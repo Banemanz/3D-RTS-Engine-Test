@@ -4,7 +4,9 @@ on:
   push:
     branches: [main, "feat/**"]
     tags: ["v*"]
-  pull_request:
+  # Package the exact branch SHA once (PR merge refs are covered by Debug CI).
+  # A pull_request build otherwise creates a second ZIP from a synthetic merge
+  # commit, confusing source SHA manifests and duplicating downloads.
   workflow_dispatch:
 
 permissions:
