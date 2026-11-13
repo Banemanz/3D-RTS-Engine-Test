@@ -3,6 +3,7 @@
 #include "third_party/picojson.h"
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // A catalog is an extensible typed object graph. Fields deliberately retain
@@ -18,7 +19,6 @@ struct CatalogEntry {
 class DataCatalog {
 public:
     const std::vector<CatalogEntry>& entries() const { return entries_; }
-    std::vector<CatalogEntry>& entries() { return entries_; }
     const CatalogEntry* find(const std::string& id) const;
     CatalogEntry* find(const std::string& id);
     bool add(CatalogEntry entry,std::string* error=nullptr);
@@ -32,6 +32,9 @@ public:
     static DataCatalog defaults();
 private:
     std::vector<CatalogEntry> entries_;
+    // Stable indices rather than pointers, so vector reallocation and copies
+    // cannot invalidate ID lookups. Only add() can change entry identities.
+    std::unordered_map<std::string,std::size_t> idIndex_;
     void resolveInto(const std::string& id,picojson::object& out,
                      std::vector<std::string>& stack) const;
 };

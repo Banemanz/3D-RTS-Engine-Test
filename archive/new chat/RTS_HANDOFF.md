@@ -290,3 +290,17 @@ adjusts spacing for creator-authored maps. Unit radii contribute to grid
 pitch. `RTSFormationTests` covers 9-unit stable slotting, reordered source
 lists, single-unit goals and multi-unit group movement. Future: formation
 shape choice, command queues and path/collision cohesiveness.
+
+## Creator catalog indexing (2026-11-13 continuation)
+
+`DataCatalog` uses `idIndex_: unordered_map<string,size_t>` to resolve
+catalog IDs in average O(1), preserving ordered `entries_` serialization.
+`entries()` is now read-only to stop callers changing identity behind the
+map; the Data Editor gets mutable selected objects through `find(id)`
+and still uses `setField` for edits. Validation detects IDs mutated through
+an unsafe mutable pointer (no rename API yet). Copy/move of DataCatalog
+preserves stable vector indices. `tests/catalog_tests.cpp` includes 2,400
+derived objects, copy/move/JSON, inheritance and invalid identity checks.
+Future passes: inherited-field memoization with explicit mutation revision,
+incremental typed schema validation, rename/reference migration and UI
+virtualization for enormous catalogs.

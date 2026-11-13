@@ -86,3 +86,11 @@ layout, stable per-ID assignments independent of source ordering, single-unit
 exact destinations, designer-configured spacing and four selected units
 travelling to a formation instead of a single point. It runs headless in
 Debug and optimized Release CTest builds.
+
+### Creator catalog scaling
+
+`RTSCatalogTests` now creates 2,400 derived object definitions with stable
+IDs, verifies constant-time indexed lookup through repeated vector growth,
+copy/move and serialization, checks inherited field isolation, and
+confirms out-of-band ID mutation is detected before project save.
+This is a correctness/scaling regression, not a portable timing benchmark.

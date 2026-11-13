@@ -102,3 +102,15 @@ without an extra search. `NavigationGrid::findPath` still resolves every
 unit's destination and path separately. Project metadata configures
 `formation_spacing_multiplier` (default 2.4, clamped 1.5..6), and
 spatial hashing handles local dynamic separation while travelling.
+
+### Catalog identity index
+
+`DataCatalog` retains ordered `std::vector<CatalogEntry>` for JSON output
+but tracks each ID in `std::unordered_map<std::string,std::size_t>`.
+The value is a vector **index, not a pointer**, so reallocation and ordinary
+copies/moves keep it valid. The index is maintained by `add` (including
+derived-object creation), used by `find`, and checked during validation.
+Catalog entries can be enumerated as a const vector; mutable edit operations
+go through `find` and `setField`. Direct changes to an entry's ID are
+unsupported and rejected by validation; a safe rename/reference migration
+API remains an outstanding creator-suite feature.

@@ -272,3 +272,12 @@ multiplier to **1.5–6.0**. The minimum unit spacing also accounts for the
 largest selected mobile unit's radius. This is a map-wide gameplay setting;
 per-unit formations, selectable squad geometries and a visual formation
 authoring panel remain TBD.
+
+### Catalog object identity
+
+The catalog now indexes object IDs for responsive search and editing as
+projects grow. Use **Data Editor duplicate/derive actions** or the
+`DataCatalog::add/cloneDerived` API to create entries and `setField` to
+author fields. The `entries()` collection is intentionally read-only:
+mutating entry IDs directly would corrupt object references. Safe object
+renaming with reference migration is planned but not yet implemented.

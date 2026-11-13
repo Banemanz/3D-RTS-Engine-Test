@@ -281,8 +281,9 @@ bool EditorSession::finishEdit(RTSProject& project) {
         message="ENTER JSON VALUE FOR "+pendingNewField_;
         return true;
     }
-    auto* selectedEntry=project.catalog.entries().empty()?nullptr:
-        &project.catalog.entries()[selectedObject%project.catalog.entries().size()];
+    const auto& entries=project.catalog.entries();
+    if(entries.empty())return false;
+    auto* selectedEntry=project.catalog.find(entries[selectedObject%entries.size()].id);
     if(!selectedEntry)return false;
     std::string key=pendingNewField_.empty()?selectedFieldName(project):pendingNewField_;
     if(key.empty())return false;

@@ -154,3 +154,18 @@ while crossing narrow passages, predict collisions, preserve squad facing
 during chase, or use flow-field routing for hundreds of agents. Destination
 slotting is nevertheless a substantial improvement over all-group members
 being ordered to the identical terrain coordinate.
+
+## Indexed creator data catalog
+
+The DataCatalog now maintains a hash map of **object ID to stable vector
+index**, replacing linear scans on each find/add/inheritance reference.
+The index survives vector growth and normal catalog copy/move, with
+validation rejecting identities mutated behind the catalog's back.
+Read-only `entries()` prevents arbitrary unsynchronized vector identity
+changes; field editing still uses `setField` or a mutable ID lookup.
+
+A 2,400-derived-object regression tests indexing, validation, copying,
+moving, field inheritance and JSON round trips. Full-scale creator
+performance still requires cached resolved inheritance, incremental
+property validation, virtualized data tables and measured editor timings;
+this pass addresses the dominant repeated ID scanning first.

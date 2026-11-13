@@ -48,20 +48,26 @@ CatalogEntry make(const std::string& type,const std::string& id,const std::strin
 }
 }
 const CatalogEntry* DataCatalog::find(const std::string& id)const {
-    for(const auto& e:entries_)if(e.id==id)return &e;
-    return nullptr;
+    const auto it=idIndex_.find(id);
+    if(it==idIndex_.end() || it->second>=entries_.size())return nullptr;
+    const CatalogEntry& entry=entries_[it->second];
+    return entry.id==id?&entry:nullptr;
 }
 CatalogEntry* DataCatalog::find(const std::string& id) {
-    for(auto& e:entries_)if(e.id==id)return &e;
-    return nullptr;
+    const auto it=idIndex_.find(id);
+    if(it==idIndex_.end() || it->second>=entries_.size())return nullptr;
+    CatalogEntry& entry=entries_[it->second];
+    return entry.id==id?&entry:nullptr;
 }
 bool DataCatalog::add(CatalogEntry e,std::string* error) {
     if(!validId(e.id) || !validId(e.type) || (!e.parent.empty() && !validId(e.parent)) ||
-       find(e.id) || entries_.size()>=10000) {
+       idIndex_.count(e.id)!=0 || entries_.size()>=10000) {
         if(error)*error="Invalid or duplicate catalog ID/type/parent";
         return false;
     }
-    entries_.push_back(std::move(e));return true;
+    entries_.push_back(std::move(e));
+    idIndex_.emplace(entries_.back().id,entries_.size()-1);
+    return true;
 }
 bool DataCatalog::cloneDerived(const std::string& original,const std::string& newId) {
     const CatalogEntry* e=find(original);
@@ -97,6 +103,13 @@ picojson::object DataCatalog::resolvedFields(const std::string& id)const {
     return result;
 }
 void DataCatalog::validate()const {
+    if(idIndex_.size()!=entries_.size())
+        throw std::invalid_argument("Catalog ID index is inconsistent");
+    for(std::size_t i=0;i<entries_.size();++i) {
+        const auto it=idIndex_.find(entries_[i].id);
+        if(it==idIndex_.end() || it->second!=i)
+            throw std::invalid_argument("Catalog entry IDs were changed outside the catalog API");
+    }
     std::set<std::string> ids;
     for(const auto& e:entries_) {
         if(!validId(e.id) || !validId(e.type) || (!e.parent.empty() && !validId(e.parent)))
