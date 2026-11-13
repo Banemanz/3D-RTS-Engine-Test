@@ -52,6 +52,32 @@ def generate():
         "rotation":[0,0,0],"scale":[1,1,1],
         "amount":0,"overrides":{"target":"optional scripted trigger marker"}
     })
+    project["metadata"]["editor_camera"] = {"x":15,"z":20,"yaw":0,"zoom":42}
+    project["metadata"]["editor_notes"] = (
+        "Terrain authoring demo with declarative triggers; no unrestricted script engine yet."
+    )
+    project["placements"].append({
+        "id":"ridge_region","kind":"Region","catalog":"",
+        "name":"Ridge Observation Zone","owner":-1,"position":[15,0,21],
+        "rotation":[0,0,0],"scale":[1,1,1],"amount":0,
+        "overrides":{"radius":7}
+    })
+    project["triggers"] = [
+        {"id":"greeting","event":{"type":"OnMapStart"},"once":True,"actions":[
+            {"type":"ShowMessage","text":"WELCOME TO THE TERRAIN WORKSHOP"},
+            {"type":"GrantMinerals","amount":25}
+        ]},
+        {"id":"reinforcement","event":{"type":"After","seconds":12},"once":True,
+         "conditions":[{"type":"UnitCountAtLeast","owner":1,"count":1}],
+         "actions":[
+            {"type":"SpawnUnit","catalog":"zealot","owner":1,"x":24,"z":-10},
+            {"type":"ShowMessage","text":"HYBRID REINFORCEMENTS DEPLOYED"}
+         ]},
+        {"id":"ridge_discovery",
+         "event":{"type":"OnRegionEnter","region":"ridge_region"},
+         "once":True,"conditions":[{"type":"SubjectOwnerIs","owner":0}],
+         "actions":[{"type":"ShowMessage","text":"RIDGELINE DISCOVERED"}]}
+    ]
     output.write_text(json.dumps(project,indent=2)+"\n",encoding="utf-8")
     print(f"Created {output} ({len(cells)} sparse terrain cells)")
 

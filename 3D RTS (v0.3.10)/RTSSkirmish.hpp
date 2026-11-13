@@ -2,6 +2,7 @@
 #include "NavigationGrid.hpp"
 #include "Unit.hpp"
 #include "RTSProject.hpp"
+#include "TriggerEngine.hpp"
 #include <cstddef>
 #include <deque>
 #include <string>
@@ -38,6 +39,7 @@ public:
     int supplyUsed = 0;
     int supplyCap = 0;
     MatchResult result = MatchResult::Playing;
+    std::string triggerMessage;
 
     bool orderMove(const Vec3& destination, bool attackMove, bool append = false);
     bool orderGather(const Vec3& nearNode);
@@ -50,11 +52,23 @@ public:
     int activeWorkerCount() const;
     int completedBarracksCount() const;
 
+    // Script actions expose only explicit, bounded game-state mutations.
+    void addMineralsForTrigger(int amount);
+    bool spawnForTrigger(const std::string& catalogId,int owner,const Vec3& at);
+    void endMatchForTrigger(bool victory);
+    void showMessageForTrigger(const std::string& message);
+    int countUnitsForTrigger(int owner,const std::string& catalogId) const;
+    int ownerForTrigger(int unitId) const;
+    const ProjectPlacement* regionForTrigger(const std::string& id) const;
+
 private:
     RTSProject project_;
     std::string marineId_="marine",workerId_="worker",enemyId_="zealot",barracksId_="barracks";
     std::string playerBaseCatalog_="command_center",enemyBaseCatalog_="hive";
     float enemyInterval_=16.0f;
+    double elapsedSeconds_=0.0;
+    std::unordered_set<int> observedDead_;
+    TriggerEngine triggers_;
     void rebuildNavigation();
     struct Route {
         std::vector<Vec3> points;

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <utility>
+#include <cstdint>
 
 namespace {
 float distanceXZ(const Vec3& a,const Vec3& b) {
@@ -82,6 +83,7 @@ void RTSSkirmish::reset() {
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     nextId_=1;friendlyBaseId_=-1;enemyBaseId_=-1;
+    observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     marineId_=metaString(project_,"player_marine","marine");
     workerId_=metaString(project_,"player_worker","worker");
     enemyId_=metaString(project_,"enemy_soldier","zealot");
@@ -112,6 +114,8 @@ void RTSSkirmish::reset() {
         if(structure)navigation.blockDisc(instance.position,instance.radius+0.2f);
     }
     for(const auto& node:minerals)navigation.blockDisc(node.position,1.8f);
+    triggers_.configure(project_);
+    triggers_.start(*this);
 }
 bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     if(!u.isAlive() || u.isStructure)return false;
@@ -361,6 +365,11 @@ void RTSSkirmish::update(float dt) {
     updateGathering(dt);
     updateProduction(dt);
     updateEnemy(dt);
+    elapsedSeconds_+=dt;
+    std::vector<int> killed;
+    for(const auto& unit:units)if(!unit.isAlive() && observedDead_.insert(unit.id).second)
+        killed.push_back(unit.id);
+    triggers_.tick(*this,elapsedSeconds_,killed);
     const Unit* human=find(friendlyBaseId_),*enemy=find(enemyBaseId_);
     if(!human || !human->isAlive())result=MatchResult::Defeat;
     else if(!enemy || !enemy->isAlive())result=MatchResult::Victory;
@@ -383,4 +392,48 @@ std::string RTSSkirmish::statusLine()const {
     if(result==MatchResult::Victory)s<<" | VICTORY - R to restart";
     else if(result==MatchResult::Defeat)s<<" | DEFEAT - R to restart";
     return s.str();
+}
+
+void RTSSkirmish::addMineralsForTrigger(int amount) {
+    const std::int64_t updated=static_cast<std::int64_t>(playerMinerals)+amount;
+    playerMinerals=static_cast<int>(std::clamp(updated,std::int64_t(0),std::int64_t(100000000)));
+}
+bool RTSSkirmish::spawnForTrigger(const std::string& id,int owner,const Vec3& target) {
+    if(owner<0 || owner>15 || units.size()>=4000 ||
+       !project_.terrain.insideWorld(target.x,target.z))return false;
+    auto entry=project_.catalog.find(id);
+    if(!entry || entry->type!="Unit")return false;
+    const auto fields=project_.catalog.resolvedFields(id);
+    bool structure=boolField(fields,"is_structure");
+    bool worker=boolField(fields,"is_worker");
+    auto cell=navigation.toCell(target);
+    if(!navigation.walkable(cell.x,cell.z))return false;
+    UnitData stats=unitFromCatalog(project_.catalog,id);
+    Unit& unit=spawn(stats,target,owner,
+             id+" (trigger "+std::to_string(nextId_)+")",
+             structure,worker,id);
+    if(structure)navigation.blockDisc(unit.position,unit.radius+.2f);
+    if(owner==0 && !structure)supplyUsed+=stats.supply_cost;
+    return true;
+}
+void RTSSkirmish::endMatchForTrigger(bool victory) {
+    result=victory?MatchResult::Victory:MatchResult::Defeat;
+}
+void RTSSkirmish::showMessageForTrigger(const std::string& message) {
+    triggerMessage=message.substr(0,256);
+}
+int RTSSkirmish::countUnitsForTrigger(int owner,const std::string& type)const {
+    int n=0;
+    for(const auto& unit:units)if(unit.isAlive() &&
+        (owner<0 || unit.ownerId==owner) &&
+        (type.empty() || unit.catalogId==type))++n;
+    return n;
+}
+int RTSSkirmish::ownerForTrigger(int id)const {
+    const Unit* u=find(id);
+    return u?u->ownerId:-999;
+}
+const ProjectPlacement* RTSSkirmish::regionForTrigger(const std::string& id)const {
+    for(const auto& p:project_.placements)if(p.id==id && p.kind=="Region")return &p;
+    return nullptr;
 }

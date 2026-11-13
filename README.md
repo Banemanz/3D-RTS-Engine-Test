@@ -1,25 +1,27 @@
 # 3D RTS Engine Test
 
-A from-scratch, experimental **C++17/OpenGL 3.3/GLFW** RTS. The game currently uses
-procedural meshes (units, structures and mineral patches) with a tiny built-in pixel-font HUD.
-It is a testbed for core mechanics, **not a complete game engine**.
+Experimental **from-scratch C++17 + GLFW + OpenGL 3.3** RTS foundation and
+in-progress **creator suite**, inspired by the broad scope of WC3 World Editor /
+StarCraft II Galaxy Editor. This is an independently developed engine, not a
+StarCraft/Galaxy-compatible game data loader.
 
-## Build and test
+## Build and run
 
-CMake 3.16+, a C++17 compiler, an OpenGL 3.3-capable driver and GLFW 3.4 are required.
-The CMake build tries a system-installed GLFW first, falling back to a pinned GLFW 3.4
-Git checkout when necessary.
+CMake 3.16+, C++17 compiler, GPU/OpenGL 3.3 driver and GLFW 3.4 or installed
+system GLFW required. The build downloads GLFW 3.4 if not installed locally.
 
 ```sh
 cmake -S "3D RTS (v0.3.10)" -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ./build/RTSCameraTerrain
+./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json
+./build/RTSProjectTool --validate projects/default.rtsproject.json
 ```
 
-On Windows with Visual Studio CMake generators, the executable is usually at
-`build/Debug/RTSCameraTerrain.exe`. The Linux/Windows headless test suite can be built
-without GLFW or a display:
+For Visual Studio multi-configuration generators use
+`build/Debug/RTSCameraTerrain.exe` and `build/Debug/RTSProjectTool.exe`.
+To compile only the logic, no OpenGL dependencies are needed:
 
 ```sh
 cmake -S "3D RTS (v0.3.10)" -B build-logic -DRTS_BUILD_DEMO=OFF
@@ -27,53 +29,52 @@ cmake --build build-logic --config Debug
 ctest --test-dir build-logic -C Debug --output-on-failure
 ```
 
-To capture a deterministic startup screenshot under software OpenGL (e.g. Mesa + Xvfb):
+## Editor
 
-```sh
-xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-frames 120 --screenshot rts.ppm
-python3 tools/ppm_to_png.py rts.ppm rts.png
-```
+**F5** terrain editor, **F7** Data Editor, **F9** play/test current map,
+**Ctrl+S** save project.
 
-The same screenshot smoke test runs in GitHub Actions; download the screenshot artifact
-from the Linux CI job. This is a renderer startup test, **not** a gameplay automation test.
+The first editor includes raise/lower/smooth/flatten brushes, material
+painting, blocked-path overlays, unit/mineral/doodad placement, in-window
+property editor, inheritance-based unit/actor/model catalogs, JSON project
+serialization, editor test screenshots, and a headless CLI.
+Trigger JSON can define a few events/conditions/actions which run at
+map start or during play. An example project with sculpted terrain and
+triggers is `projects/terrain_showcase.rtsproject.json`.
 
-## Playable skirmish controls
+For the full controls and map-code format see [Authoring guide](docs/AUTHORING.md).
+For a sober, extensive SC2-scope comparison of what is implemented versus what
+still needs to be developed, see [Creator suite matrix](docs/SC2_FEATURE_MATRIX.md).
 
-| Input | Action |
-| --- | --- |
-| Left-click / drag | Select own units or structures |
-| Right-click enemy | Order selected units to attack |
-| Right-click ground | Move selected units (A* route) |
-| Right-click minerals with selected worker | Gather and return minerals repeatedly |
-| A, then right-click | Attack-move command |
-| Shift + right-click ground | Queue additional movement/attack-move destinations |
-| Ctrl + 1-9 / 1-9 | Save / recall unit control groups |
-| B, then right-click | Place Barracks (selected worker nearby; 150 minerals) |
-| T | Train a Marine at first completed Barracks (50 minerals) |
-| C | Train a Worker at Command Center (40 minerals) |
-| X | Stop selected units |
-| Arrow keys / W S D | Pan camera (left pan uses Left Arrow; A reserved for attack-move) |
-| Q / E | Rotate camera |
-| Mouse wheel | Zoom |
-| R | Restart match |
-| Esc | Quit |
+## Gameplay
 
-The player starts with a Command Center, four Marines, two Workers and 220 minerals.
-Workers mine three finite deposits; Barracks take 9 seconds to construct; Marines and
-Workers take time to train and consume supply. Enemy reinforcements attack periodically.
-Destroy the enemy Hive to win; lose if your Command Center is destroyed.
+- Left-click/drag/Shift-click selects friendly units.
+- Right-click terrain moves; right-click enemy attacks; Workers right-click
+  minerals to gather.
+- **A** then right-click attack-moves; **Shift+right-click** queues more orders.
+- **B** then right-click places Barracks with a selected Worker nearby;
+  **T** queues Marines, **C** queues Workers.
+- **X** stops units; **Ctrl+1–9** creates control groups; **1–9** recalls.
+- **W/S/D + arrows** pans, **Q/E** rotates, mouse wheel zooms.
+- **R** restarts skirmish and **Esc** exits.
 
-## Project layout
+The prototype is a single offline skirmish with procedural graphics, simplified
+economy, basic enemy waves and no model/animation/sound import yet. Arbitrary
+catalog fields are stored and inherited but *only properties wired to runtime
+systems have actual gameplay/presentation effects*.
 
-- `3D RTS (v0.3.10)/`: main game source, platform integration, shader and rendering code.
-- `NavigationGrid.*`: tested grid A* routing and obstacle occupancy.
-- `RTSSkirmish.*`: ownership, simulation, minerals, workers, production, simple AI and win conditions.
-- `tests/`: headless C++ unit/integration tests (no OpenGL context).
-- `docs/`: architecture, controls, testing procedures and scope/limitations.
-- `archive/new chat/`: handoff material for continuing this large PR in a future conversation.
+## Engineering
 
-This is **not a Godot runtime**. The unit stats parser accepts a small `.tres`-like subset
-embedded in source; runtime loading, modding APIs, terrain heights, sound, proper object
-models, fog of war, replay and networking remain future work.
+- `RTSSimulation`: fixed-tick unit combat, A* orders, production, economy,
+  trigger dispatcher and win/loss rules.
+- `RTSAuthoring`: schema-validated project, heightfield terrain,
+  generic unit/actor/model catalogs and edit-session state.
+- `projects/`: plain editable JSON projects with version and extension fields.
+- `tools/rts_project_tool.cpp`: CLI for project/catalog/scene editing.
+- `tests/`: CTest executable suites (no GPU required).
+- `.github/workflows/ci.yml`: full Linux/Windows builds and logic tests;
+  Linux Mesa/Xvfb checks both game and terrain editor, uploads screenshots.
+- `archive/new chat/RTS_HANDOFF.md`: cross-chat handoff.
 
-Licensed under MIT: see `LICENSE`.
+MIT licensed. Vendored PicoJSON has its own BSD-style license at
+`3D RTS (v0.3.10)/third_party/PICOJSON_LICENSE`.

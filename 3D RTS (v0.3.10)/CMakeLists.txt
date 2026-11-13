@@ -14,6 +14,7 @@ target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
     RTSSkirmish.cpp
+    TriggerEngine.cpp
     unit_navigationagent3d_implementation.cpp
     unitdata_resource_implementation.cpp)
 target_include_directories(RTSSimulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -51,13 +52,17 @@ if(BUILD_TESTING)
     target_link_libraries(RTSEditorTests PRIVATE RTSAuthoring)
     add_test(NAME editor COMMAND RTSEditorTests)
     add_test(NAME sample_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/default.rtsproject.json")
+    add_test(NAME showcase_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/terrain_showcase.rtsproject.json")
     add_executable(RTSModdedProjectTests tests/modded_project_tests.cpp)
     target_link_libraries(RTSModdedProjectTests PRIVATE RTSSimulation)
     add_test(NAME modded_project COMMAND RTSModdedProjectTests)
+    add_executable(RTSTriggerTests tests/trigger_tests.cpp)
+    target_link_libraries(RTSTriggerTests PRIVATE RTSSimulation)
+    add_test(NAME triggers COMMAND RTSTriggerTests)
 endif()
 
 add_executable(RTSProjectTool "../tools/rts_project_tool.cpp")
-target_link_libraries(RTSProjectTool PRIVATE RTSAuthoring)
+target_link_libraries(RTSProjectTool PRIVATE RTSSimulation)
 
 if(RTS_BUILD_DEMO)
     find_package(glfw3 QUIET)

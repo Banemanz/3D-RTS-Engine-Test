@@ -302,7 +302,25 @@ int main(int argc, char** argv) {
             app.project.loadFile("projects/default.rtsproject.json");
         }
         app.reloadFromProject();
-        if(startEditor)app.editor.panel=EditorSession::Panel::Terrain;
+        if(startEditor) {
+            app.editor.panel=EditorSession::Panel::Terrain;
+            auto preset=app.project.metadata.find("editor_camera");
+            if(preset!=app.project.metadata.end() && preset->second.is<picojson::object>()) {
+                const auto& cam=preset->second.get<picojson::object>();
+                auto read=[&](const char* k,float def) {
+                    auto it=cam.find(k);
+                    return (it!=cam.end() && it->second.is<double>() &&
+                            std::isfinite(it->second.get<double>()))
+                        ? float(it->second.get<double>()) : def;
+                };
+                app.camera.focalPoint=Vec3(read("x",0),0,read("z",0));
+                app.camera.targetFocalPoint=app.camera.focalPoint;
+                app.camera.yawDegrees=read("yaw",0);
+                app.camera.currentZoomDistance=
+                    std::clamp(read("zoom",42),app.camera.minZoomDistance,app.camera.maxZoomDistance);
+                app.camera.targetZoomDistance=app.camera.currentZoomDistance;
+            }
+        }
         GLFWwindow* window = glfwCreateWindow(
             app.windowWidth, app.windowHeight,
             "3D RTS Engine - Modular Architecture",
@@ -763,6 +781,12 @@ int main(int argc, char** argv) {
                 else if(app.mode==AppState::Mode::AttackMove)
                     drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
                                 14,108,2.4f,"RIGHT CLICK DESTINATION TO ATTACK MOVE",1.f,.8f,.35f);
+                if(!app.game.triggerMessage.empty() &&
+                   app.editor.panel==EditorSession::Panel::Play)
+                    drawHUDText(hudBoxShader,hudVAO,hudVBO,
+                                app.windowWidth,app.windowHeight,
+                                14,139,2.0f,app.game.triggerMessage,
+                                1.f,.76f,.32f);
                 if(app.game.result != MatchResult::Playing)
                     drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
                                 w*.32f,h*.46f,5.0f,
