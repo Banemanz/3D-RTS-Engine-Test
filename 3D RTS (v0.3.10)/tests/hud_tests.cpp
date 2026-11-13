@@ -19,7 +19,11 @@ int main() {
         assert(std::abs(world.z-game.project().terrain.minZ())<.01f);
     }
     auto buttons=wide.buttons(game);
+    assert(buttons.size()==12);
     assert(buttons[0].command==HUDCommand::Move && !buttons[0].enabled);
+    assert(buttons[9].command==HUDCommand::Hold && !buttons[9].enabled);
+    assert(buttons[10].command==HUDCommand::SelectWorkers && buttons[10].enabled);
+    assert(buttons[11].command==HUDCommand::Cancel && buttons[11].enabled);
     assert(buttons[6].command==HUDCommand::SelectArmy && buttons[6].enabled);
     for(auto& unit:game.units) {
         unit.isSelected=unit.ownerId==0 && unit.isAlive() && !unit.isStructure;
@@ -27,6 +31,11 @@ int main() {
     buttons=wide.buttons(game);
     assert(buttons[0].enabled && buttons[1].enabled && buttons[2].enabled);
     assert(buttons[3].enabled); // worker selected
+    assert(buttons[9].enabled); // hold-position for movable units
+    const auto holdBounds=buttons[9].bounds;
+    assert(wide.hit(holdBounds.x+3,holdBounds.y+3,game)==HUDCommand::Hold);
+    const auto workerBounds=buttons[10].bounds;
+    assert(wide.hit(workerBounds.x+3,workerBounds.y+3,game)==HUDCommand::SelectWorkers);
     assert(wide.selectionCapacity()>=4);
     assert(narrow.selectionCapacity()>=2);
     std::vector<int> selectedIds;
@@ -44,8 +53,16 @@ int main() {
     assert(wide.hit(buttons[3].bounds.x+4,buttons[3].bounds.y+4,game)==HUDCommand::Build);
     assert(wide.hit(10,wide.bottom.y+5,game)==HUDCommand::Cancel);
     // No click on the top/bottom UI must turn into an RTS world order.
-    for(const auto& button:buttons)
+    for(const auto& button:buttons){
         assert(wide.consumes(button.bounds.x+1,button.bounds.y+1));
+        assert(wide.commandArea.contains(button.bounds.x+1,button.bounds.y+1));
+        assert(button.bounds.x+button.bounds.w<=wide.commandArea.x+wide.commandArea.w+0.01f);
+        assert(button.bounds.y+button.bounds.h<=wide.commandArea.y+wide.commandArea.h+0.01f);
+    }
+    for(const auto& button:narrow.buttons(game)){
+        assert(narrow.consumes(button.bounds.x+1,button.bounds.y+1));
+        assert(button.bounds.y+button.bounds.h<=narrow.commandArea.y+narrow.commandArea.h+.01f);
+    }
     game.supplyUsed=game.supplyCap;
     buttons=wide.buttons(game);
     assert(!buttons[5].enabled); // training is supply limited
@@ -63,6 +80,8 @@ int main() {
     const auto card=wide.selectionCardBounds(0);
     assert(wide.selectionUnitAt(card.x+2,card.y+2,game)==-1);
     assert(customBtns[8].command==HUDCommand::CancelQueue && !customBtns[8].enabled);
+    assert(customBtns[9].command==HUDCommand::Hold && !customBtns[9].enabled);
+    assert(customBtns[10].enabled); // F3 worker-select is global
     assert(game.queueWorker());
     customBtns=wide.buttons(game);
     assert(customBtns[8].enabled);

@@ -68,3 +68,13 @@ The Release package runs an additional 192-frame version from its installed
 folder. Tests do not save changes and fail if a C++ exception escapes.
 This targets editor lifecycle faults that simple screenshot startup tests
 would miss. It still does not prove stability on every Windows GPU.
+
+### Attack-move interruption and stance regression
+
+`RTSOrdersTests` exercises a nonmoving Hold Position unit that attacks an
+enemy structure in range, verifies that it cannot drift from separation or
+momentum, checks Stop and Move clear the hold flag, and verifies that an
+attack-move interrupted by a fight still completes its original destination.
+`RTSHUDTests` covers the new 12-button hit regions at 1280×720 and 800×600.
+Both are compiled as headless CTest executables and checked by Windows/Linux
+CI. The OpenGL smoke test catches HUD shader/viewport regressions.

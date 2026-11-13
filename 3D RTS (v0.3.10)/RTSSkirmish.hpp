@@ -54,6 +54,7 @@ public:
     bool orderGather(const Vec3& nearNode);
     bool orderAttack(int targetId);
     void orderStop();
+    void orderHold();
     bool buildBarracks(const Vec3& at);
     bool queueMarine();
     bool queueWorker();
@@ -85,6 +86,7 @@ private:
         std::vector<Vec3> points;
         size_t next = 0;
         bool attackMove = false;
+        bool engagementInterrupted = false; // resume destination after combat
         bool patrol = false;
         bool returning = false;
         Vec3 patrolStart{};

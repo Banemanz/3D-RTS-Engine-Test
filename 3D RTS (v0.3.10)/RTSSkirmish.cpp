@@ -242,10 +242,22 @@ bool RTSSkirmish::orderAttack(int targetId) {
     }
     return any;
 }
+void RTSSkirmish::orderHold() {
+    if(result!=MatchResult::Playing)return;
+    for(auto& u:units)if(u.isAlive() && u.ownerId==0 &&
+                          u.isSelected && !u.isStructure) {
+        routes_.erase(u.id);
+        queued_.erase(u.id);
+        jobs_.erase(u.id);
+        u.holdPosition();
+    }
+}
+
 void RTSSkirmish::orderStop() {
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
         routes_.erase(u.id);queued_.erase(u.id);jobs_.erase(u.id);u.navAgent.stop();
         u.targetUnitId=-1;u.state=UnitState::IDLE;u.attackMoveEnabled=false;
+        u.holdPositionEnabled=false;
     }
 }
 bool RTSSkirmish::orderGather(const Vec3& click) {
@@ -273,7 +285,26 @@ void RTSSkirmish::advanceRoutes() {
         Unit* u=find(it->first);
         if(!u || !u->isAlive() || u->isStructure) {it=routes_.erase(it);continue;}
         Route& route=it->second;
-        if(u->state==UnitState::CHASING || u->state==UnitState::ATTACKING){++it;continue;}
+        if(u->state==UnitState::CHASING || u->state==UnitState::ATTACKING){
+            route.engagementInterrupted=true;
+            ++it;continue;
+        }
+        if(route.attackMove && route.engagementInterrupted) {
+            // Combat pulled the unit off its A-move/patrol path. Do not
+            // advance to the next waypoint as though the old one was reached.
+            // Replan to the current leg's final destination from here.
+            route.engagementInterrupted=false;
+            auto resumed=navigation.findPath(u->position,route.points.back());
+            if(!resumed.empty()) {
+                route.points=std::move(resumed);
+                route.next=0;
+                u->moveTo(route.points.front(),true);
+                ++it;continue;
+            }
+            // In case a newly placed obstruction makes the old destination
+            // unreachable, retire this leg and attempt the next queued order.
+            route.next=route.points.size();
+        }
         if(u->state==UnitState::MOVING && !u->navAgent.isNavigationFinished(u->position)){++it;continue;}
         ++route.next;
         if(route.next>=route.points.size()){

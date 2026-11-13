@@ -71,3 +71,26 @@ Cards are laid out from the same pure `RTSHUDLayout` geometry used for
 mouse hit-testing. Groups too large for the panel show a `+N MORE UNITS`
 indicator. Empty selection-panel clicks are consumed instead of causing
 world selection or movement.
+
+## Command-grid expansion: hold position and worker selection
+
+The RTS game command grid now contains **12 clickable actions** in four rows,
+including **Hold Position (G)** and **Select Workers (F3)**. The last button
+cancels an armed targeting mode. The other actions still use their original
+shortcuts: M move, A attack-move, X stop, B build, T Marine, C Worker,
+F2 select army, H focus the home base, P patrol, and V cancel production.
+
+**Hold Position (G)** immediately stops all selected mobile units and prevents
+separation steering or existing momentum from sliding them around. They can
+automatically attack enemies already inside their weapon range but do **not**
+chase, even if those enemies withdraw. X restores normal idle/aggro behavior,
+and a new movement or explicit attack order also clears Hold Position.
+
+**Attack-move resumes** its authored destination after an interrupted fight,
+replanning from the unit's present position instead of silently skipping the
+interrupted waypoint. Patrol likewise resumes the interrupted leg.
+
+**F3** selects all living player-owned workers; this is distinct from F2's
+combat army selection, and complements building rally points and harvesting.
+The HUD highlights active Hold Position orders and shows a gold stripe on
+held unit cards.

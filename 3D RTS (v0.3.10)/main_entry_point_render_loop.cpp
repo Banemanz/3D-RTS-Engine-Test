@@ -106,7 +106,7 @@ struct AppState {
     enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
     bool keyX = false, keyR = false, keyM=false, keyP=false, keyV=false,
-         keyF2=false, keyH=false;
+         keyF2=false, keyF3=false, keyG=false, keyH=false;
     std::array<std::vector<int>,10> controlGroups{};
     std::array<bool,10> digitWasDown{};
     int framebufferWidth = 1280, framebufferHeight = 720;
@@ -129,6 +129,11 @@ struct AppState {
             case HUDCommand::AttackMove:mode=Mode::AttackMove;inform("ATTACK MOVE: RIGHT CLICK");break;
             case HUDCommand::Build:mode=Mode::BuildBarracks;inform("BUILD: RIGHT CLICK CLEAR TERRAIN");break;
             case HUDCommand::Stop:game.orderStop();mode=Mode::Normal;break;
+            case HUDCommand::Hold:
+                game.orderHold();
+                mode=Mode::Normal;
+                inform("HOLD POSITION - ATTACKS WITHOUT MOVING");
+                break;
             case HUDCommand::CancelQueue:
                 if(!game.cancelSelectedProduction())inform("NO TRAINING TO CANCEL");
                 else inform("TRAINING CANCELLED - RESOURCES REFUNDED");
@@ -147,6 +152,15 @@ struct AppState {
                     if(unit.isSelected)++count;
                 }
                 if(!count)inform("NO COMBAT UNITS AVAILABLE");
+                break;
+            }
+            case HUDCommand::SelectWorkers:{
+                int count=0;
+                for(auto& unit:game.units){
+                    unit.isSelected=unit.isAlive() && unit.ownerId==0 && unit.isWorker;
+                    if(unit.isSelected)++count;
+                }
+                if(!count)inform("NO WORKERS AVAILABLE");
                 break;
             }
             case HUDCommand::FocusBase:{
@@ -905,6 +919,8 @@ int main(int argc, char** argv) {
             if (justPressed(GLFW_KEY_C, app.keyC)) app.command(HUDCommand::Worker);
             if (justPressed(GLFW_KEY_X, app.keyX)) app.command(HUDCommand::Stop);
             if (justPressed(GLFW_KEY_F2, app.keyF2)) app.command(HUDCommand::SelectArmy);
+            if (justPressed(GLFW_KEY_F3, app.keyF3)) app.command(HUDCommand::SelectWorkers);
+            if (justPressed(GLFW_KEY_G, app.keyG)) app.command(HUDCommand::Hold);
             if (justPressed(GLFW_KEY_H, app.keyH)) app.command(HUDCommand::FocusBase);
             if (justPressed(GLFW_KEY_R, app.keyR)) {
                 app.game.reset();

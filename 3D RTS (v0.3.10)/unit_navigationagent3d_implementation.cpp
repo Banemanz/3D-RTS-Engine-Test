@@ -111,6 +111,7 @@ void Unit::moveTo(const Vec3& destination, bool isAttackMove) {
     chaseWaypoints.clear();
     chaseWaypointIndex = 0;
     attackMoveEnabled = isAttackMove;
+    holdPositionEnabled = false;
     state = UnitState::MOVING;
     navAgent.setTargetPosition(destination);
 }
@@ -120,7 +121,20 @@ void Unit::attackTarget(int enemyId) {
     chaseWaypoints.clear();
     chaseWaypointIndex = 0;
     attackMoveEnabled = false;
+    holdPositionEnabled = false;
     state = UnitState::CHASING;
+}
+
+void Unit::holdPosition() {
+    targetUnitId = -1;
+    chaseWaypoints.clear();
+    chaseWaypointIndex = 0;
+    chaseRepathTimer = 0.0f;
+    attackMoveEnabled = false;
+    holdPositionEnabled = true;
+    state = UnitState::IDLE;
+    navAgent.stop();
+    currentVelocity = Vec3(0.0f, 0.0f, 0.0f);
 }
 
 void Unit::takeDamage(float rawDamage, const std::string& attackerName) {
@@ -148,6 +162,22 @@ void Unit::update(float deltaTime,std::vector<Unit>& allUnits,float mapBoundary,
     }
 
     updateCombatStateMachine(deltaTime,allUnits,spatial);
+
+    // Hold Position is a hard movement constraint, not a slow/stop order.
+    // The unit can rotate and fire, but neither inertia nor separation drifts it.
+    if(holdPositionEnabled) {
+        currentVelocity = Vec3(0.0f,0.0f,0.0f);
+        navAgent.stop();
+        if(state==UnitState::ATTACKING && targetUnitId!=-1) {
+            Unit* target=findUnitById(allUnits,targetUnitId,spatial);
+            if(target && target->isAlive()) {
+                const Vec3 toward=target->position-position;
+                if(toward.lengthXZ()>.01f)
+                    smoothRotateToward(std::atan2(toward.x,toward.z),deltaTime);
+            }
+        }
+        return;
+    }
 
     Vec3 desiredVel = navAgent.computeSteeringVelocity(*this,allUnits,deltaTime,spatial);
 
@@ -240,10 +270,23 @@ void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
             navAgent.stop();
             // Workers follow gathering jobs unless explicitly ordered to fight.
             if (isWorker) break;
-            int enemyId = findNearestEnemyId(allUnits,data.aggro_range,spatial);
-            if (enemyId != -1) {
-                targetUnitId = enemyId;
-                state = UnitState::CHASING;
+            if(holdPositionEnabled) {
+                // Do not chase even an enemy detected within the normal aggro
+                // radius. Only shoot targets in the weapon's actual range.
+                const int candidate=findNearestEnemyId(allUnits,
+                    data.attack_range+2.5f,spatial);
+                Unit* enemy=findUnitById(allUnits,candidate,spatial);
+                if(enemy && (enemy->position-position).lengthXZ()<=
+                             data.attack_range+enemy->radius) {
+                    targetUnitId=candidate;
+                    state=UnitState::ATTACKING;
+                }
+            }else{
+                int enemyId = findNearestEnemyId(allUnits,data.aggro_range,spatial);
+                if (enemyId != -1) {
+                    targetUnitId = enemyId;
+                    state = UnitState::CHASING;
+                }
             }
             break;
         }
@@ -341,8 +384,14 @@ void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
             float effectiveRange = data.attack_range + target->radius;
 
             if (distToEnemy > effectiveRange * 1.12f) {
-                state = UnitState::CHASING;
-                navAgent.setTargetPosition(target->position);
+                if(holdPositionEnabled) {
+                    targetUnitId=-1;
+                    state=UnitState::IDLE;
+                    navAgent.stop();
+                }else{
+                    state = UnitState::CHASING;
+                    navAgent.setTargetPosition(target->position);
+                }
                 break;
             }
 

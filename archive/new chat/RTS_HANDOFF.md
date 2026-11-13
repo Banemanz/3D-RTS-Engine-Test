@@ -252,3 +252,25 @@ package. `tools/verify_build_bundle.py` rejects stray `include/` or
 `lib/` directories in the installed game/editor distribution. The Windows
 artifact should contain only the executable, CLI, launchers, project samples,
 docs, licenses, build manifest and the matching PDB symbols.
+
+## Tactical commands and HUD (2026-11-13 continuation)
+
+`Unit::holdPosition` sets `holdPositionEnabled`, clears navigation and
+velocity, and allows automatic firing only inside effective weapon range;
+the Unit update returns before local separation can move the held unit.
+`RTSSkirmish::orderHold()` clears routes, queued orders and worker jobs
+for selected friendly mobile units. Explicit Move/Attack clears hold and
+Stop clears it as well. Unit Move/Attack command implementation maintains
+the invariant.
+
+`Route::engagementInterrupted` records when attack-move or patrol entered
+CHASE/ATTACK; `advanceRoutes` replans from the unit's current position
+to the same leg's terminal waypoint on returning from combat. It no longer
+increments the old waypoint index as though fighting completed movement.
+
+`RTSHUDLayout` now has 12 interactive buttons in a 4×3 grid; G Hold, F3
+Select Workers and ESC Cancel were added without losing the previous nine.
+`RTSHUD` marks held selection cards and selected Hold button.
+`tests/order_tests.cpp` covers hold, stationary defensive fire and
+A-move continuation; `tests/hud_tests.cpp` checks all 12 button bounds.
+`docs/CONTROLS.md` lists the currently implemented command set.

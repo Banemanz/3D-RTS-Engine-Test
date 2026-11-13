@@ -131,3 +131,12 @@ The in-game Data Editor now has ID/type/local-name search and filtered
 navigation. This remains a keyboard-oriented prototype, not the SC2
 dockable object tree, behavior graph, property form editor or reference
 browser.
+
+### Tactical command extension
+
+Stop, attack-move, move, patrol, per-building rally points, Hold Position
+(no drift or chasing), F2 combat army and F3 worker selection are now present
+in the initial command model. Route interruption handling resumes the
+remaining attack-move leg. Still missing: stance/target priority layers,
+guard/follow, targeting filters, command queues with visual command cards,
+and formation-aware movement for large groups.

@@ -128,3 +128,11 @@ health stripes rather than just a single total-HP display. Click a card
 to isolate a unit, or Shift+click to remove it from the selection. UI
 hitboxes remain separate from world commands. CI includes a selected-army
 OpenGL screenshot and a searchable Data Editor screenshot.
+
+## Tactical command refinements
+
+The gameplay HUD now has a **4×3 command grid** with Hold Position (G),
+F3 worker selection, and clickable cancel. Held units stay in place but shoot
+enemies already in weapon range. Attack-move and patrol routes resume their
+intended destinations after combat interruption rather than skipping
+waypoints. See [controls](docs/CONTROLS.md).

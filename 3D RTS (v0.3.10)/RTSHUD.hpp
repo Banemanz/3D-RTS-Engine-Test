@@ -105,8 +105,10 @@ public:
         rect(s.x,s.y,s.w,3,.23f,.51f,.56f);
         text(s.x+12,s.y+12,2.0f,"SELECTION",.62f,.81f,.84f);
         int count=0;const Unit* first=nullptr;float totalHp=0,totalMax=0;
+        bool allSelectedHolding=true;
         for(const auto& u:game.units)if(u.isAlive() && u.isSelected && u.ownerId==0){
             ++count;if(!first)first=&u;totalHp+=u.currentHp;totalMax+=u.data.max_hp;
+            allSelectedHolding=allSelectedHolding && u.holdPositionEnabled;
         }
         if(first){
             text(s.x+12,s.y+43,2.5f,shortText(count==1?first->instanceName:
@@ -121,6 +123,8 @@ public:
                     if(n>=capacity)break;
                     const HUDRect b=ui_.selectionCardBounds(n++);
                     rect(b.x,b.y,b.w,b.h,.12f,.17f,.21f,.97f);
+                    if(unit.holdPositionEnabled)
+                        rect(b.x,b.y,b.w,3,.94f,.73f,.26f,.98f);
                     rect(b.x+2,b.y+2,b.w-4,b.h-12,
                          unit.data.faction_color.x*.67f,
                          unit.data.faction_color.y*.67f,
@@ -161,7 +165,8 @@ public:
                     text(s.x+12,s.y+130,1.8f,
                          std::string(first->isWorker?"WORKER  ":"COMBAT  ")+
                          "DMG "+std::to_string(int(first->data.damage))+
-                         "  ARM "+std::to_string(int(first->data.armor)),.61f,.8f,.87f);
+                         "  ARM "+std::to_string(int(first->data.armor))+
+                         (first->holdPositionEnabled?"  HOLD":""),.61f,.8f,.87f);
                 }
             }
             } // one selected unit
@@ -175,16 +180,21 @@ public:
             const bool active=(commandMode==1 && button.command==HUDCommand::Move) ||
                 (commandMode==2 && button.command==HUDCommand::AttackMove) ||
                 (commandMode==3 && button.command==HUDCommand::Build) ||
-                (commandMode==4 && button.command==HUDCommand::Patrol);
+                (commandMode==4 && button.command==HUDCommand::Patrol) ||
+                (button.command==HUDCommand::Hold && count>0 && allSelectedHolding);
             rect(b.x,b.y,b.w,b.h,button.enabled?.095f:.065f,
                  button.enabled?.17f:.09f,button.enabled?.20f:.11f,.95f);
             rect(b.x,b.y,b.w,2,active?.88f:button.enabled?.24f:.13f,
                  active?.63f:button.enabled?.59f:.19f,
                  active?.27f:button.enabled?.62f:.22f);
-            text(b.x+7,b.y+10,button.command==HUDCommand::AttackMove?1.65f:1.85f,
+            const bool compact=b.h<33.f;
+            const float titleSize=compact?1.45f:
+                                  button.command==HUDCommand::AttackMove?1.60f:1.70f;
+            text(b.x+7,b.y+(compact?6.f:7.f),titleSize,
                  button.title,button.enabled?.88f:.40f,
                  button.enabled?.92f:.47f,button.enabled?.92f:.50f);
-            text(b.x+7,b.y+b.h-14,1.55f,button.hotkey,.61f,.78f,.81f);
+            if(!compact)
+                text(b.x+7,b.y+b.h-13,1.35f,button.hotkey,.61f,.78f,.81f);
         }
         if(!notice.empty() || !game.triggerMessage.empty()){
             std::string message=notice.empty()?game.triggerMessage:notice;

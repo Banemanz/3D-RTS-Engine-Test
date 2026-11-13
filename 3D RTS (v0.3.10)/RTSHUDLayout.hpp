@@ -14,7 +14,7 @@ struct HUDRect {
     }
 };
 enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Marine,
-                        Worker, SelectArmy, FocusBase, Patrol, CancelQueue, Cancel };
+                        Worker, SelectArmy, SelectWorkers, FocusBase, Patrol, Hold, CancelQueue, Cancel };
 struct HUDButton {
     HUDCommand command=HUDCommand::None;
     const char* title="";
@@ -66,9 +66,9 @@ public:
         }
         return -1;
     }
-    std::array<HUDButton,9> buttons(const RTSSkirmish& game)const {
+    std::array<HUDButton,12> buttons(const RTSSkirmish& game)const {
         int selected=0; bool worker=false,combat=false;
-        bool base=false,army=false,selectedBuilding=false;
+        bool base=false,army=false,workersAvailable=false,selectedBuilding=false;
         int activeSelectedStructure=-1;
         for(const auto& u:game.units)if(u.isAlive() && u.ownerId==0 && u.isSelected){
             ++selected;worker|=u.isWorker;combat|=!u.isStructure;
@@ -77,26 +77,32 @@ public:
         const bool barracks=game.completedBarracksCount()>0;
         for(const auto& u:game.units)if(u.ownerId==0 && u.isAlive()){
             army|=!u.isStructure && !u.isWorker;
+            workersAvailable|=u.isWorker;
             if(u.id==game.playerBaseId())base=true;
         }
         const bool live=game.result==MatchResult::Playing;
         const bool supply=game.supplyUsed<game.supplyCap;
-        const std::array<HUDCommand,9> types={
+        const std::array<HUDCommand,12> types={
           HUDCommand::Move,HUDCommand::AttackMove,HUDCommand::Stop,
           HUDCommand::Build,HUDCommand::Marine,HUDCommand::Worker,
           HUDCommand::SelectArmy,HUDCommand::FocusBase,
-          selectedBuilding && !combat?HUDCommand::CancelQueue:HUDCommand::Patrol
+          selectedBuilding && !combat?HUDCommand::CancelQueue:HUDCommand::Patrol,
+          HUDCommand::Hold,HUDCommand::SelectWorkers,HUDCommand::Cancel
         };
-        const std::array<const char*,9> labels={
+        const std::array<const char*,12> labels={
           "MOVE","ATK MOVE","STOP","BUILD","MARINE","WORKER",
-          "ALL ARMY","HOME BASE",selectedBuilding && !combat?"CANCEL Q":"PATROL"
+          "ALL ARMY","HOME BASE",selectedBuilding && !combat?"CANCEL Q":"PATROL",
+          "HOLD","WORKERS","CANCEL"
         };
-        const std::array<const char*,9> keys={"M","A","X","B","T","C","F2","H",selectedBuilding && !combat?"V":"P"};
-        std::array<HUDButton,9> result{};
+        const std::array<const char*,12> keys={
+          "M","A","X","B","T","C","F2","H",
+          selectedBuilding && !combat?"V":"P","G","F3","ESC"
+        };
+        std::array<HUDButton,12> result{};
         const float gap=6;
         const float cw=(commandArea.w-2*gap)/3;
-        const float ch=(commandArea.h-2*gap)/3;
-        for(int i=0;i<9;++i){
+        const float ch=(commandArea.h-3*gap)/4;
+        for(int i=0;i<12;++i){
             result[static_cast<size_t>(i)]={
                 types[static_cast<size_t>(i)],labels[static_cast<size_t>(i)],
                 keys[static_cast<size_t>(i)],
@@ -114,6 +120,9 @@ public:
         result[8].enabled=live && (combat ||
             (selectedBuilding && activeSelectedStructure>=0 &&
              game.pendingProduction(activeSelectedStructure)>0));
+        result[9].enabled=live && combat;
+        result[10].enabled=live && workersAvailable;
+        result[11].enabled=true;
         return result;
     }
     HUDCommand hit(double x,double y,const RTSSkirmish& game)const {

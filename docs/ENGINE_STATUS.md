@@ -121,3 +121,20 @@ Shift+click toggles membership. Shared layout and hit testing keep the
 OpenGL renderer and GLFW input coordinates consistent. Cards are currently
 procedural and do not yet have actor portraits, localization, page scrolling,
 formation commands or a user-customizable interface.
+
+## Command-state reliability (this pass)
+
+- New **Hold Position** state prevents navigation, momentum and separation
+  drift while retaining in-range defensive attacks without pursuit.
+- Interruption-aware attack-move/patrol routes recompute a path to the
+  current leg's goal after a skirmish instead of treating combat as reaching
+  the next waypoint.
+- The RTS command panel expands to a **4×3 clickable grid**, adds global
+  worker selection and a clickable cancel action, and indicates units
+  currently holding position.
+- Added headless `RTSOrdersTests` for hold/no-drift, defensive attacks,
+  restoring normal orders, and interrupted attack-move continuation.
+
+Planned follow-ups: explicit command queues/UI visualization, non-blocking
+stuck unit recovery, tactical line-of-fire cover, stance presets, guard/
+follow orders, formations, steering crowding benchmarks, hotkey remapping.

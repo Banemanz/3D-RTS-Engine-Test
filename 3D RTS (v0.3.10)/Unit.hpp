@@ -74,6 +74,7 @@ public:
     float attackFlashTimer = 0.0f;
     Vec3 lastAttackTargetPos{0.0f, 0.0f, 0.0f};
     bool attackMoveEnabled = false;
+    bool holdPositionEnabled = false;
 
     NavigationAgent3D navAgent;
     // Borrowed from RTSSkirmish; do not delete or store across world destruction.
@@ -91,6 +92,7 @@ public:
 
     void moveTo(const Vec3& destination, bool isAttackMove = false);
     void attackTarget(int enemyId);
+    void holdPosition();
     void takeDamage(float rawDamage, const std::string& attackerName);
 
     void update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary,
