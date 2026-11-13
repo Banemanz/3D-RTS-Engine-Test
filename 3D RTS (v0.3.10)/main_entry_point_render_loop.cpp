@@ -186,6 +186,62 @@ void reportInputFailure(GLFWwindow* window,const char* source,const char* messag
     }catch(...) {std::cerr<<"[Editor] exception while reporting callback error\n";}
 }
 
+// Exercise the REAL OpenGL editor lifecycle under CI, not just the pure
+// authoring libraries. This is an in-memory harness: no writes or user input.
+void exerciseEditorLifecycle(AppState& app,int frame) {
+    if(frame%12!=0)return;
+    auto& ed=app.editor;
+    const int phase=(frame/12)%8;
+    const float x=2.f+float((frame/96)%4)*3.f;
+    switch(phase) {
+    case 0:
+        ed.panel=EditorSession::Panel::Terrain;
+        ed.tool=EditorSession::Tool::Raise;
+        ed.startStroke(app.project);
+        ed.paint(app.project,{x,0.f,2.f});
+        ed.finishStroke(app.project);
+        app.reloadFromProject();
+        break;
+    case 1:
+        ed.panel=EditorSession::Panel::Scene;
+        ed.selectedPlacementId.clear();
+        ed.cycleSceneSelection(app.project,1);
+        ed.rotateSelectedPlacement(app.project,15.f);
+        app.reloadFromProject();
+        break;
+    case 2:
+        ed.panel=EditorSession::Panel::Triggers;
+        ed.createTrigger(app.project);
+        app.reloadFromProject();
+        break;
+    case 3:
+        ed.panel=EditorSession::Panel::Triggers;
+        if(ed.beginTriggerEdit(app.project)){
+            // Parse and replace the selected rule, then reinitialize simulation
+            // to exercise reconfiguration during a live GPU context.
+            ed.finishTriggerEdit(app.project);
+            app.reloadFromProject();
+        }
+        break;
+    case 4:
+        ed.panel=EditorSession::Panel::Data;
+        ed.beginCatalogSearch();
+        ed.editText="unit";
+        ed.finishCatalogSearch(app.project);
+        break;
+    case 5:
+        ed.panel=EditorSession::Panel::Data;
+        ed.duplicateCatalogObject(app.project);
+        app.reloadFromProject();
+        break;
+    case 6:
+        if(ed.undo(app.project))app.reloadFromProject();
+        break;
+    case 7:
+        if(ed.redo(app.project))app.reloadFromProject();
+        break;
+    }
+}
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
@@ -612,6 +668,7 @@ int main(int argc, char** argv) {
     bool startSceneEditor=false;
     bool startDataEditor=false;
     bool selectArmyForSmoke=false;
+    bool stressEditor=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -624,6 +681,7 @@ int main(int argc, char** argv) {
         else if(arg == "--scene-editor")startSceneEditor=true;
         else if(arg == "--data-editor")startDataEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
+        else if(arg == "--editor-stress-smoke")stressEditor=true;
     }
     int renderedFrames = 0;
     try {
@@ -650,7 +708,8 @@ int main(int argc, char** argv) {
         app.reloadFromProject();
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
-        if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor) {
+        if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor ||
+           (stressEditor && smokeFrames>0)) {
             app.editor.panel=startDataEditor ? EditorSession::Panel::Data :
                 startSceneEditor ? EditorSession::Panel::Scene :
                 startTriggerEditor ? EditorSession::Panel::Triggers :
@@ -816,6 +875,8 @@ int main(int argc, char** argv) {
         double lastAutosave=lastTime;
 
         while (!glfwWindowShouldClose(window)) {
+            if(stressEditor && smokeFrames>0)
+                exerciseEditorLifecycle(app,renderedFrames);
             double currentTime = glfwGetTime();
             float deltaTime = std::clamp(static_cast<float>(currentTime - lastTime), 0.0f, 0.25f);
             lastTime = currentTime;

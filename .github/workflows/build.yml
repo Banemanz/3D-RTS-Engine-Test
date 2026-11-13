@@ -113,6 +113,16 @@ jobs:
           --project projects/terrain_showcase.rtsproject.json
           --smoke-frames 12
 
+      - name: Stress test the installed Release editor lifecycle
+        if: runner.os == 'Linux'
+        working-directory: dist/RTS-Creator-linux-x86_64
+        run: >
+          xvfb-run -a -s "-screen 0 1280x720x24"
+          env LIBGL_ALWAYS_SOFTWARE=1
+          ./RTSCameraTerrain --editor-stress-smoke
+          --project projects/terrain_showcase.rtsproject.json
+          --smoke-frames 192
+
       # GitHub Actions artifacts are ZIPs already. Upload the Windows
       # installation DIRECTORY, not a ZIP inside another ZIP.
       - name: Upload Windows x64 executable (unzip ONCE)

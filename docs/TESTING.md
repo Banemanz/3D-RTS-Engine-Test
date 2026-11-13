@@ -57,3 +57,14 @@ verifies the OpenGL HUD renders, converts the result to PNG and uploads a
 `--data-editor` capture exercises the searchable catalog panel.
 `RTSHUDTests` verify individual card hit boxes and multi-selection
 unit-ID mapping independently of GLFW or OpenGL.
+
+### Cross-workspace editor lifecycle / crash regression
+
+CI runs `RTSCameraTerrain --editor-stress-smoke --smoke-frames 240` with a
+loaded project under Linux Mesa/Xvfb, alternating real terrain sculpt,
+scene-object rotation, trigger creation/JSON edit, catalog search/clone and
+undo/redo while reloading the project into the rendering engine.
+The Release package runs an additional 192-frame version from its installed
+folder. Tests do not save changes and fail if a C++ exception escapes.
+This targets editor lifecycle faults that simple screenshot startup tests
+would miss. It still does not prove stability on every Windows GPU.

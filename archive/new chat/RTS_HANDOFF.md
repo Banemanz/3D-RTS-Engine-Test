@@ -235,3 +235,13 @@ stuck selection drags. Single selection still uses the detailed HP/status
 dossier. `--smoke-select-army` triggers a deterministic screenshot with
 a selected group, while `--data-editor` captures the F7 workspace.
 CI uploads both previews in addition to headless RTSHUDTests.
+
+## Full editor OpenGL stress smoke
+
+`--editor-stress-smoke --smoke-frames 240` runs an in-memory repeatable
+GLFW/OpenGL lifecycle test that alternates real F5 terrain strokes, F8 scene
+rotation, F6 trigger creation/JSON re-parse, F7 catalog search/clone and
+undo/redo. It exercises `AppState::reloadFromProject` and GPU terrain
+rebuilds with an active context rather than only unit-testing document
+methods. CI runs this on Mesa/Xvfb in Debug and on the installed Release
+package. It does not claim to reproduce GPU-driver-specific crashes.
