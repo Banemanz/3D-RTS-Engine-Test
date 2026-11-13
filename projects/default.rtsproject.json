@@ -1,0 +1,516 @@
+{
+  "schema_version": 1,
+  "name": "First Contact",
+  "description": "Starting skirmish and editable sandbox project",
+  "terrain": {
+    "width": 49,
+    "depth": 49,
+    "spacing": 2,
+    "min_x": -48,
+    "min_z": -48,
+    "cells": []
+  },
+  "catalog": [
+    {
+      "type": "Model",
+      "id": "procedural_soldier",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "material": "default"
+      }
+    },
+    {
+      "type": "Model",
+      "id": "procedural_building",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "marine_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.22,
+          0.58,
+          0.96
+        ],
+        "opacity": 1
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "worker_actor",
+      "parent": "marine_actor",
+      "fields": {
+        "tint": [
+          0.2,
+          0.9,
+          0.65
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "zealot_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.76,
+          0.24,
+          0.88
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "human_building_actor",
+      "fields": {
+        "model": "procedural_building",
+        "tint": [
+          0.24,
+          0.61,
+          0.86
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "hybrid_building_actor",
+      "parent": "human_building_actor",
+      "fields": {
+        "tint": [
+          0.72,
+          0.24,
+          0.85
+        ]
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "marine",
+      "fields": {
+        "name": "Human Marine",
+        "actor": "marine_actor",
+        "faction": "Humanity",
+        "max_hp": 45,
+        "armor": 0,
+        "damage": 7,
+        "attack_range": 6.5,
+        "attack_cooldown": 0.75,
+        "aggro_range": 10.5,
+        "move_speed": 9.5,
+        "supply_cost": 1,
+        "mineral_cost": 50,
+        "build_time": 6,
+        "visual_scale": 0.92
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "worker",
+      "parent": "marine",
+      "fields": {
+        "name": "Human Worker",
+        "actor": "worker_actor",
+        "max_hp": 40,
+        "damage": 2,
+        "attack_range": 1.5,
+        "attack_cooldown": 1.3,
+        "move_speed": 7,
+        "visual_scale": 0.72,
+        "mineral_cost": 40,
+        "is_worker": true,
+        "build_time": 4.5
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "zealot",
+      "fields": {
+        "name": "Hybrid Zealot",
+        "actor": "zealot_actor",
+        "faction": "Hybrid",
+        "max_hp": 160,
+        "armor": 3,
+        "damage": 18,
+        "attack_range": 1.85,
+        "attack_cooldown": 1.05,
+        "aggro_range": 11,
+        "move_speed": 8.2,
+        "supply_cost": 3,
+        "mineral_cost": 150,
+        "visual_scale": 1.28
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "command_center",
+      "parent": "marine",
+      "fields": {
+        "name": "Command Center",
+        "actor": "human_building_actor",
+        "max_hp": 700,
+        "armor": 2,
+        "damage": 0,
+        "attack_range": 0,
+        "aggro_range": 0,
+        "visual_scale": 2.8,
+        "supply_cost": 0,
+        "is_structure": true
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "hive",
+      "parent": "command_center",
+      "fields": {
+        "name": "Hybrid Hive",
+        "actor": "hybrid_building_actor",
+        "faction": "Hybrid"
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "barracks",
+      "parent": "command_center",
+      "fields": {
+        "name": "Barracks",
+        "max_hp": 350,
+        "visual_scale": 2,
+        "build_time": 9,
+        "mineral_cost": 150
+      }
+    }
+  ],
+  "placements": [
+    {
+      "id": "human_base",
+      "kind": "Unit",
+      "catalog": "command_center",
+      "name": "Command Center",
+      "owner": 0,
+      "position": [
+        -22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "enemy_base",
+      "kind": "Unit",
+      "catalog": "hive",
+      "name": "Hybrid Hive",
+      "owner": 1,
+      "position": [
+        22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "marine_1",
+      "kind": "Unit",
+      "catalog": "marine",
+      "name": "Marine 1",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "marine_2",
+      "kind": "Unit",
+      "catalog": "marine",
+      "name": "Marine 2",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "marine_3",
+      "kind": "Unit",
+      "catalog": "marine",
+      "name": "Marine 3",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "marine_4",
+      "kind": "Unit",
+      "catalog": "marine",
+      "name": "Marine 4",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_1",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 1",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        -5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_2",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 2",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "zealot_1",
+      "kind": "Unit",
+      "catalog": "zealot",
+      "name": "Zealot 1",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        -3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "zealot_2",
+      "kind": "Unit",
+      "catalog": "zealot",
+      "name": "Zealot 2",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_north",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals North",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        -12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_south",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals South",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_center",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals Center",
+      "owner": -1,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 1000,
+      "overrides": {}
+    }
+  ],
+  "metadata": {
+    "player_starting_minerals": 220,
+    "player_supply_cap": 18,
+    "enemy_spawn_interval": 16
+  }
+}

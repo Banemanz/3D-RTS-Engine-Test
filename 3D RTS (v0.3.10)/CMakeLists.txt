@@ -9,7 +9,7 @@ include(CTest)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp)
+add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp)
 target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
@@ -46,7 +46,15 @@ if(BUILD_TESTING)
     add_executable(RTSProjectTests tests/project_tests.cpp)
     target_link_libraries(RTSProjectTests PRIVATE RTSAuthoring)
     add_test(NAME project COMMAND RTSProjectTests)
+
+    add_executable(RTSEditorTests tests/editor_tests.cpp)
+    target_link_libraries(RTSEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME editor COMMAND RTSEditorTests)
+    add_test(NAME sample_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/default.rtsproject.json")
 endif()
+
+add_executable(RTSProjectTool "../tools/rts_project_tool.cpp")
+target_link_libraries(RTSProjectTool PRIVATE RTSAuthoring)
 
 if(RTS_BUILD_DEMO)
     find_package(glfw3 QUIET)

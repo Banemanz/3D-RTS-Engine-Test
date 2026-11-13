@@ -203,6 +203,11 @@ void RTSProject::validate() const {
     if(schemaVersion!=1 || name.empty() || name.size()>256 || !terrain.valid())
         throw std::invalid_argument("Invalid project name/version/terrain");
     catalog.validate();
+    // Any game-facing data object must be valid before we allow project saves.
+    for(const auto& e:catalog.entries()) {
+        if(e.type=="Unit")(void)unitFromCatalog(catalog,e.id);
+        else if(e.type=="Actor")(void)actorFromCatalog(catalog,e.id);
+    }
     std::set<std::string> ids;
     for(const auto& p:placements) {
         if(p.id.empty() || !ids.insert(p.id).second || p.id.size()>128)
