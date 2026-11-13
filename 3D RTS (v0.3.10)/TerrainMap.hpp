@@ -31,7 +31,7 @@ public:
     Vec3 clampToMap(const Vec3& p) const;
     bool raycast(const Ray& ray,Vec3& intersection,float maxDistance=350.0f) const;
 
-    void beginStroke();
+    void beginStroke(bool retainLocalHistory=true);
     bool applyBrush(const Vec3& center,Brush brush,float radius,float strength,
                     std::uint8_t material=0);
     void endStroke();
@@ -40,6 +40,7 @@ public:
     void clearHistory();
     bool dirty() const { return dirty_; }
     void clearDirty() { dirty_=false; }
+    void markDirty() { dirty_=true; }
     std::vector<float> buildMesh() const; // x,y,z,material per vertex; triangles
     bool valid() const { return width_>=2 && depth_>=2; }
 private:
@@ -48,6 +49,7 @@ private:
     std::vector<Cell> cells_;
     std::deque<Snapshot> undo_,redo_;
     bool stroke_=false,strokeChanged_=false,dirty_=true;
+    bool strokeHasHistory_=true;
     std::size_t index(int x,int z) const { return static_cast<std::size_t>(z*width_+x); }
     Cell& at(int x,int z) { return cells_[index(x,z)]; }
     static constexpr std::size_t maxHistory_ = 32;

@@ -206,12 +206,13 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
                 try {
                     const bool changed=edit.panel==EditorSession::Panel::Triggers
                         ? edit.finishTriggerEdit(s->project):edit.finishEdit(s->project);
-                    if(changed){
+                    if(changed && !edit.textEditing){
                         TriggerEngine::validate(s->project);
                         s->reloadFromProject();
                     }
                 }catch(const std::exception& e){
                     s->project=std::move(backup);
+                    edit.discardRejectedChange();
                     edit.modified=wasModified;
                     edit.message=std::string("INVALID EDIT: ")+e.what();
                     try{s->reloadFromProject();}catch(...) {}
@@ -252,11 +253,11 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     }
     if(edit.panel==EditorSession::Panel::Play)return;
     try{
-        if(edit.panel==EditorSession::Panel::Terrain && ctrl && key==GLFW_KEY_Z) {
+        if(ctrl && key==GLFW_KEY_Z) {
             if(edit.undo(s->project))s->reloadFromProject();
             return;
         }
-        if(edit.panel==EditorSession::Panel::Terrain && ctrl && key==GLFW_KEY_Y) {
+        if(ctrl && key==GLFW_KEY_Y) {
             if(edit.redo(s->project))s->reloadFromProject();
             return;
         }

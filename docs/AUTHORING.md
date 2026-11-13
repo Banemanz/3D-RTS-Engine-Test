@@ -35,7 +35,7 @@ target is `projects/working.rtsproject.json`.
 | M | Cycle terrain material 0–7 |
 | P / Shift+P | Cycle placed unit type / doodad actor type |
 | O | Change placement owner |
-| Ctrl+Z / Ctrl+Y | Undo/redo for terrain and placed objects (basic history) |
+| Ctrl+Z / Ctrl+Y | Undo/redo across terrain, placements, catalog edits and trigger edits (32 snapshots) |
 | Tab / Shift+Tab (data) | Next / previous catalog object |
 | Up / Down (data) | Select a field |
 | Enter (data) | Edit selected field as JSON, or bare text |
@@ -182,7 +182,9 @@ autocomplete, profiling and debugger.
 - Arbitrary actor mesh references are preserved but not imported/rendered.
 - The current terrain editor may reload the match after editing placed objects;
   a future play-in-editor system should preserve selections and state.
-- Basic undo/redo does not fully cover all edits, especially data editing
-  and certain mixed placement/terrain sequences.
+- Editing now uses a single chronological 32-step snapshot history across
+  terrain strokes, placed objects, catalog properties and trigger JSON.
+  Undo/redo applies to all three editor panels. Autosave, transaction
+  coalescing for held keys and recovery after application crashes are TBD.
 - End-game hardcoded enemy waves still coexist with trigger-authored events.
 - Custom triggers are not yet directly editable through a visual graph.

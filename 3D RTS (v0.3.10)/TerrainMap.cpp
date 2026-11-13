@@ -65,11 +65,13 @@ bool TerrainMap::raycast(const Ray& ray,Vec3& result,float maxDistance)const {
     }
     return false;
 }
-void TerrainMap::beginStroke() {
+void TerrainMap::beginStroke(bool retainLocalHistory) {
     if(stroke_)return;
-    stroke_=true;strokeChanged_=false;
-    undo_.push_back({cells_});
-    while(undo_.size()>maxHistory_)undo_.pop_front();
+    stroke_=true;strokeChanged_=false;strokeHasHistory_=retainLocalHistory;
+    if(retainLocalHistory) {
+        undo_.push_back({cells_});
+        while(undo_.size()>maxHistory_)undo_.pop_front();
+    }
 }
 bool TerrainMap::applyBrush(const Vec3& center,Brush brush,float radius,
                             float strength,std::uint8_t material) {
@@ -117,14 +119,15 @@ bool TerrainMap::applyBrush(const Vec3& center,Brush brush,float radius,
         }
     if(changed) {
         dirty_=true;strokeChanged_=true;
-        redo_.clear();
+        if(strokeHasHistory_)redo_.clear();
     }
     return changed;
 }
 void TerrainMap::endStroke(){
     if(!stroke_)return;
     stroke_=false;
-    if(!strokeChanged_ && !undo_.empty())undo_.pop_back();
+    if(strokeHasHistory_ && !strokeChanged_ && !undo_.empty())undo_.pop_back();
+    strokeHasHistory_=true;
 }
 bool TerrainMap::undo(){
     endStroke();
@@ -141,7 +144,9 @@ bool TerrainMap::redo(){
     cells_=std::move(redo_.back().cells);redo_.pop_back();
     dirty_=true;return true;
 }
-void TerrainMap::clearHistory(){undo_.clear();redo_.clear();stroke_=false;strokeChanged_=false;}
+void TerrainMap::clearHistory(){
+    undo_.clear();redo_.clear();stroke_=false;strokeChanged_=false;strokeHasHistory_=true;
+}
 std::vector<float> TerrainMap::buildMesh() const {
     std::vector<float> result;
     result.reserve(static_cast<std::size_t>((width_-1)*(depth_-1)*6*5));

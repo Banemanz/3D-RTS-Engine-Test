@@ -45,7 +45,7 @@ fields now resolve on individual placed instances.
 | **UI & localization** | Tiny built-in bitmap HUD, project metadata | UI scene/layout editor, nested anchors, cursor/icons, dialog system, hotkeys, localization tables and fallback, accessible fonts |
 | **AI & campaign** | Hardcoded enemy reinforcement behavior; first triggers | Behavior trees/utility AI, tactical policies, objectives, waves, campaigns, mission sequencing, bank/persistence |
 | **Asset importer / mod packages** | JSON projects, CLI; no external model runtime | File browser, import staging, hashes, dependencies, content packs, mod layering/conflict resolution, export/build and sandboxed publishing |
-| **Save, test, debug, profiling** | Project save/load, logic tests, CI, engine smoke captures | Play-in-editor state snapshot, diff/compare, playtest debugger, tracing and profiling, hot reload, crash recovery and transactional undo, content migrations |
+| **Save, test, debug, profiling** | Project save/load, 32-step chronological cross-editor undo/redo, logic tests, CI, engine smoke captures | Play-in-editor state snapshot, diff/compare, playtest debugger, tracing and profiling, hot reload, crash recovery and transactional undo, content migrations |
 | **Multiplayer / mod distribution** | Not implemented | Deterministic simulation, replay/rollback or lockstep, anti-cheat boundaries, lobby rules, dedicated hosting, versioned package distribution |
 
 ## The 87 SC2 catalog categories as reference

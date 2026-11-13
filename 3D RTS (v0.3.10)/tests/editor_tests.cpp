@@ -28,7 +28,15 @@ int main() {
     editor.editText="34";
     assert(editor.finishEdit(p));
     assert(unitFromCatalog(p.catalog,"marine").damage==34.0f);
+    assert(editor.undo(p));
+    assert(unitFromCatalog(p.catalog,"marine").damage==7.0f);
+    assert(editor.redo(p));
+    assert(unitFromCatalog(p.catalog,"marine").damage==34.0f);
     assert(editor.duplicateCatalogObject(p));
+    assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size()+1);
+    assert(editor.undo(p));
+    assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size());
+    assert(editor.redo(p));
     assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size()+1);
     editor.beginNewField();
     editor.editText="custom_mod_value";assert(editor.finishEdit(p));
@@ -45,6 +53,15 @@ int main() {
     assert(editor.duplicateTrigger(p));
     assert(editor.triggerCount(p)==2);
     assert(editor.deleteTrigger(p));
+    assert(editor.triggerCount(p)==1);
+    assert(editor.undo(p));
+    assert(editor.triggerCount(p)==2);
+    assert(editor.redo(p));
+    assert(editor.triggerCount(p)==1);
+
+    // Mixed history is chronological: trigger edit -> data edit -> terrain.
+    assert(editor.undo(p));
+    assert(editor.undo(p));
     assert(editor.triggerCount(p)==1);
     std::cout<<"editor: terrain strokes, placement undo, data and trigger editing passed\n";
 }

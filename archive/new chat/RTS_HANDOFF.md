@@ -81,3 +81,13 @@ Linux editor, and uploads platform archives as build artifacts.
 Artifacts are not published as GitHub Releases or merged into main; see
 `docs/BUILD_ARTIFACTS.md`. Existing Debug CI still runs and captures
 OpenGL screenshots for gameplay, terrain editor and trigger editor.
+
+## Undo/redo history update
+
+`EditorSession` now saves bounded (32) full-project snapshots for terrain
+strokes, placements, data property edits and trigger CRUD/JSON. TerrainMap can
+still manage its independent history when used directly, but editor terrain
+strokes disable its nested history so snapshots don't multiply recursively.
+Ctrl+Z/Y work throughout the edit panels. Current limitations: undo memory
+is proportional to full project size; no persistent disk recovery or coalescing
+beyond each terrain brush stroke.

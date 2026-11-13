@@ -2,6 +2,7 @@
 #include "RTSProject.hpp"
 #include <cstddef>
 #include <deque>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -35,6 +36,8 @@ public:
     void finishStroke(RTSProject& project);
     bool undo(RTSProject& project);
     bool redo(RTSProject& project);
+    // Used only to discard a tentative edit rejected by the runtime validator.
+    void discardRejectedChange();
 
     bool place(RTSProject& project,const Vec3& worldPos);
     bool removeNearest(RTSProject& project,const Vec3& worldPos,float radius=3.0f);
@@ -71,9 +74,12 @@ public:
 private:
     bool painting_=false;
     bool strokeActionRecorded_=false;
-    std::deque<std::vector<ProjectPlacement>> placementUndo_,placementRedo_;
-    std::deque<bool> history_; // true: placement, false: terrain
+    std::unique_ptr<RTSProject> strokeBefore_;
+    // One chronological undo stack across terrain, instances, catalogs and triggers.
+    // Snapshots never embed TerrainMap's own undo history.
+    std::deque<RTSProject> undo_,redo_;
     std::string pendingNewField_;
     std::size_t maxHistory_=32;
-    void rememberPlacement(const RTSProject& project);
+    void remember(const RTSProject& project);
+    void rememberPlacement(const RTSProject& project) { remember(project); }
 };

@@ -31,15 +31,18 @@ std::string EditorSession::toolName()const {
 }
 void EditorSession::startStroke(RTSProject& project) {
     if(painting_)return;
-    painting_=true;
-    strokeActionRecorded_=false;
-    project.terrain.beginStroke();
+    painting_=true;strokeActionRecorded_=false;
+    strokeBefore_=std::make_unique<RTSProject>(project);
+    strokeBefore_->terrain.clearHistory();
+    // One full-project snapshot owns this edit; don't duplicate terrain history.
+    project.terrain.beginStroke(false);
 }
 void EditorSession::finishStroke(RTSProject& project) {
     if(!painting_)return;
     painting_=false;
     strokeActionRecorded_=false;
     project.terrain.endStroke();
+    strokeBefore_.reset();
 }
 bool EditorSession::paint(RTSProject& p,const Vec3& worldPos) {
     if(panel!=Panel::Terrain || !painting_)return false;
@@ -62,41 +65,44 @@ bool EditorSession::paint(RTSProject& p,const Vec3& worldPos) {
         modified=true;
         if(!strokeActionRecorded_) {
             strokeActionRecorded_=true;
-            history_.push_back(false);
-            if(history_.size()>maxHistory_)history_.pop_front();
+            if(strokeBefore_)remember(*strokeBefore_);
+            strokeBefore_.reset();
         }
     }
     return changed;
 }
-void EditorSession::rememberPlacement(const RTSProject& project) {
-    placementUndo_.push_back(project.placements);
-    while(placementUndo_.size()>maxHistory_)placementUndo_.pop_front();
-    placementRedo_.clear();
-    history_.push_back(true);
-    while(history_.size()>maxHistory_)history_.pop_front();
+void EditorSession::remember(const RTSProject& project) {
+    undo_.push_back(project);
+    undo_.back().terrain.clearHistory();
+    while(undo_.size()>maxHistory_)undo_.pop_front();
+    redo_.clear();
 }
 bool EditorSession::undo(RTSProject& project) {
     finishStroke(project);
-    if(history_.empty())return project.terrain.undo();
-    bool placement=history_.back();history_.pop_back();
-    if(!placement)return project.terrain.undo();
-    if(placementUndo_.empty())return false;
-    placementRedo_.push_back(project.placements);
-    project.placements=std::move(placementUndo_.back());
-    placementUndo_.pop_back();
+    if(undo_.empty())return false;
+    redo_.push_back(project);
+    redo_.back().terrain.clearHistory();
+    while(redo_.size()>maxHistory_)redo_.pop_front();
+    project=std::move(undo_.back());
+    undo_.pop_back();
+    project.terrain.markDirty();
     modified=true;
     return true;
 }
 bool EditorSession::redo(RTSProject& project) {
     finishStroke(project);
-    if(!placementRedo_.empty()) {
-        placementUndo_.push_back(project.placements);
-        project.placements=std::move(placementRedo_.back());
-        placementRedo_.pop_back();
-        history_.push_back(true);
-        modified=true;return true;
-    }
-    return project.terrain.redo();
+    if(redo_.empty())return false;
+    undo_.push_back(project);
+    undo_.back().terrain.clearHistory();
+    while(undo_.size()>maxHistory_)undo_.pop_front();
+    project=std::move(redo_.back());
+    redo_.pop_back();
+    project.terrain.markDirty();
+    modified=true;
+    return true;
+}
+void EditorSession::discardRejectedChange(){
+    if(!undo_.empty())undo_.pop_back();
 }
 bool EditorSession::cyclePlacementCatalog(const RTSProject& project,int direction,bool doodad) {
     std::vector<std::string> ids;
@@ -220,6 +226,7 @@ bool EditorSession::finishEdit(RTSProject& project) {
     if(!selectedEntry)return false;
     std::string key=pendingNewField_.empty()?selectedFieldName(project):pendingNewField_;
     if(key.empty())return false;
+    const RTSProject before=project;
     auto i=selectedEntry->fields.find(key);
     const bool had=i!=selectedEntry->fields.end();
     const picojson::value before=had?i->second:picojson::value();
@@ -236,6 +243,7 @@ bool EditorSession::finishEdit(RTSProject& project) {
         message=std::string("INVALID EDIT: ")+e.what();
         return false;
     }
+    remember(before);
     modified=true;textEditing=false;editText.clear();pendingNewField_.clear();
     message="FIELD SAVED";
     auto keys=fields(project);
@@ -248,10 +256,12 @@ bool EditorSession::removeLocalOverride(RTSProject& project) {
     auto key=selectedFieldName(project);
     auto* mutableEntry=project.catalog.find(e->id);
     if(!mutableEntry || !mutableEntry->fields.count(key))return false;
+    const RTSProject before=project;
     auto old=mutableEntry->fields.at(key);
     mutableEntry->fields.erase(key);
     try{project.validate();}
     catch(...){mutableEntry->fields[key]=old;return false;}
+    remember(before);
     modified=true;message="OVERRIDE REMOVED";return true;
 }
 bool EditorSession::duplicateCatalogObject(RTSProject& project) {
@@ -260,7 +270,9 @@ bool EditorSession::duplicateCatalogObject(RTSProject& project) {
     std::string next=base;
     int suffix=2;
     while(project.catalog.find(next))next=base+std::to_string(suffix++);
+    const RTSProject before=project;
     if(!project.catalog.cloneDerived(e->id,next))return false;
+    remember(before);
     selectedObject=project.catalog.entries().size()-1;
     selectedField=0;modified=true;message="DERIVED "+next;return true;
 }
@@ -336,7 +348,9 @@ bool EditorSession::createTrigger(RTSProject& project) {
         {"id",picojson::value(id)},{"event",picojson::value(event)},
         {"once",picojson::value(true)},{"actions",picojson::value(actions)}
     };
+    const RTSProject before=project;
     a.emplace_back(v);
+    remember(before);
     selectedTrigger=a.size()-1;
     modified=true;message="TRIGGER CREATED";
     return true;
@@ -355,7 +369,9 @@ bool EditorSession::duplicateTrigger(RTSProject& project) {
     std::string base=candidate;
     while(exists(candidate))candidate=base+std::to_string(n++);
     copied["id"]=picojson::value(candidate);
+    const RTSProject before=project;
     a.emplace_back(copied);
+    remember(before);
     selectedTrigger=a.size()-1;
     modified=true;message="TRIGGER DUPLICATED";
     return true;
@@ -363,7 +379,9 @@ bool EditorSession::duplicateTrigger(RTSProject& project) {
 bool EditorSession::deleteTrigger(RTSProject& project) {
     auto& a=mutableTriggers(project);
     if(a.empty())return false;
+    const RTSProject before=project;
     a.erase(a.begin()+static_cast<std::ptrdiff_t>(selectedTrigger%a.size()));
+    remember(before);
     selectedTrigger=std::min(selectedTrigger,a.empty()?std::size_t(0):a.size()-1);
     modified=true;message="TRIGGER REMOVED";
     return true;
@@ -393,8 +411,10 @@ bool EditorSession::finishTriggerEdit(RTSProject& project) {
         if(i!=selectedTrigger%rules.size() && triggerId(rules[i])==id) {
             message="DUPLICATE TRIGGER ID";return false;
         }
+    const RTSProject before=project;
     auto& writable=mutableTriggers(project);
     writable[selectedTrigger%writable.size()]=std::move(parsed);
+    remember(before);
     textEditing=false;editText.clear();
     modified=true;message="TRIGGER JSON UPDATED";
     return true;
