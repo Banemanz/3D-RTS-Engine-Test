@@ -9,6 +9,9 @@ include(CTest)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
+add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp)
+target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
 add_library(RTSSimulation STATIC
     RTSSkirmish.cpp
     unit_navigationagent3d_implementation.cpp
@@ -32,6 +35,14 @@ if(BUILD_TESTING)
     add_executable(RTSChaseTests tests/chase_tests.cpp)
     target_link_libraries(RTSChaseTests PRIVATE RTSSimulation)
     add_test(NAME chase COMMAND RTSChaseTests)
+
+    add_executable(RTSTerrainTests tests/terrain_tests.cpp)
+    target_link_libraries(RTSTerrainTests PRIVATE RTSAuthoring)
+    add_test(NAME terrain COMMAND RTSTerrainTests)
+
+    add_executable(RTSCatalogTests tests/catalog_tests.cpp)
+    target_link_libraries(RTSCatalogTests PRIVATE RTSAuthoring)
+    add_test(NAME catalog COMMAND RTSCatalogTests)
 endif()
 
 if(RTS_BUILD_DEMO)
@@ -58,7 +69,9 @@ endif()
 if(MSVC)
     target_compile_options(RTSNavigation PRIVATE /W4)
     target_compile_options(RTSSimulation PRIVATE /W4)
+    target_compile_options(RTSAuthoring PRIVATE /W4)
 else()
     target_compile_options(RTSNavigation PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(RTSSimulation PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(RTSAuthoring PRIVATE -Wall -Wextra -Wpedantic)
 endif()
