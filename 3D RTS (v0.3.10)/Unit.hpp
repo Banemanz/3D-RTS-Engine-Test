@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Math3D.hpp"
-#include "RTSCamera.hpp"
+#include "Ray.hpp"
 #include "UnitData.hpp"
 #include <string>
 #include <vector>
@@ -45,6 +45,10 @@ inline std::string unitStateToString(UnitState s) {
 class Unit {
 public:
     int id = 0;
+    // Control/ownership are separate from model faction/visuals.
+    int ownerId = 0;
+    bool isStructure = false;
+    bool isWorker = false;
     std::string instanceName;
     UnitData data;
 

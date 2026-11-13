@@ -1,12 +1,8 @@
 #pragma once
 
 #include "Math3D.hpp"
+#include "Ray.hpp"
 #include <GLFW/glfw3.h>
-
-struct Ray {
-    Vec3 origin;
-    Vec3 direction;
-};
 
 class RTSCamera {
 public:

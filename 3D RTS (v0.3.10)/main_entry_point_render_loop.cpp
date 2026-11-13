@@ -1,9 +1,5 @@
-/**
- * Compilation Instructions:
- *   Linux:   g++ -std=c++17 main.cpp GLCore.cpp RTSCamera.cpp UnitData.cpp Unit.cpp SelectionManager.cpp -o rts_engine -lglfw -lGL -ldl
- *   macOS:   g++ -std=c++17 main.cpp GLCore.cpp RTSCamera.cpp UnitData.cpp Unit.cpp SelectionManager.cpp -o rts_engine -lglfw -framework OpenGL
- *   Windows: g++ -std=c++17 main.cpp GLCore.cpp RTSCamera.cpp UnitData.cpp Unit.cpp SelectionManager.cpp -o rts_engine.exe -lglfw3 -lopengl32 -lgdi32
- */
+// Build using CMake; see the repository README.md.
+
 
 #include "GLCore.hpp"
 #include "Math3D.hpp"
@@ -12,6 +8,9 @@
 #include "Unit.hpp"
 #include "SelectionManager.hpp"
 #include "Shaders.hpp"
+#include "RTSSkirmish.hpp"
+#include <cmath>
+#include <string>
 
 #include <algorithm>
 #include <iostream>
@@ -20,7 +19,11 @@
 struct AppState {
     RTSCamera camera;
     SelectionManager selectionManager;
-    std::vector<Unit> units;
+    RTSSkirmish game;
+    enum class Mode { Normal, AttackMove, BuildBarracks } mode = Mode::Normal;
+    bool keyA = false, keyB = false, keyT = false, keyC = false;
+    bool keyX = false, keyR = false;
+    int framebufferWidth = 1280, framebufferHeight = 720;
 
     Vec3 lastClickedWorldPos{0.0f, 0.0f, 0.0f};
     bool hasMoveMarker = false;
@@ -32,11 +35,18 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
+        state->framebufferWidth = width;
+        state->framebufferHeight = height;
+    }
+}
+
+void windowSizeCallback(GLFWwindow* window, int width, int height) {
+    auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if (state) {
         state->windowWidth = width;
         state->windowHeight = height;
     }
 }
-
 void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
@@ -66,28 +76,36 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->selectionManager.onLeftMouseUp(
                 mouseX, mouseY, shiftHeld,
                 state->camera, state->windowWidth, state->windowHeight,
-                state->units
+                state->game.units
             );
         }
     }
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-        Unit* clickedEnemy = state->selectionManager.raycastEnemyUnit(
-            mouseX, mouseY, state->camera, state->windowWidth, state->windowHeight, state->units
-        );
+        Vec3 hit;
+        if (!state->camera.screenToGroundRaycast(mouseX, mouseY,
+                state->windowWidth, state->windowHeight, hit)) return;
+        state->lastClickedWorldPos = hit;
+        state->hasMoveMarker = true;
 
-        if (clickedEnemy) {
-            state->selectionManager.issueAttackOrder(clickedEnemy, state->units);
+        if (state->mode == AppState::Mode::BuildBarracks) {
+            if (!state->game.buildBarracks(hit))
+                std::cout << "[Build] Requires a selected worker nearby, 150 minerals and clear terrain.\n";
+            state->mode = AppState::Mode::Normal;
             return;
         }
-
-        Vec3 hitPoint;
-        if (state->camera.screenToGroundRaycast(mouseX, mouseY, state->windowWidth, state->windowHeight, hitPoint)) {
-            state->lastClickedWorldPos = hitPoint;
-            state->hasMoveMarker = true;
-
-            bool isAttackMove = (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS);
-            state->selectionManager.issueMoveCommand(hitPoint, isAttackMove, state->units);
+        if (state->mode == AppState::Mode::AttackMove) {
+            state->game.orderMove(hit, true);
+            state->mode = AppState::Mode::Normal;
+            return;
+        }
+        Unit* enemy = state->selectionManager.raycastEnemyUnit(
+            mouseX, mouseY, state->camera,
+            state->windowWidth, state->windowHeight, state->game.units);
+        if (enemy) {
+            state->game.orderAttack(enemy->id);
+        } else if (!state->game.orderGather(hit)) {
+            state->game.orderMove(hit, false);
         }
     }
 }
@@ -129,6 +147,10 @@ int main() {
 
         glfwSetWindowUserPointer(window, &app);
         glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+        glfwSetWindowSizeCallback(window, windowSizeCallback);
+        glfwGetWindowSize(window, &app.windowWidth, &app.windowHeight);
+        glfwGetFramebufferSize(window, &app.framebufferWidth, &app.framebufferHeight);
+        glViewport(0, 0, app.framebufferWidth, app.framebufferHeight);
         glfwSetScrollCallback(window, scrollCallback);
         glfwSetCursorPosCallback(window, cursorPosCallback);
         glfwSetMouseButtonCallback(window, mouseButtonCallback);
@@ -143,23 +165,7 @@ int main() {
         GLuint hudBoxShader  = compileShaderProgram(HUD_BOX_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
         GLuint lineShader    = compileShaderProgram(LINE_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
 
-        UnitData humanMarineData = UnitData::fromTresString(HUMAN_MARINE_TRES);
-        UnitData hybridZealotData = UnitData::fromTresString(HYBRID_ZEALOT_TRES);
-
-        std::cout << "--- Loaded Sample .tres UnitData Resources ---\n"
-                  << humanMarineData.toTresString() << "\n"
-                  << hybridZealotData.toTresString()
-                  << "----------------------------------------------\n";
-
-        app.units.emplace_back(1, "Marine Alpha",   humanMarineData, Vec3(-8.5f, 0.0f, -3.5f));
-        app.units.emplace_back(2, "Marine Bravo",   humanMarineData, Vec3(-8.5f, 0.0f, -1.2f));
-        app.units.emplace_back(3, "Marine Charlie", humanMarineData, Vec3(-8.5f, 0.0f,  1.2f));
-        app.units.emplace_back(4, "Marine Delta",   humanMarineData, Vec3(-8.5f, 0.0f,  3.5f));
-        app.units.emplace_back(5, "Marine Echo",    humanMarineData, Vec3(-10.5f, 0.0f, -2.0f));
-        app.units.emplace_back(6, "Marine Foxtrot", humanMarineData, Vec3(-10.5f, 0.0f,  2.0f));
-
-        app.units.emplace_back(7, "Zealot Vorazun", hybridZealotData, Vec3(8.5f, 0.0f, -2.5f));
-        app.units.emplace_back(8, "Zealot Karax",   hybridZealotData, Vec3(8.5f, 0.0f,  2.5f));
+        // The skirmish owns unit lifetimes and initial spawning; see RTSSkirmish.
 
         // 1. Terrain Geometry
         const float terrainSize = 120.0f;
@@ -235,27 +241,57 @@ int main() {
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
-        std::cout << "=====================================================================" << std::endl;
-        std::cout << "3D RTS Combat & Resource Engine Ready!" << std::endl;
-        std::cout << " - Left-Click / Drag Box: Select Humanity Marines." << std::endl;
-        std::cout << " - Right-Click Ground: Move (Units auto-attack enemies in aggro range)." << std::endl;
-        std::cout << " - Right-Click Hybrid Zealot: Focus-fire target." << std::endl;
-        std::cout << "=====================================================================" << std::endl;
-
+        std::cout << "RTS Skirmish: LMB select, RMB move/attack/gather, A then RMB attack-move,\n"
+                  << "B then RMB place Barracks (worker needed), T train Marine, C train Worker,\n"
+                  << "X stop, Q/E rotate, arrows/W/S/D camera, R restart, Esc quit.\n";
+        float accumulator = 0.0f;
+        const float fixedStep = 1.0f / 60.0f;
+        double lastTitleUpdate = 0.0;
         double lastTime = glfwGetTime();
 
         while (!glfwWindowShouldClose(window)) {
             double currentTime = glfwGetTime();
-            float deltaTime = (std::min)(0.05f, static_cast<float>(currentTime - lastTime));
+            float deltaTime = std::clamp(static_cast<float>(currentTime - lastTime), 0.0f, 0.25f);
             lastTime = currentTime;
 
-            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            auto justPressed = [&](int key, bool& previous) {
+                bool down = glfwGetKey(window, key) == GLFW_PRESS;
+                bool fired = down && !previous;
+                previous = down;
+                return fired;
+            };
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
                 glfwSetWindowShouldClose(window, true);
+            if (justPressed(GLFW_KEY_A, app.keyA)) app.mode = AppState::Mode::AttackMove;
+            if (justPressed(GLFW_KEY_B, app.keyB)) app.mode = AppState::Mode::BuildBarracks;
+            if (justPressed(GLFW_KEY_T, app.keyT)) app.game.queueMarine();
+            if (justPressed(GLFW_KEY_C, app.keyC)) app.game.queueWorker();
+            if (justPressed(GLFW_KEY_X, app.keyX)) app.game.orderStop();
+            if (justPressed(GLFW_KEY_R, app.keyR)) {
+                app.game.reset();
+                app.mode = AppState::Mode::Normal;
+                app.hasMoveMarker = false;
             }
+            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
 
             app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
-            for (auto& unit : app.units) {
-                unit.update(deltaTime, app.units, app.camera.mapBoundary);
+            accumulator += deltaTime;
+            int steps = 0;
+            while (accumulator >= fixedStep && steps < 8) {
+                app.game.update(fixedStep);
+                accumulator -= fixedStep;
+                ++steps;
+            }
+            if (steps == 8 && accumulator >= fixedStep)
+                accumulator = std::fmod(accumulator, fixedStep); // discard severe stalls, not unbounded catch-up
+
+            if (currentTime - lastTitleUpdate > 0.35) {
+                const char* mode = app.mode == AppState::Mode::BuildBarracks ? "PLACE BARRACKS: RMB" :
+                    app.mode == AppState::Mode::AttackMove ? "ATTACK MOVE: RMB" : "COMMAND";
+                std::string title = std::string("3D RTS | ") + app.game.statusLine() + " | " + mode;
+                glfwSetWindowTitle(window, title.c_str());
+                lastTitleUpdate = currentTime;
             }
 
             glClearColor(0.08f, 0.11f, 0.15f, 1.0f);
@@ -283,7 +319,7 @@ int main() {
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
             // 2. Render 3D Alive Units, Rings & Weapon Tracers
-            for (const auto& unit : app.units) {
+            for (const auto& unit : app.game.units) {
                 if (!unit.isAlive()) continue;
 
                 if (unit.isSelected) {
@@ -341,6 +377,21 @@ int main() {
                 }
             }
 
+            // Mineral patches use the placeholder unit mesh until an asset pipeline exists.
+            glUseProgram(unitShader);
+            glUniformMatrix4fv(glGetUniformLocation(unitShader, "uView"), 1, GL_FALSE, view.m);
+            glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"), 1, GL_FALSE, proj.m);
+            glUniform3f(glGetUniformLocation(unitShader, "uColor"), 0.15f, 0.72f, 0.88f);
+            glUniform1f(glGetUniformLocation(unitShader, "uSelected"), 0.0f);
+            glBindVertexArray(unitVAO);
+            for (const auto& node : app.game.minerals) {
+                if (node.remaining <= 0) continue;
+                Mat4 mesh = Mat4::translate(node.position)
+                          * Mat4::scale(Vec3(1.35f, 1.1f, 1.35f));
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"), 1, GL_FALSE, mesh.m);
+                glDrawArrays(GL_TRIANGLES, 0, 33);
+            }
+
             // 3. Render Floating 2D Screen-Projected Health Bars & Drag-Selection Box
             glDisable(GL_DEPTH_TEST);
             glUseProgram(hudBoxShader);
@@ -351,7 +402,7 @@ int main() {
                 auto toNdcX = [&](float px) { return (2.0f * px) / static_cast<float>(app.windowWidth) - 1.0f; };
                 auto toNdcY = [&](float py) { return 1.0f - (2.0f * py) / static_cast<float>(app.windowHeight); };
 
-                for (const auto& unit : app.units) {
+                for (const auto& unit : app.game.units) {
                     if (!unit.isAlive()) continue;
                     Vec2 headScreen;
                     if (app.camera.worldToScreen(unit.position + Vec3(0.0f, unit.height + 0.45f, 0.0f),

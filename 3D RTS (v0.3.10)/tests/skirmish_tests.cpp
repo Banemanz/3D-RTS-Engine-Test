@@ -1,0 +1,60 @@
+#include "RTSSkirmish.hpp"
+#include <cassert>
+#include <iostream>
+
+static void assertStartingState() {
+    RTSSkirmish game;
+    assert(game.result==MatchResult::Playing);
+    assert(game.units.size()==10);
+    assert(game.playerMinerals==220);
+    assert(game.supplyUsed==6);
+    assert(game.activeWorkerCount()==2);
+    assert(game.minerals.size()==3);
+}
+static void assertBuildingAndProduction() {
+    RTSSkirmish game;
+    for(auto& u:game.units)if(u.isWorker && u.ownerId==0)u.isSelected=true;
+    assert(!game.buildBarracks({-22,0,0})); // overlaps command center
+    assert(game.playerMinerals==220);
+    assert(game.buildBarracks({-28,0,14}));
+    assert(game.playerMinerals==70);
+    assert(!game.queueMarine()); // construction has not finished
+    for(int i=0;i<600;++i)game.update(1.0f/60.0f);
+    assert(game.completedBarracksCount()==1);
+    assert(game.queueMarine());
+    assert(game.playerMinerals==20);
+    int previous=game.units.size();
+    for(int i=0;i<480;++i)game.update(1.0f/60.0f);
+    assert(game.units.size()>static_cast<size_t>(previous));
+}
+static void assertOrders() {
+    RTSSkirmish game;
+    for(auto& u:game.units)if(u.ownerId==0 && !u.isStructure && !u.isWorker)u.isSelected=true;
+    assert(game.orderMove({500,0,500},true)); // must project into playable grid
+    game.update(1.0f/60.0f);
+    bool hasActive=false;
+    for(const auto& u:game.units)if(u.ownerId==0 && !u.isStructure && !u.isWorker) {
+        assert(u.navAgent.targetPosition.x<=48.0f);
+        assert(u.navAgent.targetPosition.z<=48.0f);
+        hasActive=hasActive || u.navAgent.hasDestination;
+    }
+    assert(hasActive);
+    game.orderStop();
+    for(const auto& u:game.units)if(u.ownerId==0 && !u.isStructure && !u.isWorker)
+        assert(!u.navAgent.hasDestination);
+}
+static void assertGathering() {
+    RTSSkirmish game;
+    for(auto& u:game.units)if(u.ownerId==0 && u.isWorker)u.isSelected=true;
+    const int startRemaining=game.minerals[0].remaining;
+    assert(game.orderGather(game.minerals[0].position));
+    for(int i=0;i<1200;++i)game.update(1.0f/60.0f);
+    assert(game.minerals[0].remaining<startRemaining);
+}
+int main() {
+    assertStartingState();
+    assertBuildingAndProduction();
+    assertOrders();
+    assertGathering();
+    std::cout<<"skirmish: 4 tests passed\n";
+}

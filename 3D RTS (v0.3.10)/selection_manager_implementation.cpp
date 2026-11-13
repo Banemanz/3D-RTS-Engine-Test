@@ -42,7 +42,7 @@ Unit* SelectionManager::raycastEnemyUnit(double mouseX, double mouseY, const RTS
     float minDist = std::numeric_limits<float>::max();
 
     for (auto& unit : units) {
-        if (!unit.isAlive() || unit.getFaction() == Faction::Humanity) continue;
+        if (!unit.isAlive() || unit.ownerId == 0) continue;
         float hitDist = 0.0f;
         if (unit.intersectRay(clickRay, hitDist) && hitDist < minDist) {
             minDist = hitDist;
@@ -56,7 +56,7 @@ void SelectionManager::issueAttackOrder(Unit* targetEnemy, std::vector<Unit>& un
     if (!targetEnemy || !targetEnemy->isAlive()) return;
     int commanded = 0;
     for (auto& unit : units) {
-        if (unit.isAlive() && unit.isSelected && unit.getFaction() == Faction::Humanity) {
+        if (unit.isAlive() && unit.isSelected && unit.ownerId == 0 && !unit.isStructure) {
             unit.attackTarget(targetEnemy->id);
             commanded++;
         }
@@ -70,7 +70,7 @@ void SelectionManager::issueAttackOrder(Unit* targetEnemy, std::vector<Unit>& un
 void SelectionManager::issueMoveCommand(const Vec3& groundClickPos, bool isAttackMove, std::vector<Unit>& units) {
     std::vector<Unit*> selectedUnits;
     for (auto& unit : units) {
-        if (unit.isAlive() && unit.isSelected && unit.getFaction() == Faction::Humanity) {
+        if (unit.isAlive() && unit.isSelected && unit.ownerId == 0 && !unit.isStructure) {
             selectedUnits.push_back(&unit);
         }
     }
@@ -135,9 +135,9 @@ void SelectionManager::performSingleClickSelection(double mouseX, double mouseY,
 
     if (closestHit) {
         if (shiftHeld) {
-            closestHit->setSelected(!closestHit->isSelected);
+            if (closestHit->ownerId == 0) closestHit->setSelected(!closestHit->isSelected);
         } else {
-            closestHit->setSelected(true);
+            closestHit->setSelected(closestHit->ownerId == 0);
         }
         std::cout << "[Select] " << closestHit->instanceName
                   << " [" << closestHit->data.resourceName
@@ -164,7 +164,7 @@ void SelectionManager::performBoxSelection(bool shiftHeld, const RTSCamera& came
 
     int newlySelected = 0;
     for (auto& unit : units) {
-        if (!unit.isAlive() || unit.getFaction() != Faction::Humanity) continue;
+        if (!unit.isAlive() || unit.ownerId != 0 || unit.isStructure) continue;
         Vec3 unitCenter = unit.position + Vec3(0.0f, unit.height * 0.45f, 0.0f);
         Vec2 screenPos;
 

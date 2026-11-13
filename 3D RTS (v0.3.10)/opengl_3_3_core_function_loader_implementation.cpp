@@ -1,4 +1,5 @@
 #include "GLCore.hpp"
+#include <iostream>
 
 PFNGLGENBUFFERSPROC glGenBuffers = nullptr;
 PFNGLBINDBUFFERPROC glBindBuffer = nullptr;
@@ -55,5 +56,34 @@ bool loadOpenGLFunctions() {
     glUniform1f = (PFNGLUNIFORM1FPROC)glfwGetProcAddress("glUniform1f");
     glUniform1i = (PFNGLUNIFORM1IPROC)glfwGetProcAddress("glUniform1i");
 
-    return glGenBuffers && glCreateShader && glUseProgram && glUniformMatrix4fv;
+    bool ok = true;
+#define REQUIRE_GL(fn) if (!(fn)) { std::cerr << "Missing OpenGL function: " #fn << '\\n'; ok = false; }
+    REQUIRE_GL(glGenBuffers)
+    REQUIRE_GL(glBindBuffer)
+    REQUIRE_GL(glBufferData)
+    REQUIRE_GL(glBufferSubData)
+    REQUIRE_GL(glGenVertexArrays)
+    REQUIRE_GL(glBindVertexArray)
+    REQUIRE_GL(glEnableVertexAttribArray)
+    REQUIRE_GL(glVertexAttribPointer)
+    REQUIRE_GL(glCreateShader)
+    REQUIRE_GL(glShaderSource)
+    REQUIRE_GL(glCompileShader)
+    REQUIRE_GL(glGetShaderiv)
+    REQUIRE_GL(glGetShaderInfoLog)
+    REQUIRE_GL(glCreateProgram)
+    REQUIRE_GL(glAttachShader)
+    REQUIRE_GL(glLinkProgram)
+    REQUIRE_GL(glGetProgramiv)
+    REQUIRE_GL(glGetProgramInfoLog)
+    REQUIRE_GL(glUseProgram)
+    REQUIRE_GL(glDeleteShader)
+    REQUIRE_GL(glGetUniformLocation)
+    REQUIRE_GL(glUniformMatrix4fv)
+    REQUIRE_GL(glUniform4f)
+    REQUIRE_GL(glUniform3f)
+    REQUIRE_GL(glUniform1f)
+    REQUIRE_GL(glUniform1i)
+#undef REQUIRE_GL
+    return ok;
 }

@@ -23,7 +23,7 @@ void RTSCamera::update(float deltaTime, GLFWwindow* window, int windowWidth, int
         else if (mouseY >= windowHeight - edgeMarginPixels) panInput.z += 1.0f;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         panInput.x -= 1.0f;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         panInput.x += 1.0f;

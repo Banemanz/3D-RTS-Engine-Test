@@ -43,19 +43,20 @@ Vec3 NavigationAgent3D::computeSteeringVelocity(const Unit& self, const std::vec
 
     for (const auto& other : allUnits) {
         if (other.id == self.id || !other.isAlive()) continue;
+        float reach = separationRadius + (other.isStructure ? other.radius : 0.0f);
 
         Vec3 away = self.position - other.position;
         away.y = 0.0f;
         float dist = away.length();
 
-        if (dist < separationRadius) {
+        if (dist < reach) {
             if (dist < 1e-4f) {
                 float angle = static_cast<float>(self.id * 137.5f) * (PI / 180.0f);
                 away = Vec3(std::cos(angle), 0.0f, std::sin(angle));
                 dist = 0.01f;
             }
 
-            float strength = (separationRadius - dist) / separationRadius;
+            float strength = (reach - dist) / reach;
             separationForce += away.normalized() * (strength * separationWeight);
             neighborCount++;
         }
@@ -121,7 +122,7 @@ void Unit::takeDamage(float rawDamage, const std::string& attackerName) {
 }
 
 void Unit::update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary) {
-    if (!isAlive()) return;
+    if (!isAlive() || isStructure) return;
 
     if (attackCooldownTimer > 0.0f) {
         attackCooldownTimer = std::max(0.0f, attackCooldownTimer - deltaTime);
@@ -213,6 +214,8 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
     switch (state) {
         case UnitState::IDLE: {
             navAgent.stop();
+            // Workers follow gathering jobs unless explicitly ordered to fight.
+            if (isWorker) break;
             int enemyId = findNearestEnemyId(allUnits, data.aggro_range);
             if (enemyId != -1) {
                 targetUnitId = enemyId;
