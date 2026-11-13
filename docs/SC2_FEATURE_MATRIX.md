@@ -140,3 +140,11 @@ in the initial command model. Route interruption handling resumes the
 remaining attack-move leg. Still missing: stance/target priority layers,
 guard/follow, targeting filters, command queues with visual command cards,
 and formation-aware movement for large groups.
+
+### Group order upgrade
+
+Group move, attack-move, shift-queued move and patrol now assign separate
+formation destinations with a map-configurable footprint spacing multiplier.
+This covers initial formation *destination slotting*, not WC3/SC2 squad
+movement fidelity, adaptive rows, formation persistence or tactical
+multi-unit flow fields.

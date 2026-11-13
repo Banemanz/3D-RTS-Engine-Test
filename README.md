@@ -136,3 +136,13 @@ F3 worker selection, and clickable cancel. Held units stay in place but shoot
 enemies already in weapon range. Attack-move and patrol routes resume their
 intended destinations after combat interruption rather than skipping
 waypoints. See [controls](docs/CONTROLS.md).
+
+## Group movement formation slots
+
+Selecting multiple mobile units and issuing Move, Attack-Move, or Patrol now
+assigns **separate destinations** in a compact formation instead of
+concentrating the group on one destination cell. The layout is deterministic
+even when a unit's position in the source list changes. Project authors may
+tune `formation_spacing_multiplier` under JSON `metadata`; default
+`2.4`, accepted value range `1.5`–`6.0`. Navigation still finds
+walkable paths for each unit independently.

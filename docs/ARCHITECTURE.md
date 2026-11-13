@@ -90,3 +90,15 @@ not arbitrarily change nearest-enemy ties or local separation accumulation.
 `Unit::update`, `NavigationAgent3D::computeSteeringVelocity`, combat
 acquisition and target ID resolution accept an optional index, preserving
 direct all-pairs operation for focused standalone tests.
+
+### Formation slot allocation
+
+`RTSFormation.hpp/.cpp` is a pure geometry module taking stable unit IDs,
+current positions and footprint radii plus a desired formation center. It
+computes the centroid, travel direction and lateral basis, sorts members
+front-to-back and laterally, and assigns unique grid slots in O(N log N).
+The result preserves input-vector order, so `RTSSkirmish` can apply slots
+without an extra search. `NavigationGrid::findPath` still resolves every
+unit's destination and path separately. Project metadata configures
+`formation_spacing_multiplier` (default 2.4, clamped 1.5..6), and
+spatial hashing handles local dynamic separation while travelling.

@@ -78,3 +78,11 @@ attack-move interrupted by a fight still completes its original destination.
 `RTSHUDTests` covers the new 12-button hit regions at 1280×720 and 800×600.
 Both are compiled as headless CTest executables and checked by Windows/Linux
 CI. The OpenGL smoke test catches HUD shader/viewport regressions.
+
+### Formation slotting and group movement
+
+`RTSFormationTests` verifies nonoverlapping 9-unit target slots, centered
+layout, stable per-ID assignments independent of source ordering, single-unit
+exact destinations, designer-configured spacing and four selected units
+travelling to a formation instead of a single point. It runs headless in
+Debug and optimized Release CTest builds.

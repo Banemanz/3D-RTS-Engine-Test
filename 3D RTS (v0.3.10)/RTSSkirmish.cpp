@@ -1,5 +1,6 @@
 #include "RTSSkirmish.hpp"
 #include "InstanceOverrides.hpp"
+#include "RTSFormation.hpp"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -156,17 +157,27 @@ bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
 bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append) {
     if(result!=MatchResult::Playing)return false;
     bool ok=false;
-    Vec3 clamped=navigation.clampWorld(destination);
+    std::vector<RTSFormationMember> selected;
+    for(const auto& u:units)if(u.isAlive() && u.isSelected &&
+                                u.ownerId==0 && !u.isStructure)
+        selected.push_back({u.id,u.position,u.radius});
+    const auto formation=arrangeRTSFormation(selected,navigation.clampWorld(destination),
+        float(std::clamp(metaNumber(project_,"formation_spacing_multiplier",2.4),
+                         1.5,6.0)));
+    std::size_t assigned=0;
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
+        // Unit-order stable: assignments correspond to selected units in vector
+        // order, with deterministic front-to-back/lateral slot arrangement.
+        const Vec3 slot=navigation.clampWorld(formation[assigned++].destination);
         jobs_.erase(u.id);
         if(append && routes_.count(u.id)) {
             routes_[u.id].patrol=false; // queued move exits patrol after this leg
-            queued_[u.id].push_back({clamped,attackMove});
+            queued_[u.id].push_back({slot,attackMove});
             ok=true;
         } else {
             routes_.erase(u.id);
             queued_.erase(u.id);
-            if(setRoute(u,clamped,attackMove))ok=true;
+            if(setRoute(u,slot,attackMove))ok=true;
         }
     }
     return ok;
@@ -174,10 +185,18 @@ bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append)
 bool RTSSkirmish::orderPatrol(const Vec3& destination) {
     if(result!=MatchResult::Playing)return false;
     bool issued=false;
-    const Vec3 goal=navigation.clampWorld(destination);
+    std::vector<RTSFormationMember> selected;
+    for(const auto& u:units)if(u.isAlive() && u.isSelected &&
+                                u.ownerId==0 && !u.isStructure)
+        selected.push_back({u.id,u.position,u.radius});
+    const auto formation=arrangeRTSFormation(selected,navigation.clampWorld(destination),
+        float(std::clamp(metaNumber(project_,"formation_spacing_multiplier",2.4),
+                         1.5,6.0)));
+    std::size_t assigned=0;
     for(auto& unit:units)if(unit.isAlive() && unit.isSelected && unit.ownerId==0 &&
                            !unit.isStructure){
         const Vec3 start=unit.position;
+        const Vec3 goal=navigation.clampWorld(formation[assigned++].destination);
         routes_.erase(unit.id);
         queued_.erase(unit.id);
         jobs_.erase(unit.id);

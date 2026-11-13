@@ -138,3 +138,19 @@ formation commands or a user-customizable interface.
 Planned follow-ups: explicit command queues/UI visualization, non-blocking
 stuck unit recovery, tactical line-of-fire cover, stance presets, guard/
 follow orders, formations, steering crowding benchmarks, hotkey remapping.
+
+## Initial multi-unit formations
+
+A new `RTSFormation` helper uses an **O(N log N)** ordered slot allocator,
+assigning separate destination offsets for grouped move/attack-move/queued
+move/patrol orders. It preserves original unit IDs across input permutations
+and takes account of group travel direction and member footprint radii.
+Each slot is individually clamped and solved through existing A* pathfinding.
+The default `formation_spacing_multiplier=2.4` is overridable in authored
+project metadata (bounded 1.5..6).
+
+This is not yet a cohesive formation AI: groups do not hold an assigned shape
+while crossing narrow passages, predict collisions, preserve squad facing
+during chase, or use flow-field routing for hundreds of agents. Destination
+slotting is nevertheless a substantial improvement over all-group members
+being ordered to the identical terrain coordinate.

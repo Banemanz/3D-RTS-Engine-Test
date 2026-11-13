@@ -274,3 +274,19 @@ Select Workers and ESC Cancel were added without losing the previous nine.
 `tests/order_tests.cpp` covers hold, stationary defensive fire and
 A-move continuation; `tests/hud_tests.cpp` checks all 12 button bounds.
 `docs/CONTROLS.md` lists the currently implemented command set.
+
+## Deterministic formation layout (2026-11-13 continuation)
+
+`RTSFormation.hpp/.cpp` is a standalone geometry allocator. Members have
+stable IDs, positions and collision radii; results preserve input order
+but are deterministically assigned by relative front/lateral projections and
+ID tie-breaking. It uses O(N log N) sorting and rectangular slotting,
+rather than brute-force assignment. Group `RTSSkirmish::orderMove`
+(including shift-queued waypoints and attack-move) and `orderPatrol` use
+per-unit formation goals passed to NavigationGrid A*. Single-unit goal
+behavior is unchanged. Project metadata
+`formation_spacing_multiplier` (default 2.4, accepted range 1.5–6)
+adjusts spacing for creator-authored maps. Unit radii contribute to grid
+pitch. `RTSFormationTests` covers 9-unit stable slotting, reordered source
+lists, single-unit goals and multi-unit group movement. Future: formation
+shape choice, command queues and path/collision cohesiveness.

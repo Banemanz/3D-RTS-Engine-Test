@@ -262,3 +262,13 @@ retains the previous filter when a new query has no matches.
 Filtering is a view-only operation; it never edits serialized data and
 does not create an undo entry. This is groundwork for an eventual
 tree/list property browser, rather than a full SC2 Data Editor UI.
+
+### Formation spacing property
+
+In a project file's top-level `metadata` object, set
+`"formation_spacing_multiplier": 3.2` to widen the spacing of grouped
+move/attack-move/patrol destinations. The current implementation clamps the
+multiplier to **1.5–6.0**. The minimum unit spacing also accounts for the
+largest selected mobile unit's radius. This is a map-wide gameplay setting;
+per-unit formations, selectable squad geometries and a visual formation
+authoring panel remain TBD.

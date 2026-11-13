@@ -86,6 +86,7 @@ RTSProject RTSProject::defaults() {
     p.metadata["player_starting_minerals"]=picojson::value(220.0);
     p.metadata["player_supply_cap"]=picojson::value(18.0);
     p.metadata["enemy_spawn_interval"]=picojson::value(16.0);
+    p.metadata["formation_spacing_multiplier"]=picojson::value(2.4);
     return p;
 }
 picojson::value RTSProject::toJson() const {
