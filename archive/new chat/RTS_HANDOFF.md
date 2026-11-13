@@ -68,3 +68,6 @@ Read all Markdown documentation, current PR diff, CI runs and source in
 on a machine with GL+GLFW or use `-DRTS_BUILD_DEMO=OFF` for headless logic.
 Continue with separate reviewable commits on the same PR branch, audit tests
 after every major pass, preserve main and report exact outstanding gaps.
+
+Additional tool: F6 is a JSON trigger inspector (create/clone/delete/inline edit);
+`--trigger-editor` starts it directly. This is **not yet a visual graph or full script VM**.

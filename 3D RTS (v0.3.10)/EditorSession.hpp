@@ -9,7 +9,7 @@
 // commands. A whole project can be edited and saved without any GPU.
 class EditorSession {
 public:
-    enum class Panel { Play, Terrain, Data };
+    enum class Panel { Play, Terrain, Data, Triggers };
     enum class Tool { Raise, Lower, Smooth, Flatten, Paint, Block, Unblock,
                       PlaceMineral, PlaceUnit, PlaceDoodad };
     Panel panel=Panel::Play;
@@ -24,6 +24,7 @@ public:
 
     std::size_t selectedObject=0;
     std::size_t selectedField=0;
+    std::size_t selectedTrigger=0;
     bool textEditing=false;
     bool newFieldEditing=false;
     std::string editText;
@@ -52,6 +53,18 @@ public:
     bool finishEdit(RTSProject& project);
     bool removeLocalOverride(RTSProject& project);
     bool duplicateCatalogObject(RTSProject& project);
+
+    // First trigger authoring panel: raw JSON rule inspector/editor. A future
+    // node-graph can use the same serialized ECA object model.
+    std::size_t triggerCount(const RTSProject& project) const;
+    std::string triggerLabel(const RTSProject& project,std::size_t index) const;
+    std::string triggerJSON(const RTSProject& project,std::size_t index) const;
+    void cycleTrigger(const RTSProject& project,int delta);
+    bool createTrigger(RTSProject& project);
+    bool duplicateTrigger(RTSProject& project);
+    bool deleteTrigger(RTSProject& project);
+    bool beginTriggerEdit(const RTSProject& project);
+    bool finishTriggerEdit(RTSProject& project);
     std::string panelName() const;
     std::string toolName() const;
 

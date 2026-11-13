@@ -40,7 +40,11 @@ struct AppState {
         hasMoveMarker=false;
     }
     void saveProject(){
-        try{project.saveFile(projectPath);editor.modified=false;editor.message="PROJECT SAVED";}
+        try{
+            TriggerEngine::validate(project);
+            project.saveFile(projectPath);
+            editor.modified=false;editor.message="PROJECT SAVED";
+        }
         catch(const std::exception& e){editor.message=std::string("SAVE ERROR: ")+e.what();}
     }
     enum class Mode { Normal, AttackMove, BuildBarracks } mode = Mode::Normal;
@@ -177,7 +181,9 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 
 void characterCallback(GLFWwindow* window,unsigned int codepoint) {
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
-    if(s && s->editor.panel==EditorSession::Panel::Data)s->editor.addChar(codepoint);
+    if(s && (s->editor.panel==EditorSession::Panel::Data ||
+             s->editor.panel==EditorSession::Panel::Triggers))
+        s->editor.addChar(codepoint);
 }
 void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,int mods) {
     if(action!=GLFW_PRESS && action!=GLFW_REPEAT)return;
@@ -186,11 +192,30 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     auto& edit=s->editor;
     const bool ctrl=(mods & GLFW_MOD_CONTROL)!=0;
     if(edit.textEditing) {
+        if(ctrl && key==GLFW_KEY_V) {
+            const char* clip=glfwGetClipboardString(window);
+            if(clip)for(const unsigned char* p=reinterpret_cast<const unsigned char*>(clip);
+                         *p;++p)edit.addChar(*p);
+            return;
+        }
         if(key==GLFW_KEY_ESCAPE){edit.cancelEdit();return;}
         if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
             if(action==GLFW_PRESS) {
-                try{if(edit.finishEdit(s->project))s->reloadFromProject();}
-                catch(const std::exception& e){edit.message=e.what();}
+                RTSProject backup=s->project;
+                const bool wasModified=edit.modified;
+                try {
+                    const bool changed=edit.panel==EditorSession::Panel::Triggers
+                        ? edit.finishTriggerEdit(s->project):edit.finishEdit(s->project);
+                    if(changed){
+                        TriggerEngine::validate(s->project);
+                        s->reloadFromProject();
+                    }
+                }catch(const std::exception& e){
+                    s->project=std::move(backup);
+                    edit.modified=wasModified;
+                    edit.message=std::string("INVALID EDIT: ")+e.what();
+                    try{s->reloadFromProject();}catch(...) {}
+                }
             }
             return;
         }
@@ -203,6 +228,12 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     if(key==GLFW_KEY_F5) {
         edit.panel=edit.panel==EditorSession::Panel::Terrain?
             EditorSession::Panel::Play:EditorSession::Panel::Terrain;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F6) {
+        edit.panel=edit.panel==EditorSession::Panel::Triggers?
+            EditorSession::Panel::Play:EditorSession::Panel::Triggers;
         if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
         return;
     }
@@ -221,13 +252,29 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     }
     if(edit.panel==EditorSession::Panel::Play)return;
     try{
-        if(ctrl && key==GLFW_KEY_Z) {
+        if(edit.panel==EditorSession::Panel::Terrain && ctrl && key==GLFW_KEY_Z) {
             if(edit.undo(s->project))s->reloadFromProject();
             return;
         }
-        if(ctrl && key==GLFW_KEY_Y) {
+        if(edit.panel==EditorSession::Panel::Terrain && ctrl && key==GLFW_KEY_Y) {
             if(edit.redo(s->project))s->reloadFromProject();
             return;
+        }
+        if(edit.panel==EditorSession::Panel::Triggers) {
+            if(ctrl && key==GLFW_KEY_N) {edit.createTrigger(s->project);return;}
+            if(ctrl && key==GLFW_KEY_D) {edit.duplicateTrigger(s->project);return;}
+            if(ctrl && key==GLFW_KEY_C) {
+                const auto json=edit.triggerJSON(s->project,edit.selectedTrigger);
+                if(!json.empty())glfwSetClipboardString(window,json.c_str());
+                return;
+            }
+            if(key==GLFW_KEY_DELETE) {edit.deleteTrigger(s->project);return;}
+            if(key==GLFW_KEY_UP || key==GLFW_KEY_DOWN) {
+                edit.cycleTrigger(s->project,key==GLFW_KEY_UP?-1:1);return;
+            }
+            if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
+                edit.beginTriggerEdit(s->project);return;
+            }
         }
         if(edit.panel==EditorSession::Panel::Data) {
             if(ctrl && key==GLFW_KEY_D){edit.duplicateCatalogObject(s->project);return;}
@@ -272,6 +319,7 @@ int main(int argc, char** argv) {
     std::string screenshotPath;
     std::string inputProjectPath;
     bool startEditor=false;
+    bool startTriggerEditor=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -280,6 +328,7 @@ int main(int argc, char** argv) {
             screenshotPath = argv[++i];
         else if(arg == "--project" && i+1<argc)inputProjectPath=argv[++i];
         else if(arg == "--editor")startEditor=true;
+        else if(arg == "--trigger-editor")startTriggerEditor=true;
     }
     int renderedFrames = 0;
     try {
@@ -303,8 +352,9 @@ int main(int argc, char** argv) {
             app.project.loadFile("projects/default.rtsproject.json");
         }
         app.reloadFromProject();
-        if(startEditor) {
-            app.editor.panel=EditorSession::Panel::Terrain;
+        if(startEditor || startTriggerEditor) {
+            app.editor.panel=startTriggerEditor ? EditorSession::Panel::Triggers :
+                             EditorSession::Panel::Terrain;
             auto preset=app.project.metadata.find("editor_camera");
             if(preset!=app.project.metadata.end() && preset->second.is<picojson::object>()) {
                 const auto& cam=preset->second.get<picojson::object>();
@@ -795,7 +845,8 @@ int main(int argc, char** argv) {
             // project assets and game logic both use this exact document.
             if(app.editor.panel!=EditorSession::Panel::Play &&
                app.windowWidth>0 && app.windowHeight>0) {
-                const bool dataPanel=app.editor.panel==EditorSession::Panel::Data;
+                const bool dataPanel=app.editor.panel==EditorSession::Panel::Data ||
+                                     app.editor.panel==EditorSession::Panel::Triggers;
                 const float bottom=dataPanel?-1.0f:
                     1.0f-2.0f*220.0f/float(app.windowHeight);
                 float panelQuad[]={
@@ -839,7 +890,7 @@ int main(int argc, char** argv) {
                              std::to_string(app.hoveredWorld.x).substr(0,6)+
                              " Y "+std::to_string(app.hoveredWorld.y).substr(0,6)+
                              " Z "+std::to_string(app.hoveredWorld.z).substr(0,6));
-                } else {
+                } else if(app.editor.panel==EditorSession::Panel::Data) {
                     const CatalogEntry* entry=app.editor.selected(app.project);
                     line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT OBJECT  SHIFT+TAB PREVIOUS");
                     line(62,2.0f,"UP/DOWN PROPERTY  ENTER EDIT JSON  CTRL+N ADD FIELD  CTRL+D DERIVE OBJECT  CTRL+BACKSPACE REMOVE");
@@ -865,6 +916,34 @@ int main(int argc, char** argv) {
                         if(app.editor.textEditing)
                             line(float(app.windowHeight)-58,2.25f,
                                  "EDIT: "+app.editor.editText,1.f,.81f,.40f);
+                    }
+                } else if(app.editor.panel==EditorSession::Panel::Triggers) {
+                    line(40,2.0f,"F6 PLAY  F5 TERRAIN  F7 DATA  F9 TEST MAP  CTRL+S SAVE");
+                    line(64,2.0f,"UP/DOWN TRIGGERS  ENTER EDIT JSON  CTRL+V PASTE  CTRL+C COPY  CTRL+N NEW");
+                    line(88,2.0f,"CTRL+D DUPLICATE  DELETE REMOVE  ENTER APPLY EDIT  ESC CANCEL");
+                    const std::size_t count=app.editor.triggerCount(app.project);
+                    line(120,2.6f,"MAP LOGIC: "+std::to_string(count)+" EVENT-CONDITION-ACTION RULES",
+                         1.f,.80f,.35f);
+                    if(count==0)line(160,2.0f,"NO TRIGGERS. CTRL+N TO ADD A MAP START EVENT.");
+                    const std::size_t current=count?app.editor.selectedTrigger%count:0;
+                    const std::size_t first=count && current>10?current-10:0;
+                    for(std::size_t idx=first;idx<count && idx<first+14;++idx) {
+                        const bool active=idx==current;
+                        line(158+float(idx-first)*28,2.0f,
+                             std::string(active?"> ":"  ")+
+                             app.editor.triggerLabel(app.project,idx),
+                             active?1.f:.72f,active?.84f:.83f,active?.40f:.95f);
+                    }
+                    if(count>0) {
+                        std::string json=app.editor.triggerJSON(app.project,current);
+                        if(json.size()>150)json=json.substr(0,147)+"...";
+                        line(565,1.8f,"SELECTED: "+json,.61f,.88f,.72f);
+                    }
+                    if(app.editor.textEditing) {
+                        line(614,2.1f,"RAW JSON EDIT (CTRL+V TO PASTE):",1.f,.77f,.38f);
+                        std::string src=app.editor.editText;
+                        if(src.size()>190)src=src.substr(0,187)+"...";
+                        line(643,1.8f,src,1.f,.89f,.63f);
                     }
                 }
                 if(!app.editor.message.empty())

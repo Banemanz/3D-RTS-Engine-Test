@@ -12,6 +12,7 @@ From the repository root, after building (see root README):
 ```sh
 ./build/RTSCameraTerrain --project projects/default.rtsproject.json
 ./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json
+./build/RTSCameraTerrain --trigger-editor --project projects/terrain_showcase.rtsproject.json
 ```
 
 Windows multi-config generators: `build/Debug/RTSCameraTerrain.exe`.
@@ -24,6 +25,7 @@ target is `projects/working.rtsproject.json`.
 | Input | In current prototype |
 | --- | --- |
 | F5 | Terrain editor; F5 again to play |
+| F6 | Trigger inspector with JSON rule editing; F6 again to play |
 | F7 | Generic catalog Data Editor; F7 again to play |
 | F9 | Test/play the currently authored map |
 | 1–7 (terrain) | Raise, lower, smooth, flatten, paint, block path, clear path |
@@ -40,6 +42,9 @@ target is `projects/working.rtsproject.json`.
 | Ctrl+N (data) | Add a new arbitrary field |
 | Ctrl+D (data) | Create an inherited/derived catalog object |
 | Ctrl+Backspace (data) | Remove the local override of the selected field |
+| Trigger panel: Up/Down | Choose event-condition-action rule |
+| Trigger panel: Ctrl+N / Ctrl+D / Delete | Create, duplicate or remove a rule |
+| Trigger panel: Enter | Edit selected rule as JSON; Ctrl+V pastes JSON, Ctrl+C copies selected rule |
 | Ctrl+S | Save project |
 | Esc | Cancel a field edit / leave editing for play |
 
@@ -156,6 +161,12 @@ Supported events: `OnMapStart`, `After`, `Every`, `OnUnitDeath`,
 `MineralsBelow`. Conditions: `PlayerMineralsAtLeast`,
 `UnitCountAtLeast`, `UnitTypeCountAtLeast`, `SubjectOwnerIs`.
 Actions: `GrantMinerals`, `SpawnUnit`, `EndMatch`, `ShowMessage`.
+
+The **F6 trigger inspector** supports browsing, adding, duplicating, removing
+and editing the serialized rule JSON. It is a text-based inspector, not
+a drag-and-drop trigger node graph. The inline text buffer is limited
+to 768 ASCII characters: use project JSON files/CLI for larger rule graphs.
+Project reload validates triggers and rejects malformed actions.
 
 The engine **does not execute raw C++, arbitrary OS commands, Lua, or Galaxy**
 from project files. This first trigger runner is intentionally an explicitly

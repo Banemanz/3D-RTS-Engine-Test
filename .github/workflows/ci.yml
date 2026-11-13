@@ -39,6 +39,16 @@ jobs:
           name: rts-terrain-editor-screenshot
           path: rts-editor.png
           if-no-files-found: error
+      - name: Run trigger-editor OpenGL smoke
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-triggers.ppm
+      - name: Convert trigger-editor screenshot
+        run: python3 tools/ppm_to_png.py rts-triggers.ppm rts-triggers.png
+      - name: Upload trigger-editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-trigger-editor-screenshot
+          path: rts-triggers.png
+          if-no-files-found: error
   windows:
     runs-on: windows-latest
     steps:

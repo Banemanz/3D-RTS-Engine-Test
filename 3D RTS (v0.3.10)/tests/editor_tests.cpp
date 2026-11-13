@@ -34,5 +34,17 @@ int main() {
     editor.editText="custom_mod_value";assert(editor.finishEdit(p));
     editor.editText="{\"foo\":true}";assert(editor.finishEdit(p));
     assert(p.catalog.resolvedFields(editor.selected(p)->id).count("custom_mod_value")==1);
-    std::cout<<"editor: terrain strokes, placement undo and data property edits passed\n";
+    editor.panel=EditorSession::Panel::Triggers;
+    assert(editor.triggerCount(p)==0);
+    assert(editor.createTrigger(p));
+    assert(editor.triggerCount(p)==1);
+    assert(editor.beginTriggerEdit(p));
+    editor.editText=R"({"id":"custom_rule","event":{"type":"OnMapStart"},"once":true,"actions":[{"type":"ShowMessage","text":"HELLO"}]})";
+    assert(editor.finishTriggerEdit(p));
+    assert(editor.triggerLabel(p,0).find("custom_rule")!=std::string::npos);
+    assert(editor.duplicateTrigger(p));
+    assert(editor.triggerCount(p)==2);
+    assert(editor.deleteTrigger(p));
+    assert(editor.triggerCount(p)==1);
+    std::cout<<"editor: terrain strokes, placement undo, data and trigger editing passed\n";
 }
