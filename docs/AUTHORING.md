@@ -88,12 +88,36 @@ The `Unit` catalog controls gameplay stats and points at an `Actor`.
 This allows a unit to inherit another unit's gameplay while selecting a
 different presentation actor, and allows multiple objects to share a model.
 
+**Per-instance overrides:** each placed Unit or Doodad can override fields
+without affecting its shared catalog. A placed Unit accepts three special
+objects inside `overrides`: `unit` for gameplay fields, `actor` for
+presentation fields and `model` for linked model fields. Example:
+
+```json
+{
+  "id": "custom_elite", "kind": "Unit", "catalog": "marine",
+  "owner": 0, "name": "Unique elite Marine",
+  "position": [-8, 0, 7], "rotation": [0, 35, 0], "scale": [1.2, 1, 1],
+  "amount": 0,
+  "overrides": {
+    "unit": {"damage": 23, "max_hp": 150},
+    "actor": {"tint": [1.0, 0.45, 0.12], "opacity": 0.85},
+    "model": {"scale": [1.4, 1.0, 1.2]}
+  }
+}
+```
+
+This actually changes the unique instance's simulation stats, procedural color,
+transparency and scale. Other Marines are unaffected. The `mesh` asset
+string also resolves independently but still draws a procedural placeholder
+until the model importer is implemented.
+
 **Implemented effect:** Unit health, armor, damage, attack range, cooldown,
 speed, costs, basic worker/structure classification; actor tint, scale and
 opacity; procedural terrain materials; scene positions; bounded triggers.
 **Persisted but not yet used:** most arbitrary fields, real mesh/texture path,
-animation/sound property strings, instance-specific arbitrary overrides and
-advanced gameplay catalog categories.
+animation/sound property strings, unknown instance-specific arbitrary overrides and advanced gameplay catalog
+categories. The recognized `unit`, `actor` and `model` sections do apply.
 
 ## Declarative trigger code (first iteration)
 

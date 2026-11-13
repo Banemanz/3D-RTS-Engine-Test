@@ -1,4 +1,5 @@
 #include "RTSSkirmish.hpp"
+#include "InstanceOverrides.hpp"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -102,12 +103,23 @@ void RTSSkirmish::reset() {
             continue;
         }
         if(placement.kind!="Unit")continue; // future placed doodads do not affect gameplay yet
-        const auto fields=project_.catalog.resolvedFields(placement.catalogId);
-        bool structure=boolField(fields,"is_structure");
-        bool worker=boolField(fields,"is_worker");
-        UnitData data=unitFromCatalog(project_.catalog,placement.catalogId);
+        auto resolved=resolvePlacedUnit(project_,placement);
+        const bool structure=resolved.isStructure;
+        const bool worker=resolved.isWorker;
+        const UnitData& data=resolved.unit;
         Unit& instance=spawn(data,loc,placement.owner,placement.name.empty()?data.resourceName:placement.name,
                              structure,worker,placement.catalogId);
+        if(resolved.hasActor) {
+            instance.modelScale=resolved.actor.scale;
+            instance.actorOpacity=resolved.actor.opacity;
+            instance.actorMesh=resolved.actor.mesh;
+        }
+        instance.modelScale=Vec3(instance.modelScale.x*placement.scale.x,
+                                 instance.modelScale.y*placement.scale.y,
+                                 instance.modelScale.z*placement.scale.z);
+        instance.facingYawRad=toRadians(placement.rotation.y);
+        instance.radius*=std::max(placement.scale.x,placement.scale.z);
+        instance.height*=placement.scale.y;
         if(placement.owner==0 && !structure)supplyUsed+=data.supply_cost;
         if(instance.catalogId==playerBaseCatalog_ && instance.ownerId==0)friendlyBaseId_=instance.id;
         if(instance.catalogId==enemyBaseCatalog_ && instance.ownerId==1)enemyBaseId_=instance.id;

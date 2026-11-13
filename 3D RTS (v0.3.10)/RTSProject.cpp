@@ -1,4 +1,5 @@
 #include "RTSProject.hpp"
+#include "InstanceOverrides.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -220,10 +221,12 @@ void RTSProject::validate() const {
             const auto* e=catalog.find(p.catalogId);
             if(!e || e->type!="Unit")
                 throw std::invalid_argument("Missing Unit catalog for: "+p.id);
+            (void)resolvePlacedUnit(*this,p); // validates known instance overrides
         } else if(p.kind=="Doodad") {
             const auto* e=catalog.find(p.catalogId);
             if(!e || (e->type!="Actor" && e->type!="Model"))
                 throw std::invalid_argument("Missing actor/model for doodad: "+p.id);
+            (void)resolvePlacedDoodad(*this,p);
         } else if(p.kind!="Mineral" && p.kind!="Point" && p.kind!="Region")
             throw std::invalid_argument("Unsupported placement kind: "+p.kind);
     }

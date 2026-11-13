@@ -22,7 +22,9 @@ compatibility or that all module functionality has already been implemented.
 - Creator backend: versioned `.rtsproject.json` map files; `DataCatalog`
   generic arbitrary typed property objects, prototype inheritance/validation,
   distinct Unit/Actor/Model catalogs; linked visuals, some runtime-backed stats;
-  project placements including Unit/Mineral/Doodad/Point/Region.
+  project placements including Unit/Mineral/Doodad/Point/Region. Per-instance
+  override sections for gameplay/actor/model fields have runtime effects and
+  are validated; unknown extension sections still round-trip.
 - Terrain: heightfield mesh; sculpt/flatten/smooth and materials; blocked
   pathing masks; terrain-aware picking; basic undo/redo.
 - Editor: F5 terrain, F7 data inspector, F9 test/play; save/load; unit/doodad/

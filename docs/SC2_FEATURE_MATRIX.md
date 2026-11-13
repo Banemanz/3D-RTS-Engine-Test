@@ -27,14 +27,15 @@ Every object must be represented by data with:
 
 Storing an arbitrary `fields` key does **not** mean the runtime supports it yet.
 An extension property is currently preserved through save/load, but unimplemented
-properties have no gameplay behavior.
+properties have no gameplay behavior. A limited number of gameplay/actor/model
+fields now resolve on individual placed instances.
 
 ## Major authoring modules
 
 | Module | Current PR state | Full creator-suite objective |
 | --- | --- | --- |
 | **Terrain & pathing** | Heightfield sculpt, smooth/flatten, 8 material IDs, blocked-cell pathing and brush preview; 49×49 starter | Multiple texture layers, cliffs/ramps, water, roads, decals, foliage, cliffs meshes, destructibles, per-unit movement types, map resizing, symmetry, procedural generation |
-| **Unit / doodad placements** | JSON instances, placement brushes, owner/catalog links, persistent transforms/overrides | Entity selection/gizmos, multi-select, snapping, placement rules, brushes, prefab variants, advanced transforms and per-instance behavior |
+| **Unit / doodad placements** | JSON instances, placement brushes, owner/catalog links; gameplay, actor and model overrides on placed instances, persistent transforms | Entity selection/gizmos, multi-select, snapping, placement rules, brushes, prefab variants, fully interactive transform editing |
 | **Points / regions / cameras** | Project placement type for Point/Region; bounded region-enter trigger; editor camera preset in metadata | 2D/3D region shape tools, trigger gizmos, actual camera objects/curves, cinematics and camera transitions |
 | **Data Editor** | Arbitrary JSON typed catalogs, ID inheritance, inspector, clone/derived entries, CLI, validation | Full schema-directed inspector, reference graphs, search, inline validation, copy/duplicate with remapped references, variants, data collections, live update without resetting map |
 | **Trigger Editor / code** | Bounded event-condition-action JSON runtime with basic events, conditions and actions | Visual ECA graph, variables/functions, branches, loops, event dispatch, coroutine/waits, script debugging, profiling, source-language/DSL or sandboxed VM, mod project APIs |

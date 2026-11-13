@@ -11,6 +11,7 @@
 #include "RTSSkirmish.hpp"
 #include "BitmapHUD.hpp"
 #include "RTSProject.hpp"
+#include "InstanceOverrides.hpp"
 #include "EditorSession.hpp"
 #include <filesystem>
 #include <cstdlib>
@@ -640,10 +641,7 @@ int main(int argc, char** argv) {
             // a dedicated asset pipeline is introduced.
             for(const auto& placed:app.project.placements) {
                 if(placed.kind!="Doodad")continue;
-                ActorVisual visual;
-                const auto* entry=app.project.catalog.find(placed.catalogId);
-                if(entry && entry->type=="Actor")
-                    visual=actorFromCatalog(app.project.catalog,placed.catalogId);
+                ActorVisual visual=resolvePlacedDoodad(app.project,placed);
                 Vec3 pos=placed.position;
                 pos.y=app.project.terrain.sampleHeight(pos.x,pos.z);
                 Mat4 transform=Mat4::translate(pos)

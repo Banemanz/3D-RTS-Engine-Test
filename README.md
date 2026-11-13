@@ -39,7 +39,8 @@ painting, blocked-path overlays, unit/mineral/doodad placement, in-window
 property editor, inheritance-based unit/actor/model catalogs, JSON project
 serialization, editor test screenshots, and a headless CLI.
 Trigger JSON can define a few events/conditions/actions which run at
-map start or during play. An example project with sculpted terrain and
+map start or during play. Placed units can override their own gameplay
+and actor/model properties without altering their shared catalog. An example project with sculpted terrain and
 triggers is `projects/terrain_showcase.rtsproject.json`.
 
 For the full controls and map-code format see [Authoring guide](docs/AUTHORING.md).

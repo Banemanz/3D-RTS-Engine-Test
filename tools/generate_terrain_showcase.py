@@ -56,6 +56,15 @@ def generate():
     project["metadata"]["editor_notes"] = (
         "Terrain authoring demo with declarative triggers; no unrestricted script engine yet."
     )
+    marine = next(p for p in project["placements"] if p["id"] == "marine_1")
+    marine["name"] = "Custom Amber Marine"
+    marine["rotation"] = [0,35,0]
+    marine["scale"] = [1.2,1,1]
+    marine["overrides"] = {
+        "unit":{"damage":18,"max_hp":110},
+        "actor":{"tint":[1,.45,.12],"opacity":.85},
+        "model":{"scale":[1.7,1,1.3]}
+    }
     project["placements"].append({
         "id":"ridge_region","kind":"Region","catalog":"",
         "name":"Ridge Observation Zone","owner":-1,"position":[15,0,21],

@@ -9,7 +9,7 @@ include(CTest)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp)
+add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp InstanceOverrides.cpp)
 target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
@@ -56,6 +56,9 @@ if(BUILD_TESTING)
     add_executable(RTSModdedProjectTests tests/modded_project_tests.cpp)
     target_link_libraries(RTSModdedProjectTests PRIVATE RTSSimulation)
     add_test(NAME modded_project COMMAND RTSModdedProjectTests)
+    add_executable(RTSInstanceOverrideTests tests/instance_override_tests.cpp)
+    target_link_libraries(RTSInstanceOverrideTests PRIVATE RTSAuthoring)
+    add_test(NAME instance_overrides COMMAND RTSInstanceOverrideTests)
     add_executable(RTSTriggerTests tests/trigger_tests.cpp)
     target_link_libraries(RTSTriggerTests PRIVATE RTSSimulation)
     add_test(NAME triggers COMMAND RTSTriggerTests)
