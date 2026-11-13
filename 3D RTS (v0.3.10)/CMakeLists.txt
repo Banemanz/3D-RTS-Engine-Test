@@ -24,6 +24,10 @@ if(BUILD_TESTING)
     add_executable(RTSSimulationTests tests/skirmish_tests.cpp)
     target_link_libraries(RTSSimulationTests PRIVATE RTSSimulation)
     add_test(NAME skirmish COMMAND RTSSimulationTests)
+
+    add_executable(RTSUnitDataTests tests/unitdata_tests.cpp)
+    target_link_libraries(RTSUnitDataTests PRIVATE RTSSimulation)
+    add_test(NAME unitdata COMMAND RTSUnitDataTests)
 endif()
 
 if(RTS_BUILD_DEMO)

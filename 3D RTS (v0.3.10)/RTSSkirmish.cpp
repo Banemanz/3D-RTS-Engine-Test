@@ -52,7 +52,7 @@ const Unit* RTSSkirmish::find(int id)const {
     return nullptr;
 }
 void RTSSkirmish::reset() {
-    units.clear();minerals.clear();routes_.clear();jobs_.clear();
+    units.clear();minerals.clear();routes_.clear();jobs_.clear();releasedSupply_.clear();
     production_.clear();construction_.clear();navigation=NavigationGrid();
     nextId_=1;playerMinerals=220;supplyUsed=0;supplyCap=18;
     enemySpawnTimer_=14.0f;result=MatchResult::Playing;
@@ -277,6 +277,12 @@ void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
     dt=std::clamp(dt,0.0f,0.1f);
     for(auto& u:units)u.update(dt,units,48.0f);
+    // Dead army units return their supply exactly once. Production still reserves
+    // supply at queue time, even before the unit exists.
+    for(const auto& u:units)if(u.ownerId==0 && !u.isStructure && !u.isAlive()) {
+        if(releasedSupply_.insert(u.id).second)
+            supplyUsed=std::max(0,supplyUsed-u.data.supply_cost);
+    }
     advanceRoutes();
     updateGathering(dt);
     updateProduction(dt);

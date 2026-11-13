@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 struct MineralNode {
@@ -62,6 +63,7 @@ private:
     };
     int nextId_ = 1;
     float enemySpawnTimer_ = 12.0f;
+    std::unordered_set<int> releasedSupply_;
     std::unordered_map<int, Route> routes_;
     std::unordered_map<int, WorkerJob> jobs_;
     std::unordered_map<int, float> construction_;

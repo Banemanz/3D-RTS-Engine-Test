@@ -51,10 +51,49 @@ static void assertGathering() {
     for(int i=0;i<1200;++i)game.update(1.0f/60.0f);
     assert(game.minerals[0].remaining<startRemaining);
 }
+static void assertDeathAndReset() {
+    RTSSkirmish game;
+    int before=game.supplyUsed;
+    for(auto& u:game.units)if(u.ownerId==0 && !u.isWorker && !u.isStructure) {
+        u.takeDamage(100000.0f,"test");
+        break;
+    }
+    game.update(1.0f/60.0f);
+    assert(game.supplyUsed==before-1);
+    game.update(1.0f/60.0f);
+    assert(game.supplyUsed==before-1);
+    for(auto& u:game.units)if(u.ownerId==1 && u.isStructure) {
+        u.takeDamage(100000.0f,"test");
+        break;
+    }
+    game.update(1.0f/60.0f);
+    assert(game.result==MatchResult::Victory);
+    game.reset();
+    assert(game.result==MatchResult::Playing && game.supplyUsed==6);
+}
+static void assertReplay() {
+    RTSSkirmish a,b;
+    for(auto* game:{&a,&b}) {
+        for(auto& u:game->units)if(u.ownerId==0 && u.isWorker)u.isSelected=true;
+        assert(game->orderGather(game->minerals[0].position));
+    }
+    for(int i=0;i<360;++i) {
+        a.update(1.0f/60.0f);
+        b.update(1.0f/60.0f);
+    }
+    assert(a.playerMinerals==b.playerMinerals && a.units.size()==b.units.size());
+    for(size_t i=0;i<a.units.size();++i) {
+        assert(a.units[i].currentHp==b.units[i].currentHp);
+        assert(a.units[i].position.x==b.units[i].position.x);
+        assert(a.units[i].position.z==b.units[i].position.z);
+    }
+}
 int main() {
     assertStartingState();
     assertBuildingAndProduction();
     assertOrders();
     assertGathering();
-    std::cout<<"skirmish: 4 tests passed\n";
+    assertDeathAndReset();
+    assertReplay();
+    std::cout<<"skirmish: 6 tests passed\n";
 }

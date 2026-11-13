@@ -1,5 +1,7 @@
 #include "UnitData.hpp"
 #include <sstream>
+#include <cmath>
+#include <stdexcept>
 
 const char* HUMAN_MARINE_TRES = R"(
 [gd_resource type="UnitData" format=3]
@@ -51,6 +53,21 @@ UnitData UnitData::fromTresString(const std::string& tresContent) {
         return s.substr(first, last - first + 1);
     };
 
+    auto numericFloat = [](const std::string& s,const std::string& field) {
+        size_t parsed=0;
+        float n=std::stof(s,&parsed);
+        if(parsed!=s.size() || !std::isfinite(n))
+            throw std::invalid_argument("Invalid floating point value for "+field+": "+s);
+        return n;
+    };
+    auto numericInt = [](const std::string& s,const std::string& field) {
+        size_t parsed=0;
+        int n=std::stoi(s,&parsed);
+        if(parsed!=s.size())
+            throw std::invalid_argument("Invalid integer value for "+field+": "+s);
+        return n;
+    };
+
     while (std::getline(stream, line)) {
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
@@ -59,18 +76,29 @@ UnitData UnitData::fromTresString(const std::string& tresContent) {
         std::string val = trim(line.substr(eq + 1));
 
         if (key == "resource_name")       data.resourceName    = val;
-        else if (key == "faction")        data.faction         = (val == "Hybrid") ? Faction::Hybrid : Faction::Humanity;
-        else if (key == "max_hp")         data.max_hp          = std::stof(val);
-        else if (key == "armor")          data.armor           = std::stof(val);
-        else if (key == "damage")         data.damage          = std::stof(val);
-        else if (key == "attack_range")   data.attack_range    = std::stof(val);
-        else if (key == "attack_cooldown")data.attack_cooldown = std::stof(val);
-        else if (key == "aggro_range")    data.aggro_range     = std::stof(val);
-        else if (key == "move_speed")     data.move_speed      = std::stof(val);
-        else if (key == "supply_cost")    data.supply_cost     = std::stoi(val);
-        else if (key == "mineral_cost")   data.mineral_cost    = std::stoi(val);
-        else if (key == "build_time")     data.build_time      = std::stof(val);
-        else if (key == "visual_scale")   data.visual_scale    = std::stof(val);
+        else if (key == "faction") {
+            if(val == "Hybrid")data.faction = Faction::Hybrid;
+            else if(val == "Humanity")data.faction = Faction::Humanity;
+            else throw std::invalid_argument("Unknown unit faction: "+val);
+        }
+        else if (key == "max_hp")         data.max_hp          = numericFloat(val,key);
+        else if (key == "armor")          data.armor           = numericFloat(val,key);
+        else if (key == "damage")         data.damage          = numericFloat(val,key);
+        else if (key == "attack_range")   data.attack_range    = numericFloat(val,key);
+        else if (key == "attack_cooldown")data.attack_cooldown = numericFloat(val,key);
+        else if (key == "aggro_range")    data.aggro_range     = numericFloat(val,key);
+        else if (key == "move_speed")     data.move_speed      = numericFloat(val,key);
+        else if (key == "supply_cost")    data.supply_cost     = numericInt(val,key);
+        else if (key == "mineral_cost")   data.mineral_cost    = numericInt(val,key);
+        else if (key == "build_time")     data.build_time      = numericFloat(val,key);
+        else if (key == "visual_scale")   data.visual_scale    = numericFloat(val,key);
+    }
+
+    if(data.resourceName.empty() || data.max_hp<=0 || data.armor<0 ||
+       data.damage<0 || data.attack_range<0 || data.attack_cooldown<=0 ||
+       data.aggro_range<0 || data.move_speed<0 || data.supply_cost<0 ||
+       data.mineral_cost<0 || data.build_time<0 || data.visual_scale<=0) {
+        throw std::invalid_argument("UnitData includes an invalid stat or empty resource name");
     }
 
     if (data.faction == Faction::Humanity) {
