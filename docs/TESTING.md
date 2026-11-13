@@ -38,3 +38,12 @@ unchanged-revision suppression of GPU updates, fog texture bytes and
 data-driven Unit sight range. Linux OpenGL smoke tests compile and run the
 new terrain shader/texture under software Mesa; they do not guarantee the
 same results on all Windows GPU drivers.
+
+### Unit broadphase and ownership
+
+`RTSSpatialTests` creates 2,000 deterministic test units, compares radial
+broadphase hits against exhaustive scans, exercises negative coordinates,
+incremental movement and ID lookup, and verifies that indexed steering
+matches direct steering. An additional test confirms owner-based hostility
+regardless of appearance/faction. Existing skirmish and chase tests continue
+to exercise the new fixed-tick integration on Windows and Linux.

@@ -86,3 +86,21 @@ stealth detectors, shared vision between multiple human factions, persistent
 building ghosts, shadow casting or replay serialization yet. The AI's
 targeting uses the existing aggro system rather than omniscient player fog.
 Editor modes intentionally show the full map, without fog.
+
+## Spatial broadphase and command determinism
+
+`UnitSpatialIndex` maintains uniform-size XZ buckets plus integer-ID lookup,
+rebuilding at the start of each fixed simulation step and moving units between
+buckets as they advance. Separation and enemy acquisition query only adjacent
+cells; exact distances and original unit-vector ordering still determine
+steering and target tie-breaking. Attack target resolution uses O(1) ID lookup
+during the fixed tick. Unit movement now clamps to the active navigation map
+instead of a hard-coded 48-unit square, enabling authored maps at other scales.
+
+**Hostility is determined by `ownerId`, not appearance or faction.**
+Different owners can now choose the same visual faction while remaining
+enemies, and differently skinned allies no longer auto-attack each other.
+
+This is the first broadphase foundation; it does not yet include a dynamic
+physics BVH, collision avoidance, flow fields, multi-threaded simulation,
+multi-layer air/ground spatial categories or heavy-load performance budgets.

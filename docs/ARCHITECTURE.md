@@ -79,3 +79,14 @@ shader applies visibility brightness via that texture. The authoring modes
 disable terrain fog to permit full scene placement. `sight_range` is stored
 as a Unit catalog property (bounded 0..128 world units), and supports per-unit
 instance overrides through the standard catalog resolver.
+
+### Deterministic simulation broadphase
+
+`UnitSpatialIndex` uses 8-world-unit buckets and a map of stable unit IDs
+to vector indices. Each simulation tick rebuilds membership once, then
+incrementally relocates individual entries after movement. Queries return
+candidate indices in source-vector order, so a symmetric broadphase does
+not arbitrarily change nearest-enemy ties or local separation accumulation.
+`Unit::update`, `NavigationAgent3D::computeSteeringVelocity`, combat
+acquisition and target ID resolution accept an optional index, preserving
+direct all-pairs operation for focused standalone tests.

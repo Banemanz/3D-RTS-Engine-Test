@@ -116,3 +116,11 @@ occlusion, per-Unit/instance `sight_range`, fog-shaded terrain, hidden
 enemy world models and filtered minimap/targeting have been implemented.
 Radar, detector rules, allied vision sharing, radar ghosts and separate
 sensor layers remain TBD.
+
+### Latest simulation scaling pass
+
+An XZ spatial grid now accelerates local separation and nearest-enemy
+queries; direct target-ID lookup is O(1) within each simulation tick.
+Owner-based hostilities are independent of visual faction. Heavyweight
+collision shape queries, movement classes, flow fields, projectile physics
+and networking/prediction remain future engine subsystems.

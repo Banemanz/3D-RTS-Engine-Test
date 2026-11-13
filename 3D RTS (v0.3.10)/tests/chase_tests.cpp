@@ -21,6 +21,7 @@ int main() {
     army.emplace_back(1,"Pursuer",marine,Vec3(2.5f,0,2.5f));
     army.emplace_back(2,"Target",target,Vec3(10.5f,0,2.5f));
     army[0].navGrid=&grid;
+    army[1].ownerId=1; // ownership, not visual faction, determines hostility
     army[1].isWorker=true; // parked target, not enemy strategic AI
     army[0].attackTarget(2);
     bool traversedOpening=false;

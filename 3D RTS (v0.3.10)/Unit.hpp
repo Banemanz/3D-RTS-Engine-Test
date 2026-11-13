@@ -9,6 +9,7 @@
 #include <vector>
 
 class Unit;
+class UnitSpatialIndex;
 
 class NavigationAgent3D {
 public:
@@ -24,7 +25,8 @@ public:
     void setTargetPosition(const Vec3& target);
     void stop();
     bool isNavigationFinished(const Vec3& currentPos) const;
-    Vec3 computeSteeringVelocity(const Unit& self, const std::vector<Unit>& allUnits, float deltaTime);
+    Vec3 computeSteeringVelocity(const Unit& self, const std::vector<Unit>& allUnits,
+                                  float deltaTime,const UnitSpatialIndex* index=nullptr);
 };
 
 enum class UnitState {
@@ -91,14 +93,18 @@ public:
     void attackTarget(int enemyId);
     void takeDamage(float rawDamage, const std::string& attackerName);
 
-    void update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary);
+    void update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary,
+                const UnitSpatialIndex* spatial=nullptr);
     bool intersectRay(const Ray& ray, float& outDistance) const;
 
 private:
     Vec3 currentVelocity{0.0f, 0.0f, 0.0f};
 
     void smoothRotateToward(float targetYaw, float deltaTime);
-    static Unit* findUnitById(std::vector<Unit>& allUnits, int searchId);
-    int findNearestEnemyId(const std::vector<Unit>& allUnits, float searchRadius) const;
-    void updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits);
+    static Unit* findUnitById(std::vector<Unit>& allUnits, int searchId,
+                              const UnitSpatialIndex* spatial);
+    int findNearestEnemyId(const std::vector<Unit>& allUnits,float searchRadius,
+                           const UnitSpatialIndex* spatial) const;
+    void updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
+                                  const UnitSpatialIndex* spatial);
 };

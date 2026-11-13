@@ -15,6 +15,7 @@ target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(RTSSimulation STATIC
     RTSSkirmish.cpp
     RTSVision.cpp
+    UnitSpatialIndex.cpp
     TriggerEngine.cpp
     unit_navigationagent3d_implementation.cpp
     unitdata_resource_implementation.cpp)
@@ -56,6 +57,10 @@ if(BUILD_TESTING)
     target_link_libraries(RTSSceneTests PRIVATE RTSAuthoring)
     add_test(NAME scene COMMAND RTSSceneTests)
 
+    add_executable(RTSSpatialTests tests/spatial_tests.cpp)
+    target_link_libraries(RTSSpatialTests PRIVATE RTSSimulation)
+    add_test(NAME spatial COMMAND RTSSpatialTests)
+
     add_executable(RTSVisionTests tests/vision_tests.cpp)
     target_link_libraries(RTSVisionTests PRIVATE RTSSimulation)
     add_test(NAME vision COMMAND RTSVisionTests)
@@ -76,7 +81,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
+    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()

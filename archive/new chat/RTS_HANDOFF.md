@@ -194,3 +194,19 @@ terrain occlusion, explored persistence, GPU pixel encoding, changed-only
 revision updates, and data-driven sight ranges.
 Limitations: no radar, cloak/detector, height-adjusted air sensors, per-team
 diplomacy/alliance LOS, ghost buildings, or line-of-fire checks yet.
+
+## Spatial acceleration / owner-based teams (2026-11-13)
+
+`UnitSpatialIndex.hpp/.cpp` is a deterministic uniform XZ spatial hash:
+O(N) rebuild at the start of each fixed simulation tick, incremental
+bucket updates as units move, candidate queries returned in stable vector
+order, and ID-to-unit lookup. `Unit::update` and NavigationAgent steering/
+combat accept an optional index so old direct tests still compile. The
+skirmish uses the new spatial index in the main update loop; source vector
+iterators are stable during this loop (spawns occur afterward).
+Team hostility now checks `ownerId`, never visual `data.faction`.
+`Unit` clamps movement to its borrowed NavigationGrid map rather than
+hard-coded +/-48 bounds. `RTSSpatialTests` compare candidate neighborhoods
+to exhaustive brute-force ground truth and indexed steering to direct
+steering for exact parity. This is not full collision avoidance or a
+parallel simulation scheduler yet.

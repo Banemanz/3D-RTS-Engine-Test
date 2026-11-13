@@ -104,3 +104,12 @@ shown on the minimap or clickable while currently visible. The map editor
 continues to reveal the full scene for authoring. See
 [authoring](docs/AUTHORING.md) for `sight_range` overrides and
 [engine status](docs/ENGINE_STATUS.md) for remaining radar/stealth limitations.
+
+## Simulation scaling
+
+The engine now maintains an incremental spatial grid each fixed simulation
+tick. Local unit separation, enemy acquisition and ID-targeting no longer
+require all-pairs scans. Ownership is independent from visual faction so
+modders can create enemy factions using the same assets. The spatial
+broadphase is deterministic and covered by a 2,000-unit regression test;
+it is not a full physics/formation system.

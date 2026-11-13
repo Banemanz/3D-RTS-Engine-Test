@@ -1,4 +1,5 @@
 #include "Unit.hpp"
+#include "UnitSpatialIndex.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -20,7 +21,9 @@ bool NavigationAgent3D::isNavigationFinished(const Vec3& currentPos) const {
     return toTarget.length() <= stoppingDistance;
 }
 
-Vec3 NavigationAgent3D::computeSteeringVelocity(const Unit& self, const std::vector<Unit>& allUnits, float /*deltaTime*/) {
+Vec3 NavigationAgent3D::computeSteeringVelocity(const Unit& self,
+      const std::vector<Unit>& allUnits,float /*deltaTime*/,
+      const UnitSpatialIndex* spatial) {
     Vec3 seekForce(0.0f, 0.0f, 0.0f);
 
     if (hasDestination) {
@@ -42,8 +45,8 @@ Vec3 NavigationAgent3D::computeSteeringVelocity(const Unit& self, const std::vec
     Vec3 separationForce(0.0f, 0.0f, 0.0f);
     int neighborCount = 0;
 
-    for (const auto& other : allUnits) {
-        if (other.id == self.id || !other.isAlive()) continue;
+    auto consider = [&](const Unit& other) {
+        if (other.id == self.id || !other.isAlive()) return;
         float reach = separationRadius + (other.isStructure ? other.radius : 0.0f);
 
         Vec3 away = self.position - other.position;
@@ -61,6 +64,13 @@ Vec3 NavigationAgent3D::computeSteeringVelocity(const Unit& self, const std::vec
             separationForce += away.normalized() * (strength * separationWeight);
             neighborCount++;
         }
+    };
+    if(spatial) {
+        for(auto idx:spatial->nearby(self.position,
+             separationRadius+spatial->maxStructureRadius()))
+            consider(allUnits[idx]);
+    }else{
+        for(const auto& other:allUnits)consider(other);
     }
 
     Vec3 combined = seekForce + separationForce;
@@ -126,7 +136,8 @@ void Unit::takeDamage(float rawDamage, const std::string& attackerName) {
     }
 }
 
-void Unit::update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary) {
+void Unit::update(float deltaTime,std::vector<Unit>& allUnits,float mapBoundary,
+                  const UnitSpatialIndex* spatial) {
     if (!isAlive() || isStructure) return;
 
     if (attackCooldownTimer > 0.0f) {
@@ -136,9 +147,9 @@ void Unit::update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundar
         attackFlashTimer = std::max(0.0f, attackFlashTimer - deltaTime);
     }
 
-    updateCombatStateMachine(deltaTime, allUnits);
+    updateCombatStateMachine(deltaTime,allUnits,spatial);
 
-    Vec3 desiredVel = navAgent.computeSteeringVelocity(*this, allUnits, deltaTime);
+    Vec3 desiredVel = navAgent.computeSteeringVelocity(*this,allUnits,deltaTime,spatial);
 
     float blend = 1.0f - std::exp(-14.0f * deltaTime);
     currentVelocity = currentVelocity + (desiredVel - currentVelocity) * blend;
@@ -146,11 +157,16 @@ void Unit::update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundar
     position += currentVelocity * deltaTime;
     position.y = 0.0f;
 
-    position.x = std::clamp(position.x, -mapBoundary, mapBoundary);
-    position.z = std::clamp(position.z, -mapBoundary, mapBoundary);
+    if(navGrid) {
+        const Vec3 clamped=navGrid->clampWorld(position);
+        position.x=clamped.x;position.z=clamped.z;
+    }else{
+        position.x=std::clamp(position.x,-mapBoundary,mapBoundary);
+        position.z=std::clamp(position.z,-mapBoundary,mapBoundary);
+    }
 
     if (state == UnitState::ATTACKING && targetUnitId != -1) {
-        Unit* target = findUnitById(allUnits, targetUnitId);
+        Unit* target = findUnitById(allUnits,targetUnitId,spatial);
         if (target && target->isAlive()) {
             Vec3 toEnemy = target->position - position;
             if (toEnemy.lengthXZ() > 0.01f) {
@@ -189,31 +205,34 @@ void Unit::smoothRotateToward(float targetYaw, float deltaTime) {
     facingYawRad += diff * std::min(1.0f, 12.0f * deltaTime);
 }
 
-Unit* Unit::findUnitById(std::vector<Unit>& allUnits, int searchId) {
+Unit* Unit::findUnitById(std::vector<Unit>& allUnits,int searchId,
+                         const UnitSpatialIndex* spatial) {
+    if(spatial)return spatial->byId(allUnits,searchId);
     for (auto& u : allUnits) {
         if (u.id == searchId) return &u;
     }
     return nullptr;
 }
 
-int Unit::findNearestEnemyId(const std::vector<Unit>& allUnits, float searchRadius) const {
-    int bestId = -1;
-    float bestDist = searchRadius;
-
-    for (const auto& other : allUnits) {
-        if (other.id == id || !other.isAlive()) continue;
-        if (other.data.faction == data.faction) continue;
-
-        float dist = (other.position - position).lengthXZ();
-        if (dist <= bestDist) {
-            bestDist = dist;
-            bestId = other.id;
-        }
+int Unit::findNearestEnemyId(const std::vector<Unit>& allUnits,float searchRadius,
+                             const UnitSpatialIndex* spatial) const {
+    int bestId=-1;
+    float bestDist=searchRadius;
+    const auto consider=[&](const Unit& other) {
+        if(other.id==id || !other.isAlive() || other.ownerId==ownerId)return;
+        const float distance=(other.position-position).lengthXZ();
+        if(distance<=bestDist){bestDist=distance;bestId=other.id;}
+    };
+    if(spatial){
+        for(auto i:spatial->nearby(position,searchRadius))consider(allUnits[i]);
+    }else{
+        for(const auto& other:allUnits)consider(other);
     }
     return bestId;
 }
 
-void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits) {
+void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
+                                    const UnitSpatialIndex* spatial) {
     (void)deltaTime;
 
     switch (state) {
@@ -221,7 +240,7 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
             navAgent.stop();
             // Workers follow gathering jobs unless explicitly ordered to fight.
             if (isWorker) break;
-            int enemyId = findNearestEnemyId(allUnits, data.aggro_range);
+            int enemyId = findNearestEnemyId(allUnits,data.aggro_range,spatial);
             if (enemyId != -1) {
                 targetUnitId = enemyId;
                 state = UnitState::CHASING;
@@ -231,7 +250,7 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
 
         case UnitState::MOVING: {
             if (attackMoveEnabled) {
-                int enemyId = findNearestEnemyId(allUnits, data.aggro_range);
+                int enemyId = findNearestEnemyId(allUnits,data.aggro_range,spatial);
                 if (enemyId != -1) {
                     targetUnitId = enemyId;
                     state = UnitState::CHASING;
@@ -248,11 +267,11 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
         }
 
         case UnitState::CHASING: {
-            Unit* target = findUnitById(allUnits, targetUnitId);
+            Unit* target = findUnitById(allUnits,targetUnitId,spatial);
             if (!target || !target->isAlive()) {
                 targetUnitId = -1;
                 chaseWaypoints.clear();
-                int nextEnemy = findNearestEnemyId(allUnits, data.aggro_range);
+                int nextEnemy = findNearestEnemyId(allUnits,data.aggro_range,spatial);
                 if (nextEnemy != -1) {
                     targetUnitId = nextEnemy;
                 } else {
@@ -304,11 +323,11 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
         }
 
         case UnitState::ATTACKING: {
-            Unit* target = findUnitById(allUnits, targetUnitId);
+            Unit* target = findUnitById(allUnits,targetUnitId,spatial);
             if (!target || !target->isAlive()) {
                 targetUnitId = -1;
                 chaseWaypoints.clear();
-                int nextEnemy = findNearestEnemyId(allUnits, data.aggro_range);
+                int nextEnemy = findNearestEnemyId(allUnits,data.aggro_range,spatial);
                 if (nextEnemy != -1) {
                     targetUnitId = nextEnemy;
                     state = UnitState::CHASING;

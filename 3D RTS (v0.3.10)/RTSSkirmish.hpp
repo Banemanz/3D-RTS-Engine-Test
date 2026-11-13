@@ -1,6 +1,7 @@
 #pragma once
 #include "NavigationGrid.hpp"
 #include "RTSVision.hpp"
+#include "UnitSpatialIndex.hpp"
 #include "Unit.hpp"
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
@@ -72,6 +73,7 @@ public:
 
 private:
     RTSProject project_;
+    UnitSpatialIndex spatial_; // incrementally updated every fixed simulation tick
     std::string marineId_="marine",workerId_="worker",enemyId_="zealot",barracksId_="barracks";
     std::string playerBaseCatalog_="command_center",enemyBaseCatalog_="hive";
     float enemyInterval_=16.0f;

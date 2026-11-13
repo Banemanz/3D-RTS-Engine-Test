@@ -452,9 +452,11 @@ void RTSSkirmish::updateEnemy(float dt) {
 void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
     dt=std::clamp(dt,0.0f,0.1f);
-    for(auto& u:units) {
+    spatial_.rebuild(units);
+    for(std::size_t i=0;i<units.size();++i) {
+        auto& u=units[i];
         Vec3 previous=u.position;
-        u.update(dt,units,48.0f);
+        u.update(dt,units,48.0f,&spatial_);
         if(u.isAlive() && !u.isStructure) {
             auto cell=navigation.toCell(u.position);
             if(!navigation.walkable(cell.x,cell.z)) {
@@ -463,6 +465,7 @@ void RTSSkirmish::update(float dt) {
             }
             u.position.y=project_.terrain.sampleHeight(u.position.x,u.position.z);
         }
+        if(u.isAlive())spatial_.moved(i,previous,u.position);
     }
     // Dead army units return their supply exactly once. Production still reserves
     // supply at queue time, even before the unit exists.
