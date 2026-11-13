@@ -11,6 +11,7 @@ std::string EditorSession::panelName()const {
         case Panel::Terrain:return "TERRAIN EDITOR";
         case Panel::Data:return "DATA EDITOR";
         case Panel::Triggers:return "TRIGGER EDITOR";
+        case Panel::Scene:return "SCENE EDITOR";
     }
     return "";
 }

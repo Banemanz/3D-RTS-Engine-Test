@@ -91,3 +91,15 @@ strokes disable its nested history so snapshots don't multiply recursively.
 Ctrl+Z/Y work throughout the edit panels. Current limitations: undo memory
 is proportional to full project size; no persistent disk recovery or coalescing
 beyond each terrain brush stroke.
+
+## Scene workspace (new)
+
+`SceneEditor.cpp` implements the first F8 scene-object authoring tools:
+viewport selection of placed objects, Shift+click/G move, J/K rotation,
+comma/period scaling, ownership, Point/Region placement, region radius,
+per-instance JSON override editing, stable-ID duplication and deletion.
+Referenced Regions cannot be removed from the GUI. Added CTest scene editor
+coverage and OpenGL screenshot smoke for the scene panel. These are keyboard-
+driven controls; **not** a full transform gizmo, entity hierarchy, or
+WC3/SC2-caliber actor/scene editor yet. Work remains on property widgets,
+transactional editing, selection precision and real visual assets.

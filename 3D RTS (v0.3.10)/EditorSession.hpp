@@ -10,7 +10,7 @@
 // commands. A whole project can be edited and saved without any GPU.
 class EditorSession {
 public:
-    enum class Panel { Play, Terrain, Data, Triggers };
+    enum class Panel { Play, Terrain, Data, Triggers, Scene };
     enum class Tool { Raise, Lower, Smooth, Flatten, Paint, Block, Unblock,
                       PlaceMineral, PlaceUnit, PlaceDoodad };
     Panel panel=Panel::Play;
@@ -26,6 +26,7 @@ public:
     std::size_t selectedObject=0;
     std::size_t selectedField=0;
     std::size_t selectedTrigger=0;
+    std::string selectedPlacementId;
     bool textEditing=false;
     bool newFieldEditing=false;
     std::string editText;
@@ -42,6 +43,22 @@ public:
     bool place(RTSProject& project,const Vec3& worldPos);
     bool removeNearest(RTSProject& project,const Vec3& worldPos,float radius=3.0f);
     bool cyclePlacementCatalog(const RTSProject& project,int direction,bool doodad=false);
+
+    // Scene editor uses stable IDs rather than indices that move when deleting
+    // and inserting scene entities.
+    const ProjectPlacement* selectedPlacement(const RTSProject& project) const;
+    bool selectNearestPlacement(const RTSProject& project,const Vec3& world,float radius=3.5f);
+    bool cycleSceneSelection(const RTSProject& project,int direction);
+    bool moveSelectedPlacement(RTSProject& project,const Vec3& world);
+    bool rotateSelectedPlacement(RTSProject& project,float degrees);
+    bool scaleSelectedPlacement(RTSProject& project,float factor);
+    bool toggleSelectedOwner(RTSProject& project);
+    bool adjustSelectedRegionRadius(RTSProject& project,float delta);
+    bool duplicateSelectedPlacement(RTSProject& project);
+    bool deleteSelectedPlacement(RTSProject& project);
+    bool placeSceneMarker(RTSProject& project,const Vec3& world,bool region);
+    bool beginSceneOverrideEdit(const RTSProject& project);
+    bool finishSceneOverrideEdit(RTSProject& project);
 
     void cycleObject(const RTSProject& project,int delta);
     void cycleField(const RTSProject& project,int delta);

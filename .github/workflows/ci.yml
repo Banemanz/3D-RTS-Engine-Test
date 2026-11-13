@@ -49,6 +49,16 @@ jobs:
           name: rts-trigger-editor-screenshot
           path: rts-triggers.png
           if-no-files-found: error
+      - name: Smoke test object and region scene editor
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --scene-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-scene.ppm
+      - name: Convert scene screenshot
+        run: python3 tools/ppm_to_png.py rts-scene.ppm rts-scene.png
+      - name: Upload scene editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-scene-editor-screenshot
+          path: rts-scene.png
+          if-no-files-found: error
   windows:
     runs-on: windows-latest
     steps:

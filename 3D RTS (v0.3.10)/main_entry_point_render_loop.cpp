@@ -109,6 +109,19 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
 
+    if(state->editor.panel==EditorSession::Panel::Scene) {
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS) {
+            Vec3 hit;
+            if(state->camera.screenToGroundRaycast(mouseX,mouseY,
+                   state->windowWidth,state->windowHeight,hit)) {
+                if((mods & GLFW_MOD_SHIFT) && state->editor.selectedPlacement(state->project)) {
+                    if(state->editor.moveSelectedPlacement(state->project,hit))
+                        state->reloadFromProject();
+                } else state->editor.selectNearestPlacement(state->project,hit);
+            }
+        }
+        return;
+    }
     if(state->editor.panel!=EditorSession::Panel::Play) {
         if(state->editor.panel!=EditorSession::Panel::Terrain)return;
         Vec3 hit;
@@ -182,7 +195,8 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 void characterCallback(GLFWwindow* window,unsigned int codepoint) {
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if(s && (s->editor.panel==EditorSession::Panel::Data ||
-             s->editor.panel==EditorSession::Panel::Triggers))
+             s->editor.panel==EditorSession::Panel::Triggers ||
+             s->editor.panel==EditorSession::Panel::Scene))
         s->editor.addChar(codepoint);
 }
 void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,int mods) {
@@ -203,16 +217,20 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
             if(action==GLFW_PRESS) {
                 RTSProject backup=s->project;
                 const bool wasModified=edit.modified;
+                bool changed=false;
                 try {
-                    const bool changed=edit.panel==EditorSession::Panel::Triggers
-                        ? edit.finishTriggerEdit(s->project):edit.finishEdit(s->project);
+                    changed=edit.panel==EditorSession::Panel::Triggers
+                        ? edit.finishTriggerEdit(s->project)
+                        : edit.panel==EditorSession::Panel::Scene
+                        ? edit.finishSceneOverrideEdit(s->project)
+                        : edit.finishEdit(s->project);
                     if(changed && !edit.textEditing){
                         TriggerEngine::validate(s->project);
                         s->reloadFromProject();
                     }
                 }catch(const std::exception& e){
                     s->project=std::move(backup);
-                    edit.discardRejectedChange();
+                    if(changed)edit.discardRejectedChange();
                     edit.modified=wasModified;
                     edit.message=std::string("INVALID EDIT: ")+e.what();
                     try{s->reloadFromProject();}catch(...) {}
@@ -238,6 +256,12 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
         if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
         return;
     }
+    if(key==GLFW_KEY_F8) {
+        edit.panel=edit.panel==EditorSession::Panel::Scene?
+            EditorSession::Panel::Play:EditorSession::Panel::Scene;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
     if(key==GLFW_KEY_F7) {
         edit.panel=edit.panel==EditorSession::Panel::Data?
             EditorSession::Panel::Play:EditorSession::Panel::Data;
@@ -260,6 +284,69 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
         if(ctrl && key==GLFW_KEY_Y) {
             if(edit.redo(s->project))s->reloadFromProject();
             return;
+        }
+        if(edit.panel==EditorSession::Panel::Scene) {
+            if(key==GLFW_KEY_TAB) {
+                edit.cycleSceneSelection(s->project,(mods & GLFW_MOD_SHIFT)?-1:1);return;
+            }
+            if(ctrl && key==GLFW_KEY_D) {
+                if(edit.duplicateSelectedPlacement(s->project))s->reloadFromProject();return;
+            }
+            if(key==GLFW_KEY_DELETE) {
+                const auto* selected=edit.selectedPlacement(s->project);
+                if(selected && selected->kind=="Region") {
+                    auto triggers=s->project.extensions.find("triggers");
+                    if(triggers!=s->project.extensions.end() &&
+                       triggers->second.is<picojson::array>()) {
+                        for(const auto& rule:triggers->second.get<picojson::array>()){
+                            if(!rule.is<picojson::object>())continue;
+                            const auto& r=rule.get<picojson::object>();
+                            auto event=r.find("event");
+                            if(event==r.end() || !event->second.is<picojson::object>())continue;
+                            const auto& fields=event->second.get<picojson::object>();
+                            auto region=fields.find("region");
+                            if(region!=fields.end() && region->second.is<std::string>() &&
+                               region->second.get<std::string>()==selected->id){
+                                edit.message="REGION IS REFERENCED BY A TRIGGER";return;
+                            }
+                        }
+                    }
+                }
+                if(edit.deleteSelectedPlacement(s->project))s->reloadFromProject();return;
+            }
+            if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
+                edit.beginSceneOverrideEdit(s->project);return;
+            }
+            if(key==GLFW_KEY_P && s->hoveredTerrain) {
+                if(edit.placeSceneMarker(s->project,s->hoveredWorld,false))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_R && s->hoveredTerrain) {
+                if(edit.placeSceneMarker(s->project,s->hoveredWorld,true))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_G && s->hoveredTerrain) {
+                if(edit.moveSelectedPlacement(s->project,s->hoveredWorld))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_J || key==GLFW_KEY_K) {
+                if(edit.rotateSelectedPlacement(s->project,key==GLFW_KEY_J?-15.f:15.f))
+                    s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_COMMA || key==GLFW_KEY_PERIOD) {
+                if(edit.scaleSelectedPlacement(s->project,key==GLFW_KEY_COMMA?.9f:1.1f))
+                    s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_O) {
+                if(edit.toggleSelectedOwner(s->project))s->reloadFromProject();return;
+            }
+            if(key==GLFW_KEY_LEFT_BRACKET || key==GLFW_KEY_RIGHT_BRACKET) {
+                if(edit.adjustSelectedRegionRadius(s->project,
+                   key==GLFW_KEY_LEFT_BRACKET?-.5f:.5f))s->reloadFromProject();
+                return;
+            }
         }
         if(edit.panel==EditorSession::Panel::Triggers) {
             if(ctrl && key==GLFW_KEY_N) {edit.createTrigger(s->project);return;}
@@ -321,6 +408,7 @@ int main(int argc, char** argv) {
     std::string inputProjectPath;
     bool startEditor=false;
     bool startTriggerEditor=false;
+    bool startSceneEditor=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -330,6 +418,7 @@ int main(int argc, char** argv) {
         else if(arg == "--project" && i+1<argc)inputProjectPath=argv[++i];
         else if(arg == "--editor")startEditor=true;
         else if(arg == "--trigger-editor")startTriggerEditor=true;
+        else if(arg == "--scene-editor")startSceneEditor=true;
     }
     int renderedFrames = 0;
     try {
@@ -353,9 +442,10 @@ int main(int argc, char** argv) {
             app.project.loadFile("projects/default.rtsproject.json");
         }
         app.reloadFromProject();
-        if(startEditor || startTriggerEditor) {
-            app.editor.panel=startTriggerEditor ? EditorSession::Panel::Triggers :
-                             EditorSession::Panel::Terrain;
+        if(startEditor || startTriggerEditor || startSceneEditor) {
+            app.editor.panel=startSceneEditor ? EditorSession::Panel::Scene :
+                startTriggerEditor ? EditorSession::Panel::Triggers :
+                                     EditorSession::Panel::Terrain;
             auto preset=app.project.metadata.find("editor_camera");
             if(preset!=app.project.metadata.end() && preset->second.is<picojson::object>()) {
                 const auto& cam=preset->second.get<picojson::object>();
@@ -544,10 +634,12 @@ int main(int argc, char** argv) {
                 }
             }
             }
-            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
-            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
+            if(!app.editor.textEditing) {
+                if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
+                if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
+            }
 
-            if(app.editor.panel!=EditorSession::Panel::Data || !app.editor.textEditing)
+            if(!app.editor.textEditing)
                 app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
             if(app.editor.panel==EditorSession::Panel::Play) {
                 accumulator += deltaTime;
@@ -724,6 +816,37 @@ int main(int argc, char** argv) {
                 glDrawArrays(GL_TRIANGLES,0,6);
             }
 
+            // Selected scene objects and region extents. A lightweight ground
+            // overlay is used until the editor has proper transform gizmos.
+            if(app.editor.panel==EditorSession::Panel::Scene) {
+                for(const auto& placed:app.project.placements) {
+                    float radius=placed.kind=="Point"?.7f:1.4f;
+                    const bool region=placed.kind=="Region";
+                    if(region){
+                        radius=5.0f;
+                        auto it=placed.overrides.find("radius");
+                        if(it!=placed.overrides.end() && it->second.is<double>())
+                            radius=std::clamp(float(it->second.get<double>()),.5f,64.f);
+                    }
+                    const bool chosen=app.editor.selectedPlacementId==placed.id;
+                    Vec3 pos=placed.position;
+                    pos.y=app.project.terrain.sampleHeight(pos.x,pos.z);
+                    Mat4 marker=Mat4::translate(pos+Vec3(0,.08f,0))
+                        * Mat4::scale(Vec3(radius,1,radius));
+                    glUseProgram(ringShader);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uModel"),1,GL_FALSE,marker.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uView"),1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uProjection"),1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(ringShader,"uColor"),
+                        chosen?1.f:region?.16f:.29f,
+                        chosen?.78f:region?.78f:.66f,
+                        chosen?.18f:region?1.f:.86f,
+                        chosen?.55f:region?.13f:.24f);
+                    glBindVertexArray(ringVAO);
+                    glDrawArrays(GL_TRIANGLES,0,6);
+                }
+            }
+
             // 3. Render Floating 2D Screen-Projected Health Bars & Drag-Selection Box
             glDisable(GL_DEPTH_TEST);
             glUseProgram(hudBoxShader);
@@ -847,7 +970,8 @@ int main(int argc, char** argv) {
             if(app.editor.panel!=EditorSession::Panel::Play &&
                app.windowWidth>0 && app.windowHeight>0) {
                 const bool dataPanel=app.editor.panel==EditorSession::Panel::Data ||
-                                     app.editor.panel==EditorSession::Panel::Triggers;
+                                     app.editor.panel==EditorSession::Panel::Triggers ||
+                                      app.editor.panel==EditorSession::Panel::Scene;
                 const float bottom=dataPanel?-1.0f:
                     1.0f-2.0f*220.0f/float(app.windowHeight);
                 float panelQuad[]={
@@ -917,6 +1041,43 @@ int main(int argc, char** argv) {
                         if(app.editor.textEditing)
                             line(float(app.windowHeight)-58,2.25f,
                                  "EDIT: "+app.editor.editText,1.f,.81f,.40f);
+                    }
+                } else if(app.editor.panel==EditorSession::Panel::Scene) {
+                    line(40,2.0f,"F8 PLAY  F5 TERRAIN  F6 TRIGGERS  F7 DATA  CTRL+S SAVE  CTRL+Z/Y UNDO");
+                    line(64,1.9f,"LMB SELECT  SHIFT+LMB MOVE  G MOVE TO CURSOR  TAB NEXT  SHIFT+TAB PREV");
+                    line(87,1.9f,"P PLACE POINT  R PLACE REGION  J/K ROTATE  ,/. SCALE  O OWNER");
+                    line(110,1.9f,"[/] REGION RADIUS  CTRL+D DUPLICATE  DEL DELETE  ENTER OVERRIDE JSON");
+                    line(146,2.5f,"SCENE PLACEMENTS: "+std::to_string(app.project.placements.size()),
+                         1.f,.79f,.38f);
+                    const auto* selected=app.editor.selectedPlacement(app.project);
+                    if(selected) {
+                        line(185,2.5f,"SELECTED "+selected->id+" / "+selected->kind,
+                             1.f,.82f,.41f);
+                        line(220,2.2f,"CATALOG "+selected->catalogId+
+                             "  OWNER "+std::to_string(selected->owner));
+                        line(253,2.0f,"POSITION "+std::to_string(selected->position.x).substr(0,7)+
+                             ", "+std::to_string(selected->position.y).substr(0,7)+
+                             ", "+std::to_string(selected->position.z).substr(0,7));
+                        line(286,2.0f,"ROTATION Y "+std::to_string(selected->rotation.y).substr(0,7)+
+                             "  SCALE "+std::to_string(selected->scale.x).substr(0,6));
+                        if(selected->kind=="Region") {
+                            const auto rad=selected->overrides.find("radius");
+                            const double radius=rad!=selected->overrides.end() &&
+                                                rad->second.is<double>()
+                                                ? rad->second.get<double>():5.0;
+                            line(318,2.0f,"REGION RADIUS "+std::to_string(radius).substr(0,7),
+                                 .55f,.9f,.98f);
+                        }
+                        std::string overrides=picojson::value(selected->overrides).serialize();
+                        if(overrides.size()>155)overrides=overrides.substr(0,152)+"...";
+                        line(360,1.8f,"OVERRIDES "+overrides,.76f,.9f,.66f);
+                    } else line(190,2.0f,"CLICK A PLACED OBJECT OR PRESS TAB TO CHOOSE ONE.");
+                    if(app.editor.textEditing) {
+                        line(600,2.1f,"EDIT INSTANCE OVERRIDES JSON; CTRL+V PASTE",
+                             1.f,.75f,.32f);
+                        std::string snippet=app.editor.editText;
+                        if(snippet.size()>160)snippet=snippet.substr(0,157)+"...";
+                        line(635,1.7f,snippet,1.f,.88f,.65f);
                     }
                 } else if(app.editor.panel==EditorSession::Panel::Triggers) {
                     line(40,2.0f,"F6 PLAY  F5 TERRAIN  F7 DATA  F9 TEST MAP  CTRL+S SAVE");

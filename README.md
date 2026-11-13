@@ -17,6 +17,7 @@ ctest --test-dir build --output-on-failure
 ./build/RTSCameraTerrain
 ./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json
 ./build/RTSCameraTerrain --trigger-editor --project projects/terrain_showcase.rtsproject.json
+./build/RTSCameraTerrain --scene-editor --project projects/terrain_showcase.rtsproject.json
 ./build/RTSProjectTool --validate projects/default.rtsproject.json
 ```
 
@@ -35,7 +36,7 @@ ctest --test-dir build-logic -C Debug --output-on-failure
 ## Editor
 
 **F5** terrain editor, **F6** Trigger Editor (JSON inspector),
-**F7** Data Editor, **F9** play/test current map,
+**F7** Data Editor, **F8** Scene Editor, **F9** play/test current map,
 **Ctrl+S** save project.
 
 The first editor includes raise/lower/smooth/flatten brushes, material

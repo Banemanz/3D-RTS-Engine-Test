@@ -13,6 +13,7 @@ From the repository root, after building (see root README):
 ./build/RTSCameraTerrain --project projects/default.rtsproject.json
 ./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json
 ./build/RTSCameraTerrain --trigger-editor --project projects/terrain_showcase.rtsproject.json
+./build/RTSCameraTerrain --scene-editor --project projects/terrain_showcase.rtsproject.json
 ```
 
 Windows multi-config generators: `build/Debug/RTSCameraTerrain.exe`.
@@ -27,6 +28,7 @@ target is `projects/working.rtsproject.json`.
 | F5 | Terrain editor; F5 again to play |
 | F6 | Trigger inspector with JSON rule editing; F6 again to play |
 | F7 | Generic catalog Data Editor; F7 again to play |
+| F8 | Scene object and region editor; F8 again to play |
 | F9 | Test/play the currently authored map |
 | 1–7 (terrain) | Raise, lower, smooth, flatten, paint, block path, clear path |
 | 8, 9, 0 (terrain) | Place mineral, catalog Unit, catalog Actor doodad |
@@ -45,11 +47,22 @@ target is `projects/working.rtsproject.json`.
 | Trigger panel: Up/Down | Choose event-condition-action rule |
 | Trigger panel: Ctrl+N / Ctrl+D / Delete | Create, duplicate or remove a rule |
 | Trigger panel: Enter | Edit selected rule as JSON; Ctrl+V pastes JSON, Ctrl+C copies selected rule |
+| Scene: Left-click / Shift+left-click | Select nearest placed object / move selected object onto terrain |
+| Scene: Tab / Shift+Tab | Select next/previous scene object |
+| Scene: P / R | Place Point / Region at terrain cursor |
+| Scene: G / J / K | Move selected to cursor / rotate left / rotate right |
+| Scene: , / . / O | Uniformly scale down/up / cycle owner |
+| Scene: [ / ] | Shrink/grow region radius |
+| Scene: Ctrl+D / Delete | Duplicate/delete selected scene object (referenced regions cannot be deleted) |
+| Scene: Enter | Edit JSON per-instance overrides on the selected object |
 | Ctrl+S | Save project |
 | Esc | Cancel a field edit / leave editing for play |
 
 The renderer currently uses a custom bitmap HUD, **not** a dockable Windows
-property inspector. Some editor interactions are still rough; notably
+property inspector. Scene editor provides viewport selection and simple keyboard-driven transforms
+of placed units, doodads, Points and circular Regions. Region extents are
+drawn as tinted ground overlays. There are no 3D move/rotate/scale gizmos yet.
+Some editor interactions are still rough; notably
 cross-document undo/redo and placing/editing point and region shapes are not
 complete. The runtime renders procedural models even when an actor has a named
 mesh file string.

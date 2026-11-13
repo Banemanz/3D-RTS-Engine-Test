@@ -9,7 +9,7 @@ include(CTest)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp InstanceOverrides.cpp)
+add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp SceneEditor.cpp InstanceOverrides.cpp)
 target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
@@ -51,6 +51,9 @@ if(BUILD_TESTING)
     add_executable(RTSEditorTests tests/editor_tests.cpp)
     target_link_libraries(RTSEditorTests PRIVATE RTSAuthoring)
     add_test(NAME editor COMMAND RTSEditorTests)
+    add_executable(RTSSceneTests tests/scene_tests.cpp)
+    target_link_libraries(RTSSceneTests PRIVATE RTSAuthoring)
+    add_test(NAME scene COMMAND RTSSceneTests)
     add_test(NAME sample_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/default.rtsproject.json")
     add_test(NAME showcase_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/terrain_showcase.rtsproject.json")
     add_executable(RTSModdedProjectTests tests/modded_project_tests.cpp)
@@ -64,7 +67,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSProjectTests RTSEditorTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
+    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSProjectTests RTSEditorTests RTSSceneTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
