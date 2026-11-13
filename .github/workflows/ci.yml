@@ -1,0 +1,29 @@
+name: C++ CI
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenGL and GLFW headers
+        run: sudo apt-get update && sudo apt-get install -y libglfw3-dev libgl1-mesa-dev
+      - name: Configure
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Compile
+        run: cmake --build build --parallel 2
+      - name: Unit tests (no display required)
+        run: ctest --test-dir build --output-on-failure
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DRTS_BUILD_DEMO=OFF
+      - name: Compile
+        run: cmake --build build --config Debug
+      - name: Unit tests
+        run: ctest --test-dir build -C Debug --output-on-failure

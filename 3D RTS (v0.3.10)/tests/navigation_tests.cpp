@@ -1,0 +1,37 @@
+#include "NavigationGrid.hpp"
+#include "Math3D.hpp"
+#include <cassert>
+#include <cmath>
+#include <iostream>
+static void basic() {
+    NavigationGrid g(15,15,2.0f,-15.0f,-15.0f);
+    auto path=g.findPath({-10,0,-10},{10,0,10});
+    assert(!path.empty());
+    assert(path.back().x>8 && path.back().z>8);
+    Vec3 p=g.clampWorld({999,12,-999});
+    assert(p.y==0 && p.x<=14 && p.z>=-14);
+}
+static void obstacles() {
+    NavigationGrid g(11,11,1.0f,0,0);
+    for(int z=0;z<10;++z)g.setBlocked(5,z,true);
+    auto path=g.findPath({1.5f,0,1.5f},{9.5f,0,1.5f});
+    assert(!path.empty());
+    bool usedGap=false;
+    for(const auto& p:path) {
+       auto c=g.toCell(p);
+       assert(g.walkable(c.x,c.z));
+       if(c.z==10)usedGap=true;
+    }
+    assert(usedGap);
+    g.setBlocked(5,10,true);
+    assert(g.findPath({1.5f,0,1.5f},{9.5f,0,1.5f}).empty());
+}
+static void noCornerCut() {
+    NavigationGrid g(3,3,1.0f,0,0);
+    g.setBlocked(1,0,true);g.setBlocked(0,1,true);
+    assert(g.findPath({.5f,0,.5f},{2.5f,0,2.5f}).empty());
+}
+int main() {
+    basic();obstacles();noCornerCut();
+    std::cout<<"navigation: 3 tests passed\n";
+}
