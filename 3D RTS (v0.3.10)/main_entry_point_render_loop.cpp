@@ -10,6 +10,8 @@
 #include "Shaders.hpp"
 #include "RTSSkirmish.hpp"
 #include "BitmapHUD.hpp"
+#include "RTSHUDLayout.hpp"
+#include "RTSHUD.hpp"
 #include "RTSProject.hpp"
 #include "InstanceOverrides.hpp"
 #include "EditorSession.hpp"
@@ -23,6 +25,8 @@
 #include <array>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
+#include <exception>
 
 struct AppState {
     RTSCamera camera;
@@ -30,6 +34,9 @@ struct AppState {
     RTSSkirmish game;
     RTSProject project=RTSProject::defaults();
     EditorSession editor;
+    std::unordered_map<std::string,ActorVisual> doodadVisuals;
+    std::string notice;
+    float noticeSeconds=0;
     std::string projectPath="projects/working.rtsproject.json";
     bool mouseStroke=false;
     bool hoveredTerrain=false;
@@ -41,10 +48,21 @@ struct AppState {
         return std::clamp(float(it->second.get<double>()),.05f,100.f);
     }
     void reloadFromProject(){
+        TriggerEngine::validate(project);
+        // Validate all actor assets once, not every rendered frame.
+        std::unordered_map<std::string,ActorVisual> previews;
+        for(const auto& placed:project.placements)
+            if(placed.kind=="Doodad")
+                previews.emplace(placed.id,resolvePlacedDoodad(project,placed));
         game.loadProject(project);
+        doodadVisuals=std::move(previews);
         project.terrain.markDirty();
         camera.terrain=&project.terrain;
         hasMoveMarker=false;
+    }
+    void inform(const std::string& message){
+        notice=message.substr(0,140);
+        noticeSeconds=4.f;
     }
     void saveProject(){
         try{
@@ -54,9 +72,9 @@ struct AppState {
         }
         catch(const std::exception& e){editor.message=std::string("SAVE ERROR: ")+e.what();}
     }
-    enum class Mode { Normal, AttackMove, BuildBarracks } mode = Mode::Normal;
+    enum class Mode { Normal, Move, AttackMove, BuildBarracks } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
-    bool keyX = false, keyR = false;
+    bool keyX = false, keyR = false, keyM=false, keyF2=false, keyH=false;
     std::array<std::vector<int>,10> controlGroups{};
     std::array<bool,10> digitWasDown{};
     int framebufferWidth = 1280, framebufferHeight = 720;
@@ -65,7 +83,71 @@ struct AppState {
     bool hasMoveMarker = false;
     int windowWidth = 1280;
     int windowHeight = 720;
+    void command(HUDCommand action,double px=0,double py=0){
+        if(action==HUDCommand::Minimap){
+            RTSHUDLayout hud(windowWidth,windowHeight);
+            const Vec3 world=hud.minimapWorld(px,py,project.terrain);
+            camera.targetFocalPoint=world;
+            camera.focalPoint=world;
+            return;
+        }
+        switch(action){
+            case HUDCommand::Move: mode=Mode::Move;inform("MOVE: RIGHT CLICK DESTINATION");break;
+            case HUDCommand::AttackMove:mode=Mode::AttackMove;inform("ATTACK MOVE: RIGHT CLICK");break;
+            case HUDCommand::Build:mode=Mode::BuildBarracks;inform("BUILD: RIGHT CLICK CLEAR TERRAIN");break;
+            case HUDCommand::Stop:game.orderStop();mode=Mode::Normal;break;
+            case HUDCommand::Marine:
+                if(!game.queueMarine())inform("CANNOT TRAIN MARINE: CHECK MINERALS, SUPPLY AND BARRACKS");
+                break;
+            case HUDCommand::Worker:
+                if(!game.queueWorker())inform("CANNOT TRAIN WORKER: CHECK MINERALS AND SUPPLY");
+                break;
+            case HUDCommand::SelectArmy:{
+                int count=0;
+                for(auto& unit:game.units) {
+                    unit.isSelected=unit.isAlive() && unit.ownerId==0 &&
+                                     !unit.isStructure && !unit.isWorker;
+                    if(unit.isSelected)++count;
+                }
+                if(!count)inform("NO COMBAT UNITS AVAILABLE");
+                break;
+            }
+            case HUDCommand::FocusBase:{
+                bool found=false;
+                for(auto& unit:game.units)if(unit.isAlive() && unit.ownerId==0 &&
+                                           unit.catalogId=="command_center") {
+                    for(auto& item:game.units)item.isSelected=false;
+                    unit.isSelected=true;
+                    camera.focalPoint=unit.position;
+                    camera.targetFocalPoint=unit.position;
+                    found=true;break;
+                }
+                if(!found)inform("NO COMMAND CENTER");
+                break;
+            }
+            case HUDCommand::Cancel:mode=Mode::Normal;break;
+            default:break;
+        }
+    }
 };
+
+
+void reportInputFailure(GLFWwindow* window,const char* source,const char* message) noexcept {
+    try {
+        auto* state=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+        if(state) {
+            state->inform(std::string("EDITOR ERROR: ")+source+" - "+message);
+            state->editor.message=state->notice;
+            if(state->mouseStroke) {
+                state->editor.finishStroke(state->project);
+                state->mouseStroke=false;
+            }
+        }
+        std::cerr<<"[Editor] "<<source<<": "<<message<<"\n";
+        std::ofstream log("rts-editor-error.log",std::ios::app);
+        if(log)log<<"[Editor] "<<source<<": "<<message<<"\n";
+    }catch(...) {std::cerr<<"[Editor] exception while reporting callback error\n";}
+}
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -84,6 +166,7 @@ void windowSizeCallback(GLFWwindow* window, int width, int height) {
     }
 }
 void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
+    try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
         if(state->editor.panel==EditorSession::Panel::Terrain &&
@@ -92,9 +175,15 @@ void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
                 float(yoffset),.5f,32.0f);
         }else state->camera.onMouseScroll(yoffset);
     }
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"scrollCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"scrollCallback","unknown exception");
+    }
 }
 
 void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+    try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
         if(state->editor.panel!=EditorSession::Panel::Play) {
@@ -107,15 +196,28 @@ void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
                 state->editor.paint(state->project,hit);
         }else state->selectionManager.onMouseMove(xpos,ypos);
     }
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"cursorPosCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"cursorPosCallback","unknown exception");
+    }
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (!state) return;
 
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
-
+    if(state->editor.panel==EditorSession::Panel::Play) {
+        RTSHUDLayout hud(state->windowWidth,state->windowHeight);
+        if(hud.consumes(mouseX,mouseY)){
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS)
+                state->command(hud.hit(mouseX,mouseY,state->game),mouseX,mouseY);
+            return;
+        }
+    }
     if(state->editor.panel==EditorSession::Panel::Scene) {
         if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS) {
             Vec3 hit;
@@ -182,6 +284,12 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->mode = AppState::Mode::Normal;
             return;
         }
+        if (state->mode == AppState::Mode::Move) {
+            if(!state->game.orderMove(hit,false,(mods & GLFW_MOD_SHIFT)!=0))
+                state->inform("NO VALID MOVE ROUTE");
+            state->mode=AppState::Mode::Normal;
+            return;
+        }
         if (state->mode == AppState::Mode::AttackMove) {
             state->game.orderMove(hit, true, (mods & GLFW_MOD_SHIFT) != 0);
             state->mode = AppState::Mode::Normal;
@@ -196,17 +304,29 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->game.orderMove(hit, false, (mods & GLFW_MOD_SHIFT) != 0);
         }
     }
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"mouseButtonCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"mouseButtonCallback","unknown exception");
+    }
 }
 
 
 void characterCallback(GLFWwindow* window,unsigned int codepoint) {
+    try {
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if(s && (s->editor.panel==EditorSession::Panel::Data ||
              s->editor.panel==EditorSession::Panel::Triggers ||
              s->editor.panel==EditorSession::Panel::Scene))
         s->editor.addChar(codepoint);
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"characterCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"characterCallback","unknown exception");
+    }
 }
 void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,int mods) {
+    try {
     if(action!=GLFW_PRESS && action!=GLFW_REPEAT)return;
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if(!s)return;
@@ -407,6 +527,11 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
             }
         }
     }catch(const std::exception& e) {edit.message=std::string("EDITOR ERROR: ")+e.what();}
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"editorKeyCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"editorKeyCallback","unknown exception");
+    }
 }
 
 int main(int argc, char** argv) {
@@ -603,6 +728,10 @@ int main(int argc, char** argv) {
             double currentTime = glfwGetTime();
             float deltaTime = std::clamp(static_cast<float>(currentTime - lastTime), 0.0f, 0.25f);
             lastTime = currentTime;
+            if(app.noticeSeconds>0.f) {
+                app.noticeSeconds=std::max(0.f,app.noticeSeconds-deltaTime);
+                if(app.noticeSeconds==0.f)app.notice.clear();
+            }
 
             auto justPressed = [&](int key, bool& previous) {
                 bool down = glfwGetKey(window, key) == GLFW_PRESS;
@@ -611,11 +740,14 @@ int main(int argc, char** argv) {
                 return fired;
             };
             if(app.editor.panel==EditorSession::Panel::Play) {
-            if (justPressed(GLFW_KEY_A, app.keyA)) app.mode = AppState::Mode::AttackMove;
-            if (justPressed(GLFW_KEY_B, app.keyB)) app.mode = AppState::Mode::BuildBarracks;
-            if (justPressed(GLFW_KEY_T, app.keyT)) app.game.queueMarine();
-            if (justPressed(GLFW_KEY_C, app.keyC)) app.game.queueWorker();
-            if (justPressed(GLFW_KEY_X, app.keyX)) app.game.orderStop();
+            if (justPressed(GLFW_KEY_M, app.keyM)) app.command(HUDCommand::Move);
+            if (justPressed(GLFW_KEY_A, app.keyA)) app.command(HUDCommand::AttackMove);
+            if (justPressed(GLFW_KEY_B, app.keyB)) app.command(HUDCommand::Build);
+            if (justPressed(GLFW_KEY_T, app.keyT)) app.command(HUDCommand::Marine);
+            if (justPressed(GLFW_KEY_C, app.keyC)) app.command(HUDCommand::Worker);
+            if (justPressed(GLFW_KEY_X, app.keyX)) app.command(HUDCommand::Stop);
+            if (justPressed(GLFW_KEY_F2, app.keyF2)) app.command(HUDCommand::SelectArmy);
+            if (justPressed(GLFW_KEY_H, app.keyH)) app.command(HUDCommand::FocusBase);
             if (justPressed(GLFW_KEY_R, app.keyR)) {
                 app.game.reset();
                 app.controlGroups = {};
@@ -652,7 +784,13 @@ int main(int argc, char** argv) {
                 accumulator += deltaTime;
                 int steps = 0;
                 while (accumulator >= fixedStep && steps < 8) {
-                    app.game.update(fixedStep);
+                    try{app.game.update(fixedStep);}
+                    catch(const std::exception& e) {
+                        // Do not tear down the editor on malformed game scripting.
+                        reportInputFailure(window,"simulation",e.what());
+                        app.editor.panel=EditorSession::Panel::Scene;
+                        accumulator=0.f;break;
+                    }
                     accumulator -= fixedStep;
                     ++steps;
                 }
@@ -662,7 +800,8 @@ int main(int argc, char** argv) {
 
             if (currentTime - lastTitleUpdate > 0.35) {
                 const char* mode = app.mode == AppState::Mode::BuildBarracks ? "PLACE BARRACKS: RMB" :
-                    app.mode == AppState::Mode::AttackMove ? "ATTACK MOVE: RMB" : "COMMAND";
+                    app.mode == AppState::Mode::AttackMove ? "ATTACK MOVE: RMB" :
+                    app.mode == AppState::Mode::Move ? "MOVE: RMB" : "COMMAND";
                 std::string title = app.editor.panel==EditorSession::Panel::Play
                     ? std::string("3D RTS | ")+app.game.statusLine()+" | "+mode
                     : std::string("3D RTS AUTHORING | ")+app.project.name+
@@ -791,7 +930,9 @@ int main(int argc, char** argv) {
             // a dedicated asset pipeline is introduced.
             for(const auto& placed:app.project.placements) {
                 if(placed.kind!="Doodad")continue;
-                ActorVisual visual=resolvePlacedDoodad(app.project,placed);
+                const auto visualEntry=app.doodadVisuals.find(placed.id);
+                if(visualEntry==app.doodadVisuals.end())continue;
+                const ActorVisual& visual=visualEntry->second;
                 Vec3 pos=placed.position;
                 pos.y=app.project.terrain.sampleHeight(pos.x,pos.z);
                 Mat4 transform=Mat4::translate(pos)
@@ -915,62 +1056,16 @@ int main(int argc, char** argv) {
                 }
             }
 
-            // Screen-space economy and command HUD.
-            if (app.windowWidth > 0 && app.windowHeight > 0) {
-                const float w = static_cast<float>(app.windowWidth);
-                const float h = static_cast<float>(app.windowHeight);
-                const float bg[] = {
-                    -1.f, 1.f,  1.f, 1.f,  1.f, 1.f-240.f/h,
-                    -1.f, 1.f,  1.f, 1.f-240.f/h, -1.f, 1.f-240.f/h
-                };
-                glUseProgram(hudBoxShader);
-                glUniform4f(glGetUniformLocation(hudBoxShader, "uColor"),.035f,.065f,.10f,.75f);
-                glBindVertexArray(hudVAO);
-                glBindBuffer(GL_ARRAY_BUFFER,hudVBO);
-                glBufferData(GL_ARRAY_BUFFER,sizeof(bg),bg,GL_DYNAMIC_DRAW);
-                glDrawArrays(GL_TRIANGLES,0,6);
-                const std::string economy = "MINERALS " + std::to_string(app.game.playerMinerals)
-                    + "  SUPPLY " + std::to_string(app.game.supplyUsed) + "/"
-                    + std::to_string(app.game.supplyCap) + "  WORKERS "
-                    + std::to_string(app.game.activeWorkerCount())
-                    + "  BARRACKS " + std::to_string(app.game.completedBarracksCount());
-                drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                            14,12,2.6f,economy,.45f,.95f,.85f);
-                drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                            14,40,2.0f,"LMB SELECT  RMB COMMAND  A ATTACK MOVE  B BUILD  T MARINE  C WORKER  SHIFT+RMB QUEUE",
-                            .9f,.94f,.97f);
-                drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                            14,60,2.0f,"Q/E ROTATE  X STOP  R RESTART  CTRL+1-9 SAVE  1-9 RECALL",
-                            .7f,.8f,.9f);
-                std::string selectionLabel;
-                int selectedCount=0;
-                for(const auto& u:app.game.units)if(u.isSelected && u.isAlive() && u.ownerId==0) {
-                    ++selectedCount;
-                    if(selectedCount==1)
-                        selectionLabel = u.instanceName + " HP " + std::to_string(int(u.currentHp))
-                            + "/" + std::to_string(int(u.data.max_hp));
-                }
-                if(selectedCount>1)selectionLabel=std::to_string(selectedCount)+" UNITS SELECTED";
-                if(!selectionLabel.empty())
-                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                                14,84,2.2f,selectionLabel,1.0f,.92f,.53f);
-                if(app.mode==AppState::Mode::BuildBarracks)
-                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                                14,108,2.4f,"PLACE BARRACKS WITH RIGHT CLICK  COST 150",1.f,.8f,.35f);
-                else if(app.mode==AppState::Mode::AttackMove)
-                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                                14,108,2.4f,"RIGHT CLICK DESTINATION TO ATTACK MOVE",1.f,.8f,.35f);
-                if(!app.game.triggerMessage.empty() &&
-                   app.editor.panel==EditorSession::Panel::Play)
-                    drawHUDText(hudBoxShader,hudVAO,hudVBO,
-                                app.windowWidth,app.windowHeight,
-                                14,139,2.0f,app.game.triggerMessage,
-                                1.f,.76f,.32f);
-                if(app.game.result != MatchResult::Playing)
-                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                                w*.32f,h*.46f,5.0f,
-                                app.game.result==MatchResult::Victory ? "VICTORY - PRESS R" : "DEFEAT - PRESS R",
-                                1.f,.82f,.32f);
+            // Gameplay HUD: classic resource strip, tactical minimap,
+            // selection dossier and clickable command grid.
+            if(app.editor.panel==EditorSession::Panel::Play &&
+               app.windowWidth>0 && app.windowHeight>0) {
+                RTSHUDLayout layout(app.windowWidth,app.windowHeight);
+                RTSHUD hud(hudBoxShader,hudVAO,hudVBO,layout);
+                const int commandMode=app.mode==AppState::Mode::Move?1:
+                    app.mode==AppState::Mode::AttackMove?2:
+                    app.mode==AppState::Mode::BuildBarracks?3:0;
+                hud.draw(app.game,app.project,app.camera,commandMode,app.notice);
             }
             // Editor UI is intentionally drawn in the same OpenGL window:
             // project assets and game logic both use this exact document.
