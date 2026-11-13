@@ -6,7 +6,6 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
-#include <set>
 #include <utility>
 
 #if defined(_WIN32)

@@ -2,44 +2,60 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <stdexcept>
 #include <utility>
 
 namespace {
 float distanceXZ(const Vec3& a,const Vec3& b) {
     return (a-b).lengthXZ();
 }
-UnitData marine() {
-    UnitData d=UnitData::fromTresString(HUMAN_MARINE_TRES);
-    return d;
+double metaNumber(const RTSProject& p,const char* name,double defaultValue) {
+    const auto it=p.metadata.find(name);
+    if(it==p.metadata.end() || !it->second.is<double>())return defaultValue;
+    return it->second.get<double>();
 }
-UnitData zealot() {
-    UnitData d=UnitData::fromTresString(HYBRID_ZEALOT_TRES);
-    return d;
+bool boolField(const picojson::object& o,const char* name) {
+    auto it=o.find(name);
+    return it!=o.end() && it->second.is<bool>() && it->second.get<bool>();
 }
-UnitData workerData() {
-    UnitData d=marine();
-    d.resourceName="Human Worker";d.max_hp=40;d.damage=2;d.attack_range=1.5f;
-    d.attack_cooldown=1.3f;d.move_speed=7;d.visual_scale=.72f;
-    d.mineral_cost=40;d.supply_cost=1;return d;
-}
-UnitData baseData(bool human) {
-    UnitData d=human?marine():zealot();
-    d.resourceName=human?"Command Center":"Hive";
-    d.max_hp=700;d.armor=2;d.damage=0;d.attack_range=0;d.aggro_range=0;
-    d.visual_scale=2.8f;d.supply_cost=0;return d;
-}
-UnitData barracksData() {
-    UnitData d=baseData(true);
-    d.resourceName="Barracks";d.max_hp=350;d.visual_scale=2.0f;
-    return d;
+std::string metaString(const RTSProject& p,const char* name,const std::string& fallback){
+    const auto i=p.metadata.find(name);
+    if(i!=p.metadata.end() && i->second.is<std::string>())return i->second.get<std::string>();
+    return fallback;
 }
 }
-RTSSkirmish::RTSSkirmish(){reset();}
+RTSSkirmish::RTSSkirmish():project_(RTSProject::defaults()){reset();}
+void RTSSkirmish::loadProject(const RTSProject& project){
+    project.validate();
+    project_=project;
+    reset();
+}
+void RTSSkirmish::rebuildNavigation(){
+    const auto& t=project_.terrain;
+    navigation=NavigationGrid(t.width(),t.depth(),t.spacing(),
+                              t.minX()-t.spacing()*0.5f,t.minZ()-t.spacing()*0.5f);
+    for(int z=0;z<t.depth();++z)for(int x=0;x<t.width();++x)
+        navigation.setBlocked(x,z,t.cell(x,z).blocked);
+    for(const auto& u:units)if(u.isStructure && u.isAlive())
+        navigation.blockDisc(u.position,u.radius+0.2f);
+    for(const auto& m:minerals)if(m.remaining>0)
+        navigation.blockDisc(m.position,1.8f);
+}
+void RTSSkirmish::syncTerrain(const TerrainMap& t){
+    project_.terrain=t;
+    routes_.clear();queued_.clear();jobs_.clear();
+    for(auto& u:units){u.navAgent.stop();if(!u.isStructure)u.state=UnitState::IDLE;
+        u.position.y=project_.terrain.sampleHeight(u.position.x,u.position.z);}
+    for(auto& m:minerals)m.position.y=project_.terrain.sampleHeight(m.position.x,m.position.z);
+    rebuildNavigation();
+}
 Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
-                       const std::string& name,bool structure,bool worker) {
+                       const std::string& name,bool structure,bool worker,const std::string& catalogId) {
     units.emplace_back(nextId_++,name,d,at);
     Unit& u=units.back();
     u.ownerId=owner;u.isStructure=structure;u.isWorker=worker;
+    u.catalogId=catalogId;
+    u.position.y=project_.terrain.sampleHeight(at.x,at.z);
     u.navGrid=&navigation;
     if(structure){u.radius=2.5f*(d.visual_scale/2.8f);u.height=1.45f*d.visual_scale;}
     return u;
@@ -53,28 +69,39 @@ const Unit* RTSSkirmish::find(int id)const {
     return nullptr;
 }
 void RTSSkirmish::reset() {
-    units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();releasedSupply_.clear();
-    production_.clear();construction_.clear();navigation=NavigationGrid();
-    nextId_=1;playerMinerals=220;supplyUsed=0;supplyCap=18;
-    enemySpawnTimer_=14.0f;result=MatchResult::Playing;
-    friendlyBaseId_=spawn(baseData(true),{-22,0,0},0,"Command Center",true).id;
-    enemyBaseId_=spawn(baseData(false),{22,0,0},1,"Hybrid Hive",true).id;
-    navigation.blockDisc({-22,0,0},2.7f);
-    navigation.blockDisc({22,0,0},2.7f);
-    for(int i=0;i<4;++i) {
-        spawn(marine(),{-13,0,-4.5f+i*3.0f},0,"Marine "+std::to_string(i+1));
-        ++supplyUsed;
+    units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();
+    releasedSupply_.clear();production_.clear();construction_.clear();
+    nextId_=1;friendlyBaseId_=-1;enemyBaseId_=-1;
+    marineId_=metaString(project_,"player_marine","marine");
+    workerId_=metaString(project_,"player_worker","worker");
+    enemyId_=metaString(project_,"enemy_soldier","zealot");
+    barracksId_=metaString(project_,"player_barracks","barracks");
+    playerBaseCatalog_=metaString(project_,"player_base","command_center");
+    enemyBaseCatalog_=metaString(project_,"enemy_base","hive");
+    playerMinerals=std::max(0,int(metaNumber(project_,"player_starting_minerals",220)));
+    supplyCap=std::max(0,int(metaNumber(project_,"player_supply_cap",18)));
+    enemyInterval_=float(std::clamp(metaNumber(project_,"enemy_spawn_interval",16.0),1.0,1000.0));
+    supplyUsed=0;enemySpawnTimer_=enemyInterval_;result=MatchResult::Playing;
+    rebuildNavigation();
+    for(const auto& placement:project_.placements) {
+        Vec3 loc=project_.terrain.clampToMap(placement.position);
+        if(placement.kind=="Mineral"){
+            minerals.push_back({loc,placement.amount});
+            continue;
+        }
+        if(placement.kind!="Unit")continue; // future placed doodads do not affect gameplay yet
+        const auto fields=project_.catalog.resolvedFields(placement.catalogId);
+        bool structure=boolField(fields,"is_structure");
+        bool worker=boolField(fields,"is_worker");
+        UnitData data=unitFromCatalog(project_.catalog,placement.catalogId);
+        Unit& instance=spawn(data,loc,placement.owner,placement.name.empty()?data.resourceName:placement.name,
+                             structure,worker,placement.catalogId);
+        if(placement.owner==0 && !structure)supplyUsed+=data.supply_cost;
+        if(instance.catalogId==playerBaseCatalog_ && instance.ownerId==0)friendlyBaseId_=instance.id;
+        if(instance.catalogId==enemyBaseCatalog_ && instance.ownerId==1)enemyBaseId_=instance.id;
+        if(structure)navigation.blockDisc(instance.position,instance.radius+0.2f);
     }
-    for(int i=0;i<2;++i) {
-        spawn(workerData(),{-18,0,-5.5f+i*11.0f},0,"Worker "+std::to_string(i+1),false,true);
-        ++supplyUsed;
-    }
-    for(int i=0;i<2;++i)
-        spawn(zealot(),{13,0,-3.5f+i*7.0f},1,"Zealot "+std::to_string(i+1));
-    minerals.push_back({{-3,0,-12},750});
-    minerals.push_back({{-3,0,12},750});
-    minerals.push_back({{0,0,0},1000});
-    for(const auto& p:minerals)navigation.blockDisc(p.position,1.8f);
+    for(const auto& node:minerals)navigation.blockDisc(node.position,1.8f);
 }
 bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     if(!u.isAlive() || u.isStructure)return false;
@@ -204,7 +231,9 @@ void RTSSkirmish::updateGathering(float dt) {
     }
 }
 bool RTSSkirmish::buildBarracks(const Vec3& target) {
-    if(result!=MatchResult::Playing || playerMinerals<150)return false;
+    const auto barracksData=unitFromCatalog(project_.catalog,barracksId_);
+    const int price=barracksData.mineral_cost;
+    if(result!=MatchResult::Playing || playerMinerals<price)return false;
     bool hasWorker=false;
     Vec3 pos=navigation.clampWorld(target);
     for(const auto& u:units)if(u.isAlive() && u.isWorker && u.isSelected && u.ownerId==0 &&
@@ -218,10 +247,10 @@ bool RTSSkirmish::buildBarracks(const Vec3& target) {
     for(int z=cell.z-2;z<=cell.z+2;++z)
         for(int x=cell.x-2;x<=cell.x+2;++x)
             if(!navigation.walkable(x,z))return false;
-    playerMinerals-=150;
-    Unit& b=spawn(barracksData(),navigation.centerOf(cell),0,
-                  "Barracks "+std::to_string(nextId_),true);
-    construction_[b.id]=9.0f;
+    playerMinerals-=price;
+    Unit& b=spawn(unitFromCatalog(project_.catalog,barracksId_),navigation.centerOf(cell),0,
+                  "Barracks "+std::to_string(nextId_),true,false,barracksId_);
+    construction_[b.id]=barracksData.build_time;
     navigation.blockDisc(b.position,2.25f);
     return true;
 }
@@ -238,11 +267,16 @@ bool RTSSkirmish::queueAt(int id,bool worker,int cost,float seconds,int supply) 
 }
 bool RTSSkirmish::queueMarine() {
     for(const auto& u:units)if(u.isStructure && u.isAlive() && u.ownerId==0 &&
-        u.data.resourceName=="Barracks" && construction_.count(u.id)==0)
-        if(queueAt(u.id,false,50,6.0f,1))return true;
+        u.catalogId==barracksId_ && construction_.count(u.id)==0) {
+        auto d=unitFromCatalog(project_.catalog,marineId_);
+        if(queueAt(u.id,false,d.mineral_cost,d.build_time,d.supply_cost))return true;
+    }
     return false;
 }
-bool RTSSkirmish::queueWorker() {return queueAt(friendlyBaseId_,true,40,4.5f,1);}
+bool RTSSkirmish::queueWorker() {
+    auto d=unitFromCatalog(project_.catalog,workerId_);
+    return queueAt(friendlyBaseId_,true,d.mineral_cost,d.build_time,d.supply_cost);
+}
 void RTSSkirmish::updateProduction(float dt) {
     for(auto it=construction_.begin();it!=construction_.end();) {
         const Unit* u=find(it->first);
@@ -269,9 +303,9 @@ void RTSSkirmish::updateProduction(float dt) {
         Vec3 spawnPos=origin+Vec3(-5,0,3);
         auto route=navigation.findPath(spawnPos,spawnPos);
         if(route.empty()){++it;continue;}
-        spawn(it->worker?workerData():marine(),navigation.clampWorld(spawnPos),0,
+        spawn(unitFromCatalog(project_.catalog,it->worker?workerId_:marineId_),navigation.clampWorld(spawnPos),0,
               std::string(it->worker?"Worker ":"Marine ")+std::to_string(nextId_),
-              false,it->worker);
+              false,it->worker,it->worker?workerId_:marineId_);
         it=production_.erase(it);
     }
 }
@@ -285,9 +319,9 @@ void RTSSkirmish::updateEnemy(float dt) {
     if(!hive || !hive->isAlive() || !base || !base->isAlive())return;
     enemySpawnTimer_-=dt;
     if(enemySpawnTimer_<=0 && countOwnerUnits(1)<12) {
-        enemySpawnTimer_=16.0f;
-        spawn(zealot(),{hive->position.x-5,0,hive->position.z+4},1,
-              "Hybrid "+std::to_string(nextId_));
+        enemySpawnTimer_=enemyInterval_;
+        spawn(unitFromCatalog(project_.catalog,enemyId_),{hive->position.x-5,0,hive->position.z+4},1,
+              "Hybrid "+std::to_string(nextId_),false,false,enemyId_);
     }
     for(auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&
                           u.state==UnitState::IDLE)u.attackTarget(friendlyBaseId_);
@@ -304,6 +338,7 @@ void RTSSkirmish::update(float dt) {
                 u.position=previous;
                 u.navAgent.stop(); // prevent stepping through an occupied cell
             }
+            u.position.y=project_.terrain.sampleHeight(u.position.x,u.position.z);
         }
     }
     // Dead army units return their supply exactly once. Production still reserves
@@ -327,7 +362,7 @@ int RTSSkirmish::activeWorkerCount()const {
 int RTSSkirmish::completedBarracksCount()const {
     int n=0;
     for(const auto& u:units)if(u.isAlive() && u.ownerId==0 && u.isStructure &&
-        u.data.resourceName=="Barracks" && !construction_.count(u.id))++n;
+        u.catalogId==barracksId_ && !construction_.count(u.id))++n;
     return n;
 }
 std::string RTSSkirmish::statusLine()const {

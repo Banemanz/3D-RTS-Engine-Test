@@ -1,6 +1,7 @@
 #pragma once
 #include "NavigationGrid.hpp"
 #include "Unit.hpp"
+#include "RTSProject.hpp"
 #include <cstddef>
 #include <deque>
 #include <string>
@@ -25,6 +26,9 @@ public:
     RTSSkirmish(RTSSkirmish&&) = delete;
     RTSSkirmish& operator=(RTSSkirmish&&) = delete;
     void reset();
+    void loadProject(const RTSProject& project);
+    void syncTerrain(const TerrainMap& terrain);
+    const RTSProject& project() const { return project_; }
     void update(float fixedDt);
 
     std::vector<Unit> units;
@@ -47,6 +51,11 @@ public:
     int completedBarracksCount() const;
 
 private:
+    RTSProject project_;
+    std::string marineId_="marine",workerId_="worker",enemyId_="zealot",barracksId_="barracks";
+    std::string playerBaseCatalog_="command_center",enemyBaseCatalog_="hive";
+    float enemyInterval_=16.0f;
+    void rebuildNavigation();
     struct Route {
         std::vector<Vec3> points;
         size_t next = 0;
@@ -88,5 +97,6 @@ private:
     bool queueAt(int buildingId, bool worker, int cost, float seconds, int supply);
     int countOwnerUnits(int owner) const;
     Unit& spawn(const UnitData& data, const Vec3& at, int owner, const std::string& name,
-                bool structure = false, bool worker = false);
+                bool structure = false, bool worker = false,
+                const std::string& catalogId = "");
 };

@@ -186,14 +186,15 @@ DataCatalog DataCatalog::defaults() {
         {"attack_range",picojson::value(6.5)},{"attack_cooldown",picojson::value(.75)},
         {"aggro_range",picojson::value(10.5)},{"move_speed",picojson::value(9.5)},
         {"supply_cost",picojson::value(1.0)},{"mineral_cost",picojson::value(50.0)},
-        {"build_time",picojson::value(15.0)},{"visual_scale",picojson::value(.92)}
+        {"build_time",picojson::value(15.0)},{"visual_scale",picojson::value(.92)},{"build_time",picojson::value(6.0)}
     }));
     c.add(make("Unit","worker","marine",{
         {"name",picojson::value("Human Worker")},{"actor",picojson::value("worker_actor")},
         {"max_hp",picojson::value(40.0)},{"damage",picojson::value(2.0)},
         {"attack_range",picojson::value(1.5)},{"attack_cooldown",picojson::value(1.3)},
         {"move_speed",picojson::value(7.0)},{"visual_scale",picojson::value(.72)},
-        {"mineral_cost",picojson::value(40.0)}
+        {"mineral_cost",picojson::value(40.0)},
+        {"is_worker",picojson::value(true)},{"build_time",picojson::value(4.5)}
     }));
     c.add(make("Unit","zealot","",{
         {"name",picojson::value("Hybrid Zealot")},{"actor",picojson::value("zealot_actor")},
@@ -209,7 +210,7 @@ DataCatalog DataCatalog::defaults() {
         {"max_hp",picojson::value(700.0)},{"armor",picojson::value(2.0)},
         {"damage",picojson::value(0.0)},{"attack_range",picojson::value(0.0)},
         {"aggro_range",picojson::value(0.0)},{"visual_scale",picojson::value(2.8)},
-        {"supply_cost",picojson::value(0.0)}
+        {"supply_cost",picojson::value(0.0)},{"is_structure",picojson::value(true)}
     }));
     c.add(make("Unit","hive","command_center",{
         {"name",picojson::value("Hybrid Hive")},{"actor",picojson::value("hybrid_building_actor")},
@@ -217,7 +218,8 @@ DataCatalog DataCatalog::defaults() {
     }));
     c.add(make("Unit","barracks","command_center",{
         {"name",picojson::value("Barracks")},{"max_hp",picojson::value(350.0)},
-        {"visual_scale",picojson::value(2.0)}
+        {"visual_scale",picojson::value(2.0)},{"build_time",picojson::value(9.0)},
+        {"mineral_cost",picojson::value(150.0)}
     }));
     c.validate();
     return c;

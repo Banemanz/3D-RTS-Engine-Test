@@ -9,7 +9,7 @@ include(CTest)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp)
+add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp)
 target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
@@ -17,7 +17,7 @@ add_library(RTSSimulation STATIC
     unit_navigationagent3d_implementation.cpp
     unitdata_resource_implementation.cpp)
 target_include_directories(RTSSimulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(RTSSimulation PUBLIC RTSNavigation RTSAuthoring)
+target_link_libraries(RTSSimulation PUBLIC RTSNavigation)
 
 if(BUILD_TESTING)
     add_executable(RTSNavigationTests tests/navigation_tests.cpp)
@@ -43,10 +43,6 @@ if(BUILD_TESTING)
     add_executable(RTSCatalogTests tests/catalog_tests.cpp)
     target_link_libraries(RTSCatalogTests PRIVATE RTSAuthoring)
     add_test(NAME catalog COMMAND RTSCatalogTests)
-
-    add_executable(RTSProjectTests tests/project_tests.cpp)
-    target_link_libraries(RTSProjectTests PRIVATE RTSAuthoring)
-    add_test(NAME project COMMAND RTSProjectTests)
 endif()
 
 if(RTS_BUILD_DEMO)

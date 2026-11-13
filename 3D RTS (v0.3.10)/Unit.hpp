@@ -52,6 +52,7 @@ public:
     bool isStructure = false;
     bool isWorker = false;
     std::string instanceName;
+    std::string catalogId;
     UnitData data;
 
     Vec3 position{0.0f, 0.0f, 0.0f};
