@@ -226,7 +226,7 @@ bool EditorSession::finishEdit(RTSProject& project) {
     if(!selectedEntry)return false;
     std::string key=pendingNewField_.empty()?selectedFieldName(project):pendingNewField_;
     if(key.empty())return false;
-    const RTSProject before=project;
+    const RTSProject originalProject=project;
     auto i=selectedEntry->fields.find(key);
     const bool had=i!=selectedEntry->fields.end();
     const picojson::value before=had?i->second:picojson::value();
@@ -243,7 +243,7 @@ bool EditorSession::finishEdit(RTSProject& project) {
         message=std::string("INVALID EDIT: ")+e.what();
         return false;
     }
-    remember(before);
+    remember(originalProject);
     modified=true;textEditing=false;editText.clear();pendingNewField_.clear();
     message="FIELD SAVED";
     auto keys=fields(project);
