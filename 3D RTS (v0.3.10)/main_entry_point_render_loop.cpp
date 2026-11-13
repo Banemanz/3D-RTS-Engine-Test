@@ -34,8 +34,15 @@ struct AppState {
     bool mouseStroke=false;
     bool hoveredTerrain=false;
     Vec3 hoveredWorld{};
+    float terrainSlopeLimit()const {
+        auto it=project.metadata.find("max_walkable_slope");
+        if(it==project.metadata.end() || !it->second.is<double>() ||
+           !std::isfinite(it->second.get<double>()))return 1.25f;
+        return std::clamp(float(it->second.get<double>()),.05f,100.f);
+    }
     void reloadFromProject(){
         game.loadProject(project);
+        project.terrain.markDirty();
         camera.terrain=&project.terrain;
         hasMoveMarker=false;
     }
@@ -508,7 +515,7 @@ int main(int argc, char** argv) {
         // The skirmish owns unit lifetimes and initial spawning; see RTSSkirmish.
 
         // Editable heightfield mesh: five floats per vertex, updated after brush strokes.
-        std::vector<float> terrainVertices=app.project.terrain.buildMesh();
+        std::vector<float> terrainVertices=app.project.terrain.buildMesh(app.terrainSlopeLimit());
         GLsizei terrainVertexCount=static_cast<GLsizei>(terrainVertices.size()/5);
         GLuint terrainVAO, terrainVBO;
         glGenVertexArrays(1, &terrainVAO);
@@ -665,7 +672,7 @@ int main(int argc, char** argv) {
             }
 
             if(app.project.terrain.dirty()) {
-                terrainVertices=app.project.terrain.buildMesh();
+                terrainVertices=app.project.terrain.buildMesh(app.terrainSlopeLimit());
                 terrainVertexCount=static_cast<GLsizei>(terrainVertices.size()/5);
                 glBindVertexArray(terrainVAO);
                 glBindBuffer(GL_ARRAY_BUFFER,terrainVBO);

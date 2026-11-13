@@ -114,3 +114,9 @@ and applies `metadata.slope_cost_multiplier` (default 2.0) to route weights.
 This is a 2.5D terrain authoring foundation, **not** yet slope physics or
 per-unit movement class navigation. New tests verify detour selection,
 cliff blocking and terrain-edited pathing restoration.
+
+Pathing overlay parity: `TerrainMap::steepestSlope` is now the shared
+heightfield gradient calculation used by weighted pathfinding and GPU mesh
+blocked-path masks. Editor display and gameplay use the same global
+`max_walkable_slope` metadata value. Mesh slope masks are precomputed once
+per dirty terrain rebuild and support the default and custom thresholds.

@@ -147,15 +147,31 @@ bool TerrainMap::redo(){
 void TerrainMap::clearHistory(){
     undo_.clear();redo_.clear();stroke_=false;strokeChanged_=false;strokeHasHistory_=true;
 }
-std::vector<float> TerrainMap::buildMesh() const {
+float TerrainMap::steepestSlope(int x,int z) const {
+    if(!inBounds(x,z))return 0.0f;
+    const float height=cell(x,z).height;
+    float steepest=0.f;
+    for(int dz=-1;dz<=1;++dz)for(int dx=-1;dx<=1;++dx) {
+        if((dx==0 && dz==0) || !inBounds(x+dx,z+dz))continue;
+        const float distance=spacing_*std::sqrt(float(dx*dx+dz*dz));
+        steepest=std::max(steepest,
+            std::abs(height-cell(x+dx,z+dz).height)/distance);
+    }
+    return steepest;
+}
+std::vector<float> TerrainMap::buildMesh(float maxWalkableSlope) const {
     std::vector<float> result;
     result.reserve(static_cast<std::size_t>((width_-1)*(depth_-1)*6*5));
+    std::vector<std::uint8_t> unwalkable(static_cast<std::size_t>(width_*depth_),0);
+    for(int z=0;z<depth_;++z)for(int x=0;x<width_;++x)
+        unwalkable[index(x,z)]=(cell(x,z).blocked ||
+            steepestSlope(x,z)>maxWalkableSlope)?1:0;
     auto push=[&](int x,int z,unsigned char material) {
         result.push_back(minX_+x*spacing_);
         result.push_back(cell(x,z).height);
         result.push_back(minZ_+z*spacing_);
         result.push_back(float(material));
-        result.push_back(cell(x,z).blocked?1.0f:0.0f);
+        result.push_back(float(unwalkable[index(x,z)]));
     };
     for(int z=0;z<depth_-1;++z)
       for(int x=0;x<width_-1;++x) {

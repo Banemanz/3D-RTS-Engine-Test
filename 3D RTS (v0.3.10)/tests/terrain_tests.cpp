@@ -29,6 +29,12 @@ int main() {
     assert(terrain.applyBrush({0,raised,0},TerrainMap::Brush::Block,4,1));
     terrain.endStroke();
     assert(terrain.cell(4,4).blocked);
+    // Editor mask must match navigation's slope threshold.
+    auto mask=terrain.buildMesh(0.05f);
+    bool red=false;
+    for(std::size_t i=4;i<mask.size();i+=5)if(mask[i]>0.5f)red=true;
+    assert(red);
+    assert(terrain.steepestSlope(4,4)>=0.0f);
     terrain.undo();
     assert(!terrain.cell(4,4).blocked);
 

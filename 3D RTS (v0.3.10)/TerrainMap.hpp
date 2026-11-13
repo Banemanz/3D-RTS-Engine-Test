@@ -41,7 +41,8 @@ public:
     bool dirty() const { return dirty_; }
     void clearDirty() { dirty_=false; }
     void markDirty() { dirty_=true; }
-    std::vector<float> buildMesh() const; // x,y,z,material per vertex; triangles
+    float steepestSlope(int x,int z) const; // maximum neighboring rise/run
+    std::vector<float> buildMesh(float maxWalkableSlope=1.25f) const; // x,y,z,material,pathing
     bool valid() const { return width_>=2 && depth_>=2; }
 private:
     int width_=49,depth_=49;

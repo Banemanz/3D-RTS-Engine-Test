@@ -44,14 +44,7 @@ void RTSSkirmish::rebuildNavigation(){
     const float costScale=float(std::clamp(metaNumber(
         project_,"slope_cost_multiplier",2.0),0.0,10.0));
     for(int z=0;z<t.depth();++z)for(int x=0;x<t.width();++x) {
-        const float height=t.cell(x,z).height;
-        float steepest=0.f;
-        for(int dz=-1;dz<=1;++dz)for(int dx=-1;dx<=1;++dx) {
-            if((dx==0 && dz==0) || !t.inBounds(x+dx,z+dz))continue;
-            const float distance=t.spacing()*std::sqrt(float(dx*dx+dz*dz));
-            steepest=std::max(steepest,
-                std::abs(height-t.cell(x+dx,z+dz).height)/distance);
-        }
+        const float steepest=t.steepestSlope(x,z);
         navigation.setBlocked(x,z,t.cell(x,z).blocked || steepest>hardSlope);
         navigation.setTraversalCost(x,z,1.f+steepest*costScale);
     }
