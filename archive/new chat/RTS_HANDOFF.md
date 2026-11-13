@@ -304,3 +304,15 @@ derived objects, copy/move/JSON, inheritance and invalid identity checks.
 Future passes: inherited-field memoization with explicit mutation revision,
 incremental typed schema validation, rename/reference migration and UI
 virtualization for enormous catalogs.
+
+## Creator catalog rename pass (November 13, 2026)
+
+F7 Ctrl+R edits a catalog object's ID, validates and records one undo/redo
+transaction. The headless CLI equivalent is `RTSProjectTool --rename path old-id
+new-id`. `DataCatalog::rename` updates the hash index, inheritance parents and
+typed Unit.actor/Actor.model links; project-level logic also migrates
+placements, instance overrides, skirmish metadata defaults/roles and recognized
+SpawnUnit/UnitTypeCountAtLeast/UnitCountAtLeast triggers. Unknown custom JSON
+and free text are not rewritten. `RTSCatalogRenameTests` guards behavior.
+Preserve the draft PR; inspect Actions for the actual Windows/Linux binaries
+and do not confuse the screenshot workflow with executable downloads.

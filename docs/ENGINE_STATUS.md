@@ -169,3 +169,11 @@ moving, field inheritance and JSON round trips. Full-scale creator
 performance still requires cached resolved inheritance, incremental
 property validation, virtualized data tables and measured editor timings;
 this pass addresses the dominant repeated ID scanning first.
+
+## Catalog ID migration (November 13, 2026)
+
+F7 Ctrl+R and CLI --rename perform a transactional reference migration across
+inheritance, Unit/Actor/Model links, scene placements, known instance overrides,
+Skirmish role metadata and recognized trigger ECA catalog fields. Arbitrary
+mod extension strings remain untouched; full schema-aware reference tracking
+for third-party systems is still needed.

@@ -43,6 +43,7 @@ target is `projects/working.rtsproject.json`.
 | Enter (data) | Edit selected field as JSON, or bare text |
 | Ctrl+N (data) | Add a new arbitrary field |
 | Ctrl+D (data) | Create an inherited/derived catalog object |
+| Ctrl+R (data) | Rename catalog ID and update known references (one undo action) |
 | Ctrl+Backspace (data) | Remove the local override of the selected field |
 | Trigger panel: Up/Down | Choose event-condition-action rule |
 | Trigger panel: Ctrl+N / Ctrl+D / Delete | Create, duplicate or remove a rule |
@@ -79,6 +80,7 @@ there is no requirement to open a GUI.
 ./build/RTSProjectTool --get projects/new.rtsproject.json marine damage
 ./build/RTSProjectTool --set projects/new.rtsproject.json marine damage 17
 ./build/RTSProjectTool --derive projects/new.rtsproject.json marine super_marine
+./build/RTSProjectTool --rename projects/new.rtsproject.json super_marine ranger
 ./build/RTSProjectTool --set projects/new.rtsproject.json super_marine max_hp 300
 ./build/RTSProjectTool --paint-cell projects/new.rtsproject.json 24 24 4.5 2 1
 ./build/RTSProjectTool --place projects/new.rtsproject.json Unit super_marine -6 4 0

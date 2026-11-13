@@ -26,6 +26,7 @@ public:
     std::size_t selectedObject=0;
     std::string catalogFilter;
     bool filterEditing=false;
+    bool renamingCatalog=false;
     std::size_t selectedField=0;
     std::size_t selectedTrigger=0;
     std::string selectedPlacementId;
@@ -80,6 +81,8 @@ public:
     bool finishEdit(RTSProject& project);
     bool removeLocalOverride(RTSProject& project);
     bool duplicateCatalogObject(RTSProject& project);
+    bool beginCatalogRename(const RTSProject& project);
+    bool finishCatalogRename(RTSProject& project);
 
     // First trigger authoring panel: raw JSON rule inspector/editor. A future
     // node-graph can use the same serialized ECA object model.

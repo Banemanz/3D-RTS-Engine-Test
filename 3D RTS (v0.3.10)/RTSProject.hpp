@@ -32,6 +32,8 @@ public:
     static RTSProject fromJson(const picojson::value& root);
     picojson::value toJson() const;
     void validate() const;
+    // Transactional: migrates recognized engine-facing catalog references.
+    bool renameCatalogObject(const std::string& oldId,const std::string& newId);
     void loadFile(const std::string& filename);
     void saveFile(const std::string& filename) const;
 };

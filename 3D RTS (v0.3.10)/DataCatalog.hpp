@@ -23,6 +23,7 @@ public:
     CatalogEntry* find(const std::string& id);
     bool add(CatalogEntry entry,std::string* error=nullptr);
     bool cloneDerived(const std::string& original,const std::string& newId);
+    bool rename(const std::string& oldId,const std::string& newId);
     bool setField(const std::string& id,const std::string& key,
                   const picojson::value& value);
     picojson::object resolvedFields(const std::string& id) const;
@@ -33,7 +34,7 @@ public:
 private:
     std::vector<CatalogEntry> entries_;
     // Stable indices rather than pointers, so vector reallocation and copies
-    // cannot invalidate ID lookups. Only add() can change entry identities.
+    // cannot invalidate ID lookups. Only add() and rename() can change entry identities.
     std::unordered_map<std::string,std::size_t> idIndex_;
     void resolveInto(const std::string& id,picojson::object& out,
                      std::vector<std::string>& stack) const;

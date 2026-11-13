@@ -74,6 +74,28 @@ bool DataCatalog::cloneDerived(const std::string& original,const std::string& ne
     if(!e || !validId(newId) || find(newId))return false;
     return add(make(e->type,newId,original,{}));
 }
+bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
+    if(oldId==newId || !validId(newId) || !find(oldId) || find(newId))return false;
+    validate();
+    const std::size_t index=idIndex_.at(oldId);
+    const std::string type=entries_[index].type;
+    for(auto& entry:entries_) {
+        if(entry.parent==oldId)entry.parent=newId;
+        const char* ref=(type=="Actor" && entry.type=="Unit")?"actor":
+                        (type=="Model" && entry.type=="Actor")?"model":nullptr;
+        if(ref) {
+            auto field=entry.fields.find(ref);
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+    }
+    entries_[index].id=newId;
+    idIndex_.erase(oldId);
+    idIndex_.emplace(newId,index);
+    validate();
+    return true;
+}
 bool DataCatalog::setField(const std::string& id,const std::string& key,
                             const picojson::value& value) {
     CatalogEntry* e=find(id);

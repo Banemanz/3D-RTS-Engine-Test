@@ -196,7 +196,7 @@ std::size_t EditorSession::matchingCatalogCount(const RTSProject& project)const 
 }
 void EditorSession::beginCatalogSearch(){
     if(textEditing)return;
-    filterEditing=true;textEditing=true;newFieldEditing=false;
+    filterEditing=true;textEditing=true;newFieldEditing=false;renamingCatalog=false;
     editText=catalogFilter;
     message="TYPE CATALOG SEARCH AND PRESS ENTER";
 }
@@ -252,13 +252,13 @@ bool EditorSession::beginValueEdit(const RTSProject& project) {
     if(key.empty())return false;
     auto props=project.catalog.resolvedFields(e->id);
     editText=props.at(key).serialize();
-    textEditing=true;newFieldEditing=false;
+    textEditing=true;newFieldEditing=false;renamingCatalog=false;
     message="ENTER TO APPLY FIELD / ESC TO CANCEL";
     return true;
 }
 void EditorSession::beginNewField(){
     if(textEditing)return;
-    textEditing=true;newFieldEditing=true;pendingNewField_.clear();editText.clear();
+    textEditing=true;newFieldEditing=true;renamingCatalog=false;pendingNewField_.clear();editText.clear();
     message="TYPE NEW PROPERTY NAME THEN ENTER";
 }
 void EditorSession::addChar(unsigned int c) {
@@ -269,7 +269,7 @@ void EditorSession::backspace(){
     if(textEditing && !editText.empty())editText.pop_back();
 }
 void EditorSession::cancelEdit(){
-    textEditing=false;newFieldEditing=false;filterEditing=false;
+    textEditing=false;newFieldEditing=false;filterEditing=false;renamingCatalog=false;
     editText.clear();pendingNewField_.clear();
     message="EDIT CANCELLED";
 }
@@ -338,6 +338,40 @@ bool EditorSession::duplicateCatalogObject(RTSProject& project) {
     selectedField=0;modified=true;message="DERIVED "+next;return true;
 }
 
+bool EditorSession::beginCatalogRename(const RTSProject& project) {
+    if(textEditing)return false;
+    const auto* object=selected(project);
+    if(!object)return false;
+    textEditing=true;renamingCatalog=true;filterEditing=false;newFieldEditing=false;
+    editText=object->id;
+    message="RENAME CATALOG ID / ENTER APPLY / ESC CANCEL";
+    return true;
+}
+bool EditorSession::finishCatalogRename(RTSProject& project) {
+    if(!textEditing || !renamingCatalog)return false;
+    const auto* object=selected(project);
+    if(!object)return false;
+    const std::string oldId=object->id;
+    if(oldId==editText) {
+        renamingCatalog=false;textEditing=false;editText.clear();
+        message="CATALOG ID UNCHANGED";return false;
+    }
+    const RTSProject before=project;
+    try {
+        if(!project.renameCatalogObject(oldId,editText)) {
+            message="INVALID OR DUPLICATE CATALOG ID";return false;
+        }
+    }catch(const std::exception& e) {
+        message=std::string("RENAME FAILED: ")+e.what();
+        return false;
+    }
+    if(placementArchetype==oldId)placementArchetype=editText;
+    if(placementDoodad==oldId)placementDoodad=editText;
+    remember(before);
+    renamingCatalog=false;textEditing=false;editText.clear();
+    modified=true;message="RENAMED "+oldId;
+    return true;
+}
 namespace {
 const picojson::array& triggerArray(const RTSProject& project) {
     static const picojson::array empty;

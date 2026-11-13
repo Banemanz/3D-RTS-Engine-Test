@@ -137,6 +137,14 @@ enemies already in weapon range. Attack-move and patrol routes resume their
 intended destinations after combat interruption rather than skipping
 waypoints. See [controls](docs/CONTROLS.md).
 
+## Creator catalog ID rename
+
+F7 Data Editor now supports **Ctrl+R** to rename a selected catalog ID,
+migrating recognized inheritance, Unit/Actor/Model, placed-unit, instance,
+skirmish-role metadata and trigger ECA references in one undoable action.
+Arbitrary extension strings are intentionally not rewritten. CLI equivalent:
+`RTSProjectTool --rename project.rtsproject.json old-id new-id`.
+
 ## Group movement formation slots
 
 Selecting multiple mobile units and issuing Move, Attack-Move, or Patrol now

@@ -232,6 +232,72 @@ void RTSProject::validate() const {
             throw std::invalid_argument("Unsupported placement kind: "+p.kind);
     }
 }
+bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string& newId) {
+    const auto* source=catalog.find(oldId);
+    if(!source || oldId==newId)return false;
+    const std::string type=source->type;
+    RTSProject next=*this;
+    if(!next.catalog.rename(oldId,newId))return false;
+    for(auto& placement:next.placements) {
+        if(placement.catalogId==oldId)placement.catalogId=newId;
+        // Preserve unrecognized mod fields and strings; only typed references migrate.
+        const char* section=type=="Actor"?"unit":(type=="Model"?"actor":nullptr);
+        const char* property=type=="Actor"?"actor":(type=="Model"?"model":nullptr);
+        if(!section)continue;
+        auto category=placement.overrides.find(section);
+        if(category==placement.overrides.end() || !category->second.is<picojson::object>())continue;
+        auto& overrides=category->second.get<picojson::object>();
+        auto field=overrides.find(property);
+        if(field!=overrides.end() && field->second.is<std::string>() &&
+           field->second.get<std::string>()==oldId)
+            field->second=picojson::value(newId);
+    }
+    if(type=="Unit") {
+        // The built-in skirmish has six metadata-configurable unit roles.
+        // Supply explicit mappings when an implicit fallback is renamed.
+        const std::pair<const char*,const char*> roles[]={
+            {"player_marine","marine"},{"player_worker","worker"},
+            {"enemy_soldier","zealot"},{"player_barracks","barracks"},
+            {"player_base","command_center"},{"enemy_base","hive"}};
+        for(const auto& role:roles) {
+            auto field=next.metadata.find(role.first);
+            if(field==next.metadata.end()) {
+                if(oldId==role.second)next.metadata[role.first]=picojson::value(newId);
+            }else if(field->second.is<std::string>() &&
+                     field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+        auto triggers=next.extensions.find("triggers");
+        if(triggers!=next.extensions.end() && triggers->second.is<picojson::array>()) {
+            for(auto& ruleValue:triggers->second.get<picojson::array>()) {
+                if(!ruleValue.is<picojson::object>())continue;
+                auto& rule=ruleValue.get<picojson::object>();
+                for(const char* key:{"conditions","actions"}) {
+                    auto group=rule.find(key);
+                    if(group==rule.end() || !group->second.is<picojson::array>())continue;
+                    for(auto& nodeValue:group->second.get<picojson::array>()) {
+                        if(!nodeValue.is<picojson::object>())continue;
+                        auto& node=nodeValue.get<picojson::object>();
+                        auto kind=node.find("type");
+                        if(kind==node.end() || !kind->second.is<std::string>())continue;
+                        const auto& op=kind->second.get<std::string>();
+                        const bool typed=(std::string(key)=="actions" && op=="SpawnUnit") ||
+                            (std::string(key)=="conditions" &&
+                            (op=="UnitTypeCountAtLeast" || op=="UnitCountAtLeast"));
+                        if(!typed)continue;
+                        auto field=node.find("catalog");
+                        if(field!=node.end() && field->second.is<std::string>() &&
+                           field->second.get<std::string>()==oldId)
+                            field->second=picojson::value(newId);
+                    }
+                }
+            }
+        }
+    }
+    next.validate();
+    *this=std::move(next);
+    return true;
+}
 void RTSProject::loadFile(const std::string& filename) {
     std::ifstream stream(filename,std::ios::binary);
     if(!stream)throw std::runtime_error("Could not open project: "+filename);

@@ -480,6 +480,8 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
                         ? edit.finishTriggerEdit(s->project)
                         : edit.panel==EditorSession::Panel::Scene
                         ? edit.finishSceneOverrideEdit(s->project)
+                        : edit.renamingCatalog
+                        ? edit.finishCatalogRename(s->project)
                         : edit.finishEdit(s->project);
                     if(changed && !edit.textEditing){
                         TriggerEngine::validate(s->project);
@@ -631,6 +633,7 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
                 return;
             }
             if(ctrl && key==GLFW_KEY_D){edit.duplicateCatalogObject(s->project);return;}
+            if(ctrl && key==GLFW_KEY_R){edit.beginCatalogRename(s->project);return;}
             if(ctrl && key==GLFW_KEY_N){edit.beginNewField();return;}
             if(ctrl && key==GLFW_KEY_BACKSPACE) {
                 if(edit.removeLocalOverride(s->project))s->reloadFromProject();
@@ -1348,7 +1351,7 @@ int main(int argc, char** argv) {
                 } else if(app.editor.panel==EditorSession::Panel::Data) {
                     const CatalogEntry* entry=app.editor.selected(app.project);
                     line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT / SHIFT+TAB PREV");
-                    line(62,2.0f,"CTRL+F SEARCH  CTRL+SHIFT+F CLEAR  UP/DOWN PROPERTY  ENTER EDIT  CTRL+N ADD FIELD  CTRL+D DERIVE");
+                    line(62,2.0f,"CTRL+F SEARCH  CTRL+R RENAME ID  UP/DOWN PROPERTY  ENTER EDIT  CTRL+N FIELD  CTRL+D DERIVE");
                     const std::size_t matches=app.editor.matchingCatalogCount(app.project);
                     line(87,2.0f,"OBJECTS "+std::to_string(matches)+" / "+
                          std::to_string(app.project.catalog.entries().size())+
@@ -1375,7 +1378,7 @@ int main(int argc, char** argv) {
                         }
                         if(app.editor.textEditing)
                             line(float(app.windowHeight)-58,2.25f,
-                                 std::string(app.editor.filterEditing?"SEARCH: ":"EDIT: ")+
+                                 std::string(app.editor.filterEditing?"SEARCH: ":(app.editor.renamingCatalog?"RENAME ID: ":"EDIT: "))+
                                      app.editor.editText,1.f,.81f,.40f);
                     }
                 } else if(app.editor.panel==EditorSession::Panel::Scene) {
