@@ -9,6 +9,9 @@
 #include "SelectionManager.hpp"
 #include "Shaders.hpp"
 #include "RTSSkirmish.hpp"
+#include "BitmapHUD.hpp"
+#include <cstdlib>
+#include <fstream>
 #include <cmath>
 #include <string>
 
@@ -110,7 +113,17 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     }
 }
 
-int main() {
+int main(int argc, char** argv) {
+    int smokeFrames = -1;
+    std::string screenshotPath;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--smoke-frames" && i + 1 < argc)
+            smokeFrames = std::max(1, std::atoi(argv[++i]));
+        else if (arg == "--screenshot" && i + 1 < argc)
+            screenshotPath = argv[++i];
+    }
+    int renderedFrames = 0;
     try {
         if (!glfwInit()) {
             std::cerr << "Failed to initialize GLFW." << std::endl;
@@ -452,8 +465,75 @@ int main() {
                     }
                 }
             }
+
+            // Screen-space economy and command HUD.
+            if (app.windowWidth > 0 && app.windowHeight > 0) {
+                const float w = static_cast<float>(app.windowWidth);
+                const float h = static_cast<float>(app.windowHeight);
+                const float bg[] = {
+                    -1.f, 1.f,  1.f, 1.f,  1.f, 1.f-240.f/h,
+                    -1.f, 1.f,  1.f, 1.f-240.f/h, -1.f, 1.f-240.f/h
+                };
+                glUseProgram(hudBoxShader);
+                glUniform4f(glGetUniformLocation(hudBoxShader, "uColor"),.035f,.065f,.10f,.75f);
+                glBindVertexArray(hudVAO);
+                glBindBuffer(GL_ARRAY_BUFFER,hudVBO);
+                glBufferData(GL_ARRAY_BUFFER,sizeof(bg),bg,GL_DYNAMIC_DRAW);
+                glDrawArrays(GL_TRIANGLES,0,6);
+                const std::string economy = "MINERALS " + std::to_string(app.game.playerMinerals)
+                    + "  SUPPLY " + std::to_string(app.game.supplyUsed) + "/"
+                    + std::to_string(app.game.supplyCap) + "  WORKERS "
+                    + std::to_string(app.game.activeWorkerCount())
+                    + "  BARRACKS " + std::to_string(app.game.completedBarracksCount());
+                drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                            14,12,2.6f,economy,.45f,.95f,.85f);
+                drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                            14,40,2.0f,"LMB SELECT  RMB COMMAND  A ATTACK MOVE  B BUILD  T MARINE  C WORKER",
+                            .9f,.94f,.97f);
+                drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                            14,60,2.0f,"Q/E ROTATE  X STOP  R RESTART  ARROWS/W/S/D PAN",
+                            .7f,.8f,.9f);
+                std::string selectionLabel;
+                int selectedCount=0;
+                for(const auto& u:app.game.units)if(u.isSelected && u.isAlive() && u.ownerId==0) {
+                    ++selectedCount;
+                    if(selectedCount==1)
+                        selectionLabel = u.instanceName + " HP " + std::to_string(int(u.currentHp))
+                            + "/" + std::to_string(int(u.data.max_hp));
+                }
+                if(selectedCount>1)selectionLabel=std::to_string(selectedCount)+" UNITS SELECTED";
+                if(!selectionLabel.empty())
+                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                                14,84,2.2f,selectionLabel,1.0f,.92f,.53f);
+                if(app.mode==AppState::Mode::BuildBarracks)
+                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                                14,108,2.4f,"PLACE BARRACKS WITH RIGHT CLICK  COST 150",1.f,.8f,.35f);
+                else if(app.mode==AppState::Mode::AttackMove)
+                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                                14,108,2.4f,"RIGHT CLICK DESTINATION TO ATTACK MOVE",1.f,.8f,.35f);
+                if(app.game.result != MatchResult::Playing)
+                    drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
+                                w*.32f,h*.46f,5.0f,
+                                app.game.result==MatchResult::Victory ? "VICTORY - PRESS R" : "DEFEAT - PRESS R",
+                                1.f,.82f,.32f);
+            }
             glEnable(GL_DEPTH_TEST);
 
+            if (smokeFrames > 0 && ++renderedFrames >= smokeFrames) {
+                if (!screenshotPath.empty() && app.framebufferWidth > 0 && app.framebufferHeight > 0) {
+                    const int width = app.framebufferWidth, height = app.framebufferHeight;
+                    std::vector<unsigned char> pixels(static_cast<size_t>(width)*height*3);
+                    glPixelStorei(GL_PACK_ALIGNMENT,1);
+                    glReadPixels(0,0,width,height,GL_RGB,GL_UNSIGNED_BYTE,pixels.data());
+                    std::ofstream out(screenshotPath,std::ios::binary);
+                    out<<"P6\n"<<width<<" "<<height<<"\n255\n";
+                    for(int y=height-1;y>=0;--y)
+                        out.write(reinterpret_cast<const char*>(pixels.data()+static_cast<size_t>(y)*width*3),
+                                  static_cast<std::streamsize>(width*3));
+                    if(!out)std::cerr<<"Failed to save screenshot: "<<screenshotPath<<"\n";
+                }
+                glfwSetWindowShouldClose(window,true);
+            }
             glfwSwapBuffers(window);
             glfwPollEvents();
         }

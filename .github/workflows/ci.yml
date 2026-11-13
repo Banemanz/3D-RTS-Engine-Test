@@ -17,6 +17,18 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Unit tests (no display required)
         run: ctest --test-dir build --output-on-failure
+      - name: Install software OpenGL smoke test dependencies
+        run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
+      - name: Run headless OpenGL renderer and capture frame
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-frames 120 --screenshot rts-smoke.ppm
+      - name: Convert screenshot without extra dependencies
+        run: python3 tools/ppm_to_png.py rts-smoke.ppm rts-smoke.png
+      - name: Upload rendered screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-software-opengl-screenshot
+          path: rts-smoke.png
+          if-no-files-found: error
   windows:
     runs-on: windows-latest
     steps:

@@ -57,7 +57,7 @@ bool loadOpenGLFunctions() {
     glUniform1i = (PFNGLUNIFORM1IPROC)glfwGetProcAddress("glUniform1i");
 
     bool ok = true;
-#define REQUIRE_GL(fn) if (!(fn)) { std::cerr << "Missing OpenGL function: " #fn << '\\n'; ok = false; }
+#define REQUIRE_GL(fn) if (!(fn)) { std::cerr << "Missing OpenGL function: " #fn << '\n'; ok = false; }
     REQUIRE_GL(glGenBuffers)
     REQUIRE_GL(glBindBuffer)
     REQUIRE_GL(glBufferData)
