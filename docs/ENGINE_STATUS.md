@@ -12,7 +12,7 @@ distinct from manual gameplay verification.
 | Unit HP, armor, cooldown, combat | Implemented | Target lookup is still linear; no projectiles |
 | Fixed 60 Hz simulation in app | Implemented | 8-tick catch-up limit; drops excess time |
 | A* navigation for move orders | Implemented | 8-neighbor grid; static building/mineral blockers |
-| Combat-chase obstacle rerouting | **Not complete** | Chasing still uses the prototype's direct steering |
+| Combat-chase obstacle rerouting | Implemented (basic) | Periodic A* replanning; path blocker collision guard |
 | Contextual mineral harvesting | Implemented | 10 minerals per trip, 1.6-second extraction |
 | Command Center and Barracks | Implemented | Placeholder meshes, 9-second Barracks construction |
 | Marine/Worker training, economy/supply | Implemented | Per-building queues, paid minerals, reserved supply |
@@ -29,9 +29,9 @@ distinct from manual gameplay verification.
 
 - Entity storage uses a vector of `Unit` with integer IDs; lookup, combat aggro and
   separation still scan vectors. It is not prepared for thousands of units.
-- Navigation planning is used for move/attack-move waypoints; combat chasing may still
-  cross static blockers. This is a **known gameplay defect** to fix before declaring
-  obstacle navigation complete.
+- Navigation planning is used for move/attack-move waypoints and tactical chases.
+  Dynamic obstacles can invalidate existing routes; crowd-scale movement and combat
+  line-of-sight remain to be improved.
 - Model rendering and gameplay remain coupled in the main executable. The simulation
   is now separated sufficiently for headless tests, not yet a complete engine API.
 - Formations are a simple group destination, not sophisticated flow-field movement.

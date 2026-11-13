@@ -14,8 +14,8 @@ headless tests, Linux/Windows CI, and Mesa screenshot smoke test.
 
 **Current priority TODO:**
 1. Verify all CI jobs and inspect software-rendered screenshot artifact.
-2. Fix combat target movement around structures: direct CHASING steering still
-   ignores navigation blockers. Add tactical path replanning and collision.
+2. Stress-test tactical A* chase routing and corner cases; static blocker
+   collision guard exists, dynamic blockers still need routing invalidation.
 3. Replace O(N²) combat/steering scans with a reusable spatial grid and ID index;
    stress-test with 50/250/500 units.
 4. Improve the command/UI model: true shift-queued orders, control groups, unit/

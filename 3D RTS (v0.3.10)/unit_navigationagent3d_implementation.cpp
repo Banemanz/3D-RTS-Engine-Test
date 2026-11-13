@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <utility>
 
 void NavigationAgent3D::setTargetPosition(const Vec3& target) {
     targetPosition = Vec3(target.x, 0.0f, target.z);
@@ -97,6 +98,8 @@ void Unit::setSelected(bool selected) {
 
 void Unit::moveTo(const Vec3& destination, bool isAttackMove) {
     targetUnitId = -1;
+    chaseWaypoints.clear();
+    chaseWaypointIndex = 0;
     attackMoveEnabled = isAttackMove;
     state = UnitState::MOVING;
     navAgent.setTargetPosition(destination);
@@ -104,6 +107,8 @@ void Unit::moveTo(const Vec3& destination, bool isAttackMove) {
 
 void Unit::attackTarget(int enemyId) {
     targetUnitId = enemyId;
+    chaseWaypoints.clear();
+    chaseWaypointIndex = 0;
     attackMoveEnabled = false;
     state = UnitState::CHASING;
 }
@@ -246,6 +251,7 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
             Unit* target = findUnitById(allUnits, targetUnitId);
             if (!target || !target->isAlive()) {
                 targetUnitId = -1;
+                chaseWaypoints.clear();
                 int nextEnemy = findNearestEnemyId(allUnits, data.aggro_range);
                 if (nextEnemy != -1) {
                     targetUnitId = nextEnemy;
@@ -262,6 +268,35 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
             if (distToEnemy <= effectiveRange) {
                 navAgent.stop();
                 state = UnitState::ATTACKING;
+                chaseWaypoints.clear();
+            } else if (navGrid) {
+                // Replan periodically or when a moving target leaves the current area.
+                chaseRepathTimer -= deltaTime;
+                const bool moved = (chaseRouteGoal - target->position).lengthXZ() > 2.0f;
+                if (chaseWaypoints.empty() || moved || chaseRepathTimer <= 0.0f) {
+                    auto path = navGrid->findPath(position, target->position);
+                    if (!path.empty()) {
+                        chaseWaypoints = std::move(path);
+                        chaseWaypointIndex = 0;
+                    } else {
+                        chaseWaypoints.clear();
+                        navAgent.stop();
+                    }
+                    chaseRouteGoal = target->position;
+                    chaseRepathTimer = moved ? 0.5f : 1.0f;
+                }
+                while (chaseWaypointIndex < chaseWaypoints.size() &&
+                       (chaseWaypoints[chaseWaypointIndex] - position).lengthXZ() <= 0.45f)
+                    ++chaseWaypointIndex;
+                if (chaseWaypointIndex < chaseWaypoints.size())
+                    navAgent.setTargetPosition(chaseWaypoints[chaseWaypointIndex]);
+                else {
+                    // A building occupies blocked cells: approach a walkable boundary
+                    // rather than forcing a steering target inside the structure.
+                    auto approach = navGrid->findPath(position, target->position);
+                    if (!approach.empty()) navAgent.setTargetPosition(approach.back());
+                    else navAgent.stop();
+                }
             } else {
                 navAgent.setTargetPosition(target->position);
             }
@@ -272,6 +307,7 @@ void Unit::updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits
             Unit* target = findUnitById(allUnits, targetUnitId);
             if (!target || !target->isAlive()) {
                 targetUnitId = -1;
+                chaseWaypoints.clear();
                 int nextEnemy = findNearestEnemyId(allUnits, data.aggro_range);
                 if (nextEnemy != -1) {
                     targetUnitId = nextEnemy;

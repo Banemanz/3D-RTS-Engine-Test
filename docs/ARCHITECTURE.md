@@ -35,8 +35,9 @@ and mineral patches are marked blocked. A* searches eight directions (octile
 cost/heuristic), disallows cutting blocked corners, and projects blocked goal cells
 to their nearest walkable neighbor. Routes are persisted as waypoints by integer
 unit ID and reissued on arrival. Attack-move orders retain their path across
-temporary aggro engagements. **Direct combat chasing still ignores A***; it
-requires an explicit tactical-repath system.
+temporary aggro engagements. Combat chasing uses an additional per-unit waypoint route which replans periodically,
+while the world prevents occupants from crossing blocked navigation cells. Moving
+targets, chokepoints, unit/unit collisions and line-of-sight remain simplified.
 
 ## Economy and units
 
@@ -59,7 +60,7 @@ OpenGL 3.3 window in Mesa/Xvfb and captures a software-rendered frame.
 
 - Separate the renderer and UI host into small reusable classes and manage GL
   resource lifetimes explicitly (GPU objects currently survive until context teardown).
-- Add combat path planning/replanning and collision resolution against blockers.
+- Improve combat-repath efficiency and dynamic blocker handling; full physics/LOS is absent.
 - Use spatial indexing for movement separation, nearest-enemy lookup and ID lookup.
 - Add explicit command queue/shift-append, formation reservation and resource dropoff.
 - Replace the prototype's permissive embedded data with files and a versioned schema.

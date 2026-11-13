@@ -40,6 +40,7 @@ Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
     units.emplace_back(nextId_++,name,d,at);
     Unit& u=units.back();
     u.ownerId=owner;u.isStructure=structure;u.isWorker=worker;
+    u.navGrid=&navigation;
     if(structure){u.radius=2.5f*(d.visual_scale/2.8f);u.height=1.45f*d.visual_scale;}
     return u;
 }
@@ -276,7 +277,17 @@ void RTSSkirmish::updateEnemy(float dt) {
 void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
     dt=std::clamp(dt,0.0f,0.1f);
-    for(auto& u:units)u.update(dt,units,48.0f);
+    for(auto& u:units) {
+        Vec3 previous=u.position;
+        u.update(dt,units,48.0f);
+        if(u.isAlive() && !u.isStructure) {
+            auto cell=navigation.toCell(u.position);
+            if(!navigation.walkable(cell.x,cell.z)) {
+                u.position=previous;
+                u.navAgent.stop(); // prevent stepping through an occupied cell
+            }
+        }
+    }
     // Dead army units return their supply exactly once. Production still reserves
     // supply at queue time, even before the unit exists.
     for(const auto& u:units)if(u.ownerId==0 && !u.isStructure && !u.isAlive()) {

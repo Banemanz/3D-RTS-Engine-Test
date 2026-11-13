@@ -2,8 +2,10 @@
 
 #include "Math3D.hpp"
 #include "Ray.hpp"
+#include "NavigationGrid.hpp"
 #include "UnitData.hpp"
 #include <string>
+#include <cstddef>
 #include <vector>
 
 class Unit;
@@ -68,6 +70,12 @@ public:
     bool attackMoveEnabled = false;
 
     NavigationAgent3D navAgent;
+    // Borrowed from RTSSkirmish; do not delete or store across world destruction.
+    const NavigationGrid* navGrid = nullptr;
+    std::vector<Vec3> chaseWaypoints;
+    std::size_t chaseWaypointIndex = 0;
+    Vec3 chaseRouteGoal{0,0,0};
+    float chaseRepathTimer = 0.0f;
 
     Unit(int id, const std::string& name, const UnitData& unitData, const Vec3& startPos);
 

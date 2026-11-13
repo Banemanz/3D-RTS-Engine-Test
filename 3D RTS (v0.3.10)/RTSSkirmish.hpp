@@ -19,6 +19,10 @@ enum class MatchResult { Playing, Victory, Defeat };
 class RTSSkirmish {
 public:
     RTSSkirmish();
+    RTSSkirmish(const RTSSkirmish&) = delete;
+    RTSSkirmish& operator=(const RTSSkirmish&) = delete;
+    RTSSkirmish(RTSSkirmish&&) = delete;
+    RTSSkirmish& operator=(RTSSkirmish&&) = delete;
     void reset();
     void update(float fixedDt);
 

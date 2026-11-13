@@ -28,6 +28,10 @@ if(BUILD_TESTING)
     add_executable(RTSUnitDataTests tests/unitdata_tests.cpp)
     target_link_libraries(RTSUnitDataTests PRIVATE RTSSimulation)
     add_test(NAME unitdata COMMAND RTSUnitDataTests)
+
+    add_executable(RTSChaseTests tests/chase_tests.cpp)
+    target_link_libraries(RTSChaseTests PRIVATE RTSSimulation)
+    add_test(NAME chase COMMAND RTSChaseTests)
 endif()
 
 if(RTS_BUILD_DEMO)
