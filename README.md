@@ -30,6 +30,8 @@ cmake --build build-logic --config Debug
 ctest --test-dir build-logic -C Debug --output-on-failure
 ```
 
+**Prebuilt binaries:** [GitHub Actions → Build downloadable RTS engine](https://github.com/Banemanz/3D-RTS-Engine-Test/actions/workflows/build.yml). Download the Windows or Linux archive from a successful run. See [Build artifact guide](docs/BUILD_ARTIFACTS.md) for dependencies, launchers, and portability notes.
+
 ## Editor
 
 **F5** terrain editor, **F6** Trigger Editor (JSON inspector),

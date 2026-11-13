@@ -62,6 +62,15 @@ if(BUILD_TESTING)
     add_executable(RTSTriggerTests tests/trigger_tests.cpp)
     target_link_libraries(RTSTriggerTests PRIVATE RTSSimulation)
     add_test(NAME triggers COMMAND RTSTriggerTests)
+
+    # Preserve assert() checks even when producing optimized Release bundles.
+    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSProjectTests RTSEditorTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
+        if(MSVC)
+            target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
+        else()
+            target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:-UNDEBUG>)
+        endif()
+    endforeach()
 endif()
 
 add_executable(RTSProjectTool "../tools/rts_project_tool.cpp")
@@ -96,4 +105,36 @@ else()
     target_compile_options(RTSNavigation PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(RTSSimulation PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(RTSAuthoring PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Installable layout is intentionally identical on Windows and Linux:
+# exe/launcher files beside projects/, docs/, and build manifest.
+install(TARGETS RTSProjectTool RUNTIME DESTINATION ".")
+if(RTS_BUILD_DEMO)
+    install(TARGETS RTSCameraTerrain RUNTIME DESTINATION ".")
+endif()
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../projects/"
+        DESTINATION "projects" FILES_MATCHING PATTERN "*.rtsproject.json")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE"
+    DESTINATION ".")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AUTHORING.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/SC2_FEATURE_MATRIX.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/BUILD_ARTIFACTS.md"
+    DESTINATION "docs")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PICOJSON_LICENSE"
+    DESTINATION "licenses")
+if(WIN32)
+    install(FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.bat"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-editor.bat"
+        DESTINATION ".")
+elseif(UNIX)
+    install(PROGRAMS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.sh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-editor.sh"
+        DESTINATION ".")
 endif()

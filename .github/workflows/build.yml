@@ -1,0 +1,123 @@
+name: Build downloadable RTS engine
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rts-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-binaries:
+    name: ${{ matrix.platform }} release bundle
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            platform: windows-x64
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Linux build and runtime dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglfw3-dev libgl1-mesa-dev libgl1-mesa-dri xvfb xauth
+
+      - name: Configure Linux Release
+        if: runner.os == 'Linux'
+        run: >
+          cmake -S "3D RTS (v0.3.10)" -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DRTS_BUILD_DEMO=ON
+          -DBUILD_TESTING=ON
+
+      - name: Configure Windows Release x64
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >
+          cmake -S "3D RTS (v0.3.10)" -B build
+          -G "Visual Studio 17 2022" -A x64
+          -DRTS_BUILD_DEMO=ON
+          -DBUILD_TESTING=ON
+
+      - name: Compile Release and all tests
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Run CTest suite
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Install self-contained project layout
+        shell: bash
+        run: |
+          cmake --install build --config Release --prefix "$GITHUB_WORKSPACE/dist/RTS-Creator-${{ matrix.platform }}"
+        # bash is available on both ubuntu and GitHub's Windows runners.
+
+      - name: Write build identity and verify bundle contents
+        shell: bash
+        run: |
+          python tools/verify_build_bundle.py \
+            "dist/RTS-Creator-${{ matrix.platform }}" \
+            "${{ matrix.platform }}" \
+            "${{ github.sha }}" \
+            "${{ github.run_id }}"
+
+      - name: Validate bundled maps with bundled project utility (Linux)
+        if: runner.os == 'Linux'
+        working-directory: dist/RTS-Creator-linux-x86_64
+        run: |
+          ./RTSProjectTool --validate projects/default.rtsproject.json
+          ./RTSProjectTool --validate projects/terrain_showcase.rtsproject.json
+
+      - name: Validate bundled maps with bundled project utility (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: dist/RTS-Creator-windows-x64
+        run: |
+          .\RTSProjectTool.exe --validate projects/default.rtsproject.json
+          .\RTSProjectTool.exe --validate projects/terrain_showcase.rtsproject.json
+
+      - name: Smoke test the packaged Linux editor with software OpenGL
+        if: runner.os == 'Linux'
+        working-directory: dist/RTS-Creator-linux-x86_64
+        run: >
+          xvfb-run -a -s "-screen 0 1280x720x24"
+          env LIBGL_ALWAYS_SOFTWARE=1
+          ./RTSCameraTerrain --editor
+          --project projects/terrain_showcase.rtsproject.json
+          --smoke-frames 12
+
+      - name: Archive Windows portable build
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Compress-Archive -Path "dist/RTS-Creator-windows-x64" -DestinationPath "artifacts/RTS-Creator-windows-x64.zip" -CompressionLevel Optimal
+
+      - name: Archive Linux portable build
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p artifacts
+          tar -C dist -czf artifacts/RTS-Creator-linux-x86_64.tar.gz RTS-Creator-linux-x86_64
+
+      - name: Upload executable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-creator-${{ matrix.platform }}-${{ github.run_number }}
+          path: artifacts/RTS-Creator-*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
