@@ -136,6 +136,29 @@ static void assertPatrol() {
     for(const auto& unit:game.units)if(unit.id==id)
         assert(!unit.navAgent.hasDestination);
 }
+static void assertRallyProduction(){
+    RTSSkirmish game;
+    const int base=game.playerBaseId();
+    assert(base>0);
+    for(auto& u:game.units)if(u.id==base)u.isSelected=true;
+    assert(!game.setRallyPoint({-22,0,0})); // Command Center occupies this cell
+    const Vec3 rally{-12,0,-12};
+    assert(game.setRallyPoint(rally));
+    assert(game.rallyPoints().at(base).x==-12.f);
+    assert(game.queueWorker());
+    assert(game.pendingProduction(base)==1);
+    for(int i=0;i<330;++i)game.update(1.f/60.f);
+    assert(game.pendingProduction(base)==0);
+    assert(game.activeWorkerCount()==3);
+    bool newlyMoving=false;
+    for(const auto& u:game.units)if(u.isWorker && u.ownerId==0 &&
+                                     u.instanceName.rfind("Worker ",0)==0 &&
+                                     u.navAgent.hasDestination)
+        newlyMoving=true;
+    assert(newlyMoving);
+    game.reset();
+    assert(game.rallyPoints().empty());
+}
 int main() {
     assertStartingState();
     assertBuildingAndProduction();
@@ -145,5 +168,6 @@ int main() {
     assertReplay();
     assertQueuedMovement();
     assertPatrol();
-    std::cout<<"skirmish: 8 tests passed\n";
+    assertRallyProduction();
+    std::cout<<"skirmish: 9 tests passed\n";
 }

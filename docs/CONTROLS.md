@@ -45,3 +45,11 @@ after its current leg.
 Visuals are procedural (no imported command icons, portraits or art assets
 yet). The HUD is rendered with the existing OpenGL pipeline and currently
 has no user-configurable layout system or Unicode font atlas.
+
+**Building rally points:** Select a completed Command Center or Barracks
+and right-click reachable terrain to set its rally point. Trained workers and
+Marines automatically path toward that destination. Select the structure to
+see its rally marker on the battlefield and current training queue count
+in the selection panel. A mixed mobile+structure selection issues ordinary
+unit orders instead of accidentally changing the rally point. Rally points
+are current-match state and reset on restarting the skirmish.

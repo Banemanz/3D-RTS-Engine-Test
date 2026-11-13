@@ -58,3 +58,10 @@ added. Editor callbacks are guarded against escaping C++ exceptions, actor
 visuals are cached and autosave/recovery can limit data loss. Production
 rally points, icon/model assets, fog/LOS, independent unit command schemas
 and full event-driven UI remain outstanding.
+
+**Production rally points** now store one target per structure and dispatch
+newly trained units through the existing A* navigation. Selected structures
+expose their rally location and queue length in the UI. Remaining work:
+production progress display, per-building orders, rally target types
+(unit or resource), queue cancellation, external actor icons, and a
+configurable per-unit command schema.

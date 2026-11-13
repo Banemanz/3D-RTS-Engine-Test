@@ -157,3 +157,10 @@ appearance to avoid validating/copying a catalog on every draw call.
 Autosave every 25 seconds produces `.autosave` sibling files and newer
 valid autosaves are recovered on launch. Still needs native Windows playtest;
 uncaught native DLL/OpenGL crashes require callstacks/dumps.
+
+Production rally foundation: `RTSSkirmish::setRallyPoint` accepts RMB
+terrain clicks only when production buildings are selected with no mobile
+units. `rallyPoints_` keyed by building ID; produced units receive their
+first waypoint route automatically. Selected structures draw a gold world
+marker; selected-unit panel displays pending queue count. Rally is match-
+local state, not yet persisted or authored as a placement property.

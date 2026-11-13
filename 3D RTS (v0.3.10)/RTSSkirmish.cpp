@@ -91,7 +91,7 @@ const Unit* RTSSkirmish::find(int id)const {
     return nullptr;
 }
 void RTSSkirmish::reset() {
-    units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();
+    units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     nextId_=1;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
@@ -187,6 +187,26 @@ bool RTSSkirmish::orderPatrol(const Vec3& destination) {
         }
     }
     return issued;
+}
+bool RTSSkirmish::setRallyPoint(const Vec3& destination) {
+    if(result!=MatchResult::Playing)return false;
+    for(const auto& u:units)if(u.isAlive() && u.ownerId==0 &&
+                               u.isSelected && !u.isStructure)return false;
+    const Vec3 target=navigation.clampWorld(destination);
+    const auto cell=navigation.toCell(target);
+    if(!navigation.walkable(cell.x,cell.z))return false;
+    bool set=false;
+    for(const auto& u:units)if(u.isAlive() && u.ownerId==0 &&
+                               u.isSelected && u.isStructure &&
+                               (u.id==friendlyBaseId_ || u.catalogId==barracksId_)) {
+        rallyPoints_[u.id]=target;set=true;
+    }
+    return set;
+}
+int RTSSkirmish::pendingProduction(int buildingId)const {
+    int count=0;
+    for(const auto& p:production_)if(p.buildingId==buildingId)++count;
+    return count;
 }
 bool RTSSkirmish::orderAttack(int targetId) {
     Unit* target=find(targetId);
@@ -379,9 +399,12 @@ void RTSSkirmish::updateProduction(float dt) {
         Vec3 spawnPos=origin+Vec3(-5,0,3);
         auto route=navigation.findPath(spawnPos,spawnPos);
         if(route.empty()){++it;continue;}
-        spawn(unitFromCatalog(project_.catalog,it->worker?workerId_:marineId_),navigation.clampWorld(spawnPos),0,
+        Unit& produced=spawn(unitFromCatalog(project_.catalog,it->worker?workerId_:marineId_),
+              navigation.clampWorld(spawnPos),0,
               std::string(it->worker?"Worker ":"Marine ")+std::to_string(nextId_),
               false,it->worker,it->worker?workerId_:marineId_);
+        const auto rally=rallyPoints_.find(it->buildingId);
+        if(rally!=rallyPoints_.end())setRoute(produced,rally->second,false);
         it=production_.erase(it);
     }
 }
@@ -426,6 +449,11 @@ void RTSSkirmish::update(float dt) {
     advanceRoutes();
     updateGathering(dt);
     updateProduction(dt);
+    for(auto it=rallyPoints_.begin();it!=rallyPoints_.end();) {
+        const Unit* building=find(it->first);
+        if(!building || !building->isAlive())it=rallyPoints_.erase(it);
+        else ++it;
+    }
     updateEnemy(dt);
     elapsedSeconds_+=dt;
     std::vector<int> killed;

@@ -116,11 +116,16 @@ public:
             rect(s.x+12,s.y+102,(s.w-24)*hp,11,
                  hp>.45f?.24f:.87f,hp>.45f?.85f:.48f,.43f);
             if(count==1) {
-                text(s.x+12,s.y+130,1.8f,
-                     std::string(first->isWorker?"WORKER  ":
-                         first->isStructure?"STRUCTURE  ":"COMBAT  ")+
-                     "DMG "+std::to_string(int(first->data.damage))+
-                     "  ARM "+std::to_string(int(first->data.armor)),.61f,.8f,.87f);
+                if(first->isStructure) {
+                    text(s.x+12,s.y+130,1.8f,
+                        "QUEUE "+std::to_string(game.pendingProduction(first->id))+
+                        "  RMB SET RALLY",.61f,.8f,.87f);
+                } else {
+                    text(s.x+12,s.y+130,1.8f,
+                         std::string(first->isWorker?"WORKER  ":"COMBAT  ")+
+                         "DMG "+std::to_string(int(first->data.damage))+
+                         "  ARM "+std::to_string(int(first->data.armor)),.61f,.8f,.87f);
+                }
             } else {
                 text(s.x+12,s.y+130,1.8f,"ORDERS APPLY TO THE SELECTED GROUP",.61f,.8f,.87f);
             }

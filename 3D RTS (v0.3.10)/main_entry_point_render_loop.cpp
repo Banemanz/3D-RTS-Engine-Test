@@ -336,8 +336,10 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->windowWidth, state->windowHeight, state->game.units);
         if (enemy) {
             state->game.orderAttack(enemy->id);
-        } else if (!state->game.orderGather(hit)) {
-            state->game.orderMove(hit, false, (mods & GLFW_MOD_SHIFT) != 0);
+        } else if(state->game.setRallyPoint(hit)) {
+            state->inform("RALLY POINT UPDATED");
+        } else if(!state->game.orderGather(hit)) {
+            state->game.orderMove(hit,false,(mods & GLFW_MOD_SHIFT)!=0);
         }
     }
     } catch(const std::exception& e) {
@@ -999,6 +1001,22 @@ int main(int argc, char** argv) {
                 glDrawArrays(GL_TRIANGLES,0,33);
             }
 
+            // Rally location marker for currently selected production buildings.
+            for(const auto& building:app.game.units)if(building.isAlive() &&
+                building.isSelected && building.isStructure && building.ownerId==0) {
+                const auto it=app.game.rallyPoints().find(building.id);
+                if(it==app.game.rallyPoints().end())continue;
+                const Vec3 pos=app.project.terrain.clampToMap(it->second);
+                Mat4 marker=Mat4::translate(pos+Vec3(0,.09f,0))
+                    * Mat4::scale(Vec3(1.1f,1.f,1.1f));
+                glUseProgram(ringShader);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader,"uModel"),1,GL_FALSE,marker.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader,"uView"),1,GL_FALSE,view.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader,"uProjection"),1,GL_FALSE,proj.m);
+                glUniform4f(glGetUniformLocation(ringShader,"uColor"),.94f,.84f,.28f,.60f);
+                glBindVertexArray(ringVAO);
+                glDrawArrays(GL_TRIANGLES,0,6);
+            }
             if(app.editor.panel==EditorSession::Panel::Terrain && app.hoveredTerrain) {
                 glUseProgram(ringShader);
                 Mat4 brush=Mat4::translate(app.hoveredWorld+Vec3(0,.06f,0))

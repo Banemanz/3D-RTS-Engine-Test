@@ -43,6 +43,9 @@ public:
 
     bool orderMove(const Vec3& destination, bool attackMove, bool append = false);
     bool orderPatrol(const Vec3& destination);
+    bool setRallyPoint(const Vec3& destination);
+    const std::unordered_map<int,Vec3>& rallyPoints() const { return rallyPoints_; }
+    int pendingProduction(int buildingId) const;
     bool orderGather(const Vec3& nearNode);
     bool orderAttack(int targetId);
     void orderStop();
@@ -104,6 +107,7 @@ private:
     std::unordered_map<int, WorkerJob> jobs_;
     std::unordered_map<int, float> construction_;
     std::vector<Production> production_;
+    std::unordered_map<int,Vec3> rallyPoints_;
 
     Unit* find(int id);
     const Unit* find(int id) const;
