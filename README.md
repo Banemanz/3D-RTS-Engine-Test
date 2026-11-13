@@ -46,6 +46,8 @@ from the Linux CI job. This is a renderer startup test, **not** a gameplay autom
 | Right-click ground | Move selected units (A* route) |
 | Right-click minerals with selected worker | Gather and return minerals repeatedly |
 | A, then right-click | Attack-move command |
+| Shift + right-click ground | Queue additional movement/attack-move destinations |
+| Ctrl + 1-9 / 1-9 | Save / recall unit control groups |
 | B, then right-click | Place Barracks (selected worker nearby; 150 minerals) |
 | T | Train a Marine at first completed Barracks (50 minerals) |
 | C | Train a Worker at Command Center (40 minerals) |

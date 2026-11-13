@@ -53,7 +53,7 @@ const Unit* RTSSkirmish::find(int id)const {
     return nullptr;
 }
 void RTSSkirmish::reset() {
-    units.clear();minerals.clear();routes_.clear();jobs_.clear();releasedSupply_.clear();
+    units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();releasedSupply_.clear();
     production_.clear();construction_.clear();navigation=NavigationGrid();
     nextId_=1;playerMinerals=220;supplyUsed=0;supplyCap=18;
     enemySpawnTimer_=14.0f;result=MatchResult::Playing;
@@ -86,12 +86,20 @@ bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     u.moveTo(routes_[u.id].points.front(),attackMove);
     return true;
 }
-bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove) {
+bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append) {
     if(result!=MatchResult::Playing)return false;
     bool ok=false;
+    Vec3 clamped=navigation.clampWorld(destination);
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
-        routes_.erase(u.id);jobs_.erase(u.id);
-        if(setRoute(u,destination,attackMove))ok=true;
+        jobs_.erase(u.id);
+        if(append && routes_.count(u.id)) {
+            queued_[u.id].push_back({clamped,attackMove});
+            ok=true;
+        } else {
+            routes_.erase(u.id);
+            queued_.erase(u.id);
+            if(setRoute(u,clamped,attackMove))ok=true;
+        }
     }
     return ok;
 }
@@ -100,14 +108,14 @@ bool RTSSkirmish::orderAttack(int targetId) {
     if(result!=MatchResult::Playing || !target || !target->isAlive() || target->ownerId==0)return false;
     bool any=false;
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
-        routes_.erase(u.id);jobs_.erase(u.id);
+        routes_.erase(u.id);queued_.erase(u.id);jobs_.erase(u.id);
         u.attackTarget(targetId);any=true;
     }
     return any;
 }
 void RTSSkirmish::orderStop() {
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
-        routes_.erase(u.id);jobs_.erase(u.id);u.navAgent.stop();
+        routes_.erase(u.id);queued_.erase(u.id);jobs_.erase(u.id);u.navAgent.stop();
         u.targetUnitId=-1;u.state=UnitState::IDLE;u.attackMoveEnabled=false;
     }
 }
@@ -122,7 +130,7 @@ bool RTSSkirmish::orderGather(const Vec3& click) {
     if(index==minerals.size())return false;
     bool any=false;
     for(auto& u:units)if(u.isAlive() && u.isWorker && u.ownerId==0 && u.isSelected) {
-        routes_.erase(u.id);jobs_.erase(u.id);
+        routes_.erase(u.id);queued_.erase(u.id);jobs_.erase(u.id);
         if(setRoute(u,minerals[index].position,false)) {
             jobs_[u.id]={index,WorkerPhase::ToMineral,0.0f,0};
             any=true;
@@ -131,6 +139,7 @@ bool RTSSkirmish::orderGather(const Vec3& click) {
     return any;
 }
 void RTSSkirmish::advanceRoutes() {
+    std::vector<int> completed;
     for(auto it=routes_.begin();it!=routes_.end();) {
         Unit* u=find(it->first);
         if(!u || !u->isAlive() || u->isStructure) {it=routes_.erase(it);continue;}
@@ -140,11 +149,20 @@ void RTSSkirmish::advanceRoutes() {
         ++route.next;
         if(route.next>=route.points.size()){
             u->navAgent.stop();u->state=UnitState::IDLE;
+            completed.push_back(u->id);
             it=routes_.erase(it);
         }else{
             u->moveTo(route.points[route.next],route.attackMove);
             ++it;
         }
+    }
+    for(int id:completed) {
+        auto q=queued_.find(id);
+        if(q==queued_.end() || q->second.empty())continue;
+        PendingMove next=q->second.front();
+        q->second.pop_front();
+        if(q->second.empty())queued_.erase(q);
+        if(Unit* u=find(id))setRoute(*u,next.target,next.attackMove);
     }
 }
 void RTSSkirmish::updateGathering(float dt) {

@@ -88,6 +88,21 @@ static void assertReplay() {
         assert(a.units[i].position.z==b.units[i].position.z);
     }
 }
+static void assertQueuedMovement() {
+    RTSSkirmish game;
+    int workerId=-1;
+    for(auto& u:game.units)if(u.isWorker && u.ownerId==0 && workerId==-1) {
+        workerId=u.id;u.isSelected=true;
+    }
+    assert(workerId!=-1);
+    assert(game.orderMove({-12,0,-10},false));
+    assert(game.orderMove({-12,0,-2},false,true));
+    for(int i=0;i<900;++i)game.update(1.0f/60.0f);
+    bool close=false;
+    for(const auto& u:game.units)if(u.id==workerId)
+        close=u.isAlive() && (u.position-Vec3(-12,0,-2)).lengthXZ()<3.0f;
+    assert(close);
+}
 int main() {
     assertStartingState();
     assertBuildingAndProduction();
@@ -95,5 +110,6 @@ int main() {
     assertGathering();
     assertDeathAndReset();
     assertReplay();
-    std::cout<<"skirmish: 6 tests passed\n";
+    assertQueuedMovement();
+    std::cout<<"skirmish: 7 tests passed\n";
 }

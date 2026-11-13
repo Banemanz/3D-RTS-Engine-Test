@@ -16,6 +16,7 @@
 #include <string>
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <vector>
 
@@ -26,6 +27,8 @@ struct AppState {
     enum class Mode { Normal, AttackMove, BuildBarracks } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
     bool keyX = false, keyR = false;
+    std::array<std::vector<int>,10> controlGroups{};
+    std::array<bool,10> digitWasDown{};
     int framebufferWidth = 1280, framebufferHeight = 720;
 
     Vec3 lastClickedWorldPos{0.0f, 0.0f, 0.0f};
@@ -98,7 +101,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             return;
         }
         if (state->mode == AppState::Mode::AttackMove) {
-            state->game.orderMove(hit, true);
+            state->game.orderMove(hit, true, (mods & GLFW_MOD_SHIFT) != 0);
             state->mode = AppState::Mode::Normal;
             return;
         }
@@ -108,7 +111,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         if (enemy) {
             state->game.orderAttack(enemy->id);
         } else if (!state->game.orderGather(hit)) {
-            state->game.orderMove(hit, false);
+            state->game.orderMove(hit, false, (mods & GLFW_MOD_SHIFT) != 0);
         }
     }
 }
@@ -282,8 +285,27 @@ int main(int argc, char** argv) {
             if (justPressed(GLFW_KEY_X, app.keyX)) app.game.orderStop();
             if (justPressed(GLFW_KEY_R, app.keyR)) {
                 app.game.reset();
+                app.controlGroups = {};
                 app.mode = AppState::Mode::Normal;
                 app.hasMoveMarker = false;
+            }
+            bool controlHeld = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+                               glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+            for(int digit=1;digit<=9;++digit) {
+                if(!justPressed(GLFW_KEY_0+digit,app.digitWasDown[static_cast<size_t>(digit)]))continue;
+                auto& group=app.controlGroups[static_cast<size_t>(digit)];
+                if(controlHeld) {
+                    group.clear();
+                    for(const auto& u:app.game.units)
+                        if(u.isSelected && u.isAlive() && u.ownerId==0)group.push_back(u.id);
+                } else {
+                    for(auto& u:app.game.units) {
+                        u.isSelected=false;
+                        if(u.isAlive() && u.ownerId==0 &&
+                           std::find(group.begin(),group.end(),u.id)!=group.end())
+                            u.isSelected=true;
+                    }
+                }
             }
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
             if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
@@ -488,10 +510,10 @@ int main(int argc, char** argv) {
                 drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
                             14,12,2.6f,economy,.45f,.95f,.85f);
                 drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                            14,40,2.0f,"LMB SELECT  RMB COMMAND  A ATTACK MOVE  B BUILD  T MARINE  C WORKER",
+                            14,40,2.0f,"LMB SELECT  RMB COMMAND  A ATTACK MOVE  B BUILD  T MARINE  C WORKER  SHIFT+RMB QUEUE",
                             .9f,.94f,.97f);
                 drawHUDText(hudBoxShader,hudVAO,hudVBO,app.windowWidth,app.windowHeight,
-                            14,60,2.0f,"Q/E ROTATE  X STOP  R RESTART  ARROWS/W/S/D PAN",
+                            14,60,2.0f,"Q/E ROTATE  X STOP  R RESTART  CTRL+1-9 SAVE  1-9 RECALL",
                             .7f,.8f,.9f);
                 std::string selectionLabel;
                 int selectedCount=0;

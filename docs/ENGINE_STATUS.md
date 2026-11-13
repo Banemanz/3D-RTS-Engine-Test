@@ -13,6 +13,7 @@ distinct from manual gameplay verification.
 | Fixed 60 Hz simulation in app | Implemented | 8-tick catch-up limit; drops excess time |
 | A* navigation for move orders | Implemented | 8-neighbor grid; static building/mineral blockers |
 | Combat-chase obstacle rerouting | Implemented (basic) | Periodic A* replanning; path blocker collision guard |
+| Shift-queued ground orders and control groups | Implemented (basic) | No attack-target/gather queuing yet |
 | Contextual mineral harvesting | Implemented | 10 minerals per trip, 1.6-second extraction |
 | Command Center and Barracks | Implemented | Placeholder meshes, 9-second Barracks construction |
 | Marine/Worker training, economy/supply | Implemented | Per-building queues, paid minerals, reserved supply |

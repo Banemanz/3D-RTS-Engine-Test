@@ -14,11 +14,16 @@ are selected, assigns the nearest clicked mineral patch for repeated collection.
 continue their routes after tactical engagements. **B** arms Barracks placement;
 **right-click** a clear location within 18 world units of a selected Worker.
 Successful placement spends 150 minerals and takes 9 seconds to finish.
+**Shift + right-click ground** appends movement/attack-move destinations to the
+current route for units already moving. Queued terrain commands do not currently
+support queuing targeted attacks or worker gather jobs.
 
 **C** queues a Worker at the Command Center (40 minerals); **T** queues a Marine
 at the first complete Barracks (50 minerals). Production requires available
 supply and is sequential per structure. **X** stops selected mobile units.
-**R** restarts the skirmish; **Esc** exits.
+**Ctrl + 1-9** saves currently selected friendly unit IDs into a control group;
+press the corresponding **1-9** key to recall the surviving members.
+**R** restarts the skirmish (and clears control groups); **Esc** exits.
 
 This skirmish is a prototype: no construction preview, minimap, fog, control
 groups, production selection UI or building placement feedback beyond console.

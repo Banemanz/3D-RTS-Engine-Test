@@ -2,6 +2,7 @@
 #include "NavigationGrid.hpp"
 #include "Unit.hpp"
 #include <cstddef>
+#include <deque>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -34,7 +35,7 @@ public:
     int supplyCap = 0;
     MatchResult result = MatchResult::Playing;
 
-    bool orderMove(const Vec3& destination, bool attackMove);
+    bool orderMove(const Vec3& destination, bool attackMove, bool append = false);
     bool orderGather(const Vec3& nearNode);
     bool orderAttack(int targetId);
     void orderStop();
@@ -58,6 +59,7 @@ private:
         float timer = 0.0f;
         int cargo = 0;
     };
+    struct PendingMove { Vec3 target; bool attackMove = false; };
     struct Production {
         int buildingId = -1;
         bool worker = false;
@@ -69,6 +71,7 @@ private:
     float enemySpawnTimer_ = 12.0f;
     std::unordered_set<int> releasedSupply_;
     std::unordered_map<int, Route> routes_;
+    std::unordered_map<int, std::deque<PendingMove>> queued_;
     std::unordered_map<int, WorkerJob> jobs_;
     std::unordered_map<int, float> construction_;
     std::vector<Production> production_;
