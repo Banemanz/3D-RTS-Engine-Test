@@ -1,4 +1,4 @@
-name: C++ CI
+name: Tests + screenshots (NOT executables)
 on:
   push:
     branches: [main, "feat/**"]

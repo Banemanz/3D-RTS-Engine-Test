@@ -26,6 +26,7 @@ def main() -> int:
         f"RTSCameraTerrain{ext}",
         f"RTSProjectTool{ext}",
         "README.md",
+        "START_HERE.txt",
         "LICENSE",
         "projects/default.rtsproject.json",
         "projects/terrain_showcase.rtsproject.json",
@@ -41,6 +42,13 @@ def main() -> int:
         path = root / relative
         if not path.is_file() or path.stat().st_size == 0:
             raise RuntimeError(f"Missing or empty installed file: {relative}")
+
+    expected_magic = b"MZ" if windows else b"\x7fELF"
+    for exe in (f"RTSCameraTerrain{ext}", f"RTSProjectTool{ext}"):
+        with (root / exe).open("rb") as handle:
+            header = handle.read(4)
+        if not header.startswith(expected_magic):
+            raise RuntimeError(f"Not a native executable: {exe}: {header!r}")
 
     for name in ("default", "terrain_showcase"):
         p = root / "projects" / f"{name}.rtsproject.json"

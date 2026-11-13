@@ -31,7 +31,7 @@ cmake --build build-logic --config Debug
 ctest --test-dir build-logic -C Debug --output-on-failure
 ```
 
-**Prebuilt binaries:** [GitHub Actions → Build downloadable RTS engine](https://github.com/Banemanz/3D-RTS-Engine-Test/actions/workflows/build.yml). Download the Windows or Linux archive from a successful run. See [Build artifact guide](docs/BUILD_ARTIFACTS.md) for dependencies, launchers, and portability notes.
+**Download the actual executable:** [GitHub Actions → Download Windows EXE and Linux RTS Builds](https://github.com/Banemanz/3D-RTS-Engine-Test/actions/workflows/build.yml). The **WINDOWS-x64-EXE** artifact is a single ZIP containing `RTSCameraTerrain.exe` and launch scripts—extract once and run. **Tests + screenshots** is a separate workflow and does not distribute executables. [Exact download instructions](docs/BUILD_ARTIFACTS.md).
 
 ## Editor
 

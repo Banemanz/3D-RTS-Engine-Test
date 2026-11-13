@@ -120,3 +120,15 @@ heightfield gradient calculation used by weighted pathfinding and GPU mesh
 blocked-path masks. Editor display and gameplay use the same global
 `max_walkable_slope` metadata value. Mesh slope masks are precomputed once
 per dirty terrain rebuild and support the default and custom thresholds.
+
+## Build artifact UX correction
+
+Use the **Download Windows EXE and Linux RTS Builds** workflow for actual
+runnable binaries; **Tests + screenshots (NOT executables)** is not the
+user download location. The Windows build now uploads the installed folder
+directly through actions/upload-artifact, so its single downloadable ZIP
+contains `RTSCameraTerrain.exe`, `RTSProjectTool.exe`, projects, launchers,
+`START_HERE.txt`, docs and manifest without nested ZIPs. The Linux build
+still wraps a tar.gz inside the Actions artifact ZIP to preserve execute
+permissions. Windows Release uses MSVC static CRT. See
+`docs/BUILD_ARTIFACTS.md`.

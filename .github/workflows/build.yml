@@ -1,4 +1,4 @@
-name: Build downloadable RTS engine
+name: Download Windows EXE and Linux RTS Builds
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   release-binaries:
-    name: ${{ matrix.platform }} release bundle
+    name: ${{ matrix.platform }} executable build
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -53,6 +53,7 @@ jobs:
           -G "Visual Studio 17 2022" -A x64
           -DRTS_BUILD_DEMO=ON
           -DBUILD_TESTING=ON
+          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Compile Release and all tests
         run: cmake --build build --config Release --parallel 2
@@ -110,24 +111,31 @@ jobs:
           --project projects/terrain_showcase.rtsproject.json
           --smoke-frames 12
 
-      - name: Archive Windows portable build
+      # GitHub Actions artifacts are ZIPs already. Upload the Windows
+      # installation DIRECTORY, not a ZIP inside another ZIP.
+      - name: Upload Windows x64 executable (unzip ONCE)
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          Compress-Archive -Path "dist/RTS-Creator-windows-x64" -DestinationPath "artifacts/RTS-Creator-windows-x64.zip" -CompressionLevel Optimal
+        uses: actions/upload-artifact@v4
+        with:
+          name: WINDOWS-x64-EXE-RTS-Creator-${{ github.run_number }}
+          path: dist/RTS-Creator-windows-x64/
+          if-no-files-found: error
+          retention-days: 30
 
-      - name: Archive Linux portable build
+      # A tarball is intentional on Linux: the Actions artifact ZIP format
+      # does not preserve chmod +x on shell scripts / ELF binaries.
+      - name: Archive Linux build with executable permissions
         if: runner.os == 'Linux'
         run: |
           mkdir -p artifacts
           tar -C dist -czf artifacts/RTS-Creator-linux-x86_64.tar.gz RTS-Creator-linux-x86_64
 
-      - name: Upload executable build
+      - name: Upload Linux x86_64 executable tarball
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: rts-creator-${{ matrix.platform }}-${{ github.run_number }}
-          path: artifacts/RTS-Creator-*
+          name: LINUX-x86_64-RTS-Creator-${{ github.run_number }}
+          path: artifacts/RTS-Creator-linux-x86_64.tar.gz
           if-no-files-found: error
           retention-days: 30
           compression-level: 0

@@ -119,6 +119,7 @@ endif()
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../projects/"
         DESTINATION "projects" FILES_MATCHING PATTERN "*.rtsproject.json")
 install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/START_HERE.txt"
     "${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE"
     DESTINATION ".")

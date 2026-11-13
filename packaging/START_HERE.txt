@@ -1,0 +1,24 @@
+RTS CREATOR - QUICK START
+========================
+
+WINDOWS (x64):
+  1) Extract this downloaded GitHub Actions ZIP to a folder.
+  2) Double-click run-game.bat to play the RTS skirmish.
+  3) Double-click run-editor.bat for the terrain editor.
+  Or double-click RTSCameraTerrain.exe in this same folder.
+
+EDITOR MODES:
+  F5 Terrain editor | F6 Triggers | F7 Data | F8 Scene | F9 Play/test
+  Ctrl+S saves projects. See docs/AUTHORING.md for all controls.
+
+PROJECTS:
+  projects/default.rtsproject.json
+  projects/terrain_showcase.rtsproject.json
+
+LINUX:
+  Run ./run-game.sh or ./run-editor.sh. Requires desktop OpenGL 3.3
+  and GLFW/X11 runtime libraries on your system.
+
+This prototype requires an OpenGL 3.3-capable graphics driver.
+The map editor, assets, scripting and gameplay are all still evolving.
+Source revision / CI run: see build-info.json.
