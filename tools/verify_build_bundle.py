@@ -40,6 +40,12 @@ def main() -> int:
 
     if windows:
         mandatory.append("symbols/RTSCameraTerrain.pdb")
+    # A runtime deliverable must not accidentally include a third-party SDK
+    # just because GLFW was pulled in through CMake FetchContent.
+    for unwanted in ("include", "lib"):
+        if (root / unwanted).exists():
+            raise RuntimeError(f"Development files leaked into runtime build: {unwanted}")
+
     for relative in mandatory:
         path = root / relative
         if not path.is_file() or path.stat().st_size == 0:

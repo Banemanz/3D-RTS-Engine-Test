@@ -245,3 +245,10 @@ undo/redo. It exercises `AppState::reloadFromProject` and GPU terrain
 rebuilds with an active context rather than only unit-testing document
 methods. CI runs this on Mesa/Xvfb in Debug and on the installed Release
 package. It does not claim to reproduce GPU-driver-specific crashes.
+
+Release packaging cleanup: `GLFW_INSTALL=OFF` keeps CMake FetchContent
+from installing GLFW headers and static .lib files into the user's runtime
+package. `tools/verify_build_bundle.py` rejects stray `include/` or
+`lib/` directories in the installed game/editor distribution. The Windows
+artifact should contain only the executable, CLI, launchers, project samples,
+docs, licenses, build manifest and the matching PDB symbols.

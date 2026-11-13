@@ -58,3 +58,8 @@ GitHub Release, supports manual **Run workflow**, and retains artifacts for 30 d
 `symbols/RTSCameraTerrain.pdb`, matching the executable. Native crash
 dumps written locally by the game can be symbolicated using that PDB.
 Neither minidumps nor error logs are uploaded automatically.
+
+The packaged Windows executable is runtime-only: third-party GLFW headers,
+CMake package files and static libraries are excluded from the installer
+layout. CI treats inclusion of a development SDK in the end-user archive
+as a packaging regression. The engine's own debug PDB remains in `symbols/`.
