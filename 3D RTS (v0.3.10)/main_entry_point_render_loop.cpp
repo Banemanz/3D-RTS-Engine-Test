@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
-            smokeFrames = std::max(1, std::atoi(argv[++i]));
+            smokeFrames = (std::max)(1, std::atoi(argv[++i]));
         else if (arg == "--screenshot" && i + 1 < argc)
             screenshotPath = argv[++i];
     }

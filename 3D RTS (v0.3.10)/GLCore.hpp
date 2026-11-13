@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_WIN32) && !defined(NOMINMAX)
+#define NOMINMAX
+#endif
+
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
 #include <cstddef>

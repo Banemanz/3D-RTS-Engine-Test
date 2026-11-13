@@ -40,7 +40,7 @@ Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
     units.emplace_back(nextId_++,name,d,at);
     Unit& u=units.back();
     u.ownerId=owner;u.isStructure=structure;u.isWorker=worker;
-    if(structure){u.radius=2.5f*(d.visual_scale/2.8f);u.height=2.8f*d.visual_scale;}
+    if(structure){u.radius=2.5f*(d.visual_scale/2.8f);u.height=1.45f*d.visual_scale;}
     return u;
 }
 Unit* RTSSkirmish::find(int id) {

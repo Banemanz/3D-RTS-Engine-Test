@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S "3D RTS (v0.3.10)" -B build -DRTS_BUILD_DEMO=OFF
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DRTS_BUILD_DEMO=ON
       - name: Compile
         run: cmake --build build --config Debug
       - name: Unit tests
