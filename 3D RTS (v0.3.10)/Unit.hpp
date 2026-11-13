@@ -1,0 +1,88 @@
+#pragma once
+
+#include "Math3D.hpp"
+#include "RTSCamera.hpp"
+#include "UnitData.hpp"
+#include <string>
+#include <vector>
+
+class Unit;
+
+class NavigationAgent3D {
+public:
+    Vec3 targetPosition{0.0f, 0.0f, 0.0f};
+    bool hasDestination = false;
+
+    float maxSpeed         = 9.5f;
+    float stoppingDistance = 0.25f;
+    float slowingRadius    = 2.2f;
+    float separationRadius = 1.95f;
+    float separationWeight = 11.5f;
+
+    void setTargetPosition(const Vec3& target);
+    void stop();
+    bool isNavigationFinished(const Vec3& currentPos) const;
+    Vec3 computeSteeringVelocity(const Unit& self, const std::vector<Unit>& allUnits, float deltaTime);
+};
+
+enum class UnitState {
+    IDLE,
+    MOVING,
+    CHASING,
+    ATTACKING
+};
+
+inline std::string unitStateToString(UnitState s) {
+    switch (s) {
+        case UnitState::IDLE:      return "IDLE";
+        case UnitState::MOVING:    return "MOVING";
+        case UnitState::CHASING:   return "CHASING";
+        case UnitState::ATTACKING: return "ATTACKING";
+    }
+    return "UNKNOWN";
+}
+
+class Unit {
+public:
+    int id = 0;
+    std::string instanceName;
+    UnitData data;
+
+    Vec3 position{0.0f, 0.0f, 0.0f};
+    float facingYawRad = 0.0f;
+    float radius = 0.65f;
+    float height = 1.6f;
+
+    float currentHp = 45.0f;
+    bool isSelected = false;
+
+    UnitState state = UnitState::IDLE;
+    int targetUnitId = -1;
+    float attackCooldownTimer = 0.0f;
+    float attackFlashTimer = 0.0f;
+    Vec3 lastAttackTargetPos{0.0f, 0.0f, 0.0f};
+    bool attackMoveEnabled = false;
+
+    NavigationAgent3D navAgent;
+
+    Unit(int id, const std::string& name, const UnitData& unitData, const Vec3& startPos);
+
+    bool isAlive() const;
+    Faction getFaction() const;
+    void setSelected(bool selected);
+
+    void moveTo(const Vec3& destination, bool isAttackMove = false);
+    void attackTarget(int enemyId);
+    void takeDamage(float rawDamage, const std::string& attackerName);
+
+    void update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary);
+    bool intersectRay(const Ray& ray, float& outDistance) const;
+
+private:
+    Vec3 currentVelocity{0.0f, 0.0f, 0.0f};
+
+    void smoothRotateToward(float targetYaw, float deltaTime);
+    static Unit* findUnitById(std::vector<Unit>& allUnits, int searchId);
+    int findNearestEnemyId(const std::vector<Unit>& allUnits, float searchRadius) const;
+    void updateCombatStateMachine(float deltaTime, std::vector<Unit>& allUnits);
+};
