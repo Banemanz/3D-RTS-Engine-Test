@@ -113,3 +113,10 @@ require all-pairs scans. Ownership is independent from visual faction so
 modders can create enemy factions using the same assets. The spatial
 broadphase is deterministic and covered by a 2,000-unit regression test;
 it is not a full physics/formation system.
+
+## Data catalog browsing
+
+In the F7 Data Editor, use **Ctrl+F** to filter by catalog object name,
+ID or type. Navigate results with Tab/Shift+Tab and clear with
+**Ctrl+Shift+F**. Property editing, derived objects and per-instance
+overrides remain supported.

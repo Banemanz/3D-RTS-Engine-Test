@@ -124,3 +124,10 @@ queries; direct target-ID lookup is O(1) within each simulation tick.
 Owner-based hostilities are independent of visual faction. Heavyweight
 collision shape queries, movement classes, flow fields, projectile physics
 and networking/prediction remain future engine subsystems.
+
+### Creator navigation iteration
+
+The in-game Data Editor now has ID/type/local-name search and filtered
+navigation. This remains a keyboard-oriented prototype, not the SC2
+dockable object tree, behavior graph, property form editor or reference
+browser.

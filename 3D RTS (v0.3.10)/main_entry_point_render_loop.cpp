@@ -387,6 +387,10 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
         if(key==GLFW_KEY_ESCAPE){edit.cancelEdit();return;}
         if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
             if(action==GLFW_PRESS) {
+                if(edit.filterEditing){
+                    edit.finishCatalogSearch(s->project);
+                    return;
+                }
                 RTSProject backup=s->project;
                 const bool wasModified=edit.modified;
                 bool changed=false;
@@ -540,6 +544,11 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
             }
         }
         if(edit.panel==EditorSession::Panel::Data) {
+            if(ctrl && key==GLFW_KEY_F){
+                if(mods & GLFW_MOD_SHIFT)edit.clearCatalogSearch(s->project);
+                else edit.beginCatalogSearch();
+                return;
+            }
             if(ctrl && key==GLFW_KEY_D){edit.duplicateCatalogObject(s->project);return;}
             if(ctrl && key==GLFW_KEY_N){edit.beginNewField();return;}
             if(ctrl && key==GLFW_KEY_BACKSPACE) {
@@ -1243,10 +1252,15 @@ int main(int argc, char** argv) {
                              " Z "+std::to_string(app.hoveredWorld.z).substr(0,6));
                 } else if(app.editor.panel==EditorSession::Panel::Data) {
                     const CatalogEntry* entry=app.editor.selected(app.project);
-                    line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT OBJECT  SHIFT+TAB PREVIOUS");
-                    line(62,2.0f,"UP/DOWN PROPERTY  ENTER EDIT JSON  CTRL+N ADD FIELD  CTRL+D DERIVE OBJECT  CTRL+BACKSPACE REMOVE");
+                    line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT / SHIFT+TAB PREV");
+                    line(62,2.0f,"CTRL+F SEARCH  CTRL+SHIFT+F CLEAR  UP/DOWN PROPERTY  ENTER EDIT  CTRL+N ADD FIELD  CTRL+D DERIVE");
+                    const std::size_t matches=app.editor.matchingCatalogCount(app.project);
+                    line(87,2.0f,"OBJECTS "+std::to_string(matches)+" / "+
+                         std::to_string(app.project.catalog.entries().size())+
+                         "  FILTER: "+(app.editor.catalogFilter.empty()?"ALL":app.editor.catalogFilter),
+                         .61f,.91f,.76f);
                     if(entry) {
-                        line(92,2.7f,entry->type+" / "+entry->id+
+                        line(118,2.7f,entry->type+" / "+entry->id+
                              (entry->parent.empty()?"":"  PARENT "+entry->parent),
                              1.f,.80f,.36f);
                         auto keys=app.editor.fields(app.project);
@@ -1259,14 +1273,15 @@ int main(int argc, char** argv) {
                             std::string value=values.at(key).serialize();
                             if(value.size()>65)value=value.substr(0,62)+"...";
                             bool highlight=idx==selectedIndex;
-                            line(124+float(idx-first)*25,2.1f,
+                            line(153+float(idx-first)*25,2.1f,
                                  std::string(highlight?"> ":"  ")+key+" = "+value,
                                  highlight?1.0f:.68f,highlight?.87f:.81f,
                                  highlight?.41f:.92f);
                         }
                         if(app.editor.textEditing)
                             line(float(app.windowHeight)-58,2.25f,
-                                 "EDIT: "+app.editor.editText,1.f,.81f,.40f);
+                                 std::string(app.editor.filterEditing?"SEARCH: ":"EDIT: ")+
+                                     app.editor.editText,1.f,.81f,.40f);
                     }
                 } else if(app.editor.panel==EditorSession::Panel::Scene) {
                     line(40,2.0f,"F8 PLAY  F5 TERRAIN  F6 TRIGGERS  F7 DATA  CTRL+S SAVE  CTRL+Z/Y UNDO");

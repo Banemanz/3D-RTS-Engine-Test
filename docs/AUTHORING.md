@@ -249,3 +249,16 @@ it in F8 Scene Editor using `{"unit":{"sight_range":24}}`.
 Heightfield crests interrupt line of sight; explored but not currently
 visible areas remain darkened. F5–F8 editor panels intentionally suppress
 fog. This is the first LOS layer, not yet Spring-style radar/jamming.
+
+### Data Editor object search (F7)
+
+Press **Ctrl+F** while in the Data Editor to filter the catalog by case-
+insensitive **object ID, type, or directly authored name**. Enter applies
+the filter; Tab/Shift+Tab now cycle only matching objects. Press
+**Ctrl+Shift+F** to clear the filter and return to the entire catalog.
+The inspector displays match count and the active search string, and
+retains the previous filter when a new query has no matches.
+
+Filtering is a view-only operation; it never edits serialized data and
+does not create an undo entry. This is groundwork for an eventual
+tree/list property browser, rather than a full SC2 Data Editor UI.

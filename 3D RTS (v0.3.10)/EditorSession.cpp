@@ -4,6 +4,7 @@
 #include <set>
 #include <stdexcept>
 #include <cstddef>
+#include <cctype>
 
 std::string EditorSession::panelName()const {
     switch(panel) {
@@ -175,11 +176,68 @@ std::string EditorSession::selectedFieldName(const RTSProject& project)const {
     if(keys.empty())return "";
     return keys[selectedField%keys.size()];
 }
+bool EditorSession::catalogMatches(const CatalogEntry& entry) const {
+    if(catalogFilter.empty())return true;
+    auto lower=[](std::string text){
+        for(auto& c:text)c=char(std::tolower(static_cast<unsigned char>(c)));
+        return text;
+    };
+    const auto query=lower(catalogFilter);
+    if(lower(entry.id).find(query)!=std::string::npos ||
+       lower(entry.type).find(query)!=std::string::npos)return true;
+    auto name=entry.fields.find("name");
+    return name!=entry.fields.end() && name->second.is<std::string>() &&
+           lower(name->second.get<std::string>()).find(query)!=std::string::npos;
+}
+std::size_t EditorSession::matchingCatalogCount(const RTSProject& project)const {
+    std::size_t count=0;
+    for(const auto& entry:project.catalog.entries())if(catalogMatches(entry))++count;
+    return count;
+}
+void EditorSession::beginCatalogSearch(){
+    if(textEditing)return;
+    filterEditing=true;textEditing=true;newFieldEditing=false;
+    editText=catalogFilter;
+    message="TYPE CATALOG SEARCH AND PRESS ENTER";
+}
+bool EditorSession::finishCatalogSearch(const RTSProject& project){
+    if(!textEditing || !filterEditing)return false;
+    const std::string old=catalogFilter;
+    catalogFilter=editText.substr(0,128);
+    filterEditing=false;textEditing=false;editText.clear();
+    const auto count=matchingCatalogCount(project);
+    if(count==0){
+        catalogFilter=old;
+        message="NO MATCHES - PREVIOUS FILTER KEPT";
+        return false;
+    }
+    for(std::size_t i=0;i<project.catalog.entries().size();++i)
+        if(catalogMatches(project.catalog.entries()[i])){
+            selectedObject=i;break;
+        }
+    selectedField=0;
+    message="MATCHES "+std::to_string(count);
+    return true;
+}
+void EditorSession::clearCatalogSearch(const RTSProject& project){
+    catalogFilter.clear();filterEditing=false;textEditing=false;editText.clear();
+    if(selectedObject>=project.catalog.entries().size())selectedObject=0;
+    message="CATALOG FILTER CLEARED";
+}
 void EditorSession::cycleObject(const RTSProject& project,int delta) {
     if(textEditing || project.catalog.entries().empty())return;
-    int count=int(project.catalog.entries().size());
-    selectedObject=static_cast<std::size_t>((int(selectedObject%count)+delta%count+count)%count);
-    selectedField=0;
+    const auto& entries=project.catalog.entries();
+    const int n=int(entries.size());
+    int current=int(selectedObject%entries.size());
+    const int direction=delta<0?-1:1;
+    for(int k=0;k<n;++k){
+        current=(current+direction+n)%n;
+        if(catalogMatches(entries[static_cast<std::size_t>(current)])){
+            selectedObject=std::size_t(current);
+            selectedField=0;
+            return;
+        }
+    }
 }
 void EditorSession::cycleField(const RTSProject& project,int delta) {
     if(textEditing)return;
@@ -211,7 +269,8 @@ void EditorSession::backspace(){
     if(textEditing && !editText.empty())editText.pop_back();
 }
 void EditorSession::cancelEdit(){
-    textEditing=false;newFieldEditing=false;editText.clear();pendingNewField_.clear();
+    textEditing=false;newFieldEditing=false;filterEditing=false;
+    editText.clear();pendingNewField_.clear();
     message="EDIT CANCELLED";
 }
 bool EditorSession::finishEdit(RTSProject& project) {

@@ -104,3 +104,11 @@ enemies, and differently skinned allies no longer auto-attack each other.
 This is the first broadphase foundation; it does not yet include a dynamic
 physics BVH, collision avoidance, flow fields, multi-threaded simulation,
 multi-layer air/ground spatial categories or heavy-load performance budgets.
+
+### Data Editor catalog search
+
+The F7 inspector now supports case-insensitive object ID/type/name search,
+a match counter, filtered previous/next selection and a clear-filter
+shortcut. This is a lightweight in-window catalog browser. A full dockable
+object tree, property type schemas, references, asset import, configurable
+form controls and search across inherited values are still TBD.

@@ -24,6 +24,8 @@ public:
     std::string message;
 
     std::size_t selectedObject=0;
+    std::string catalogFilter;
+    bool filterEditing=false;
     std::size_t selectedField=0;
     std::size_t selectedTrigger=0;
     std::string selectedPlacementId;
@@ -61,6 +63,11 @@ public:
     bool finishSceneOverrideEdit(RTSProject& project);
 
     void cycleObject(const RTSProject& project,int delta);
+    void beginCatalogSearch();
+    void clearCatalogSearch(const RTSProject& project);
+    bool finishCatalogSearch(const RTSProject& project);
+    std::size_t matchingCatalogCount(const RTSProject& project) const;
+    bool catalogMatches(const CatalogEntry& entry) const;
     void cycleField(const RTSProject& project,int delta);
     std::vector<std::string> fields(const RTSProject& project) const;
     const CatalogEntry* selected(const RTSProject& project) const;

@@ -210,3 +210,15 @@ hard-coded +/-48 bounds. `RTSSpatialTests` compare candidate neighborhoods
 to exhaustive brute-force ground truth and indexed steering to direct
 steering for exact parity. This is not full collision avoidance or a
 parallel simulation scheduler yet.
+
+## Creator data navigation improvement (2026-11-13)
+
+F7 Data Editor: `EditorSession::catalogFilter` and `filterEditing`
+implement Ctrl+F search, Enter apply, Ctrl+Shift+F clear and filtered
+Tab/Shift+Tab navigation. `catalogMatches` searches ASCII case-insensitive
+catalog IDs, types and locally authored name fields, without mutating
+the project. Search with zero matches retains the previous filter.
+`tests/editor_tests.cpp` covers filtering, cycling, unmatched searches,
+clear, type search and continued field edits. This is a precursor to the
+dockable hierarchy/property inspector needed by the SC2-style authoring
+roadmap.

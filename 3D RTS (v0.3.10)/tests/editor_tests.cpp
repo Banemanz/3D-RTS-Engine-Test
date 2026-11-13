@@ -38,6 +38,25 @@ int main() {
     assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size());
     assert(editor.redo(p));
     assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size()+1);
+    editor.beginCatalogSearch();
+    editor.editText="mArInE";
+    assert(editor.finishCatalogSearch(p));
+    assert(editor.matchingCatalogCount(p)>=2);
+    assert(editor.selected(p)->id.find("marine")!=std::string::npos);
+    editor.cycleObject(p,1);
+    assert(editor.catalogMatches(*editor.selected(p)));
+    editor.beginCatalogSearch();
+    editor.editText="no_such_rts_object_123";
+    assert(!editor.finishCatalogSearch(p));
+    assert(editor.catalogFilter=="mArInE");
+    editor.clearCatalogSearch(p);
+    assert(editor.catalogFilter.empty());
+    assert(editor.matchingCatalogCount(p)==p.catalog.entries().size());
+    editor.beginCatalogSearch();
+    editor.editText="Unit";
+    assert(editor.finishCatalogSearch(p));
+    assert(editor.selected(p)->type=="Unit");
+    editor.clearCatalogSearch(p);
     editor.beginNewField();
     editor.editText="custom_mod_value";assert(editor.finishEdit(p));
     editor.editText="{\"foo\":true}";assert(editor.finishEdit(p));
@@ -63,5 +82,5 @@ int main() {
     assert(editor.undo(p));
     assert(editor.undo(p));
     assert(editor.triggerCount(p)==1);
-    std::cout<<"editor: terrain strokes, placement undo, data and trigger editing passed\n";
+    std::cout<<"editor: terrain strokes, placement undo, data search/filter and trigger editing passed\n";
 }
