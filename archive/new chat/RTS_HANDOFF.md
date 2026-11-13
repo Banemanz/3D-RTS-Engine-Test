@@ -132,3 +132,28 @@ contains `RTSCameraTerrain.exe`, `RTSProjectTool.exe`, projects, launchers,
 still wraps a tar.gz inside the Actions artifact ZIP to preserve execute
 permissions. Windows Release uses MSVC static CRT. See
 `docs/BUILD_ARTIFACTS.md`.
+
+## Gameplay UI, input hardening and RTS fundamentals
+
+The new `RTSHUDLayout.hpp` is pure headless command layout and hit testing;
+`RTSHUD.hpp` renders a dark RTS-style resource bar, minimap, selected-unit
+dossier and clickable command grid. `AppState` shares it for mouse hit tests
+and keyboard actions, with F2 army selection, H base focus and minimap pan.
+`RTSSkirmish::orderPatrol` implements back-and-forth patrol routing using
+the existing waypoint planner and attack-move behavior. Stop and replacement
+commands clear patrol. ESC cancels targeting before quitting.
+
+Relevant research: SpringRTS / Recoil architecture (game-specific Lua/UI
+widgets separate from core simulation), Beyond All Reason command panel
+and minimap conventions. This code is newly authored, **no GPL engine
+sources or widget code were copied**. Work pending: portrait/icon art,
+multi-selection tiles, queue indicators, declarative command schemas, actual
+production rally points, fog/LOS, zoomable minimap, user HUD layout editing.
+
+GLFW callbacks for mouse, cursor, scroll, char and editor key now catch all
+exceptions at the C entry boundary, display a notice and log errors to
+`rts-editor-error.log`. `AppState::reloadFromProject` caches doodad actor
+appearance to avoid validating/copying a catalog on every draw call.
+Autosave every 25 seconds produces `.autosave` sibling files and newer
+valid autosaves are recovered on launch. Still needs native Windows playtest;
+uncaught native DLL/OpenGL crashes require callstacks/dumps.

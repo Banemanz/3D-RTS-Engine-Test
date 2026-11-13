@@ -92,7 +92,8 @@ public:
                 unit.ownerId==0?.75f:.31f);
         dot(camera.focalPoint,2.5f,1.f,1.f,.96f);
         text(mm.x+6,mm.y+5,1.6f,"TACTICAL MAP",.95f,.96f,.87f);
-        text(mm.x,mm.y+mm.h+9,1.5f,"CLICK TO CENTER",.57f,.72f,.77f);
+        rect(mm.x+2,mm.y+mm.h-17,mm.w-4,15,.04f,.08f,.11f,.85f);
+        text(mm.x+8,mm.y+mm.h-13,1.4f,"LMB PAN",.69f,.88f,.92f);
 
         const auto s=ui_.selectionArea;
         rect(s.x,s.y,s.w,s.h,.075f,.105f,.139f,.85f);
@@ -132,7 +133,8 @@ public:
             const HUDRect b=button.bounds;
             const bool active=(commandMode==1 && button.command==HUDCommand::Move) ||
                 (commandMode==2 && button.command==HUDCommand::AttackMove) ||
-                (commandMode==3 && button.command==HUDCommand::Build);
+                (commandMode==3 && button.command==HUDCommand::Build) ||
+                (commandMode==4 && button.command==HUDCommand::Patrol);
             rect(b.x,b.y,b.w,b.h,button.enabled?.095f:.065f,
                  button.enabled?.17f:.09f,button.enabled?.20f:.11f,.95f);
             rect(b.x,b.y,b.w,2,active?.88f:button.enabled?.24f:.13f,

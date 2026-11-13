@@ -48,3 +48,13 @@ The pathfinder now supports weighted cell traversal: steepness raises route
 cost, and gradients above the authorable global threshold block cells.
 Manual blocked-cell painting remains explicit. This does not model collision
 physics or the different movement categories and ramps expected in SC2.
+
+## RTS/HUD reliability pass
+
+A playable RTS-style HUD now replaces the debug-text game overlay, using
+resource counters, a tactical minimap, selected unit stats/HP and clickable
+command grid. F2 army selection, H base focus and P repeat-patrol have been
+added. Editor callbacks are guarded against escaping C++ exceptions, actor
+visuals are cached and autosave/recovery can limit data loss. Production
+rally points, icon/model assets, fog/LOS, independent unit command schemas
+and full event-driven UI remain outstanding.

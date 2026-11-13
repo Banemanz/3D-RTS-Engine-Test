@@ -27,6 +27,7 @@ int main() {
     buttons=wide.buttons(game);
     assert(buttons[0].enabled && buttons[1].enabled && buttons[2].enabled);
     assert(buttons[3].enabled); // worker selected
+    assert(buttons[8].command==HUDCommand::Patrol && buttons[8].enabled);
     assert(wide.hit(buttons[3].bounds.x+4,buttons[3].bounds.y+4,game)==HUDCommand::Build);
     assert(wide.hit(10,wide.bottom.y+5,game)==HUDCommand::Cancel);
     // No click on the top/bottom UI must turn into an RTS world order.
@@ -35,5 +36,20 @@ int main() {
     game.supplyUsed=game.supplyCap;
     buttons=wide.buttons(game);
     assert(!buttons[5].enabled); // training is supply limited
+    // Gameplay UI must recognize data-driven replacement bases, not only
+    // the original command_center catalog literal.
+    RTSProject custom=RTSProject::defaults();
+    assert(custom.catalog.cloneDerived("command_center","custom_hq"));
+    custom.metadata["player_base"]=picojson::value("custom_hq");
+    custom.placements[0].catalogId="custom_hq";
+    game.loadProject(custom);
+    auto customBtns=wide.buttons(game);
+    assert(customBtns[7].enabled);
+    bool found=false;
+    for(const auto& u:game.units)if(u.id==game.playerBaseId()){
+        assert(u.catalogId=="custom_hq");
+        found=true;
+    }
+    assert(found);
     std::cout<<"rts-hud: hit targets, minimap mapping, abilities and panel boundaries passed\n";
 }

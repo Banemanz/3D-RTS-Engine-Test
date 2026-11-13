@@ -1,5 +1,6 @@
 #include "RTSSkirmish.hpp"
 #include <cassert>
+#include <algorithm>
 #include <iostream>
 
 static void assertStartingState() {
@@ -108,6 +109,33 @@ static void assertQueuedMovement() {
         close=u.isAlive() && (u.position-Vec3(-12,0,-2)).lengthXZ()<3.0f;
     assert(close);
 }
+static void assertPatrol() {
+    RTSProject map=RTSProject::defaults();
+    map.placements.erase(std::remove_if(map.placements.begin(),map.placements.end(),
+       [](const ProjectPlacement& p){return p.owner==1 && p.catalogId=="zealot";}),
+       map.placements.end());
+    RTSSkirmish game;
+    game.loadProject(map);
+    int id=-1;
+    for(auto& unit:game.units)if(unit.ownerId==0 && unit.isWorker && id==-1) {
+        id=unit.id;
+        unit.isSelected=true;
+    }
+    assert(id!=-1);
+    assert(game.orderPatrol({-10,0,-5.5f}));
+    bool outbound=false,returned=false;
+    for(int i=0;i<720;++i) {
+        game.update(1.f/60.f);
+        for(const auto& unit:game.units)if(unit.id==id) {
+            if(unit.position.x>-12.5f)outbound=true;
+            if(outbound && unit.position.x<-16.f)returned=true;
+        }
+    }
+    assert(outbound && returned);
+    game.orderStop();
+    for(const auto& unit:game.units)if(unit.id==id)
+        assert(!unit.navAgent.hasDestination);
+}
 int main() {
     assertStartingState();
     assertBuildingAndProduction();
@@ -116,5 +144,6 @@ int main() {
     assertDeathAndReset();
     assertReplay();
     assertQueuedMovement();
-    std::cout<<"skirmish: 7 tests passed\n";
+    assertPatrol();
+    std::cout<<"skirmish: 8 tests passed\n";
 }

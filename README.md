@@ -52,6 +52,14 @@ For the full controls and map-code format see [Authoring guide](docs/AUTHORING.m
 For a sober, extensive SC2-scope comparison of what is implemented versus what
 still needs to be developed, see [Creator suite matrix](docs/SC2_FEATURE_MATRIX.md).
 
+## Gameplay HUD
+
+Play mode now has a proper RTS-style resource bar, clickable tactical minimap,
+selection details with HP, and a 3×3 command grid. Buttons and keyboard
+shortcuts share the same commands; the HUD consumes pointer events separately
+from the world. The first iteration uses procedural UI geometry pending a
+proper texture/icon/theme and localization pipeline.
+
 ## Gameplay
 
 - Left-click/drag/Shift-click selects friendly units.
@@ -60,7 +68,9 @@ still needs to be developed, see [Creator suite matrix](docs/SC2_FEATURE_MATRIX.
 - **A** then right-click attack-moves; **Shift+right-click** queues more orders.
 - **B** then right-click places Barracks with a selected Worker nearby;
   **T** queues Marines, **C** queues Workers.
-- **X** stops units; **Ctrl+1–9** creates control groups; **1–9** recalls.
+- **X** stops units; **P** then right-click orders repeating patrol routes.
+- **F2** selects combat army; **H** selects/focuses the command center.
+- **Ctrl+1–9** creates control groups; **1–9** recalls.
 - **W/S/D + arrows** pans, **Q/E** rotates, mouse wheel zooms.
 - **R** restarts skirmish and **Esc** exits.
 

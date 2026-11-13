@@ -42,6 +42,7 @@ public:
     std::string triggerMessage;
 
     bool orderMove(const Vec3& destination, bool attackMove, bool append = false);
+    bool orderPatrol(const Vec3& destination);
     bool orderGather(const Vec3& nearNode);
     bool orderAttack(int targetId);
     void orderStop();
@@ -51,6 +52,7 @@ public:
     std::string statusLine() const;
     int activeWorkerCount() const;
     int completedBarracksCount() const;
+    int playerBaseId() const { return friendlyBaseId_; }
 
     // Script actions expose only explicit, bounded game-state mutations.
     void addMineralsForTrigger(int amount);
@@ -74,6 +76,10 @@ private:
         std::vector<Vec3> points;
         size_t next = 0;
         bool attackMove = false;
+        bool patrol = false;
+        bool returning = false;
+        Vec3 patrolStart{};
+        Vec3 patrolGoal{};
     };
     enum class WorkerPhase { ToMineral, Harvesting, ToBase };
     struct WorkerJob {

@@ -14,7 +14,7 @@ struct HUDRect {
     }
 };
 enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Marine,
-                        Worker, SelectArmy, FocusBase, Cancel };
+                        Worker, SelectArmy, FocusBase, Patrol, Cancel };
 struct HUDButton {
     HUDCommand command=HUDCommand::None;
     const char* title="";
@@ -43,24 +43,24 @@ public:
         for(const auto& u:game.units)if(u.isAlive() && u.ownerId==0 && u.isSelected){
             ++selected;worker|=u.isWorker;combat|=!u.isStructure;
         }
-        bool base=false,barracks=false,army=false;
+        bool base=false,army=false;
+        const bool barracks=game.completedBarracksCount()>0;
         for(const auto& u:game.units)if(u.ownerId==0 && u.isAlive()){
             army|=!u.isStructure && !u.isWorker;
-            if(u.catalogId=="command_center")base=true;
-            if(u.catalogId=="barracks")barracks=true;
+            if(u.id==game.playerBaseId())base=true;
         }
         const bool live=game.result==MatchResult::Playing;
         const bool supply=game.supplyUsed<game.supplyCap;
         const std::array<HUDCommand,9> types={
           HUDCommand::Move,HUDCommand::AttackMove,HUDCommand::Stop,
           HUDCommand::Build,HUDCommand::Marine,HUDCommand::Worker,
-          HUDCommand::SelectArmy,HUDCommand::FocusBase,HUDCommand::Cancel
+          HUDCommand::SelectArmy,HUDCommand::FocusBase,HUDCommand::Patrol
         };
         const std::array<const char*,9> labels={
-          "MOVE","ATTACK-MOVE","STOP","BUILD","MARINE","WORKER",
-          "ALL ARMY","HOME BASE","CANCEL"
+          "MOVE","ATK MOVE","STOP","BUILD","MARINE","WORKER",
+          "ALL ARMY","HOME BASE","PATROL"
         };
-        const std::array<const char*,9> keys={"M","A","X","B","T","C","F2","H","ESC"};
+        const std::array<const char*,9> keys={"M","A","X","B","T","C","F2","H","P"};
         std::array<HUDButton,9> result{};
         const float gap=6;
         const float cw=(commandArea.w-2*gap)/3;
@@ -80,7 +80,7 @@ public:
         result[5].enabled=live && base && supply;
         result[6].enabled=army;
         result[7].enabled=base;
-        result[8].enabled=true;
+        result[8].enabled=live && combat;
         return result;
     }
     HUDCommand hit(double x,double y,const RTSSkirmish& game)const {

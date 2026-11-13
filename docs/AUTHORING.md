@@ -206,3 +206,20 @@ autocomplete, profiling and debugger.
   coalescing for held keys and recovery after application crashes are TBD.
 - End-game hardcoded enemy waves still coexist with trigger-authored events.
 - Custom triggers are not yet directly editable through a visual graph.
+
+## Editor reliability and crash recovery
+
+Editor input callbacks now catch C++ exceptions locally instead of allowing
+exceptions to escape GLFW's C callback boundary. Errors appear as in-game
+notices and are appended to `rts-editor-error.log` in the current working
+directory. The first run with these guards cannot prevent native graphics
+faults or out-of-memory conditions, so real-machine crash logs still matter.
+
+Edited projects autosave every **25 seconds** to `<project>.autosave`
+when an editor panel is active and the document has unsaved changes. This
+never overwrites the saved project. When a newer autosave exists, the editor
+loads it at startup, marks the document modified, and offers **Ctrl+S** to
+keep the recovery. An ordinary successful Ctrl+S removes the stale autosave.
+Use the launch scripts or open `--project <file>` explicitly to keep the
+correct per-project recovery location. The software OpenGL / CI smoke tests
+are not substitutes for a Windows real-machine crash reproduction.

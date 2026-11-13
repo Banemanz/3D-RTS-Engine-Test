@@ -64,17 +64,47 @@ struct AppState {
         notice=message.substr(0,140);
         noticeSeconds=4.f;
     }
+    void autoSave(){
+        if(!editor.modified || editor.panel==EditorSession::Panel::Play)return;
+        try{
+            TriggerEngine::validate(project);
+            project.saveFile(projectPath+".autosave");
+        }catch(const std::exception& e){
+            std::cerr<<"[Autosave] "<<e.what()<<"\n";
+            editor.message=std::string("AUTOSAVE FAILED: ")+e.what();
+        }
+    }
+    void recoverAutosave(){
+        try {
+            const std::string autosave=projectPath+".autosave";
+            if(!std::filesystem::exists(autosave))return;
+            if(std::filesystem::exists(projectPath) &&
+               std::filesystem::last_write_time(autosave)<=std::filesystem::last_write_time(projectPath))
+                return;
+            RTSProject recovered;
+            recovered.loadFile(autosave);
+            TriggerEngine::validate(recovered);
+            project=std::move(recovered);
+            editor.modified=true;
+            inform("RECOVERED NEWER AUTOSAVE - CTRL+S TO KEEP");
+        }catch(const std::exception& e){
+            std::cerr<<"[Autosave] recovery skipped: "<<e.what()<<"\n";
+        }
+    }
     void saveProject(){
         try{
             TriggerEngine::validate(project);
             project.saveFile(projectPath);
+            std::error_code ec;
+            std::filesystem::remove(projectPath+".autosave",ec);
             editor.modified=false;editor.message="PROJECT SAVED";
+            inform("MAP SAVED");
         }
         catch(const std::exception& e){editor.message=std::string("SAVE ERROR: ")+e.what();}
     }
-    enum class Mode { Normal, Move, AttackMove, BuildBarracks } mode = Mode::Normal;
+    enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
-    bool keyX = false, keyR = false, keyM=false, keyF2=false, keyH=false;
+    bool keyX = false, keyR = false, keyM=false, keyP=false, keyF2=false, keyH=false;
     std::array<std::vector<int>,10> controlGroups{};
     std::array<bool,10> digitWasDown{};
     int framebufferWidth = 1280, framebufferHeight = 720;
@@ -93,6 +123,7 @@ struct AppState {
         }
         switch(action){
             case HUDCommand::Move: mode=Mode::Move;inform("MOVE: RIGHT CLICK DESTINATION");break;
+            case HUDCommand::Patrol:mode=Mode::Patrol;inform("PATROL: RIGHT CLICK DESTINATION");break;
             case HUDCommand::AttackMove:mode=Mode::AttackMove;inform("ATTACK MOVE: RIGHT CLICK");break;
             case HUDCommand::Build:mode=Mode::BuildBarracks;inform("BUILD: RIGHT CLICK CLEAR TERRAIN");break;
             case HUDCommand::Stop:game.orderStop();mode=Mode::Normal;break;
@@ -115,7 +146,7 @@ struct AppState {
             case HUDCommand::FocusBase:{
                 bool found=false;
                 for(auto& unit:game.units)if(unit.isAlive() && unit.ownerId==0 &&
-                                           unit.catalogId=="command_center") {
+                                           unit.id==game.playerBaseId()) {
                     for(auto& item:game.units)item.isSelected=false;
                     unit.isSelected=true;
                     camera.focalPoint=unit.position;
@@ -284,6 +315,11 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->mode = AppState::Mode::Normal;
             return;
         }
+        if (state->mode == AppState::Mode::Patrol) {
+            if(!state->game.orderPatrol(hit))state->inform("NO VALID PATROL ROUTE");
+            state->mode=AppState::Mode::Normal;
+            return;
+        }
         if (state->mode == AppState::Mode::Move) {
             if(!state->game.orderMove(hit,false,(mods & GLFW_MOD_SHIFT)!=0))
                 state->inform("NO VALID MOVE ROUTE");
@@ -399,6 +435,9 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     if(key==GLFW_KEY_ESCAPE) {
         if(edit.panel!=EditorSession::Panel::Play) {
             edit.panel=EditorSession::Panel::Play;s->reloadFromProject();
+        }else if(s->mode!=AppState::Mode::Normal) {
+            s->mode=AppState::Mode::Normal;
+            s->inform("COMMAND CANCELLED");
         }else glfwSetWindowShouldClose(window,true);
         return;
     }
@@ -573,6 +612,7 @@ int main(int argc, char** argv) {
         }else if(std::filesystem::exists("projects/default.rtsproject.json")) {
             app.project.loadFile("projects/default.rtsproject.json");
         }
+        app.recoverAutosave();
         app.reloadFromProject();
         if(startEditor || startTriggerEditor || startSceneEditor) {
             app.editor.panel=startSceneEditor ? EditorSession::Panel::Scene :
@@ -723,11 +763,16 @@ int main(int argc, char** argv) {
         const float fixedStep = 1.0f / 60.0f;
         double lastTitleUpdate = 0.0;
         double lastTime = glfwGetTime();
+        double lastAutosave=lastTime;
 
         while (!glfwWindowShouldClose(window)) {
             double currentTime = glfwGetTime();
             float deltaTime = std::clamp(static_cast<float>(currentTime - lastTime), 0.0f, 0.25f);
             lastTime = currentTime;
+            if(currentTime-lastAutosave>=25.0){
+                app.autoSave();
+                lastAutosave=currentTime;
+            }
             if(app.noticeSeconds>0.f) {
                 app.noticeSeconds=std::max(0.f,app.noticeSeconds-deltaTime);
                 if(app.noticeSeconds==0.f)app.notice.clear();
@@ -741,6 +786,7 @@ int main(int argc, char** argv) {
             };
             if(app.editor.panel==EditorSession::Panel::Play) {
             if (justPressed(GLFW_KEY_M, app.keyM)) app.command(HUDCommand::Move);
+            if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
             if (justPressed(GLFW_KEY_A, app.keyA)) app.command(HUDCommand::AttackMove);
             if (justPressed(GLFW_KEY_B, app.keyB)) app.command(HUDCommand::Build);
             if (justPressed(GLFW_KEY_T, app.keyT)) app.command(HUDCommand::Marine);
@@ -801,7 +847,8 @@ int main(int argc, char** argv) {
             if (currentTime - lastTitleUpdate > 0.35) {
                 const char* mode = app.mode == AppState::Mode::BuildBarracks ? "PLACE BARRACKS: RMB" :
                     app.mode == AppState::Mode::AttackMove ? "ATTACK MOVE: RMB" :
-                    app.mode == AppState::Mode::Move ? "MOVE: RMB" : "COMMAND";
+                    app.mode == AppState::Mode::Move ? "MOVE: RMB" :
+                    app.mode == AppState::Mode::Patrol ? "PATROL: RMB" : "COMMAND";
                 std::string title = app.editor.panel==EditorSession::Panel::Play
                     ? std::string("3D RTS | ")+app.game.statusLine()+" | "+mode
                     : std::string("3D RTS AUTHORING | ")+app.project.name+
@@ -1064,7 +1111,8 @@ int main(int argc, char** argv) {
                 RTSHUD hud(hudBoxShader,hudVAO,hudVBO,layout);
                 const int commandMode=app.mode==AppState::Mode::Move?1:
                     app.mode==AppState::Mode::AttackMove?2:
-                    app.mode==AppState::Mode::BuildBarracks?3:0;
+                    app.mode==AppState::Mode::BuildBarracks?3:
+                    app.mode==AppState::Mode::Patrol?4:0;
                 hud.draw(app.game,app.project,app.camera,commandMode,app.notice);
             }
             // Editor UI is intentionally drawn in the same OpenGL window:

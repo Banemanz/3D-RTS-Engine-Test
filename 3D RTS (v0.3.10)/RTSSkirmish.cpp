@@ -156,6 +156,7 @@ bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append)
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
         jobs_.erase(u.id);
         if(append && routes_.count(u.id)) {
+            routes_[u.id].patrol=false; // queued move exits patrol after this leg
             queued_[u.id].push_back({clamped,attackMove});
             ok=true;
         } else {
@@ -165,6 +166,27 @@ bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append)
         }
     }
     return ok;
+}
+bool RTSSkirmish::orderPatrol(const Vec3& destination) {
+    if(result!=MatchResult::Playing)return false;
+    bool issued=false;
+    const Vec3 goal=navigation.clampWorld(destination);
+    for(auto& unit:units)if(unit.isAlive() && unit.isSelected && unit.ownerId==0 &&
+                           !unit.isStructure){
+        const Vec3 start=unit.position;
+        routes_.erase(unit.id);
+        queued_.erase(unit.id);
+        jobs_.erase(unit.id);
+        if(setRoute(unit,goal,true)){
+            auto& route=routes_[unit.id];
+            route.patrol=true;
+            route.patrolStart=start;
+            route.patrolGoal=goal;
+            route.returning=false;
+            issued=true;
+        }
+    }
+    return issued;
 }
 bool RTSSkirmish::orderAttack(int targetId) {
     Unit* target=find(targetId);
@@ -211,6 +233,18 @@ void RTSSkirmish::advanceRoutes() {
         if(u->state==UnitState::MOVING && !u->navAgent.isNavigationFinished(u->position)){++it;continue;}
         ++route.next;
         if(route.next>=route.points.size()){
+            if(route.patrol){
+                const Vec3 target=route.returning?route.patrolGoal:route.patrolStart;
+                auto path=navigation.findPath(u->position,target);
+                if(!path.empty()){
+                    route.points=std::move(path);
+                    route.next=0;
+                    route.returning=!route.returning;
+                    u->moveTo(route.points.front(),true);
+                    ++it;
+                    continue;
+                }
+            }
             u->navAgent.stop();u->state=UnitState::IDLE;
             completed.push_back(u->id);
             it=routes_.erase(it);
@@ -275,7 +309,13 @@ bool RTSSkirmish::buildBarracks(const Vec3& target) {
     for(const auto& u:units)if(u.isAlive() && u.isWorker && u.isSelected && u.ownerId==0 &&
         distanceXZ(u.position,pos)<=18){hasWorker=true;break;}
     if(!hasWorker)return false;
-    if(pos.x<-44 || pos.x>44 || pos.z<-44 || pos.z>44)return false;
+    const auto& terrain=project_.terrain;
+    const float margin=std::max(2.f,terrain.spacing()*2.f);
+    if(pos.x<terrain.minX()+margin ||
+       pos.x>terrain.minX()+(terrain.width()-1)*terrain.spacing()-margin ||
+       pos.z<terrain.minZ()+margin ||
+       pos.z>terrain.minZ()+(terrain.depth()-1)*terrain.spacing()-margin)
+        return false;
     for(const auto& u:units)if(u.isStructure && u.isAlive() &&
         distanceXZ(pos,u.position)<u.radius+3.2f)return false;
     for(const auto& m:minerals)if(distanceXZ(pos,m.position)<5.0f)return false;

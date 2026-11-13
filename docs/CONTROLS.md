@@ -27,3 +27,21 @@ press the corresponding **1-9** key to recall the surviving members.
 
 This skirmish is a prototype: no construction preview, minimap, fog, control
 groups, production selection UI or building placement feedback beyond console.
+
+## RTS Gameplay HUD (new)
+
+The gameplay screen now uses a top resource strip, a bottom-left tactical
+minimap (click to center the camera), a selection/health panel and a clickable
+3×3 command grid instead of a debug-text overlay. HUD clicks are consumed
+before world raycasting, so buttons do not accidentally issue game orders.
+Commands include move **M**, attack-move **A**, stop **X**, build **B**,
+train Marine **T**, train Worker **C**, select all army **F2**, focus/select
+Command Center **H**, and patrol **P**. Patrol orders move selected units
+between their original position and the clicked destination indefinitely
+until stopped or replaced. **Esc** cancels an armed targeting command before
+exiting on a second press. **Shift+RMB** queues waypoints and exits patrol
+after its current leg.
+
+Visuals are procedural (no imported command icons, portraits or art assets
+yet). The HUD is rendered with the existing OpenGL pipeline and currently
+has no user-configurable layout system or Unicode font atlas.

@@ -42,8 +42,12 @@ void RTSCamera::update(float deltaTime, GLFWwindow* window, int windowWidth, int
         Vec3 worldMove = (right * panInput.x + forward * (-panInput.z)) * (panSpeed * heightScale * deltaTime);
 
         targetFocalPoint = targetFocalPoint + worldMove;
-        targetFocalPoint.x = std::clamp(targetFocalPoint.x, -mapBoundary, mapBoundary);
-        targetFocalPoint.z = std::clamp(targetFocalPoint.z, -mapBoundary, mapBoundary);
+        const float loX=terrain?terrain->minX():-mapBoundary;
+        const float loZ=terrain?terrain->minZ():-mapBoundary;
+        const float hiX=terrain?(terrain->minX()+(terrain->width()-1)*terrain->spacing()):mapBoundary;
+        const float hiZ=terrain?(terrain->minZ()+(terrain->depth()-1)*terrain->spacing()):mapBoundary;
+        targetFocalPoint.x=std::clamp(targetFocalPoint.x,loX,hiX);
+        targetFocalPoint.z=std::clamp(targetFocalPoint.z,loZ,hiZ);
     }
 
     float t = 1.0f - std::exp(-smoothingFactor * deltaTime);
