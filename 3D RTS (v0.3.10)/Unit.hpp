@@ -10,6 +10,12 @@
 
 class Unit;
 class UnitSpatialIndex;
+struct CombatHit {
+    int attackerId=-1;
+    int targetId=-1;
+    float rawDamage=0.f;
+    std::string attackerName;
+};
 
 class NavigationAgent3D {
 public:
@@ -96,7 +102,8 @@ public:
     void takeDamage(float rawDamage, const std::string& attackerName);
 
     void update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary,
-                const UnitSpatialIndex* spatial=nullptr);
+                const UnitSpatialIndex* spatial=nullptr,
+                std::vector<CombatHit>* pendingHits=nullptr);
     bool intersectRay(const Ray& ray, float& outDistance) const;
 
 private:
@@ -108,5 +115,6 @@ private:
     int findNearestEnemyId(const std::vector<Unit>& allUnits,float searchRadius,
                            const UnitSpatialIndex* spatial) const;
     void updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
-                                  const UnitSpatialIndex* spatial);
+                                  const UnitSpatialIndex* spatial,
+                                  std::vector<CombatHit>* pendingHits);
 };

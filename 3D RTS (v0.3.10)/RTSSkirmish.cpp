@@ -503,10 +503,14 @@ void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
     dt=std::clamp(dt,0.0f,0.1f);
     spatial_.rebuild(units);
+    // Two-phase combat: every actor gets its chance to fire before damage
+    // is applied, making mutually lethal hits independent of update order.
+    std::vector<CombatHit> pendingHits;
+    pendingHits.reserve(units.size());
     for(std::size_t i=0;i<units.size();++i) {
         auto& u=units[i];
         Vec3 previous=u.position;
-        u.update(dt,units,48.0f,&spatial_);
+        u.update(dt,units,48.0f,&spatial_,&pendingHits);
         if(u.isAlive() && !u.isStructure) {
             auto cell=navigation.toCell(u.position);
             if(!navigation.walkable(cell.x,cell.z)) {
@@ -517,6 +521,13 @@ void RTSSkirmish::update(float dt) {
         }
         if(u.isAlive())spatial_.moved(i,previous,u.position);
     }
+    // Stable ordering prevents actor-vector reordering changing overkill.
+    std::sort(pendingHits.begin(),pendingHits.end(),
+        [](const CombatHit& a,const CombatHit& b) {
+            return a.targetId!=b.targetId ? a.targetId<b.targetId : a.attackerId<b.attackerId;
+        });
+    for(const auto& hit:pendingHits)
+        if(Unit* target=find(hit.targetId))target->takeDamage(hit.rawDamage,hit.attackerName);
     // Dead army units return their supply exactly once. Production still reserves
     // supply at queue time, even before the unit exists.
     for(const auto& u:units)if(u.ownerId==0 && !u.isStructure && !u.isAlive()) {

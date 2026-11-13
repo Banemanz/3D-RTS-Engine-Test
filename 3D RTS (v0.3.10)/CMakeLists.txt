@@ -33,6 +33,9 @@ if(BUILD_TESTING)
     add_test(NAME formation COMMAND RTSFormationTests)
 
     add_executable(RTSOrdersTests tests/order_tests.cpp)
+    add_executable(RTSCombatResolutionTests tests/combat_resolution_tests.cpp)
+    target_link_libraries(RTSCombatResolutionTests PRIVATE RTSSimulation)
+    add_test(NAME combat_resolution COMMAND RTSCombatResolutionTests)
     target_link_libraries(RTSOrdersTests PRIVATE RTSSimulation)
     add_test(NAME orders COMMAND RTSOrdersTests)
 
@@ -93,7 +96,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSOrdersTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
+    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()

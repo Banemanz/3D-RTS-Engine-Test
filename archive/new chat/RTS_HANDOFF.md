@@ -316,3 +316,13 @@ SpawnUnit/UnitTypeCountAtLeast/UnitCountAtLeast triggers. Unknown custom JSON
 and free text are not rewritten. `RTSCatalogRenameTests` guards behavior.
 Preserve the draft PR; inspect Actions for the actual Windows/Linux binaries
 and do not confuse the screenshot workflow with executable downloads.
+
+## Two-phase combat damage (November 13, 2026)
+
+`RTSSkirmish::update` now collects `CombatHit` events during unit updates and
+applies them after all actors have acted, in stable target/attacker ID order.
+Mutually lethal attacks can return fire even when one attacker appears later
+in the unit vector. Direct `Unit::update` callers without an optional hit
+buffer retain immediate damage. `RTSCombatResolutionTests` checks duels in
+both source orderings. Movement/target acquisition remain sequential and
+multiplayer lockstep determinism is not implemented.

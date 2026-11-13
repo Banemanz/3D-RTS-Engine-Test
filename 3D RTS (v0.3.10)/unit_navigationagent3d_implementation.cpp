@@ -151,7 +151,7 @@ void Unit::takeDamage(float rawDamage, const std::string& attackerName) {
 }
 
 void Unit::update(float deltaTime,std::vector<Unit>& allUnits,float mapBoundary,
-                  const UnitSpatialIndex* spatial) {
+                  const UnitSpatialIndex* spatial,std::vector<CombatHit>* pendingHits) {
     if (!isAlive() || isStructure) return;
 
     if (attackCooldownTimer > 0.0f) {
@@ -161,7 +161,7 @@ void Unit::update(float deltaTime,std::vector<Unit>& allUnits,float mapBoundary,
         attackFlashTimer = std::max(0.0f, attackFlashTimer - deltaTime);
     }
 
-    updateCombatStateMachine(deltaTime,allUnits,spatial);
+    updateCombatStateMachine(deltaTime,allUnits,spatial,pendingHits);
 
     // Hold Position is a hard movement constraint, not a slow/stop order.
     // The unit can rotate and fire, but neither inertia nor separation drifts it.
@@ -262,7 +262,8 @@ int Unit::findNearestEnemyId(const std::vector<Unit>& allUnits,float searchRadiu
 }
 
 void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
-                                    const UnitSpatialIndex* spatial) {
+                                    const UnitSpatialIndex* spatial,
+                                    std::vector<CombatHit>* pendingHits) {
     (void)deltaTime;
 
     switch (state) {
@@ -399,7 +400,8 @@ void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
                 attackCooldownTimer = data.attack_cooldown;
                 attackFlashTimer = 0.14f;
                 lastAttackTargetPos = target->position + Vec3(0.0f, target->height * 0.55f, 0.0f);
-                target->takeDamage(data.damage, instanceName);
+                if(pendingHits)pendingHits->push_back({id,target->id,data.damage,instanceName});
+                else target->takeDamage(data.damage, instanceName);
             }
             break;
         }
