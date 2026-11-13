@@ -41,3 +41,10 @@ distinct from manual gameplay verification.
   an actual builder physically constructing the structure.
 - Research, upgrades, teams beyond human vs Hybrid and ownership transfers are absent.
 - The custom font supports uppercase Latin, digits and selected punctuation only.
+
+## Terrain pathing integration (current draft PR)
+
+The pathfinder now supports weighted cell traversal: steepness raises route
+cost, and gradients above the authorable global threshold block cells.
+Manual blocked-cell painting remains explicit. This does not model collision
+physics or the different movement categories and ramps expected in SC2.

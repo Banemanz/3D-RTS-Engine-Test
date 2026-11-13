@@ -34,7 +34,7 @@ fields now resolve on individual placed instances.
 
 | Module | Current PR state | Full creator-suite objective |
 | --- | --- | --- |
-| **Terrain & pathing** | Heightfield sculpt, smooth/flatten, 8 material IDs, blocked-cell pathing and brush preview; 49×49 starter | Multiple texture layers, cliffs/ramps, water, roads, decals, foliage, cliffs meshes, destructibles, per-unit movement types, map resizing, symmetry, procedural generation |
+| **Terrain & pathing** | Heightfield sculpt, smooth/flatten, 8 material IDs, blocked-cell pathing, slope-aware weighted A* and brush preview; 49×49 starter | Multiple texture layers, cliffs/ramps, water, roads, decals, foliage, cliffs meshes, destructibles, per-unit movement types, map resizing, symmetry, procedural generation |
 | **Unit / doodad placements** | JSON instances, placement brushes, owner/catalog links; gameplay, actor and model overrides on placed instances, persistent transforms | Entity selection/gizmos, multi-select, snapping, placement rules, brushes, prefab variants, fully interactive transform editing |
 | **Points / regions / cameras** | F8 scene object workspace, Point/Region placement and radius, selected-object movement/rotation/scale, bounded region-enter trigger; editor camera preset | 2D/3D region shape tools, trigger gizmos, actual camera objects/curves, cinematics and camera transitions |
 | **Data Editor** | Arbitrary JSON typed catalogs, ID inheritance, inspector, clone/derived entries, CLI, validation | Full schema-directed inspector, reference graphs, search, inline validation, copy/duplicate with remapped references, variants, data collections, live update without resetting map |

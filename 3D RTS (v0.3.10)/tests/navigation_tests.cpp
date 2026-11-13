@@ -31,7 +31,18 @@ static void noCornerCut() {
     g.setBlocked(1,0,true);g.setBlocked(0,1,true);
     assert(g.findPath({.5f,0,.5f},{2.5f,0,2.5f}).empty());
 }
+static void weightedDetour(){
+    NavigationGrid g(7,3,1.f,0,0);
+    for(int x=1;x<=5;++x)g.setTraversalCost(x,1,15.f);
+    auto route=g.findPath({.5f,0,1.5f},{6.5f,0,1.5f});
+    assert(!route.empty());
+    bool detoured=false;
+    for(const auto& p:route)if(g.toCell(p).z!=1)detoured=true;
+    assert(detoured);
+    g.setTraversalCost(1,1,-4.f); // invalid costs are ignored
+    assert(g.traversalCost(1,1)==15.f);
+}
 int main() {
-    basic();obstacles();noCornerCut();
-    std::cout<<"navigation: 3 tests passed\n";
+    basic();obstacles();noCornerCut();weightedDetour();
+    std::cout<<"navigation: 4 tests passed\n";
 }

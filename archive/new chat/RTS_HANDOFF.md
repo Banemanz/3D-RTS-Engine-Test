@@ -103,3 +103,14 @@ coverage and OpenGL screenshot smoke for the scene panel. These are keyboard-
 driven controls; **not** a full transform gizmo, entity hierarchy, or
 WC3/SC2-caliber actor/scene editor yet. Work remains on property widgets,
 transactional editing, selection precision and real visual assets.
+
+## Terrain navigation update
+
+`NavigationGrid` now accepts positive per-cell traversal cost and uses a
+symmetric weighted A* edge cost with an admissible octile heuristic.
+`RTSSkirmish::rebuildNavigation()` derives each cell's maximum neighbor
+rise/run, blocks cells above `metadata.max_walkable_slope` (default 1.25)
+and applies `metadata.slope_cost_multiplier` (default 2.0) to route weights.
+This is a 2.5D terrain authoring foundation, **not** yet slope physics or
+per-unit movement class navigation. New tests verify detour selection,
+cliff blocking and terrain-edited pathing restoration.

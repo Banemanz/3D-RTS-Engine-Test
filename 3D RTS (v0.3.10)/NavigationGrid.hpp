@@ -13,6 +13,8 @@ public:
     bool inBounds(int x, int z) const;
     bool walkable(int x, int z) const;
     void setBlocked(int x, int z, bool blocked);
+    void setTraversalCost(int x,int z,float cost);
+    float traversalCost(int x,int z) const;
     void blockDisc(const Vec3& center, float radius);
     Cell toCell(const Vec3& p) const;
     Vec3 centerOf(Cell c) const;
@@ -24,6 +26,7 @@ private:
     int width_, height_;
     float step_, minX_, minZ_;
     std::vector<uint8_t> blocked_;
+    std::vector<float> cost_;
     int index(Cell c) const { return c.z * width_ + c.x; }
     bool nearestWalkable(Cell origin, Cell& result) const;
 };

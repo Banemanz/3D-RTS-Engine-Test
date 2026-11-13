@@ -189,8 +189,11 @@ autocomplete, profiling and debugger.
 
 ## Known limitations
 
-- Heightfield movement follows terrain height visually but uses a flat XZ
-  navigation planner; slopes/cliffs/water do not yet have physical/path costs.
+- Navigation now uses cell-by-cell terrain gradients to block slopes above
+  the maximum walkable rise/run, and adds slope costs to weighted A*.
+  Configure `metadata.max_walkable_slope` (default 1.25) and
+  `metadata.slope_cost_multiplier` (default 2). These are global values;
+  per-unit climb ability, ramps/cliffs, physics and water pathing are TBD.
 - Terrain size and material count are currently bounded for simplicity.
 - Arbitrary actor mesh references are preserved but not imported/rendered.
 - The current terrain editor may reload the match after editing placed objects;

@@ -41,5 +41,12 @@ int main(){
     p.terrain.setCell(32,30,{1.5f,3,false});
     game.syncTerrain(p.terrain);
     assert(game.navigation.walkable(32,30));
+    p.terrain.setCell(10,10,{10.f,0,false});
+    p.metadata["max_walkable_slope"]=picojson::value(1.0);
+    game.loadProject(p);
+    assert(!game.navigation.walkable(10,10));
+    p.terrain.setCell(10,10,{0.f,0,false});
+    game.syncTerrain(p.terrain);
+    assert(game.navigation.walkable(10,10));
     std::cout<<"modded_project: catalog edits, scene placements and path mask apply\n";
 }

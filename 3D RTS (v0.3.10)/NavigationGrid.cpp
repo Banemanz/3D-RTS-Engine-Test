@@ -7,7 +7,8 @@
 NavigationGrid::NavigationGrid(int w, int h, float step, float x, float z)
     : width_(std::max(1,w)), height_(std::max(1,h)),
       step_(std::max(0.1f,step)), minX_(x), minZ_(z),
-      blocked_(static_cast<size_t>(width_ * height_),0) {}
+      blocked_(static_cast<size_t>(width_ * height_),0),
+      cost_(static_cast<size_t>(width_ * height_),1.f) {}
 
 bool NavigationGrid::inBounds(int x,int z) const {
     return x >= 0 && z >= 0 && x < width_ && z < height_;
@@ -17,6 +18,14 @@ bool NavigationGrid::walkable(int x,int z) const {
 }
 void NavigationGrid::setBlocked(int x,int z,bool b) {
     if (inBounds(x,z)) blocked_[static_cast<size_t>(z*width_+x)] = b ? 1 : 0;
+}
+void NavigationGrid::setTraversalCost(int x,int z,float cost) {
+    if(inBounds(x,z) && std::isfinite(cost) && cost>=1.f && cost<=1000.f)
+        cost_[static_cast<size_t>(z*width_+x)]=cost;
+}
+float NavigationGrid::traversalCost(int x,int z)const {
+    return inBounds(x,z)?cost_[static_cast<size_t>(z*width_+x)]
+                         :std::numeric_limits<float>::infinity();
 }
 NavigationGrid::Cell NavigationGrid::toCell(const Vec3& p) const {
     return {std::clamp(static_cast<int>(std::floor((p.x-minX_)/step_)),0,width_-1),
@@ -87,7 +96,11 @@ std::vector<Vec3> NavigationGrid::findPath(const Vec3& start,const Vec3& target)
             if(!walkable(next.x,next.z))continue;
             if(i>=4 && (!walkable(c.x+dx[i],c.z) || !walkable(c.x,c.z+dz[i]))) continue;
             int nid=index(next);
-            float candidate=dist[static_cast<size_t>(id)]+(i<4 ? 1.0f:1.41421356f);
+            // Edge weight is symmetric and >= geometric distance; the octile
+            // heuristic stays admissible for weighted terrain.
+            float average=(cost_[static_cast<size_t>(id)]+cost_[static_cast<size_t>(nid)])*.5f;
+            float candidate=dist[static_cast<size_t>(id)]+
+                            (i<4 ? 1.0f:1.41421356f)*average;
             if(candidate+0.00001f<dist[static_cast<size_t>(nid)]){
                 dist[static_cast<size_t>(nid)]=candidate;
                 parent[static_cast<size_t>(nid)]=id;
