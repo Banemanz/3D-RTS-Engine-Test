@@ -47,3 +47,13 @@ incremental movement and ID lookup, and verifies that indexed steering
 matches direct steering. An additional test confirms owner-based hostility
 regardless of appearance/faction. Existing skirmish and chase tests continue
 to exercise the new fixed-tick integration on Windows and Linux.
+
+### Visual selection-card regression
+
+Linux C++ CI now launches a gameplay capture with
+`--smoke-select-army --smoke-frames 80 --screenshot rts-group-hud.ppm`,
+verifies the OpenGL HUD renders, converts the result to PNG and uploads a
+`rts-group-selection-hud-screenshot` artifact. A separate
+`--data-editor` capture exercises the searchable catalog panel.
+`RTSHUDTests` verify individual card hit boxes and multi-selection
+unit-ID mapping independently of GLFW or OpenGL.

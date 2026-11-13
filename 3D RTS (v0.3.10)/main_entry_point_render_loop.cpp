@@ -250,9 +250,20 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if(state->editor.panel==EditorSession::Panel::Play) {
         RTSHUDLayout hud(state->windowWidth,state->windowHeight);
         if(hud.consumes(mouseX,mouseY)){
-            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS)
-                state->command(hud.hit(mouseX,mouseY,state->game),mouseX,mouseY);
-            return;
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE)
+                state->selectionManager.isDragging=false;
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+                const int selectedId=hud.selectionUnitAt(mouseX,mouseY,state->game);
+                if(selectedId>=0){
+                    const bool additive=(mods&GLFW_MOD_SHIFT)!=0;
+                    for(auto& unit:state->game.units) {
+                        if(additive){
+                            if(unit.id==selectedId)unit.isSelected=!unit.isSelected;
+                        }else unit.isSelected=unit.isAlive() && unit.id==selectedId;
+                    }
+                }else state->command(hud.hit(mouseX,mouseY,state->game),mouseX,mouseY);
+            }
+            return; // even a HUD background click must never issue a world command
         }
     }
     if(state->editor.panel==EditorSession::Panel::Scene) {
@@ -599,6 +610,8 @@ int main(int argc, char** argv) {
     bool startEditor=false;
     bool startTriggerEditor=false;
     bool startSceneEditor=false;
+    bool startDataEditor=false;
+    bool selectArmyForSmoke=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -609,6 +622,8 @@ int main(int argc, char** argv) {
         else if(arg == "--editor")startEditor=true;
         else if(arg == "--trigger-editor")startTriggerEditor=true;
         else if(arg == "--scene-editor")startSceneEditor=true;
+        else if(arg == "--data-editor")startDataEditor=true;
+        else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
     }
     int renderedFrames = 0;
     try {
@@ -633,8 +648,11 @@ int main(int argc, char** argv) {
         }
         app.recoverAutosave();
         app.reloadFromProject();
-        if(startEditor || startTriggerEditor || startSceneEditor) {
-            app.editor.panel=startSceneEditor ? EditorSession::Panel::Scene :
+        if(selectArmyForSmoke && smokeFrames>0)
+            app.command(HUDCommand::SelectArmy);
+        if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor) {
+            app.editor.panel=startDataEditor ? EditorSession::Panel::Data :
+                startSceneEditor ? EditorSession::Panel::Scene :
                 startTriggerEditor ? EditorSession::Panel::Triggers :
                                      EditorSession::Panel::Terrain;
             auto preset=app.project.metadata.find("editor_camera");

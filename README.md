@@ -120,3 +120,11 @@ In the F7 Data Editor, use **Ctrl+F** to filter by catalog object name,
 ID or type. Navigate results with Tab/Shift+Tab and clear with
 **Ctrl+Shift+F**. Property editing, derived objects and per-instance
 overrides remain supported.
+
+## Group selection HUD
+
+Selecting multiple units now displays clickable individual cards with
+health stripes rather than just a single total-HP display. Click a card
+to isolate a unit, or Shift+click to remove it from the selection. UI
+hitboxes remain separate from world commands. CI includes a selected-army
+OpenGL screenshot and a searchable Data Editor screenshot.

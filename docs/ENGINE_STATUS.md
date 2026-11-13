@@ -112,3 +112,12 @@ a match counter, filtered previous/next selection and a clear-filter
 shortcut. This is a lightweight in-window catalog browser. A full dockable
 object tree, property type schemas, references, asset import, configurable
 form controls and search across inherited values are still TBD.
+
+### Multi-selection HUD update
+
+The selection dossier can now show a grid of individual cards and HP bars
+for selected army groups. Clicking a card isolates the unit, while
+Shift+click toggles membership. Shared layout and hit testing keep the
+OpenGL renderer and GLFW input coordinates consistent. Cards are currently
+procedural and do not yet have actor portraits, localization, page scrolling,
+formation commands or a user-customizable interface.

@@ -29,6 +29,26 @@ jobs:
           name: rts-software-opengl-screenshot
           path: rts-smoke.png
           if-no-files-found: error
+      - name: Smoke test clickable RTS unit selection cards
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-select-army --smoke-frames 80 --screenshot rts-group-hud.ppm
+      - name: Convert group HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-group-hud.ppm rts-group-hud.png
+      - name: Upload group HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-group-selection-hud-screenshot
+          path: rts-group-hud.png
+          if-no-files-found: error
+      - name: Smoke test Data Editor searchable catalog
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 80 --screenshot rts-data.ppm
+      - name: Convert Data Editor screenshot
+        run: python3 tools/ppm_to_png.py rts-data.ppm rts-data.png
+      - name: Upload Data Editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-data-editor-screenshot
+          path: rts-data.png
+          if-no-files-found: error
       - name: Run interactive-editor OpenGL startup smoke
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-editor.ppm
       - name: Convert editor screenshot

@@ -60,3 +60,14 @@ slot becomes **CANCEL Q (V)** when a production structure is selected; it
 removes the newest pending order for that building and refunds its mineral
 and supply reservation. Production still occurs one item at a time per
 building; ordering remains prototype-only, not a full production planner.
+
+### Multi-unit selection card grid
+
+Select several friendly units (box-select or press **F2**). Their details now
+appear as a card grid in the bottom selection panel, with individual HP
+stripes and compact class abbreviations. **Left-click a card** to isolate
+that unit; **Shift+left-click** removes/adds it from the current selection.
+Cards are laid out from the same pure `RTSHUDLayout` geometry used for
+mouse hit-testing. Groups too large for the panel show a `+N MORE UNITS`
+indicator. Empty selection-panel clicks are consumed instead of causing
+world selection or movement.

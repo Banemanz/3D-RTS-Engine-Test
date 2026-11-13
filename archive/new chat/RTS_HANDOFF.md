@@ -222,3 +222,16 @@ the project. Search with zero matches retains the previous filter.
 clear, type search and continued field edits. This is a precursor to the
 dockable hierarchy/property inspector needed by the SC2-style authoring
 roadmap.
+
+## RTS HUD per-unit card grid (2026-11-13)
+
+`RTSHUDLayout::selectionColumns/Rows/Capacity` and
+`selectionCardBounds/selectionUnitAt` provide a pure deterministic grid
+and hit-testing for the selected-group UI. `RTSHUD::draw` renders per-unit
+cards with owner faction tint, short catalog abbreviations and HP stripes.
+The GLFW HUD click handler uses the exact same rectangles to isolate a
+selected unit or Shift-toggle it, and consumes release events to avoid
+stuck selection drags. Single selection still uses the detailed HP/status
+dossier. `--smoke-select-army` triggers a deterministic screenshot with
+a selected group, while `--data-editor` captures the F7 workspace.
+CI uploads both previews in addition to headless RTSHUDTests.

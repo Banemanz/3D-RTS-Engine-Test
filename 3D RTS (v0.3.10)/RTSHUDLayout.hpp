@@ -38,6 +38,34 @@ public:
     bool consumes(double x,double y)const {
         return topBar.contains(x,y) || bottom.contains(x,y);
     }
+    int selectionColumns() const {
+        return std::max(1,int((selectionArea.w-20.f)/48.f));
+    }
+    int selectionRows() const {
+        return std::max(1,int((selectionArea.h-61.f)/46.f));
+    }
+    int selectionCapacity() const {
+        return std::min(120,selectionColumns()*selectionRows());
+    }
+    HUDRect selectionCardBounds(int index) const {
+        const int cols=selectionColumns();
+        return {selectionArea.x+10.f+(index%cols)*48.f,
+                selectionArea.y+55.f+(index/cols)*46.f,44.f,41.f};
+    }
+    int selectionUnitAt(double x,double y,const RTSSkirmish& game)const {
+        if(!selectionArea.contains(x,y))return -1;
+        int count=0;
+        for(const auto& u:game.units)
+            if(u.isAlive() && u.isSelected && u.ownerId==0)++count;
+        if(count<=1)return -1; // single selection uses the detailed dossier
+        int n=0;
+        for(const auto& u:game.units)if(u.isAlive() && u.isSelected && u.ownerId==0){
+            if(n>=selectionCapacity())return -1;
+            if(selectionCardBounds(n).contains(x,y))return u.id;
+            ++n;
+        }
+        return -1;
+    }
     std::array<HUDButton,9> buttons(const RTSSkirmish& game)const {
         int selected=0; bool worker=false,combat=false;
         bool base=false,army=false,selectedBuilding=false;

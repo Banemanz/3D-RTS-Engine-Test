@@ -27,6 +27,19 @@ int main() {
     buttons=wide.buttons(game);
     assert(buttons[0].enabled && buttons[1].enabled && buttons[2].enabled);
     assert(buttons[3].enabled); // worker selected
+    assert(wide.selectionCapacity()>=4);
+    assert(narrow.selectionCapacity()>=2);
+    std::vector<int> selectedIds;
+    for(const auto& u:game.units)
+        if(u.isAlive() && u.ownerId==0 && u.isSelected)selectedIds.push_back(u.id);
+    assert(selectedIds.size()>1);
+    for(std::size_t i=0;i<std::min(selectedIds.size(),
+                                     std::size_t(wide.selectionCapacity()));++i){
+        const auto card=wide.selectionCardBounds(int(i));
+        assert(wide.selectionArea.contains(card.x+2,card.y+2));
+        assert(wide.selectionUnitAt(card.x+4,card.y+4,game)==selectedIds[i]);
+    }
+    assert(wide.selectionUnitAt(4,4,game)==-1);
     assert(buttons[8].command==HUDCommand::Patrol && buttons[8].enabled);
     assert(wide.hit(buttons[3].bounds.x+4,buttons[3].bounds.y+4,game)==HUDCommand::Build);
     assert(wide.hit(10,wide.bottom.y+5,game)==HUDCommand::Cancel);
@@ -47,6 +60,8 @@ int main() {
     assert(customBtns[7].enabled);
     for(auto& u:game.units)u.isSelected=(u.id==game.playerBaseId());
     customBtns=wide.buttons(game);
+    const auto card=wide.selectionCardBounds(0);
+    assert(wide.selectionUnitAt(card.x+2,card.y+2,game)==-1);
     assert(customBtns[8].command==HUDCommand::CancelQueue && !customBtns[8].enabled);
     assert(game.queueWorker());
     customBtns=wide.buttons(game);

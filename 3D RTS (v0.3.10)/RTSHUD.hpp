@@ -113,6 +113,32 @@ public:
                 std::to_string(count)+" UNITS SELECTED",
                 static_cast<size_t>(std::max(12.f,(s.w-24)/15.f))),
                 1.f,.88f,.55f);
+            if(count>1) {
+                int n=0;
+                const int capacity=ui_.selectionCapacity();
+                for(const auto& unit:game.units)if(unit.isAlive() && unit.isSelected &&
+                                                   unit.ownerId==0){
+                    if(n>=capacity)break;
+                    const HUDRect b=ui_.selectionCardBounds(n++);
+                    rect(b.x,b.y,b.w,b.h,.12f,.17f,.21f,.97f);
+                    rect(b.x+2,b.y+2,b.w-4,b.h-12,
+                         unit.data.faction_color.x*.67f,
+                         unit.data.faction_color.y*.67f,
+                         unit.data.faction_color.z*.67f,.93f);
+                    std::string abbrev=unit.isWorker?"WK":unit.isStructure?"HQ":
+                                       unit.catalogId.substr(0,2);
+                    text(b.x+7,b.y+10,2.f,abbrev,1.f,1.f,1.f);
+                    const float health=std::clamp(unit.currentHp/
+                         std::max(.01f,unit.data.max_hp),0.f,1.f);
+                    rect(b.x+3,b.y+b.h-8,b.w-6,5,.08f,.12f,.15f);
+                    rect(b.x+3,b.y+b.h-8,(b.w-6)*health,5,
+                         health>.4f?.22f:.9f,health>.4f?.86f:.46f,.35f);
+                }
+                if(count>capacity)
+                    text(s.x+12,s.y+s.h-15,1.5f,
+                         "+"+std::to_string(count-capacity)+" MORE UNITS",
+                         .81f,.80f,.53f);
+            }else{
             text(s.x+12,s.y+75,1.9f,
                  "HP  "+std::to_string(int(totalHp))+" / "+std::to_string(int(totalMax)),
                  .8f,.89f,.91f);
@@ -137,9 +163,8 @@ public:
                          "DMG "+std::to_string(int(first->data.damage))+
                          "  ARM "+std::to_string(int(first->data.armor)),.61f,.8f,.87f);
                 }
-            } else {
-                text(s.x+12,s.y+130,1.8f,"ORDERS APPLY TO THE SELECTED GROUP",.61f,.8f,.87f);
             }
+            } // one selected unit
         }else {
             text(s.x+12,s.y+50,2.1f,"NO UNITS SELECTED",.84f,.86f,.89f);
             text(s.x+12,s.y+84,1.7f,"SELECT UNITS OR PRESS F2",.56f,.78f,.83f);
