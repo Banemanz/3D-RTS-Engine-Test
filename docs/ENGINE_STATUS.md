@@ -69,3 +69,20 @@ configurable per-unit command schema.
 The command panel now also provides contextual queue cancellation and an
 active training progress strip for the selected structure. Cancellation
 refunds the reservation exactly once, covered by headless regression tests.
+
+## Fog of war / gameplay vision (this pass)
+
+`RTSVision` tracks **Unexplored / Explored / Visible** states in a per-terrain-cell
+grid. Friendly living units contribute circular sight radii defined by the
+editable catalog property `sight_range`, with visibility blocked by raised
+terrain along sight rays. Explored cells persist until reset; live visibility
+refreshes five times per simulation second. The terrain shader samples a
+revision-gated 8-bit GPU texture, keeping fog updates independent of terrain
+mesh rebuilds. The minimap and enemy right-click/click selection use the same
+visibility state, preventing invisible enemies from being selected.
+
+This is deliberately **basic ground-level LOS**: no radar, sonar, cloaking,
+stealth detectors, shared vision between multiple human factions, persistent
+building ghosts, shadow casting or replay serialization yet. The AI's
+targeting uses the existing aggro system rather than omniscient player fog.
+Editor modes intentionally show the full map, without fog.

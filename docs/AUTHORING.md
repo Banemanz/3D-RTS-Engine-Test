@@ -238,3 +238,14 @@ of process memory; do not post them publicly without reviewing privacy.
 This exception handler records evidence; it is not a fix for arbitrary
 native faults. Other crash handlers or an attached debugger can take
 precedence, so dump generation is best-effort.
+
+### Editable unit sight range
+
+A Unit catalog's `sight_range` controls how many world units it reveals
+around a living player-owned unit or building. Bounds: **0–128**, default
+14 for the marine. In the Data Editor (F7), select a Unit and edit its
+`sight_range` numeric property. Individual placed instances can override
+it in F8 Scene Editor using `{"unit":{"sight_range":24}}`.
+Heightfield crests interrupt line of sight; explored but not currently
+visible areas remain darkened. F5–F8 editor panels intentionally suppress
+fog. This is the first LOS layer, not yet Spring-style radar/jamming.

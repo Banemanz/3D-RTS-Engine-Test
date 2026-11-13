@@ -94,3 +94,13 @@ systems have actual gameplay/presentation effects*.
 
 MIT licensed. Vendored PicoJSON has its own BSD-style license at
 `3D RTS (v0.3.10)/third_party/PICOJSON_LICENSE`.
+
+## Fog of war
+
+Gameplay now has **terrain-aware fog of war**. Your units reveal terrain within
+their editable `sight_range`, with high hills blocking ground sight.
+Previously visited terrain stays explored, but enemy units are only rendered,
+shown on the minimap or clickable while currently visible. The map editor
+continues to reveal the full scene for authoring. See
+[authoring](docs/AUTHORING.md) for `sight_range` overrides and
+[engine status](docs/ENGINE_STATUS.md) for remaining radar/stealth limitations.

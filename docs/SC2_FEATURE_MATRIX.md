@@ -108,3 +108,11 @@ Every new catalog type receives JSON round-trip and inheritance tests; each
 runtime-backed property receives a simulation integration test. Scene edits
 are checked against replay/collision/pathing. Editor actions get a full-GPU
 smoke screenshot and eventually automated input playback.
+
+### Latest visibility implementation
+
+A simulation-owned explored/visible terrain grid, terrain-height sight
+occlusion, per-Unit/instance `sight_range`, fog-shaded terrain, hidden
+enemy world models and filtered minimap/targeting have been implemented.
+Radar, detector rules, allied vision sharing, radar ghosts and separate
+sensor layers remain TBD.

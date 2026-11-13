@@ -66,3 +66,16 @@ OpenGL 3.3 window in Mesa/Xvfb and captures a software-rendered frame.
 - Add explicit command queue/shift-append, formation reservation and resource dropoff.
 - Replace the prototype's permissive embedded data with files and a versioned schema.
 - Improve combat by decoupling damage events from update order.
+
+### Ground-level field of vision
+
+`RTSVision.hpp/.cpp` owns explored and currently visible cells; it is
+initialized by `RTSSkirmish::reset`, updated at 5 Hz and refreshed when terrain
+editing syncs the heightfield. The source-of-truth is simulation-only, so
+target eligibility, map icons and GPU rendering cannot diverge by accidentally
+using separate visibility algorithms. The scene renderer uploads a compact
+R8 texture only when the vision revision changes, and the terrain fragment
+shader applies visibility brightness via that texture. The authoring modes
+disable terrain fog to permit full scene placement. `sight_range` is stored
+as a Unit catalog property (bounded 0..128 world units), and supports per-unit
+instance overrides through the standard catalog resolver.

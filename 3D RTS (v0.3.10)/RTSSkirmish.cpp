@@ -60,6 +60,7 @@ void RTSSkirmish::syncTerrain(const TerrainMap& t){
         u.position.y=project_.terrain.sampleHeight(u.position.x,u.position.z);}
     for(auto& m:minerals)m.position.y=project_.terrain.sampleHeight(m.position.x,m.position.z);
     rebuildNavigation();
+    vision.update(project_.terrain,units);
 }
 Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
                        const std::string& name,bool structure,bool worker,const std::string& catalogId) {
@@ -95,6 +96,8 @@ void RTSSkirmish::reset() {
     releasedSupply_.clear();production_.clear();construction_.clear();
     nextId_=1;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
+    visionIntervalTimer_=0.f;
+    vision.reset(project_.terrain);
     marineId_=metaString(project_,"player_marine","marine");
     workerId_=metaString(project_,"player_worker","worker");
     enemyId_=metaString(project_,"enemy_soldier","zealot");
@@ -138,6 +141,7 @@ void RTSSkirmish::reset() {
     for(const auto& node:minerals)navigation.blockDisc(node.position,1.8f);
     triggers_.configure(project_);
     triggers_.start(*this);
+    vision.update(project_.terrain,units);
 }
 bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     if(!u.isAlive() || u.isStructure)return false;
@@ -480,6 +484,11 @@ void RTSSkirmish::update(float dt) {
     for(const auto& unit:units)if(!unit.isAlive() && observedDead_.insert(unit.id).second)
         killed.push_back(unit.id);
     triggers_.tick(*this,elapsedSeconds_,killed);
+    visionIntervalTimer_+=dt;
+    if(visionIntervalTimer_>=.2f){
+        visionIntervalTimer_=std::fmod(visionIntervalTimer_,.2f);
+        vision.update(project_.terrain,units);
+    }
     const Unit* human=find(friendlyBaseId_),*enemy=find(enemyBaseId_);
     if(!human || !human->isAlive())result=MatchResult::Defeat;
     else if(!enemy || !enemy->isAlive())result=MatchResult::Victory;

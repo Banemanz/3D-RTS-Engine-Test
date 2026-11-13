@@ -1,5 +1,6 @@
 #pragma once
 #include "NavigationGrid.hpp"
+#include "RTSVision.hpp"
 #include "Unit.hpp"
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
@@ -35,6 +36,7 @@ public:
     std::vector<Unit> units;
     std::vector<MineralNode> minerals;
     NavigationGrid navigation;
+    RTSVision vision; // player team's explored/visible terrain, independent of OpenGL
     int playerMinerals = 0;
     int supplyUsed = 0;
     int supplyCap = 0;
@@ -104,6 +106,7 @@ private:
     };
     int nextId_ = 1;
     float enemySpawnTimer_ = 12.0f;
+    float visionIntervalTimer_=0.0f;
     std::unordered_set<int> releasedSupply_;
     std::unordered_map<int, Route> routes_;
     std::unordered_map<int, std::deque<PendingMove>> queued_;

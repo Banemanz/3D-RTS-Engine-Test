@@ -303,7 +303,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->selectionManager.onLeftMouseUp(
                 mouseX, mouseY, shiftHeld,
                 state->camera, state->windowWidth, state->windowHeight,
-                state->game.units
+                state->game.units,&state->game.vision
             );
         }
     }
@@ -339,7 +339,8 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         }
         Unit* enemy = state->selectionManager.raycastEnemyUnit(
             mouseX, mouseY, state->camera,
-            state->windowWidth, state->windowHeight, state->game.units);
+            state->windowWidth, state->windowHeight, state->game.units,
+            &state->game.vision);
         if (enemy) {
             state->game.orderAttack(enemy->id);
         } else if(state->game.setRallyPoint(hit)) {
@@ -686,6 +687,19 @@ int main(int argc, char** argv) {
         GLuint hudBoxShader  = compileShaderProgram(HUD_BOX_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
         GLuint lineShader    = compileShaderProgram(LINE_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
 
+        // Streaming 1-channel vision texture, one texel per terrain cell.
+        // Uploads are revision-gated; this does not rebuild the terrain VBO.
+        GLuint fogTexture=0;
+        glGenTextures(1,&fogTexture);
+        glBindTexture(GL_TEXTURE_2D,fogTexture);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+        glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+        int uploadedFogWidth=0,uploadedFogHeight=0;
+        std::size_t uploadedFogRevision=0;
+
         // The skirmish owns unit lifetimes and initial spawning; see RTSSkirmish.
 
         // Editable heightfield mesh: five floats per vertex, updated after brush strokes.
@@ -876,6 +890,24 @@ int main(int argc, char** argv) {
                              terrainVertices.data(),GL_DYNAMIC_DRAW);
                 app.project.terrain.clearDirty();
             }
+            const auto& vision=app.game.vision;
+            const int visW=vision.width(),visH=vision.depth();
+            if(visW>0 && visH>0 &&
+               (uploadedFogRevision!=vision.revision() ||
+                uploadedFogWidth!=visW || uploadedFogHeight!=visH)){
+                glBindTexture(GL_TEXTURE_2D,fogTexture);
+                const auto& texels=vision.textureBytes();
+                if(uploadedFogWidth!=visW || uploadedFogHeight!=visH){
+                    glTexImage2D(GL_TEXTURE_2D,0,GL_R8,visW,visH,0,GL_RED,
+                                 GL_UNSIGNED_BYTE,texels.data());
+                    uploadedFogWidth=visW;
+                    uploadedFogHeight=visH;
+                }else{
+                    glTexSubImage2D(GL_TEXTURE_2D,0,0,0,visW,visH,GL_RED,
+                                    GL_UNSIGNED_BYTE,texels.data());
+                }
+                uploadedFogRevision=vision.revision();
+            }
             glClearColor(0.08f, 0.11f, 0.15f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -888,6 +920,14 @@ int main(int argc, char** argv) {
 
             // 1. Render Terrain
             glUseProgram(terrainShader);
+            glBindTexture(GL_TEXTURE_2D,fogTexture);
+            glUniform1i(glGetUniformLocation(terrainShader,"uFogMap"),0);
+            glUniform4f(glGetUniformLocation(terrainShader,"uFogSettings"),
+                app.project.terrain.minX(),app.project.terrain.minZ(),
+                app.project.terrain.spacing(),
+                app.editor.panel==EditorSession::Panel::Play?1.f:0.f);
+            glUniform4f(glGetUniformLocation(terrainShader,"uFogSize"),
+                float(visW),float(visH),0.f,0.f);
             Mat4 terrainModel;
             glUniformMatrix4fv(glGetUniformLocation(terrainShader, "uModel"), 1, GL_FALSE, terrainModel.m);
             glUniformMatrix4fv(glGetUniformLocation(terrainShader, "uView"), 1, GL_FALSE, view.m);
@@ -908,6 +948,9 @@ int main(int argc, char** argv) {
             // 2. Render 3D Alive Units, Rings & Weapon Tracers
             for (const auto& unit : app.game.units) {
                 if (!unit.isAlive()) continue;
+                if(app.editor.panel==EditorSession::Panel::Play &&
+                   unit.ownerId!=0 && !app.game.vision.visible(unit.position))
+                    continue;
 
                 if (unit.isSelected) {
                     glUseProgram(ringShader);
@@ -975,7 +1018,9 @@ int main(int argc, char** argv) {
             glUniform1f(glGetUniformLocation(unitShader, "uOpacity"), 1.0f);
             glBindVertexArray(unitVAO);
             for (const auto& node : app.game.minerals) {
-                if (node.remaining <= 0) continue;
+                if(node.remaining<=0)continue;
+                if(app.editor.panel==EditorSession::Panel::Play &&
+                   !app.game.vision.explored(node.position))continue;
                 Mat4 mesh = Mat4::translate(node.position)
                           * Mat4::scale(Vec3(1.35f, 1.1f, 1.35f));
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"), 1, GL_FALSE, mesh.m);
@@ -987,6 +1032,8 @@ int main(int argc, char** argv) {
             // a dedicated asset pipeline is introduced.
             for(const auto& placed:app.project.placements) {
                 if(placed.kind!="Doodad")continue;
+                if(app.editor.panel==EditorSession::Panel::Play &&
+                   !app.game.vision.explored(placed.position))continue;
                 const auto visualEntry=app.doodadVisuals.find(placed.id);
                 if(visualEntry==app.doodadVisuals.end())continue;
                 const ActorVisual& visual=visualEntry->second;
@@ -1080,6 +1127,9 @@ int main(int argc, char** argv) {
 
                 for (const auto& unit : app.game.units) {
                     if (!unit.isAlive()) continue;
+                    if(app.editor.panel==EditorSession::Panel::Play &&
+                       unit.ownerId!=0 && !app.game.vision.visible(unit.position))
+                        continue;
                     Vec2 headScreen;
                     if (app.camera.worldToScreen(unit.position + Vec3(0.0f, unit.height + 0.45f, 0.0f),
                                                  app.windowWidth, app.windowHeight, headScreen)) {
@@ -1309,6 +1359,7 @@ int main(int argc, char** argv) {
             glfwPollEvents();
         }
 
+        glDeleteTextures(1,&fogTexture);
         glfwDestroyWindow(window);
         glfwTerminate();
     } catch (const std::exception& e) {

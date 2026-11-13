@@ -87,6 +87,7 @@ UnitData UnitData::fromTresString(const std::string& tresContent) {
         else if (key == "attack_range")   data.attack_range    = numericFloat(val,key);
         else if (key == "attack_cooldown")data.attack_cooldown = numericFloat(val,key);
         else if (key == "aggro_range")    data.aggro_range     = numericFloat(val,key);
+        else if (key == "sight_range")    data.sight_range     = numericFloat(val,key);
         else if (key == "move_speed")     data.move_speed      = numericFloat(val,key);
         else if (key == "supply_cost")    data.supply_cost     = numericInt(val,key);
         else if (key == "mineral_cost")   data.mineral_cost    = numericInt(val,key);
@@ -96,7 +97,8 @@ UnitData UnitData::fromTresString(const std::string& tresContent) {
 
     if(data.resourceName.empty() || data.max_hp<=0 || data.armor<0 ||
        data.damage<0 || data.attack_range<0 || data.attack_cooldown<=0 ||
-       data.aggro_range<0 || data.move_speed<0 || data.supply_cost<0 ||
+       data.aggro_range<0 || data.sight_range<0 || data.sight_range>128 ||
+       data.move_speed<0 || data.supply_cost<0 ||
        data.mineral_cost<0 || data.build_time<0 || data.visual_scale<=0) {
         throw std::invalid_argument("UnitData includes an invalid stat or empty resource name");
     }
@@ -121,6 +123,7 @@ std::string UnitData::toTresString() const {
         << "attack_range = " << attack_range << "\n"
         << "attack_cooldown = " << attack_cooldown << "\n"
         << "aggro_range = " << aggro_range << "\n"
+        << "sight_range = " << sight_range << "\n"
         << "move_speed = " << move_speed << "\n"
         << "supply_cost = " << supply_cost << "\n"
         << "mineral_cost = " << mineral_cost << "\n"

@@ -30,3 +30,11 @@ with `assert()` re-enabled on the test executables; otherwise `NDEBUG`
 would silently disable much of the regression suite. A successful run also
 verifies the installed project maps and starts the *packaged* Linux terrain
 editor under Xvfb. Windows GUI runtime behavior still requires manual testing.
+
+### Fog of war and LOS
+
+`RTSVisionTests` cover live-to-explored transition, hill occlusion,
+unchanged-revision suppression of GPU updates, fog texture bytes and
+data-driven Unit sight range. Linux OpenGL smoke tests compile and run the
+new terrain shader/texture under software Mesa; they do not guarantee the
+same results on all Windows GPU drivers.

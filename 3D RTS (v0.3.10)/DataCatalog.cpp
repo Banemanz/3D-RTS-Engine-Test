@@ -184,7 +184,8 @@ DataCatalog DataCatalog::defaults() {
         {"faction",picojson::value("Humanity")},{"max_hp",picojson::value(45.0)},
         {"armor",picojson::value(0.0)},{"damage",picojson::value(7.0)},
         {"attack_range",picojson::value(6.5)},{"attack_cooldown",picojson::value(.75)},
-        {"aggro_range",picojson::value(10.5)},{"move_speed",picojson::value(9.5)},
+        {"aggro_range",picojson::value(10.5)},{"sight_range",picojson::value(14.0)},
+        {"move_speed",picojson::value(9.5)},
         {"supply_cost",picojson::value(1.0)},{"mineral_cost",picojson::value(50.0)},
         {"build_time",picojson::value(6.0)},{"visual_scale",picojson::value(.92)}
     }));
@@ -193,7 +194,7 @@ DataCatalog DataCatalog::defaults() {
         {"max_hp",picojson::value(40.0)},{"damage",picojson::value(2.0)},
         {"attack_range",picojson::value(1.5)},{"attack_cooldown",picojson::value(1.3)},
         {"move_speed",picojson::value(7.0)},{"visual_scale",picojson::value(.72)},
-        {"mineral_cost",picojson::value(40.0)},
+        {"mineral_cost",picojson::value(40.0)},{"sight_range",picojson::value(12.0)},
         {"is_worker",picojson::value(true)},{"build_time",picojson::value(4.5)}
     }));
     c.add(make("Unit","zealot","",{
@@ -201,7 +202,8 @@ DataCatalog DataCatalog::defaults() {
         {"faction",picojson::value("Hybrid")},{"max_hp",picojson::value(160.0)},
         {"armor",picojson::value(3.0)},{"damage",picojson::value(18.0)},
         {"attack_range",picojson::value(1.85)},{"attack_cooldown",picojson::value(1.05)},
-        {"aggro_range",picojson::value(11.0)},{"move_speed",picojson::value(8.2)},
+        {"aggro_range",picojson::value(11.0)},{"sight_range",picojson::value(14.0)},
+        {"move_speed",picojson::value(8.2)},
         {"supply_cost",picojson::value(3.0)},{"mineral_cost",picojson::value(150.0)},
         {"visual_scale",picojson::value(1.28)}
     }));
@@ -209,7 +211,8 @@ DataCatalog DataCatalog::defaults() {
         {"name",picojson::value("Command Center")},{"actor",picojson::value("human_building_actor")},
         {"max_hp",picojson::value(700.0)},{"armor",picojson::value(2.0)},
         {"damage",picojson::value(0.0)},{"attack_range",picojson::value(0.0)},
-        {"aggro_range",picojson::value(0.0)},{"visual_scale",picojson::value(2.8)},
+        {"aggro_range",picojson::value(0.0)},{"sight_range",picojson::value(18.0)},
+        {"visual_scale",picojson::value(2.8)},
         {"supply_cost",picojson::value(0.0)},{"is_structure",picojson::value(true)}
     }));
     c.add(make("Unit","hive","command_center",{
@@ -240,13 +243,15 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     d.attack_range=float(numeric(f,"attack_range",d.attack_range));
     d.attack_cooldown=float(numeric(f,"attack_cooldown",d.attack_cooldown));
     d.aggro_range=float(numeric(f,"aggro_range",d.aggro_range));
+    d.sight_range=float(numeric(f,"sight_range",d.sight_range));
     d.move_speed=float(numeric(f,"move_speed",d.move_speed));
     d.supply_cost=int(numeric(f,"supply_cost",d.supply_cost));
     d.mineral_cost=int(numeric(f,"mineral_cost",d.mineral_cost));
     d.build_time=float(numeric(f,"build_time",d.build_time));
     d.visual_scale=float(numeric(f,"visual_scale",d.visual_scale));
     if(d.max_hp<=0 || d.armor<0 || d.damage<0 || d.attack_range<0 ||
-       d.attack_cooldown<=0 || d.aggro_range<0 || d.move_speed<0 ||
+       d.attack_cooldown<=0 || d.aggro_range<0 ||
+       d.sight_range<0 || d.sight_range>128 || d.move_speed<0 ||
        d.supply_cost<0 || d.mineral_cost<0 || d.build_time<0 || d.visual_scale<=0)
         throw std::invalid_argument("Invalid unit gameplay stats: "+id);
     std::string actor=stringField(f,"actor","");

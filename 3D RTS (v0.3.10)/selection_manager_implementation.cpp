@@ -19,7 +19,7 @@ void SelectionManager::onMouseMove(double mouseX, double mouseY) {
 
 void SelectionManager::onLeftMouseUp(double mouseX, double mouseY, bool shiftHeld,
                                      const RTSCamera& camera, int screenWidth, int screenHeight,
-                                     std::vector<Unit>& units) {
+                                     std::vector<Unit>& units,const RTSVision* vision) {
     if (!isDragging) return;
     dragCurrentScreen = Vec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
     isDragging = false;
@@ -27,14 +27,14 @@ void SelectionManager::onLeftMouseUp(double mouseX, double mouseY, bool shiftHel
     float dragDistance = (dragCurrentScreen - dragStartScreen).length();
 
     if (dragDistance < dragThresholdPixels) {
-        performSingleClickSelection(mouseX, mouseY, shiftHeld, camera, screenWidth, screenHeight, units);
+        performSingleClickSelection(mouseX, mouseY, shiftHeld, camera, screenWidth, screenHeight, units,vision);
     } else {
         performBoxSelection(shiftHeld, camera, screenWidth, screenHeight, units);
     }
 }
 
 Unit* SelectionManager::raycastEnemyUnit(double mouseX, double mouseY, const RTSCamera& camera,
-                                         int screenWidth, int screenHeight, std::vector<Unit>& units) {
+                                         int screenWidth, int screenHeight, std::vector<Unit>& units,const RTSVision* vision) {
     Ray clickRay;
     if (!camera.screenPointToRay(mouseX, mouseY, screenWidth, screenHeight, clickRay)) return nullptr;
 
@@ -42,7 +42,8 @@ Unit* SelectionManager::raycastEnemyUnit(double mouseX, double mouseY, const RTS
     float minDist = std::numeric_limits<float>::max();
 
     for (auto& unit : units) {
-        if (!unit.isAlive() || unit.ownerId == 0) continue;
+        if (!unit.isAlive() || unit.ownerId == 0 ||
+            (vision && !vision->visible(unit.position))) continue;
         float hitDist = 0.0f;
         if (unit.intersectRay(clickRay, hitDist) && hitDist < minDist) {
             minDist = hitDist;
@@ -113,7 +114,7 @@ void SelectionManager::clearSelection(std::vector<Unit>& units) {
 
 void SelectionManager::performSingleClickSelection(double mouseX, double mouseY, bool shiftHeld,
                                                    const RTSCamera& camera, int screenWidth, int screenHeight,
-                                                   std::vector<Unit>& units) {
+                                                   std::vector<Unit>& units,const RTSVision* vision) {
     Ray clickRay;
     if (!camera.screenPointToRay(mouseX, mouseY, screenWidth, screenHeight, clickRay)) return;
 
@@ -121,7 +122,8 @@ void SelectionManager::performSingleClickSelection(double mouseX, double mouseY,
     float minDist = std::numeric_limits<float>::max();
 
     for (auto& unit : units) {
-        if (!unit.isAlive()) continue;
+        if (!unit.isAlive() ||
+            (vision && unit.ownerId!=0 && !vision->visible(unit.position))) continue;
         float hitDist = 0.0f;
         if (unit.intersectRay(clickRay, hitDist) && hitDist < minDist) {
             minDist = hitDist;

@@ -74,6 +74,9 @@ public:
             else if(cell.material==3){r=.53f;g=.48f;b=.29f;}
             else if(cell.material==5){r=.09f;g=.25f;b=.34f;}
             if(cell.blocked){r*=.55f;g*=.55f;b*=.55f;}
+            const auto vis=game.vision.cell(cx,cz);
+            if(vis==RTSVision::State::Unexplored){r=.012f;g=.018f;b=.023f;}
+            else if(vis==RTSVision::State::Explored){r*=.42f;g*=.42f;b*=.42f;}
             const float tileW=mm.w/tiles,tileH=mm.h/tiles;
             rect(mm.x+x*tileW,mm.y+z*tileH,tileW+.25f,tileH+.25f,r,g,b);
         }
@@ -84,9 +87,11 @@ public:
             const float y=mm.y+std::clamp((world.z-project.terrain.minZ())/rangeZ,0.f,1.f)*mm.h;
             rect(x-radius,y-radius,2*radius,2*radius,r,g,b);
         };
-        for(const auto& mineral:game.minerals)if(mineral.remaining>0)
-            dot(mineral.position,2.f,.20f,.88f,1.f);
-        for(const auto& unit:game.units)if(unit.isAlive())
+        for(const auto& mineral:game.minerals)
+            if(mineral.remaining>0 && game.vision.explored(mineral.position))
+                dot(mineral.position,2.f,.20f,.88f,1.f);
+        for(const auto& unit:game.units)if(unit.isAlive() &&
+            (unit.ownerId==0 || game.vision.visible(unit.position)))
             dot(unit.position,unit.isStructure?3.5f:2.0f,
                 unit.ownerId==0?.26f:.98f,unit.ownerId==0?.87f:.32f,
                 unit.ownerId==0?.75f:.31f);

@@ -178,3 +178,19 @@ when empty; `cancelSelectedProduction()` removes the latest pending job on
 a selected structure and refunds its minerals and reserved supply. The
 contextual rightmost command button switches from Patrol to CANCEL Q with
 hotkey V. See skirmish and HUD CTests for reservation/progress/refund checks.
+
+## Simulation-driven fog of war (2026-11-13)
+
+`RTSVision.hpp/.cpp` stores 0=unexplored, 1=explored, 2=currently visible
+per terrain vertex/cell; refreshes at 5 Hz and on reset/terrain sync. Unit
+`sight_range` is a bounded 0..128 catalog property, with instance override
+support through existing `resolvePlacedUnit`. LOS rays sample heights at
+half-cell spacing; the eye height uses unit geometry. A revision-gated R8
+OpenGL texture darkens never-seen terrain, partially shades explored ground
+and leaves live terrain bright. Player enemy right-click, minimap dots,
+world models and health bars respect the same visibility state. Editor modes
+bypass fog so map creators see all objects. `RTSVisionTests` validates
+terrain occlusion, explored persistence, GPU pixel encoding, changed-only
+revision updates, and data-driven sight ranges.
+Limitations: no radar, cloak/detector, height-adjusted air sensors, per-team
+diplomacy/alliance LOS, ghost buildings, or line-of-fire checks yet.
