@@ -136,6 +136,28 @@ static void assertPatrol() {
     for(const auto& unit:game.units)if(unit.id==id)
         assert(!unit.navAgent.hasDestination);
 }
+static void assertProductionCancellation(){
+    RTSSkirmish game;
+    const int base=game.playerBaseId();
+    assert(base>0);
+    for(auto& unit:game.units)if(unit.id==base)unit.isSelected=true;
+    const int minerals=game.playerMinerals;
+    const int supply=game.supplyUsed;
+    assert(!game.cancelSelectedProduction());
+    assert(game.queueWorker());
+    assert(game.playerMinerals==minerals-40);
+    assert(game.supplyUsed==supply+1);
+    assert(game.pendingProduction(base)==1);
+    assert(game.productionProgress(base)>=0.f);
+    for(int i=0;i<90;++i)game.update(1.f/60.f);
+    const float progress=game.productionProgress(base);
+    assert(progress>.1f && progress<1.f);
+    assert(game.cancelSelectedProduction());
+    assert(game.pendingProduction(base)==0);
+    assert(game.productionProgress(base)<0.f);
+    assert(game.playerMinerals==minerals);
+    assert(game.supplyUsed==supply);
+}
 static void assertRallyProduction(){
     RTSSkirmish game;
     const int base=game.playerBaseId();
@@ -169,5 +191,6 @@ int main() {
     assertQueuedMovement();
     assertPatrol();
     assertRallyProduction();
-    std::cout<<"skirmish: 9 tests passed\n";
+    assertProductionCancellation();
+    std::cout<<"skirmish: 10 tests passed\n";
 }

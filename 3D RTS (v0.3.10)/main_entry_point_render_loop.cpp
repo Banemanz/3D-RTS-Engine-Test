@@ -105,7 +105,8 @@ struct AppState {
     }
     enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
-    bool keyX = false, keyR = false, keyM=false, keyP=false, keyF2=false, keyH=false;
+    bool keyX = false, keyR = false, keyM=false, keyP=false, keyV=false,
+         keyF2=false, keyH=false;
     std::array<std::vector<int>,10> controlGroups{};
     std::array<bool,10> digitWasDown{};
     int framebufferWidth = 1280, framebufferHeight = 720;
@@ -128,6 +129,10 @@ struct AppState {
             case HUDCommand::AttackMove:mode=Mode::AttackMove;inform("ATTACK MOVE: RIGHT CLICK");break;
             case HUDCommand::Build:mode=Mode::BuildBarracks;inform("BUILD: RIGHT CLICK CLEAR TERRAIN");break;
             case HUDCommand::Stop:game.orderStop();mode=Mode::Normal;break;
+            case HUDCommand::CancelQueue:
+                if(!game.cancelSelectedProduction())inform("NO TRAINING TO CANCEL");
+                else inform("TRAINING CANCELLED - RESOURCES REFUNDED");
+                break;
             case HUDCommand::Marine:
                 if(!game.queueMarine())inform("CANNOT TRAIN MARINE: CHECK MINERALS, SUPPLY AND BARRACKS");
                 break;
@@ -791,6 +796,7 @@ int main(int argc, char** argv) {
             if(app.editor.panel==EditorSession::Panel::Play) {
             if (justPressed(GLFW_KEY_M, app.keyM)) app.command(HUDCommand::Move);
             if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
+            if (justPressed(GLFW_KEY_V, app.keyV)) app.command(HUDCommand::CancelQueue);
             if (justPressed(GLFW_KEY_A, app.keyA)) app.command(HUDCommand::AttackMove);
             if (justPressed(GLFW_KEY_B, app.keyB)) app.command(HUDCommand::Build);
             if (justPressed(GLFW_KEY_T, app.keyT)) app.command(HUDCommand::Marine);

@@ -208,6 +208,26 @@ int RTSSkirmish::pendingProduction(int buildingId)const {
     for(const auto& p:production_)if(p.buildingId==buildingId)++count;
     return count;
 }
+float RTSSkirmish::productionProgress(int buildingId) const {
+    for(const auto& p:production_)if(p.buildingId==buildingId)
+        return p.totalTime>0.f?std::clamp(1.f-p.remaining/p.totalTime,0.f,1.f):1.f;
+    return -1.f;
+}
+bool RTSSkirmish::cancelSelectedProduction() {
+    if(result!=MatchResult::Playing)return false;
+    for(const auto& u:units)if(u.isSelected && u.isAlive() &&
+                               u.ownerId==0 && u.isStructure) {
+        for(auto it=production_.end();it!=production_.begin();) {
+            --it;
+            if(it->buildingId!=u.id)continue;
+            playerMinerals+=it->paidMinerals;
+            supplyUsed=std::max(0,supplyUsed-it->reservedSupply);
+            production_.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
 bool RTSSkirmish::orderAttack(int targetId) {
     Unit* target=find(targetId);
     if(result!=MatchResult::Playing || !target || !target->isAlive() || target->ownerId==0)return false;
@@ -358,7 +378,7 @@ bool RTSSkirmish::queueAt(int id,bool worker,int cost,float seconds,int supply) 
     for(const auto& p:production_)if(p.buildingId==id)++pending;
     if(pending>=5)return false;
     playerMinerals-=cost;supplyUsed+=supply;
-    production_.push_back({id,worker,seconds,supply,cost});
+    production_.push_back({id,worker,seconds,supply,cost,seconds});
     return true;
 }
 bool RTSSkirmish::queueMarine() {

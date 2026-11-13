@@ -117,9 +117,15 @@ public:
                  hp>.45f?.24f:.87f,hp>.45f?.85f:.48f,.43f);
             if(count==1) {
                 if(first->isStructure) {
-                    text(s.x+12,s.y+130,1.8f,
+                    text(s.x+12,s.y+std::min(130.f,s.h-29.f),1.8f,
                         "QUEUE "+std::to_string(game.pendingProduction(first->id))+
                         "  RMB SET RALLY",.61f,.8f,.87f);
+                    const float progress=game.productionProgress(first->id);
+                    if(progress>=0.f){
+                        rect(s.x+12,s.y+s.h-13,s.w-24,6,.13f,.20f,.24f);
+                        rect(s.x+12,s.y+s.h-13,(s.w-24)*progress,6,
+                             .32f,.77f,.91f);
+                    }
                 } else {
                     text(s.x+12,s.y+130,1.8f,
                          std::string(first->isWorker?"WORKER  ":"COMBAT  ")+

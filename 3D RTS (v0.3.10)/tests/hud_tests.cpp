@@ -45,6 +45,13 @@ int main() {
     game.loadProject(custom);
     auto customBtns=wide.buttons(game);
     assert(customBtns[7].enabled);
+    for(auto& u:game.units)u.isSelected=(u.id==game.playerBaseId());
+    customBtns=wide.buttons(game);
+    assert(customBtns[8].command==HUDCommand::CancelQueue && !customBtns[8].enabled);
+    assert(game.queueWorker());
+    customBtns=wide.buttons(game);
+    assert(customBtns[8].enabled);
+    assert(wide.hit(customBtns[8].bounds.x+3,customBtns[8].bounds.y+3,game)==HUDCommand::CancelQueue);
     bool found=false;
     for(const auto& u:game.units)if(u.id==game.playerBaseId()){
         assert(u.catalogId=="custom_hq");

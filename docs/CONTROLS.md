@@ -53,3 +53,10 @@ see its rally marker on the battlefield and current training queue count
 in the selection panel. A mixed mobile+structure selection issues ordinary
 unit orders instead of accidentally changing the rally point. Rally points
 are current-match state and reset on restarting the skirmish.
+
+**Production cancel and progress:** Selecting a producing building displays
+its queue length and a small progress indicator. The final command-grid
+slot becomes **CANCEL Q (V)** when a production structure is selected; it
+removes the newest pending order for that building and refunds its mineral
+and supply reservation. Production still occurs one item at a time per
+building; ordering remains prototype-only, not a full production planner.

@@ -46,6 +46,8 @@ public:
     bool setRallyPoint(const Vec3& destination);
     const std::unordered_map<int,Vec3>& rallyPoints() const { return rallyPoints_; }
     int pendingProduction(int buildingId) const;
+    float productionProgress(int buildingId) const;
+    bool cancelSelectedProduction();
     bool orderGather(const Vec3& nearNode);
     bool orderAttack(int targetId);
     void orderStop();
@@ -98,6 +100,7 @@ private:
         float remaining = 0.0f;
         int reservedSupply = 1;
         int paidMinerals = 0;
+        float totalTime = 0.f;
     };
     int nextId_ = 1;
     float enemySpawnTimer_ = 12.0f;

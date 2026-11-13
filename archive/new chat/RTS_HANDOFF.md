@@ -171,3 +171,10 @@ using DbgHelp (linked into RTSCameraTerrain only on Windows). GLFW callback
 C++ exceptions already surface via the editor message and
 `rts-editor-error.log`. Do not publicly upload minidumps without checking
 privacy; dumps may contain process memory.
+
+Production queue HUD: `pendingProduction(buildingId)` exposes queue size,
+`productionProgress(buildingId)` exposes [0,1] for the active job or -1
+when empty; `cancelSelectedProduction()` removes the latest pending job on
+a selected structure and refunds its minerals and reserved supply. The
+contextual rightmost command button switches from Patrol to CANCEL Q with
+hotkey V. See skirmish and HUD CTests for reservation/progress/refund checks.

@@ -65,3 +65,7 @@ expose their rally location and queue length in the UI. Remaining work:
 production progress display, per-building orders, rally target types
 (unit or resource), queue cancellation, external actor icons, and a
 configurable per-unit command schema.
+
+The command panel now also provides contextual queue cancellation and an
+active training progress strip for the selected structure. Cancellation
+refunds the reservation exactly once, covered by headless regression tests.
