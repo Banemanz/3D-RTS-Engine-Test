@@ -55,6 +55,16 @@ Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
     Unit& u=units.back();
     u.ownerId=owner;u.isStructure=structure;u.isWorker=worker;
     u.catalogId=catalogId;
+    if(!catalogId.empty()) {
+        auto fields=project_.catalog.resolvedFields(catalogId);
+        auto actor=fields.find("actor");
+        if(actor!=fields.end() && actor->second.is<std::string>()) {
+            ActorVisual visual=actorFromCatalog(project_.catalog,actor->second.get<std::string>());
+            u.modelScale=visual.scale;
+            u.actorOpacity=visual.opacity;
+            u.actorMesh=visual.mesh;
+        }
+    }
     u.position.y=project_.terrain.sampleHeight(at.x,at.z);
     u.navGrid=&navigation;
     if(structure){u.radius=2.5f*(d.visual_scale/2.8f);u.height=1.45f*d.visual_scale;}

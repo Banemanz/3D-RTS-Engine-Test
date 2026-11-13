@@ -6,7 +6,7 @@
 int main() {
     TerrainMap terrain(9,9,2,-8,-8);
     assert(terrain.width()==9 && terrain.depth()==9);
-    assert(terrain.buildMesh().size()==8u*8u*6u*4u);
+    assert(terrain.buildMesh().size()==8u*8u*6u*5u);
     terrain.beginStroke();
     assert(terrain.applyBrush({0,0,0},TerrainMap::Brush::Raise,4,2));
     terrain.endStroke();

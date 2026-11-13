@@ -144,12 +144,13 @@ bool TerrainMap::redo(){
 void TerrainMap::clearHistory(){undo_.clear();redo_.clear();stroke_=false;strokeChanged_=false;}
 std::vector<float> TerrainMap::buildMesh() const {
     std::vector<float> result;
-    result.reserve(static_cast<std::size_t>((width_-1)*(depth_-1)*6*4));
+    result.reserve(static_cast<std::size_t>((width_-1)*(depth_-1)*6*5));
     auto push=[&](int x,int z,unsigned char material) {
         result.push_back(minX_+x*spacing_);
         result.push_back(cell(x,z).height);
         result.push_back(minZ_+z*spacing_);
         result.push_back(float(material));
+        result.push_back(cell(x,z).blocked?1.0f:0.0f);
     };
     for(int z=0;z<depth_-1;++z)
       for(int x=0;x<width_-1;++x) {

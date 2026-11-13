@@ -1,0 +1,33 @@
+#include "RTSSkirmish.hpp"
+#include <cassert>
+#include <iostream>
+
+int main(){
+    RTSProject p=RTSProject::defaults();
+    assert(p.catalog.setField("marine","max_hp",picojson::value(100.0)));
+    assert(p.catalog.setField("marine_actor","tint",picojson::value(
+        picojson::array{picojson::value(.7),picojson::value(.2),picojson::value(.3)})));
+    p.placements.erase(p.placements.begin()+5);
+    ProjectPlacement extra;
+    extra.id="editor_added_unit";extra.kind="Unit";extra.catalogId="marine";
+    extra.name="Editor Custom";extra.owner=0;extra.position={-8,0,7};
+    p.placements.push_back(extra);
+    p.terrain.setCell(32,30,{4.0f,2,true});
+    p.validate();
+    RTSSkirmish game;
+    game.loadProject(p);
+    bool found=false,painted=false;
+    for(const auto& unit:game.units)if(unit.instanceName=="Editor Custom"){
+        found=true;
+        assert(unit.currentHp==100.0f);
+        assert(unit.data.faction_color.x>.69f && unit.data.faction_color.x<.71f);
+    }
+    for(const auto& u:game.units)if(u.catalogId=="marine" && u.data.max_hp==100.f)
+        painted=true;
+    assert(found && painted);
+    assert(!game.navigation.walkable(32,30));
+    p.terrain.setCell(32,30,{1.5f,3,false});
+    game.syncTerrain(p.terrain);
+    assert(game.navigation.walkable(32,30));
+    std::cout<<"modded_project: catalog edits, scene placements and path mask apply\n";
+}

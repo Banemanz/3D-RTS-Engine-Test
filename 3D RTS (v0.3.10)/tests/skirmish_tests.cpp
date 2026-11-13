@@ -23,9 +23,14 @@ static void assertBuildingAndProduction() {
     assert(game.completedBarracksCount()==1);
     assert(game.queueMarine());
     assert(game.playerMinerals==20);
-    int previous=game.units.size();
+    int previousFriendly=0;
+    for(const auto& unit:game.units)if(unit.ownerId==0 && !unit.isWorker && !unit.isStructure)
+        ++previousFriendly;
     for(int i=0;i<480;++i)game.update(1.0f/60.0f);
-    assert(game.units.size()>static_cast<size_t>(previous));
+    int newFriendly=0;
+    for(const auto& unit:game.units)if(unit.ownerId==0 && !unit.isWorker && !unit.isStructure)
+        ++newFriendly;
+    assert(newFriendly==previousFriendly+1); // enemy spawns must not mask failed production
 }
 static void assertOrders() {
     RTSSkirmish game;

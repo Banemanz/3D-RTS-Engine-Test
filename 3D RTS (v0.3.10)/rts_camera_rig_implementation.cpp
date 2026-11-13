@@ -105,6 +105,7 @@ bool RTSCamera::screenPointToRay(double mouseX, double mouseY, int screenWidth, 
 bool RTSCamera::screenToGroundRaycast(double mouseX, double mouseY, int screenWidth, int screenHeight, Vec3& outHitPoint) const {
     Ray ray;
     if (!screenPointToRay(mouseX, mouseY, screenWidth, screenHeight, ray)) return false;
+    if (terrain)return terrain->raycast(ray,outHitPoint);
     if (std::abs(ray.direction.y) < 1e-6f) return false;
 
     float t = -ray.origin.y / ray.direction.y;

@@ -59,6 +59,9 @@ public:
     float facingYawRad = 0.0f;
     float radius = 0.65f;
     float height = 1.6f;
+    Vec3 modelScale{1,1,1};
+    float actorOpacity = 1.0f;
+    std::string actorMesh = "procedural.unit";
 
     float currentHp = 45.0f;
     bool isSelected = false;

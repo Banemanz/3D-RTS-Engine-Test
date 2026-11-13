@@ -10,6 +10,9 @@
 #include "Shaders.hpp"
 #include "RTSSkirmish.hpp"
 #include "BitmapHUD.hpp"
+#include "RTSProject.hpp"
+#include "EditorSession.hpp"
+#include <filesystem>
 #include <cstdlib>
 #include <fstream>
 #include <cmath>
@@ -24,6 +27,21 @@ struct AppState {
     RTSCamera camera;
     SelectionManager selectionManager;
     RTSSkirmish game;
+    RTSProject project=RTSProject::defaults();
+    EditorSession editor;
+    std::string projectPath="projects/working.rtsproject.json";
+    bool mouseStroke=false;
+    bool hoveredTerrain=false;
+    Vec3 hoveredWorld{};
+    void reloadFromProject(){
+        game.loadProject(project);
+        camera.terrain=&project.terrain;
+        hasMoveMarker=false;
+    }
+    void saveProject(){
+        try{project.saveFile(projectPath);editor.modified=false;editor.message="PROJECT SAVED";}
+        catch(const std::exception& e){editor.message=std::string("SAVE ERROR: ")+e.what();}
+    }
     enum class Mode { Normal, AttackMove, BuildBarracks } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
     bool keyX = false, keyR = false;
@@ -56,14 +74,26 @@ void windowSizeCallback(GLFWwindow* window, int width, int height) {
 void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
-        state->camera.onMouseScroll(yoffset);
+        if(state->editor.panel==EditorSession::Panel::Terrain &&
+           glfwGetKey(window,GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS) {
+            state->editor.brushRadius=std::clamp(state->editor.brushRadius+
+                float(yoffset),.5f,32.0f);
+        }else state->camera.onMouseScroll(yoffset);
     }
 }
 
 void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
-        state->selectionManager.onMouseMove(xpos, ypos);
+        if(state->editor.panel!=EditorSession::Panel::Play) {
+            Vec3 hit;
+            state->hoveredTerrain=state->camera.screenToGroundRaycast(
+                xpos,ypos,state->windowWidth,state->windowHeight,hit);
+            if(state->hoveredTerrain)state->hoveredWorld=hit;
+            if(state->mouseStroke && state->hoveredTerrain &&
+               state->editor.panel==EditorSession::Panel::Terrain)
+                state->editor.paint(state->project,hit);
+        }else state->selectionManager.onMouseMove(xpos,ypos);
     }
 }
 
@@ -73,6 +103,33 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
+
+    if(state->editor.panel!=EditorSession::Panel::Play) {
+        if(state->editor.panel!=EditorSession::Panel::Terrain)return;
+        Vec3 hit;
+        bool hits=state->camera.screenToGroundRaycast(
+            mouseX,mouseY,state->windowWidth,state->windowHeight,hit);
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS && hits) {
+            if(state->editor.tool==EditorSession::Tool::PlaceMineral ||
+               state->editor.tool==EditorSession::Tool::PlaceUnit ||
+               state->editor.tool==EditorSession::Tool::PlaceDoodad) {
+                if(state->editor.place(state->project,hit))state->reloadFromProject();
+            }else{
+                state->editor.startStroke(state->project);
+                state->mouseStroke=true;
+                state->editor.paint(state->project,hit);
+            }
+        }else if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE) {
+            if(state->mouseStroke) {
+                state->editor.finishStroke(state->project);
+                state->mouseStroke=false;
+                state->game.syncTerrain(state->project.terrain);
+            }
+        }else if(button==GLFW_MOUSE_BUTTON_RIGHT && action==GLFW_PRESS && hits) {
+            if(state->editor.removeNearest(state->project,hit))state->reloadFromProject();
+        }
+        return;
+    }
 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
@@ -116,15 +173,112 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     }
 }
 
+
+void characterCallback(GLFWwindow* window,unsigned int codepoint) {
+    auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if(s && s->editor.panel==EditorSession::Panel::Data)s->editor.addChar(codepoint);
+}
+void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,int mods) {
+    if(action!=GLFW_PRESS && action!=GLFW_REPEAT)return;
+    auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if(!s)return;
+    auto& edit=s->editor;
+    const bool ctrl=(mods & GLFW_MOD_CONTROL)!=0;
+    if(edit.textEditing) {
+        if(key==GLFW_KEY_ESCAPE){edit.cancelEdit();return;}
+        if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
+            if(action==GLFW_PRESS) {
+                try{if(edit.finishEdit(s->project))s->reloadFromProject();}
+                catch(const std::exception& e){edit.message=e.what();}
+            }
+            return;
+        }
+        if(key==GLFW_KEY_BACKSPACE){edit.backspace();return;}
+        return;
+    }
+    if(action==GLFW_REPEAT && key!=GLFW_KEY_LEFT_BRACKET && key!=GLFW_KEY_RIGHT_BRACKET)
+        return;
+    if(ctrl && key==GLFW_KEY_S) {s->saveProject();return;}
+    if(key==GLFW_KEY_F5) {
+        edit.panel=edit.panel==EditorSession::Panel::Terrain?
+            EditorSession::Panel::Play:EditorSession::Panel::Terrain;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F7) {
+        edit.panel=edit.panel==EditorSession::Panel::Data?
+            EditorSession::Panel::Play:EditorSession::Panel::Data;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F9) {edit.panel=EditorSession::Panel::Play;s->reloadFromProject();return;}
+    if(key==GLFW_KEY_ESCAPE) {
+        if(edit.panel!=EditorSession::Panel::Play) {
+            edit.panel=EditorSession::Panel::Play;s->reloadFromProject();
+        }else glfwSetWindowShouldClose(window,true);
+        return;
+    }
+    if(edit.panel==EditorSession::Panel::Play)return;
+    try{
+        if(ctrl && key==GLFW_KEY_Z) {
+            if(edit.undo(s->project))s->reloadFromProject();
+            return;
+        }
+        if(ctrl && key==GLFW_KEY_Y) {
+            if(edit.redo(s->project))s->reloadFromProject();
+            return;
+        }
+        if(edit.panel==EditorSession::Panel::Data) {
+            if(ctrl && key==GLFW_KEY_D){edit.duplicateCatalogObject(s->project);return;}
+            if(ctrl && key==GLFW_KEY_N){edit.beginNewField();return;}
+            if(ctrl && key==GLFW_KEY_BACKSPACE) {
+                if(edit.removeLocalOverride(s->project))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_TAB)edit.cycleObject(s->project,
+                                                    (mods & GLFW_MOD_SHIFT)?-1:1);
+            else if(key==GLFW_KEY_UP)edit.cycleField(s->project,-1);
+            else if(key==GLFW_KEY_DOWN)edit.cycleField(s->project,1);
+            else if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER)
+                edit.beginValueEdit(s->project);
+        }else if(edit.panel==EditorSession::Panel::Terrain) {
+            if(key>=GLFW_KEY_1 && key<=GLFW_KEY_7)
+                edit.tool=static_cast<EditorSession::Tool>(key-GLFW_KEY_1);
+            else if(key==GLFW_KEY_8)edit.tool=EditorSession::Tool::PlaceMineral;
+            else if(key==GLFW_KEY_9)edit.tool=EditorSession::Tool::PlaceUnit;
+            else if(key==GLFW_KEY_0)edit.tool=EditorSession::Tool::PlaceDoodad;
+            else if(key==GLFW_KEY_LEFT_BRACKET)
+                edit.brushRadius=std::max(.5f,edit.brushRadius-.5f);
+            else if(key==GLFW_KEY_RIGHT_BRACKET)
+                edit.brushRadius=std::min(32.f,edit.brushRadius+.5f);
+            else if(key==GLFW_KEY_MINUS)
+                edit.brushStrength=std::max(.1f,edit.brushStrength-.1f);
+            else if(key==GLFW_KEY_EQUAL)
+                edit.brushStrength=std::min(10.f,edit.brushStrength+.1f);
+            else if(key==GLFW_KEY_M)edit.materialId=(edit.materialId+1)%8;
+            else if(key==GLFW_KEY_O)edit.placementOwner=1-edit.placementOwner;
+            else if(key==GLFW_KEY_P)
+                edit.cyclePlacementCatalog(s->project,1,(mods & GLFW_MOD_SHIFT)!=0);
+            else if(key==GLFW_KEY_DELETE && s->hoveredTerrain) {
+                if(edit.removeNearest(s->project,s->hoveredWorld))s->reloadFromProject();
+            }
+        }
+    }catch(const std::exception& e) {edit.message=std::string("EDITOR ERROR: ")+e.what();}
+}
+
 int main(int argc, char** argv) {
     int smokeFrames = -1;
     std::string screenshotPath;
+    std::string inputProjectPath;
+    bool startEditor=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
             smokeFrames = (std::max)(1, std::atoi(argv[++i]));
         else if (arg == "--screenshot" && i + 1 < argc)
             screenshotPath = argv[++i];
+        else if(arg == "--project" && i+1<argc)inputProjectPath=argv[++i];
+        else if(arg == "--editor")startEditor=true;
     }
     int renderedFrames = 0;
     try {
@@ -141,6 +295,14 @@ int main(int argc, char** argv) {
 #endif
 
         AppState app;
+        if(!inputProjectPath.empty()) {
+            app.project.loadFile(inputProjectPath);
+            app.projectPath=inputProjectPath;
+        }else if(std::filesystem::exists("projects/default.rtsproject.json")) {
+            app.project.loadFile("projects/default.rtsproject.json");
+        }
+        app.reloadFromProject();
+        if(startEditor)app.editor.panel=EditorSession::Panel::Terrain;
         GLFWwindow* window = glfwCreateWindow(
             app.windowWidth, app.windowHeight,
             "3D RTS Engine - Modular Architecture",
@@ -170,6 +332,8 @@ int main(int argc, char** argv) {
         glfwSetScrollCallback(window, scrollCallback);
         glfwSetCursorPosCallback(window, cursorPosCallback);
         glfwSetMouseButtonCallback(window, mouseButtonCallback);
+        glfwSetKeyCallback(window,editorKeyCallback);
+        glfwSetCharCallback(window,characterCallback);
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
@@ -183,20 +347,23 @@ int main(int argc, char** argv) {
 
         // The skirmish owns unit lifetimes and initial spawning; see RTSSkirmish.
 
-        // 1. Terrain Geometry
-        const float terrainSize = 120.0f;
-        float terrainVertices[] = {
-            -terrainSize, 0.0f, -terrainSize,  terrainSize, 0.0f, -terrainSize,  terrainSize, 0.0f,  terrainSize,
-            -terrainSize, 0.0f, -terrainSize,  terrainSize, 0.0f,  terrainSize, -terrainSize, 0.0f,  terrainSize
-        };
+        // Editable heightfield mesh: five floats per vertex, updated after brush strokes.
+        std::vector<float> terrainVertices=app.project.terrain.buildMesh();
+        GLsizei terrainVertexCount=static_cast<GLsizei>(terrainVertices.size()/5);
         GLuint terrainVAO, terrainVBO;
         glGenVertexArrays(1, &terrainVAO);
         glGenBuffers(1, &terrainVBO);
         glBindVertexArray(terrainVAO);
         glBindBuffer(GL_ARRAY_BUFFER, terrainVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(terrainVertices), terrainVertices, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glBufferData(GL_ARRAY_BUFFER, terrainVertices.size()*sizeof(float),
+                     terrainVertices.data(), GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3*sizeof(float)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(4*sizeof(float)));
+        glEnableVertexAttribArray(2);
+        app.project.terrain.clearDirty();
 
         // 2. 3D Unit Mesh Geometry
         float unitVertices[] = {
@@ -276,8 +443,7 @@ int main(int argc, char** argv) {
                 previous = down;
                 return fired;
             };
-            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-                glfwSetWindowShouldClose(window, true);
+            if(app.editor.panel==EditorSession::Panel::Play) {
             if (justPressed(GLFW_KEY_A, app.keyA)) app.mode = AppState::Mode::AttackMove;
             if (justPressed(GLFW_KEY_B, app.keyB)) app.mode = AppState::Mode::BuildBarracks;
             if (justPressed(GLFW_KEY_T, app.keyT)) app.game.queueMarine();
@@ -307,28 +473,44 @@ int main(int argc, char** argv) {
                     }
                 }
             }
+            }
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
             if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
 
-            app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
-            accumulator += deltaTime;
-            int steps = 0;
-            while (accumulator >= fixedStep && steps < 8) {
-                app.game.update(fixedStep);
-                accumulator -= fixedStep;
-                ++steps;
-            }
-            if (steps == 8 && accumulator >= fixedStep)
-                accumulator = std::fmod(accumulator, fixedStep); // discard severe stalls, not unbounded catch-up
+            if(app.editor.panel!=EditorSession::Panel::Data || !app.editor.textEditing)
+                app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
+            if(app.editor.panel==EditorSession::Panel::Play) {
+                accumulator += deltaTime;
+                int steps = 0;
+                while (accumulator >= fixedStep && steps < 8) {
+                    app.game.update(fixedStep);
+                    accumulator -= fixedStep;
+                    ++steps;
+                }
+                if (steps == 8 && accumulator >= fixedStep)
+                    accumulator = std::fmod(accumulator, fixedStep);
+            }else accumulator=0.0f; // editor never advances gameplay
 
             if (currentTime - lastTitleUpdate > 0.35) {
                 const char* mode = app.mode == AppState::Mode::BuildBarracks ? "PLACE BARRACKS: RMB" :
                     app.mode == AppState::Mode::AttackMove ? "ATTACK MOVE: RMB" : "COMMAND";
-                std::string title = std::string("3D RTS | ") + app.game.statusLine() + " | " + mode;
+                std::string title = app.editor.panel==EditorSession::Panel::Play
+                    ? std::string("3D RTS | ")+app.game.statusLine()+" | "+mode
+                    : std::string("3D RTS AUTHORING | ")+app.project.name+
+                      " | "+app.editor.panelName()+(app.editor.modified?" *":"");
                 glfwSetWindowTitle(window, title.c_str());
                 lastTitleUpdate = currentTime;
             }
 
+            if(app.project.terrain.dirty()) {
+                terrainVertices=app.project.terrain.buildMesh();
+                terrainVertexCount=static_cast<GLsizei>(terrainVertices.size()/5);
+                glBindVertexArray(terrainVAO);
+                glBindBuffer(GL_ARRAY_BUFFER,terrainVBO);
+                glBufferData(GL_ARRAY_BUFFER,terrainVertices.size()*sizeof(float),
+                             terrainVertices.data(),GL_DYNAMIC_DRAW);
+                app.project.terrain.clearDirty();
+            }
             glClearColor(0.08f, 0.11f, 0.15f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -348,10 +530,15 @@ int main(int argc, char** argv) {
             glUniform3f(glGetUniformLocation(terrainShader, "uClickMarker"),
                         app.lastClickedWorldPos.x, app.lastClickedWorldPos.y, app.lastClickedWorldPos.z);
             glUniform1f(glGetUniformLocation(terrainShader, "uMarkerPulse"), static_cast<float>(currentTime));
-            glUniform1f(glGetUniformLocation(terrainShader, "uHasMarker"), app.hasMoveMarker ? 1.0f : 0.0f);
+            glUniform1f(glGetUniformLocation(terrainShader, "uHasMarker"),
+                        app.hasMoveMarker ? 1.0f : 0.0f);
+            glUniform1f(glGetUniformLocation(terrainShader, "uShowPathing"),
+                        app.editor.panel==EditorSession::Panel::Terrain ? 1.0f : 0.0f);
+            glUniform1f(glGetUniformLocation(terrainShader, "uShowGrid"),
+                        app.editor.panel==EditorSession::Panel::Terrain ? 1.0f : .35f);
 
             glBindVertexArray(terrainVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glDrawArrays(GL_TRIANGLES, 0, terrainVertexCount);
 
             // 2. Render 3D Alive Units, Rings & Weapon Tracers
             for (const auto& unit : app.game.units) {
@@ -378,13 +565,15 @@ int main(int argc, char** argv) {
                 float s = unit.data.visual_scale;
                 Mat4 unitModel = Mat4::translate(unit.position)
                                * Mat4::rotateY(unit.facingYawRad)
-                               * Mat4::scale(Vec3(s, s, s));
+                               * Mat4::scale(Vec3(s*unit.modelScale.x,
+                                                  s*unit.modelScale.y,s*unit.modelScale.z));
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"), 1, GL_FALSE, unitModel.m);
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uView"), 1, GL_FALSE, view.m);
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"), 1, GL_FALSE, proj.m);
                 glUniform3f(glGetUniformLocation(unitShader, "uColor"),
                             unit.data.faction_color.x, unit.data.faction_color.y, unit.data.faction_color.z);
                 glUniform1f(glGetUniformLocation(unitShader, "uSelected"), unit.isSelected ? 1.0f : 0.0f);
+                glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),unit.actorOpacity);
 
                 glBindVertexArray(unitVAO);
                 glDrawArrays(GL_TRIANGLES, 0, 33);
@@ -418,6 +607,7 @@ int main(int argc, char** argv) {
             glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"), 1, GL_FALSE, proj.m);
             glUniform3f(glGetUniformLocation(unitShader, "uColor"), 0.15f, 0.72f, 0.88f);
             glUniform1f(glGetUniformLocation(unitShader, "uSelected"), 0.0f);
+            glUniform1f(glGetUniformLocation(unitShader, "uOpacity"), 1.0f);
             glBindVertexArray(unitVAO);
             for (const auto& node : app.game.minerals) {
                 if (node.remaining <= 0) continue;
@@ -425,6 +615,46 @@ int main(int argc, char** argv) {
                           * Mat4::scale(Vec3(1.35f, 1.1f, 1.35f));
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"), 1, GL_FALSE, mesh.m);
                 glDrawArrays(GL_TRIANGLES, 0, 33);
+            }
+
+            // Placed doodads resolve their actor color/scale/opacity. Imported mesh
+            // filenames stay in the catalog; procedural placeholders are used until
+            // a dedicated asset pipeline is introduced.
+            for(const auto& placed:app.project.placements) {
+                if(placed.kind!="Doodad")continue;
+                ActorVisual visual;
+                const auto* entry=app.project.catalog.find(placed.catalogId);
+                if(entry && entry->type=="Actor")
+                    visual=actorFromCatalog(app.project.catalog,placed.catalogId);
+                Vec3 pos=placed.position;
+                pos.y=app.project.terrain.sampleHeight(pos.x,pos.z);
+                Mat4 transform=Mat4::translate(pos)
+                    * Mat4::rotateY(toRadians(placed.rotation.y))
+                    * Mat4::scale(Vec3(placed.scale.x*visual.scale.x,
+                                       placed.scale.y*visual.scale.y,
+                                       placed.scale.z*visual.scale.z));
+                glUseProgram(unitShader);
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uView"),1,GL_FALSE,view.m);
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"),1,GL_FALSE,proj.m);
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"),1,GL_FALSE,transform.m);
+                glUniform3f(glGetUniformLocation(unitShader, "uColor"),
+                            visual.tint.x,visual.tint.y,visual.tint.z);
+                glUniform1f(glGetUniformLocation(unitShader, "uSelected"),0.0f);
+                glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),visual.opacity);
+                glBindVertexArray(unitVAO);
+                glDrawArrays(GL_TRIANGLES,0,33);
+            }
+
+            if(app.editor.panel==EditorSession::Panel::Terrain && app.hoveredTerrain) {
+                glUseProgram(ringShader);
+                Mat4 brush=Mat4::translate(app.hoveredWorld+Vec3(0,.06f,0))
+                    * Mat4::scale(Vec3(app.editor.brushRadius,1,app.editor.brushRadius));
+                glUniformMatrix4fv(glGetUniformLocation(ringShader, "uModel"),1,GL_FALSE,brush.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader, "uView"),1,GL_FALSE,view.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader, "uProjection"),1,GL_FALSE,proj.m);
+                glUniform4f(glGetUniformLocation(ringShader, "uColor"),.94f,.8f,.21f,.77f);
+                glBindVertexArray(ringVAO);
+                glDrawArrays(GL_TRIANGLES,0,6);
             }
 
             // 3. Render Floating 2D Screen-Projected Health Bars & Drag-Selection Box
@@ -538,6 +768,86 @@ int main(int argc, char** argv) {
                                 w*.32f,h*.46f,5.0f,
                                 app.game.result==MatchResult::Victory ? "VICTORY - PRESS R" : "DEFEAT - PRESS R",
                                 1.f,.82f,.32f);
+            }
+            // Editor UI is intentionally drawn in the same OpenGL window:
+            // project assets and game logic both use this exact document.
+            if(app.editor.panel!=EditorSession::Panel::Play &&
+               app.windowWidth>0 && app.windowHeight>0) {
+                const bool dataPanel=app.editor.panel==EditorSession::Panel::Data;
+                const float bottom=dataPanel?-1.0f:
+                    1.0f-2.0f*220.0f/float(app.windowHeight);
+                float panelQuad[]={
+                    -1,1, 1,1, 1,bottom,
+                    -1,1, 1,bottom, -1,bottom
+                };
+                glUseProgram(hudBoxShader);
+                glUniform4f(glGetUniformLocation(hudBoxShader,"uColor"),
+                            .035f,.061f,.095f,.96f);
+                glBindVertexArray(hudVAO);
+                glBindBuffer(GL_ARRAY_BUFFER,hudVBO);
+                glBufferData(GL_ARRAY_BUFFER,sizeof(panelQuad),panelQuad,GL_DYNAMIC_DRAW);
+                glDrawArrays(GL_TRIANGLES,0,6);
+                const auto line=[&](float y,float size,const std::string& msg,
+                                   float r=.76f,float g=.87f,float b=.95f){
+                    std::string display=msg;
+                    if(display.size()>115)display=display.substr(0,112)+"...";
+                    drawHUDText(hudBoxShader,hudVAO,hudVBO,
+                                app.windowWidth,app.windowHeight,
+                                15.f,y,size,display,r,g,b);
+                };
+                line(12,2.8f,app.editor.panelName()+
+                     (app.editor.modified?"  * UNSAVED":"  SAVED"),.31f,.94f,.67f);
+                if(app.editor.panel==EditorSession::Panel::Terrain) {
+                    line(38,2.0f,"F5 PLAY  F7 DATA  F9 TEST MAP  CTRL+S SAVE  CTRL+Z/Y UNDO/REDO");
+                    line(60,2.0f,"1 RAISE  2 LOWER  3 SMOOTH  4 FLATTEN  5 PAINT  6 BLOCK  7 CLEAR  8 MINERAL  9 UNIT  0 DOODAD");
+                    line(82,2.0f,"LMB BRUSH/PLACE  RMB DELETE NEARBY  [/] RADIUS  -/= STRENGTH  M MATERIAL  P UNIT  SHIFT+P ACTOR");
+                    line(104,2.0f,"TOOL "+app.editor.toolName()+
+                         "  RADIUS "+std::to_string(int(app.editor.brushRadius*10)/10.0f)+
+                         "  STRENGTH "+std::to_string(app.editor.brushStrength).substr(0,4)+
+                         "  MATERIAL "+std::to_string(app.editor.materialId),1.f,.80f,.37f);
+                    line(126,2.0f,"PLACEMENT "+app.editor.placementArchetype+
+                         "  ACTOR "+app.editor.placementDoodad+
+                         "  OWNER "+std::to_string(app.editor.placementOwner),.71f,.84f,1.f);
+                    line(148,2.0f,"MAP "+app.project.name+
+                         "  SIZE "+std::to_string(app.project.terrain.width())+" X "+
+                         std::to_string(app.project.terrain.depth())+
+                         "  OBJECTS "+std::to_string(app.project.placements.size()));
+                    if(app.hoveredTerrain)
+                        line(171,1.8f,"CURSOR X "+
+                             std::to_string(app.hoveredWorld.x).substr(0,6)+
+                             " Y "+std::to_string(app.hoveredWorld.y).substr(0,6)+
+                             " Z "+std::to_string(app.hoveredWorld.z).substr(0,6));
+                } else {
+                    const CatalogEntry* entry=app.editor.selected(app.project);
+                    line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT OBJECT  SHIFT+TAB PREVIOUS");
+                    line(62,2.0f,"UP/DOWN PROPERTY  ENTER EDIT JSON  CTRL+N ADD FIELD  CTRL+D DERIVE OBJECT  CTRL+BACKSPACE REMOVE");
+                    if(entry) {
+                        line(92,2.7f,entry->type+" / "+entry->id+
+                             (entry->parent.empty()?"":"  PARENT "+entry->parent),
+                             1.f,.80f,.36f);
+                        auto keys=app.editor.fields(app.project);
+                        auto values=app.project.catalog.resolvedFields(entry->id);
+                        int selectedIndex=keys.empty()?0:int(app.editor.selectedField%keys.size());
+                        int first=std::max(0,selectedIndex-10);
+                        if(int(keys.size())>18)first=std::min(first,int(keys.size())-18);
+                        for(int idx=first;idx<int(keys.size()) && idx<first+18;++idx) {
+                            const auto& key=keys[static_cast<std::size_t>(idx)];
+                            std::string value=values.at(key).serialize();
+                            if(value.size()>65)value=value.substr(0,62)+"...";
+                            bool highlight=idx==selectedIndex;
+                            line(124+float(idx-first)*25,2.1f,
+                                 std::string(highlight?"> ":"  ")+key+" = "+value,
+                                 highlight?1.0f:.68f,highlight?.87f:.81f,
+                                 highlight?.41f:.92f);
+                        }
+                        if(app.editor.textEditing)
+                            line(float(app.windowHeight)-58,2.25f,
+                                 "EDIT: "+app.editor.editText,1.f,.81f,.40f);
+                    }
+                }
+                if(!app.editor.message.empty())
+                    line(float(app.windowHeight)-(dataPanel?24:float(app.windowHeight)-199),
+                         1.8f,app.editor.message,1.f,.63f,.33f);
             }
             glEnable(GL_DEPTH_TEST);
 

@@ -186,7 +186,7 @@ DataCatalog DataCatalog::defaults() {
         {"attack_range",picojson::value(6.5)},{"attack_cooldown",picojson::value(.75)},
         {"aggro_range",picojson::value(10.5)},{"move_speed",picojson::value(9.5)},
         {"supply_cost",picojson::value(1.0)},{"mineral_cost",picojson::value(50.0)},
-        {"build_time",picojson::value(15.0)},{"visual_scale",picojson::value(.92)},{"build_time",picojson::value(6.0)}
+        {"build_time",picojson::value(6.0)},{"visual_scale",picojson::value(.92)}
     }));
     c.add(make("Unit","worker","marine",{
         {"name",picojson::value("Human Worker")},{"actor",picojson::value("worker_actor")},
@@ -253,7 +253,6 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     if(!actor.empty()) {
         ActorVisual visual=actorFromCatalog(catalog,actor);
         d.faction_color=visual.tint;
-        d.visual_scale*=visual.scale.x;
     }
     return d;
 }

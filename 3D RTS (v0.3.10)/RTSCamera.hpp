@@ -2,10 +2,12 @@
 
 #include "Math3D.hpp"
 #include "Ray.hpp"
+#include "TerrainMap.hpp"
 #include <GLFW/glfw3.h>
 
 class RTSCamera {
 public:
+    const TerrainMap* terrain=nullptr; // borrowed from the currently loaded project
     Vec3 focalPoint{0.0f, 0.0f, 0.0f};
     Vec3 targetFocalPoint{0.0f, 0.0f, 0.0f};
 

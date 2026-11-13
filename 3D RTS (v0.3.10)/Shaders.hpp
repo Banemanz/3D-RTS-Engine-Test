@@ -99,6 +99,7 @@ out vec4 FragColor;
 
 uniform vec3 uColor;
 uniform float uSelected;
+uniform float uOpacity;
 
 void main() {
     vec3 lightDir = normalize(vec3(0.45, 0.85, 0.35));
@@ -108,7 +109,7 @@ void main() {
     if (uSelected > 0.5) {
         litColor += vec3(0.12, 0.28, 0.14);
     }
-    FragColor = vec4(litColor, 1.0);
+    FragColor = vec4(litColor, uOpacity);
 }
 )";
 
