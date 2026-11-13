@@ -40,12 +40,12 @@ public:
     }
     std::array<HUDButton,9> buttons(const RTSSkirmish& game)const {
         int selected=0; bool worker=false,combat=false;
+        bool base=false,army=false,selectedBuilding=false;
+        int activeSelectedStructure=-1;
         for(const auto& u:game.units)if(u.isAlive() && u.ownerId==0 && u.isSelected){
             ++selected;worker|=u.isWorker;combat|=!u.isStructure;
             if(u.isStructure){selectedBuilding=true;activeSelectedStructure=u.id;}
         }
-        bool base=false,army=false,selectedBuilding=false;
-        int activeSelectedStructure=-1;
         const bool barracks=game.completedBarracksCount()>0;
         for(const auto& u:game.units)if(u.ownerId==0 && u.isAlive()){
             army|=!u.isStructure && !u.isWorker;
