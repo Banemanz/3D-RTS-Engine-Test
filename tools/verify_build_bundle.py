@@ -38,6 +38,8 @@ def main() -> int:
         "run-editor.bat" if windows else "run-editor.sh",
     ]
 
+    if windows:
+        mandatory.append("symbols/RTSCameraTerrain.pdb")
     for relative in mandatory:
         path = root / relative
         if not path.is_file() or path.stat().st_size == 0:

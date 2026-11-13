@@ -53,3 +53,8 @@ cmake --install build --config Release --prefix ./dist/RTS-Creator-local
 
 The workflow needs only `contents: read`, does not merge the PR or publish a
 GitHub Release, supports manual **Run workflow**, and retains artifacts for 30 days.
+
+**Crash diagnostics:** Windows Release packages also contain
+`symbols/RTSCameraTerrain.pdb`, matching the executable. Native crash
+dumps written locally by the game can be symbolicated using that PDB.
+Neither minidumps nor error logs are uploaded automatically.

@@ -102,6 +102,15 @@ if(RTS_BUILD_DEMO)
         rts_camera_rig_implementation.cpp
         selection_manager_implementation.cpp)
     target_link_libraries(RTSCameraTerrain PRIVATE glfw OpenGL::GL RTSSimulation)
+    if(WIN32)
+        target_link_libraries(RTSCameraTerrain PRIVATE dbghelp)
+    endif()
+    if(MSVC)
+        # Keep symbols for native crash dump analysis in Release binaries.
+        target_link_options(RTSCameraTerrain PRIVATE /DEBUG:FULL)
+        install(FILES "$<TARGET_PDB_FILE:RTSCameraTerrain>"
+                DESTINATION "symbols" OPTIONAL)
+    endif()
 endif()
 
 if(MSVC)

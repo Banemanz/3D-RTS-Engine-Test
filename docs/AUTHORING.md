@@ -223,3 +223,18 @@ keep the recovery. An ordinary successful Ctrl+S removes the stale autosave.
 Use the launch scripts or open `--project <file>` explicitly to keep the
 correct per-project recovery location. The software OpenGL / CI smoke tests
 are not substitutes for a Windows real-machine crash reproduction.
+
+### Windows native crash dumps
+
+For Windows crashes that bypass the protected GLFW callbacks (for example,
+access violations in the graphics driver or renderer), the application
+installs a last-chance exception handler that writes a **local**
+`rts-crash-YYYYMMDD-HHMMSS.dmp` file in its working directory. The
+application does not upload dumps. Send the matching dump and
+`rts-editor-error.log` privately when reporting a crash, along with
+what editor mode/operation triggered it. Minidumps may contain portions
+of process memory; do not post them publicly without reviewing privacy.
+
+This exception handler records evidence; it is not a fix for arbitrary
+native faults. Other crash handlers or an attached debugger can take
+precedence, so dump generation is best-effort.

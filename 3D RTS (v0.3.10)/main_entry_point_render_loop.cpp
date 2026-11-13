@@ -12,6 +12,7 @@
 #include "BitmapHUD.hpp"
 #include "RTSHUDLayout.hpp"
 #include "RTSHUD.hpp"
+#include "CrashReporter.hpp"
 #include "RTSProject.hpp"
 #include "InstanceOverrides.hpp"
 #include "EditorSession.hpp"
@@ -576,6 +577,7 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
 }
 
 int main(int argc, char** argv) {
+    RTSCrashReporter::install();
     int smokeFrames = -1;
     std::string screenshotPath;
     std::string inputProjectPath;

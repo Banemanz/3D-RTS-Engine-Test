@@ -164,3 +164,10 @@ units. `rallyPoints_` keyed by building ID; produced units receive their
 first waypoint route automatically. Selected structures draw a gold world
 marker; selected-unit panel displays pending queue count. Rally is match-
 local state, not yet persisted or authored as a placement property.
+
+Windows native fault diagnostics: `CrashReporter.hpp` registers a best-
+effort `SetUnhandledExceptionFilter` with a timestamped local minidump
+using DbgHelp (linked into RTSCameraTerrain only on Windows). GLFW callback
+C++ exceptions already surface via the editor message and
+`rts-editor-error.log`. Do not publicly upload minidumps without checking
+privacy; dumps may contain process memory.
