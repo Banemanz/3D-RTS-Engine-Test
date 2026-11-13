@@ -42,7 +42,7 @@ public:
         return std::max(1,int((selectionArea.w-20.f)/48.f));
     }
     int selectionRows() const {
-        return std::max(1,int((selectionArea.h-61.f)/46.f));
+        return std::max(1,int((selectionArea.h-69.f+4.f)/46.f));
     }
     int selectionCapacity() const {
         return std::min(120,selectionColumns()*selectionRows());
@@ -50,7 +50,7 @@ public:
     HUDRect selectionCardBounds(int index) const {
         const int cols=selectionColumns();
         return {selectionArea.x+10.f+(index%cols)*48.f,
-                selectionArea.y+55.f+(index/cols)*46.f,44.f,41.f};
+                selectionArea.y+69.f+(index/cols)*46.f,44.f,41.f};
     }
     int selectionUnitAt(double x,double y,const RTSSkirmish& game)const {
         if(!selectionArea.contains(x,y))return -1;
