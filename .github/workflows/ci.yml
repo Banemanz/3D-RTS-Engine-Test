@@ -160,6 +160,8 @@ jobs:
             build/command_replay_fingerprint.txt
             build/ai_defense_fingerprint.txt
             build/trigger_globals_fingerprint.txt
+            build/script_expression_fingerprint.txt
+            build/script_flow_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
