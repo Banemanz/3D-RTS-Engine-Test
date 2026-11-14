@@ -95,8 +95,13 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
             throw std::invalid_argument("Trigger event must be object");
         const auto& e=event->second.get<picojson::object>();
         rule.event=str(e,"type");
-        requireType(rule.event,{"OnMapStart","After","Every","OnUnitDeath","OnRegionEnter","MineralsBelow"});
+        requireType(rule.event,{"OnMapStart","After","Every","OnUnitDeath","OnRegionEnter","MineralsBelow","OnVariableChanged"});
         rule.region=str(e,"region");
+        if(rule.event=="OnVariableChanged") {
+            rule.variable=str(e,"variable");
+            if(!variables.count(rule.variable))
+                throw std::invalid_argument("Variable event references missing variable: "+rule.variable);
+        }
         if(rule.event=="OnRegionEnter") {
             bool found=false;
             for(const auto& p:project.placements)
