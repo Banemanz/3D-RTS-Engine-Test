@@ -84,8 +84,8 @@ bool draw(App& app,const std::string& parentId,const std::string& field,
         if(category=="Unit"){
             const auto resolved=project.catalog.resolvedFields(candidate.id);
             const auto structure=resolved.find("is_structure");
-            if(structure!=resolved.end() && structure->second.is<bool>() &&
-               structure->second.get<bool>())continue;
+            if(structure!=resolved.end() && structure->second.template is<bool>() &&
+               structure->second.template get<bool>())continue;
         }
         candidates.push_back(candidate.id);
     }
