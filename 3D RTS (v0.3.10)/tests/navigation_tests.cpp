@@ -42,7 +42,37 @@ static void weightedDetour(){
     g.setTraversalCost(1,1,-4.f); // invalid costs are ignored
     assert(g.traversalCost(1,1)==15.f);
 }
+static void topologyRevisionAndCorridor(){
+    NavigationGrid grid(11,11,1.f,0.f,0.f);
+    const Vec3 start{1.5f,0,4.5f},goal{9.5f,0,4.5f};
+    auto direct=grid.findPath(start,goal);
+    assert(direct.size()>=8);
+    assert(grid.routeClear(start,direct));
+    auto initial=grid.revision();
+    grid.setBlocked(5,4,false);
+    assert(grid.revision()==initial); // no-op must not cause churn
+    grid.setBlocked(5,4,true);
+    assert(grid.revision()==initial+1);
+    assert(!grid.routeClear(start,direct));
+    auto diverted=grid.findPath(start,goal);
+    assert(!diverted.empty() && grid.routeClear(start,diverted));
+    grid.setBlocked(5,4,true);
+    assert(grid.revision()==initial+1);
+    grid.setTraversalCost(3,3,5.f);
+    assert(grid.revision()==initial+2);
+    grid.setTraversalCost(3,3,5.f);
+    assert(grid.revision()==initial+2);
+    // Corner-cutting becomes invalid even if the next diagonal cell is clear.
+    NavigationGrid corner(3,3,1.f,0.f,0.f);
+    const Vec3 p{.5f,0,.5f};
+    auto diagonal=corner.findPath(p,{2.5f,0,2.5f});
+    assert(corner.routeClear(p,diagonal));
+    corner.setBlocked(1,0,true);
+    assert(!corner.routeClear(p,diagonal));
+    assert(corner.routeClear(p,diagonal,diagonal.size()));
+}
 int main() {
     basic();obstacles();noCornerCut();weightedDetour();
+    topologyRevisionAndCorridor();
     std::cout<<"navigation: 4 tests passed\n";
 }

@@ -6,6 +6,7 @@
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <string>
 #include <unordered_map>
@@ -98,8 +99,12 @@ private:
     std::unordered_set<int> observedDead_;
     TriggerEngine triggers_;
     void rebuildNavigation();
+    std::uint64_t navigationGeneration_=0;
     struct Route {
         std::vector<Vec3> points;
+        Vec3 requestedGoal{};
+        std::uint64_t navigationGeneration=0;
+        std::uint64_t gridRevision=0;
         size_t next = 0;
         bool attackMove = false;
         bool engagementInterrupted = false; // resume destination after combat

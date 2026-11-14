@@ -53,6 +53,7 @@ void RTSSkirmish::rebuildNavigation(){
         navigation.blockDisc(u.position,u.radius+0.2f);
     for(const auto& m:minerals)if(m.remaining>0)
         navigation.blockDisc(m.position,1.8f);
+    ++navigationGeneration_;
 }
 void RTSSkirmish::syncTerrain(const TerrainMap& t){
     project_.terrain=t;
@@ -156,6 +157,9 @@ bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     auto path=navigation.findPath(u.position,clamped);
     if(path.empty())return false;
     Route order;order.points=std::move(path);order.attackMove=attackMove;
+    order.requestedGoal=clamped;
+    order.navigationGeneration=navigationGeneration_;
+    order.gridRevision=navigation.revision();
     routes_[u.id]=std::move(order);
     u.moveTo(routes_[u.id].points.front(),attackMove);
     return true;
@@ -314,15 +318,43 @@ void RTSSkirmish::advanceRoutes() {
             route.engagementInterrupted=true;
             ++it;continue;
         }
+        // A structure, depleted mineral, or terrain edit can invalidate a
+        // route while the unit is in transit. Only inspect/replan when the
+        // grid actually changes, never on every simulation tick.
+        const bool changed=(route.navigationGeneration!=navigationGeneration_) ||
+                           (route.gridRevision!=navigation.revision());
+        if(changed){
+            route.navigationGeneration=navigationGeneration_;
+            route.gridRevision=navigation.revision();
+            if(!navigation.routeClear(u->position,route.points,route.next)){
+                auto reroute=navigation.findPath(u->position,route.requestedGoal);
+                if(!reroute.empty()){
+                    route.points=std::move(reroute);
+                    route.next=0;
+                    route.engagementInterrupted=false;
+                    u->moveTo(route.points.front(),route.attackMove);
+                    ++it;
+                    continue;
+                }
+                // A completely sealed route is retired instead of pinning
+                // the unit forever against an unreachable waypoint.
+                u->navAgent.stop();u->state=UnitState::IDLE;
+                completed.push_back(u->id);
+                it=routes_.erase(it);
+                continue;
+            }
+        }
         if(route.attackMove && route.engagementInterrupted) {
             // Combat pulled the unit off its A-move/patrol path. Do not
             // advance to the next waypoint as though the old one was reached.
             // Replan to the current leg's final destination from here.
             route.engagementInterrupted=false;
-            auto resumed=navigation.findPath(u->position,route.points.back());
+            auto resumed=navigation.findPath(u->position,route.requestedGoal);
             if(!resumed.empty()) {
                 route.points=std::move(resumed);
                 route.next=0;
+                route.navigationGeneration=navigationGeneration_;
+                route.gridRevision=navigation.revision();
                 u->moveTo(route.points.front(),true);
                 ++it;continue;
             }
@@ -339,6 +371,9 @@ void RTSSkirmish::advanceRoutes() {
                 if(!path.empty()){
                     route.points=std::move(path);
                     route.next=0;
+                    route.requestedGoal=target;
+                    route.navigationGeneration=navigationGeneration_;
+                    route.gridRevision=navigation.revision();
                     route.returning=!route.returning;
                     u->moveTo(route.points.front(),true);
                     ++it;

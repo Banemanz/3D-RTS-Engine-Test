@@ -17,11 +17,16 @@ bool NavigationGrid::walkable(int x,int z) const {
     return inBounds(x,z) && blocked_[static_cast<size_t>(z*width_+x)] == 0;
 }
 void NavigationGrid::setBlocked(int x,int z,bool b) {
-    if (inBounds(x,z)) blocked_[static_cast<size_t>(z*width_+x)] = b ? 1 : 0;
+    if(!inBounds(x,z))return;
+    auto& cell=blocked_[static_cast<size_t>(z*width_+x)];
+    const std::uint8_t desired=b?1:0;
+    if(cell!=desired){cell=desired;++revision_;}
 }
 void NavigationGrid::setTraversalCost(int x,int z,float cost) {
-    if(inBounds(x,z) && std::isfinite(cost) && cost>=1.f && cost<=1000.f)
-        cost_[static_cast<size_t>(z*width_+x)]=cost;
+    if(inBounds(x,z) && std::isfinite(cost) && cost>=1.f && cost<=1000.f){
+        auto& previous=cost_[static_cast<size_t>(z*width_+x)];
+        if(previous!=cost){previous=cost;++revision_;}
+    }
 }
 float NavigationGrid::traversalCost(int x,int z)const {
     return inBounds(x,z)?cost_[static_cast<size_t>(z*width_+x)]
@@ -116,4 +121,24 @@ std::vector<Vec3> NavigationGrid::findPath(const Vec3& start,const Vec3& target)
     }
     std::reverse(reversed.begin(),reversed.end());
     return reversed;
+}
+
+bool NavigationGrid::routeClear(const Vec3& current,
+                                const std::vector<Vec3>& points,
+                                std::size_t next)const{
+    if(next>=points.size())return true;
+    Cell before=toCell(current);
+    for(std::size_t i=next;i<points.size();++i){
+        const Cell after=toCell(points[i]);
+        if(!walkable(after.x,after.z))return false;
+        const int dx=after.x-before.x,dz=after.z-before.z;
+        // A* paths are contiguous 8-way steps. If steering pushed a unit
+        // farther away, replan rather than allow a direct leap through walls.
+        if(std::abs(dx)>1 || std::abs(dz)>1)return false;
+        if(dx!=0 && dz!=0 &&
+           (!walkable(before.x+dx,before.z) ||
+            !walkable(before.x,before.z+dz)))return false;
+        before=after;
+    }
+    return true;
 }
