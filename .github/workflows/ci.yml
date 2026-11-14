@@ -24,6 +24,7 @@ jobs:
           path: |
             build/command_replay_fingerprint.txt
             build/ai_defense_fingerprint.txt
+            build/trigger_globals_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -146,6 +147,7 @@ jobs:
           path: |
             build/command_replay_fingerprint.txt
             build/ai_defense_fingerprint.txt
+            build/trigger_globals_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -166,3 +168,4 @@ jobs:
         run: |
           diff -u fingerprints/linux/command_replay_fingerprint.txt fingerprints/windows/command_replay_fingerprint.txt
           diff -u fingerprints/linux/ai_defense_fingerprint.txt fingerprints/windows/ai_defense_fingerprint.txt
+          diff -u fingerprints/linux/trigger_globals_fingerprint.txt fingerprints/windows/trigger_globals_fingerprint.txt
