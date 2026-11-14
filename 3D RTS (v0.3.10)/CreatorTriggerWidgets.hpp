@@ -173,6 +173,35 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
                     }
                 }
             }
+            if(kind=="IfThenElse" || kind=="Repeat"){
+                ImGui::Separator();
+                ImGui::TextDisabled("Nested actions are executed by the real script runtime.");
+                const auto drawSubtree=[&](const char* key,const char* title){
+                    const auto fieldIt=node.find(key);
+                    if(fieldIt==node.end() ||
+                       !fieldIt->second.template is<picojson::array>())return;
+                    const auto& items=fieldIt->second.template get<picojson::array>();
+                    if(ImGui::TreeNode(title)){
+                        for(std::size_t nested=0;nested<items.size();++nested){
+                            const auto& value=items[nested];
+                            if(!value.template is<picojson::object>())continue;
+                            const auto& o=value.template get<picojson::object>();
+                            const auto item=o.find("type");
+                            const std::string label=item!=o.end() &&
+                                item->second.template is<std::string>()?
+                                item->second.template get<std::string>():"UNKNOWN";
+                            ImGui::BulletText("%zu. %s",nested+1,label.c_str());
+                        }
+                        ImGui::TreePop();
+                    }
+                };
+                if(kind=="IfThenElse"){
+                    drawSubtree("conditions","Branch conditions");
+                    drawSubtree("then","Then actions");
+                    drawSubtree("else","Else actions");
+                }else drawSubtree("actions","Repeated actions");
+                ImGui::TextDisabled("Edit nested action lists in Advanced JSON (validated).");
+            }
             ImGui::TreePop();
         }
         ImGui::PopID();
@@ -181,7 +210,8 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
         ?std::vector<std::string>{"PlayerMineralsAtLeast","UnitCountAtLeast",
                                   "UnitTypeCountAtLeast","SubjectOwnerIs","VariableCompare"}
         :std::vector<std::string>{"ShowMessage","GrantMinerals","SpawnUnit",
-                                  "ApplyEffect","EndMatch","SetVariable","AddVariable"};
+                                  "ApplyEffect","EndMatch","SetVariable","AddVariable",
+                                  "IfThenElse","Repeat"};
     std::string eventKind;
     auto event=rule.find("event");
     if(event!=rule.end() && event->second.template is<picojson::object>()){

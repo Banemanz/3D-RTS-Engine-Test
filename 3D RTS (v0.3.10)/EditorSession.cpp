@@ -819,6 +819,33 @@ bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std:
                       .5f*(project.terrain.depth()-1)*project.terrain.spacing()));
         }else if(type=="SetVariable" || type=="AddVariable"){
             node["value"]=picojson::value(1.0);
+        }else if(type=="IfThenElse"){
+            node["conditions"]=picojson::value(picojson::array{
+                picojson::value(picojson::object{
+                    {"type",picojson::value("PlayerMineralsAtLeast")},
+                    {"amount",picojson::value(100.0)}
+                })
+            });
+            node["then"]=picojson::value(picojson::array{
+                picojson::value(picojson::object{
+                    {"type",picojson::value("ShowMessage")},
+                    {"text",picojson::value("CONDITION TRUE")}
+                })
+            });
+            node["else"]=picojson::value(picojson::array{
+                picojson::value(picojson::object{
+                    {"type",picojson::value("ShowMessage")},
+                    {"text",picojson::value("CONDITION FALSE")}
+                })
+            });
+        }else if(type=="Repeat"){
+            node["times"]=picojson::value(2.0);
+            node["actions"]=picojson::value(picojson::array{
+                picojson::value(picojson::object{
+                    {"type",picojson::value("ShowMessage")},
+                    {"text",picojson::value("REPEATED ACTION")}
+                })
+            });
         }else if(type=="EndMatch")node["result"]=picojson::value("Victory");
         else if(type=="ApplyEffect"){
             auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
