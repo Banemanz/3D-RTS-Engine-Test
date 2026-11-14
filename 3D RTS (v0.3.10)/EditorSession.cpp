@@ -663,10 +663,21 @@ bool EditorSession::mutateTrigger(
 }
 bool EditorSession::setTriggerEvent(RTSProject& project,const std::string& type) {
     if(type!="OnMapStart" && type!="After" && type!="Every" &&
-       type!="OnUnitDeath" && type!="OnRegionEnter" && type!="MineralsBelow")return false;
+       type!="OnUnitDeath" && type!="OnRegionEnter" && type!="MineralsBelow" &&
+       type!="OnVariableChanged")return false;
     picojson::object event{{"type",picojson::value(type)}};
     if(type=="After" || type=="Every")event["seconds"]=picojson::value(1.0);
     if(type=="MineralsBelow")event["amount"]=picojson::value(100.0);
+    if(type=="OnVariableChanged"){
+        const auto globals=project.extensions.find("trigger_variables");
+        if(globals==project.extensions.end() || !globals->second.is<picojson::object>() ||
+           globals->second.get<picojson::object>().empty()){
+            message="CREATE A TRIGGER VARIABLE FIRST";
+            return false;
+        }
+        event["variable"]=picojson::value(
+            globals->second.get<picojson::object>().begin()->first);
+    }
     if(type=="OnRegionEnter") {
         auto it=std::find_if(project.placements.begin(),project.placements.end(),
             [](const ProjectPlacement& p){return p.kind=="Region";});
