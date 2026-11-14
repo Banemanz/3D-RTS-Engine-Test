@@ -231,15 +231,18 @@ void inspector(App& app){
                 if(!entry->parent.empty() && navigateCatalog(app,"Parent",entry->parent)){
                     ImGui::End();return;
                 }
-                const auto linkedField=[&](const char* key,const char* label){
-                    auto it=resolved.find(key);
-                    return it!=resolved.end() && it->second.template is<std::string>() &&
-                           navigateCatalog(app,label,it->second.template get<std::string>());
-                };
-                if(entry->type=="Unit" && linkedField("actor","Actor")){
+                // Explicit branches keep MSVC/GCC template name lookup
+                // identical (nested captures of templated App can diverge).
+                const auto actorLink=resolved.find("actor");
+                if(entry->type=="Unit" && actorLink!=resolved.end() &&
+                   actorLink->second.template is<std::string>() &&
+                   navigateCatalog(app,"Actor",actorLink->second.template get<std::string>())){
                     ImGui::End();return;
                 }
-                if(entry->type=="Actor" && linkedField("model","Model")){
+                const auto modelLink=resolved.find("model");
+                if(entry->type=="Actor" && modelLink!=resolved.end() &&
+                   modelLink->second.template is<std::string>() &&
+                   navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
                     ImGui::End();return;
                 }
                 if(entry->type=="Unit"){
