@@ -259,18 +259,48 @@ void inspector(App& app){
                 refresh(app,ed.deleteSelectedPlacement(project));
                 ImGui::End();return;
             }
-            // Numeric widgets commit on Enter, yielding one undoable edit
-            // rather than a separate full-project snapshot for each mouse pixel.
-            const Vec3 pos=copy.position;
-            float location[]={pos.x,pos.y,pos.z};
-            if(ImGui::InputFloat3("Position (Enter)",location,"%.2f",
-                                   ImGuiInputTextFlags_EnterReturnsTrue))
+            // Edit drafts persist across frames. ImGui deliberately rejects
+            // EnterReturnsTrue for numeric InputScalar (Debug builds assert);
+            // commit only once on focus loss, keeping a single undo snapshot.
+            // Do not reset active drafts from the document every frame.
+            static std::string draftId;
+            static float draftPos[3]={0.f,0.f,0.f};
+            static float draftYaw=0.f;
+            if(draftId!=copy.id){
+                draftId=copy.id;
+                draftPos[0]=copy.position.x;
+                draftPos[1]=copy.position.y;
+                draftPos[2]=copy.position.z;
+                draftYaw=copy.rotation.y;
+            }
+            bool committedPosition=false;
+            ImGui::TextUnformatted("Position");
+            ImGui::PushID(copy.id.c_str());
+            ImGui::InputFloat("X",&draftPos[0],0.f,0.f,"%.2f");
+            committedPosition|=ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::InputFloat("Y",&draftPos[1],0.f,0.f,"%.2f");
+            committedPosition|=ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::InputFloat("Z",&draftPos[2],0.f,0.f,"%.2f");
+            committedPosition|=ImGui::IsItemDeactivatedAfterEdit();
+            if(committedPosition){
                 refresh(app,ed.moveSelectedPlacement(project,
-                    Vec3(location[0],location[1],location[2])));
-            float yaw=copy.rotation.y;
-            if(ImGui::InputFloat("Yaw (Enter)",&yaw,.0f,.0f,"%.1f",
-                                  ImGuiInputTextFlags_EnterReturnsTrue))
-                refresh(app,ed.rotateSelectedPlacement(project,yaw-copy.rotation.y));
+                    Vec3(draftPos[0],draftPos[1],draftPos[2])));
+                // Validation may reject the edit. Always mirror the actual
+                // document afterward rather than preserving invalid drafts.
+                if(const auto* updated=ed.selectedPlacement(project)){
+                    draftPos[0]=updated->position.x;
+                    draftPos[1]=updated->position.y;
+                    draftPos[2]=updated->position.z;
+                }
+            }
+            ImGui::InputFloat("Yaw",&draftYaw,0.f,0.f,"%.1f");
+            if(ImGui::IsItemDeactivatedAfterEdit()){
+                refresh(app,ed.rotateSelectedPlacement(project,
+                    draftYaw-copy.rotation.y));
+                if(const auto* updated=ed.selectedPlacement(project))
+                    draftYaw=updated->rotation.y;
+            }
+            ImGui::PopID();
             if(ImGui::Button("Scale -"))
                 refresh(app,ed.scaleSelectedPlacement(project,.9f));
             ImGui::SameLine();
