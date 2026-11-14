@@ -203,6 +203,22 @@
           "restorative_pulse"
         ]
       }
+    },
+    {
+      "id": "kinetic_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Damage",
+        "amount": 12
+      }
+    },
+    {
+      "id": "restorative_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Heal",
+        "amount": 8
+      }
     }
   ],
   "placements": [
