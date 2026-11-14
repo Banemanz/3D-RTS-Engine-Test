@@ -39,6 +39,16 @@ jobs:
           name: rts-group-selection-hud-screenshot
           path: rts-group-hud.png
           if-no-files-found: error
+      - name: Smoke test contextual RTS production HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/production_showcase.rtsproject.json --smoke-select-producer --smoke-frames 80 --screenshot rts-production.ppm
+      - name: Convert production HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-production.ppm rts-production.png
+      - name: Upload contextual production HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-production-hud-screenshot
+          path: rts-production.png
+          if-no-files-found: error
       - name: Smoke test Data Editor searchable catalog
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 80 --screenshot rts-data.ppm
       - name: Convert Data Editor screenshot

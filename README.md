@@ -165,3 +165,14 @@ access contextual B/T/C training commands; **Tab** pages through more than three
 types. Legacy commands still apply with no producer selected. The F7 Data
 Editor edits these lists as JSON. See docs/AUTHORING.md for validation and
 project format.
+
+### Try the working production creator showcase
+
+The bundled `projects/production_showcase.rtsproject.json` has a prebuilt
+Fabrication Bay with **six creator-defined trainable unit types**, two pages of
+B/T/C buttons, and a second producer with a different unit list. Launch
+`run-production-lab.bat` on Windows or `./run-production-lab.sh` on Linux.
+Select the Fabrication Bay (gold-tinted building), train units, set a rally
+point, cancel production with V, or open F7 to modify the catalog live.
+The CI OpenGL smoke test captures the *actual contextual production HUD* with
+`--smoke-select-producer`, not a generated mockup.

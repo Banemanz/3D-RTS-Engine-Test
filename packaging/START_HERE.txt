@@ -22,3 +22,9 @@ LINUX:
 This prototype requires an OpenGL 3.3-capable graphics driver.
 The map editor, assets, scripting and gameplay are all still evolving.
 Source revision / CI run: see build-info.json.
+
+CREATOR FEATURE DEMO: run-production-lab.bat (Windows) or
+./run-production-lab.sh (Linux) launches a new map with a prebuilt
+Fabrication Bay. Click it, use B/T/C to train, Tab to change page,
+right-click to rally, and V to cancel/refund a job. Open F7 to modify
+its trainable_units catalog array and F9 to test the changes.

@@ -704,6 +704,7 @@ int main(int argc, char** argv) {
     bool startSceneEditor=false;
     bool startDataEditor=false;
     bool selectArmyForSmoke=false;
+    bool selectProducerForSmoke=false;
     bool stressEditor=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
@@ -717,6 +718,7 @@ int main(int argc, char** argv) {
         else if(arg == "--scene-editor")startSceneEditor=true;
         else if(arg == "--data-editor")startDataEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
+        else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
     }
     int renderedFrames = 0;
@@ -744,6 +746,15 @@ int main(int argc, char** argv) {
         app.reloadFromProject();
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
+        if(selectProducerForSmoke && smokeFrames>0) {
+            for(auto& unit:app.game.units)if(unit.isAlive() && unit.ownerId==0 &&
+                unit.isStructure && app.game.trainableUnits(unit.id).size()>3) {
+                unit.isSelected=true;
+                app.camera.focalPoint=unit.position;
+                app.camera.targetFocalPoint=unit.position;
+                break;
+            }
+        }
         if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor ||
            (stressEditor && smokeFrames>0)) {
             app.editor.panel=startDataEditor ? EditorSession::Panel::Data :

@@ -351,3 +351,14 @@ outlets. Structure deaths release blocked footprints (one rebuild per new
 structure death), and exhausted mineral deposits release pathing cells.
 `RTSProductionSpawnTests` checks producer outlet legality, a destroyed
 structure, rally and mineral depletion. Still no general collision solver.
+
+## Creator demo map / screenshot smoke (November 13, 2026)
+
+Added `projects/production_showcase.rtsproject.json` with two prebuilt
+producers; a `fabrication_bay` derived from barracks with distinct actor tint
+and six trainable slots (two HUD pages), four derived unit definitions, and
+extra starting resources for hands-on playtesting. Windows/Linux launchers
+`run-production-lab.*` are installed in binary bundles. Both CLI map
+validation and an actual Mesa/Xvfb `--smoke-select-producer` screenshot are in
+GitHub Actions. This makes the data-driven production subsystem testable from
+the downloadable executable, not only unit tests.

@@ -94,6 +94,7 @@ if(BUILD_TESTING)
     add_test(NAME hud COMMAND RTSHUDTests)
     add_test(NAME sample_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/default.rtsproject.json")
     add_test(NAME showcase_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/terrain_showcase.rtsproject.json")
+    add_test(NAME production_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/production_showcase.rtsproject.json")
     add_executable(RTSModdedProjectTests tests/modded_project_tests.cpp)
     target_link_libraries(RTSModdedProjectTests PRIVATE RTSSimulation)
     add_test(NAME modded_project COMMAND RTSModdedProjectTests)
@@ -183,10 +184,12 @@ if(WIN32)
     install(FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.bat"
         "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-editor.bat"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-production-lab.bat"
         DESTINATION ".")
 elseif(UNIX)
     install(PROGRAMS
         "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-editor.sh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-production-lab.sh"
         DESTINATION ".")
 endif()

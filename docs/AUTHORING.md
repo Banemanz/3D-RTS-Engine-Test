@@ -310,3 +310,11 @@ migrates these typed links; arbitrary custom fields still round-trip.
 This is a real runtime training mechanic, not merely an editable string field.
 Tech prerequisites, upgrades, ability graphs and multiple queue lanes are
 not implemented yet.
+
+### Shipped production lab
+
+Use `run-production-lab.bat` or `run-production-lab.sh` from an installed
+build. `projects/production_showcase.rtsproject.json` demonstrates Unit
+inheritance, actor tint, two distinct training lists, six units (including
+catalog-derived Medic/Guard/Scout/Sniper), pages, rally points and per-building
+queues without editing source code. F7 edits those fields; F9 play-tests.
