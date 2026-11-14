@@ -320,6 +320,111 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
     *this=std::move(next);
     return true;
 }
+std::vector<std::string> RTSProject::catalogReferences(const std::string& id) const {
+    std::vector<std::string> refs;
+    const auto* original=catalog.find(id);
+    if(!original)return refs;
+    for(const auto& entry:catalog.entries())if(entry.id!=id) {
+        if(entry.parent==id)refs.push_back("inherited by "+entry.id);
+        const auto properties=catalog.resolvedFields(entry.id);
+        const char* typed=(original->type=="Actor" && entry.type=="Unit")?"actor":
+            (original->type=="Model" && entry.type=="Actor")?"model":nullptr;
+        if(typed) {
+            auto it=properties.find(typed);
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+"."+typed);
+        }
+        if(original->type=="Unit" && entry.type=="Unit") {
+            auto it=properties.find("trainable_units");
+            if(it!=properties.end() && it->second.is<picojson::array>())
+                for(const auto& entryId:it->second.get<picojson::array>())
+                    if(entryId.is<std::string>() && entryId.get<std::string>()==id)
+                        refs.push_back(entry.id+".trainable_units");
+        }
+    }
+    for(const auto& placement:placements) {
+        if(placement.catalogId==id)refs.push_back("placement "+placement.id);
+        const char* section=original->type=="Actor"?"unit":
+            (original->type=="Model"?"actor":nullptr);
+        const char* property=original->type=="Actor"?"actor":
+            (original->type=="Model"?"model":nullptr);
+        if(!section)continue;
+        auto category=placement.overrides.find(section);
+        if(category==placement.overrides.end() ||
+           !category->second.is<picojson::object>())continue;
+        const auto& fields=category->second.get<picojson::object>();
+        auto it=fields.find(property);
+        if(it!=fields.end() && it->second.is<std::string>() &&
+           it->second.get<std::string>()==id)
+            refs.push_back("placement "+placement.id+"."+section+"."+property);
+    }
+    if(original->type=="Unit") {
+        const std::pair<const char*,const char*> roles[]={
+            {"player_marine","marine"},{"player_worker","worker"},
+            {"enemy_soldier","zealot"},{"player_barracks","barracks"},
+            {"player_base","command_center"},{"enemy_base","hive"}};
+        for(const auto& role:roles) {
+            auto it=metadata.find(role.first);
+            if((it==metadata.end() && id==role.second) ||
+               (it!=metadata.end() && it->second.is<std::string>() &&
+                it->second.get<std::string>()==id))
+                refs.push_back(std::string("skirmish role ")+role.first);
+        }
+        auto trigger=extensions.find("triggers");
+        if(trigger!=extensions.end() && trigger->second.is<picojson::array>())
+            for(const auto& val:trigger->second.get<picojson::array>()) {
+                if(!val.is<picojson::object>())continue;
+                const auto& rule=val.get<picojson::object>();
+                for(const char* section:{"conditions","actions"}) {
+                    auto array=rule.find(section);
+                    if(array==rule.end() || !array->second.is<picojson::array>())continue;
+                    for(const auto& action:array->second.get<picojson::array>()) {
+                        if(!action.is<picojson::object>())continue;
+                        const auto& node=action.get<picojson::object>();
+                        auto op=node.find("type");
+                        auto unit=node.find("catalog");
+                        if(op==node.end() || !op->second.is<std::string>() ||
+                           unit==node.end() || !unit->second.is<std::string>() ||
+                           unit->second.get<std::string>()!=id)continue;
+                        const auto& kind=op->second.get<std::string>();
+                        if((std::string(section)=="actions" && kind=="SpawnUnit") ||
+                           (std::string(section)=="conditions" &&
+                            (kind=="UnitTypeCountAtLeast" || kind=="UnitCountAtLeast"))) {
+                            auto name=rule.find("id");
+                            const std::string ruleName=
+                                name!=rule.end() && name->second.is<std::string>()?
+                                name->second.get<std::string>():"<unnamed>";
+                            refs.push_back("trigger "+ruleName+"."+section);
+                        }
+                    }
+                }
+            }
+    }
+    return refs;
+}
+bool RTSProject::removeCatalogObject(const std::string& id,std::string* error) {
+    if(!catalog.find(id)) {
+        if(error)*error="Unknown catalog ID: "+id;
+        return false;
+    }
+    const auto refs=catalogReferences(id);
+    if(!refs.empty()) {
+        if(error)*error="Used by "+refs.front()+
+            (refs.size()>1?" (+"+std::to_string(refs.size()-1)+" more)":"");
+        return false;
+    }
+    try {
+        RTSProject next=*this;
+        if(!next.catalog.erase(id))return false;
+        next.validate();
+        *this=std::move(next);
+        return true;
+    } catch(const std::exception& e) {
+        if(error)*error=e.what();
+        return false;
+    }
+}
 void RTSProject::loadFile(const std::string& filename) {
     std::ifstream stream(filename,std::ios::binary);
     if(!stream)throw std::runtime_error("Could not open project: "+filename);

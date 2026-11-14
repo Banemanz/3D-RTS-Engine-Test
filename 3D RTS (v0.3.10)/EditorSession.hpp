@@ -83,6 +83,7 @@ public:
     bool duplicateCatalogObject(RTSProject& project);
     bool beginCatalogRename(const RTSProject& project);
     bool finishCatalogRename(RTSProject& project);
+    bool deleteCatalogObject(RTSProject& project);
 
     // First trigger authoring panel: raw JSON rule inspector/editor. A future
     // node-graph can use the same serialized ECA object model.

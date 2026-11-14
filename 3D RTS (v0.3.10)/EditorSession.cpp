@@ -372,6 +372,35 @@ bool EditorSession::finishCatalogRename(RTSProject& project) {
     modified=true;message="RENAMED "+oldId;
     return true;
 }
+bool EditorSession::deleteCatalogObject(RTSProject& project) {
+    if(textEditing)return false;
+    const auto* object=selected(project);
+    if(!object)return false;
+    const std::string id=object->id;
+    const RTSProject before=project;
+    std::string why;
+    if(!project.removeCatalogObject(id,&why)) {
+        message="CANNOT DELETE "+id+": "+why;
+        return false;
+    }
+    remember(before);
+    if(placementArchetype==id || placementDoodad==id) {
+        placementArchetype.clear();
+        placementDoodad.clear();
+        for(const auto& entry:project.catalog.entries()) {
+            if(placementArchetype.empty() && entry.type=="Unit")placementArchetype=entry.id;
+            if(placementDoodad.empty() && entry.type=="Actor")placementDoodad=entry.id;
+        }
+    }
+    if(!project.catalog.entries().empty())
+        selectedObject=std::min(selectedObject,project.catalog.entries().size()-1);
+    else selectedObject=0;
+    selectedField=0;
+    if(matchingCatalogCount(project)==0)catalogFilter.clear();
+    modified=true;message="DELETED "+id;
+    return true;
+}
+
 namespace {
 const picojson::array& triggerArray(const RTSProject& project) {
     static const picojson::array empty;

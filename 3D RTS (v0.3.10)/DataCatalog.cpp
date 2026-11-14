@@ -104,6 +104,16 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
     validate();
     return true;
 }
+bool DataCatalog::erase(const std::string& id) {
+    const auto it=idIndex_.find(id);
+    if(it==idIndex_.end())return false;
+    validate(); // reject any unauthorized direct ID mutation
+    const std::size_t at=it->second;
+    entries_.erase(entries_.begin()+static_cast<std::ptrdiff_t>(at));
+    idIndex_.erase(id);
+    for(std::size_t i=at;i<entries_.size();++i)idIndex_[entries_[i].id]=i;
+    return true;
+}
 bool DataCatalog::setField(const std::string& id,const std::string& key,
                             const picojson::value& value) {
     CatalogEntry* e=find(id);

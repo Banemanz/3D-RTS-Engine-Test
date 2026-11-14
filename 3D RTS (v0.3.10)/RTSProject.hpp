@@ -34,6 +34,10 @@ public:
     void validate() const;
     // Transactional: migrates recognized engine-facing catalog references.
     bool renameCatalogObject(const std::string& oldId,const std::string& newId);
+    // Recognized references to a catalog ID, useful for an inspector/ref finder.
+    std::vector<std::string> catalogReferences(const std::string& id) const;
+    // Delete only unreferenced objects; invalid attempts are nonmutating.
+    bool removeCatalogObject(const std::string& id,std::string* error=nullptr);
     void loadFile(const std::string& filename);
     void saveFile(const std::string& filename) const;
 };

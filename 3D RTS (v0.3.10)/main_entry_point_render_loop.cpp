@@ -649,6 +649,10 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
             }
             if(ctrl && key==GLFW_KEY_D){edit.duplicateCatalogObject(s->project);return;}
             if(ctrl && key==GLFW_KEY_R){edit.beginCatalogRename(s->project);return;}
+            if(key==GLFW_KEY_DELETE) {
+                if(edit.deleteCatalogObject(s->project))s->reloadFromProject();
+                return;
+            }
             if(ctrl && key==GLFW_KEY_N){edit.beginNewField();return;}
             if(ctrl && key==GLFW_KEY_BACKSPACE) {
                 if(edit.removeLocalOverride(s->project))s->reloadFromProject();
@@ -1373,7 +1377,7 @@ int main(int argc, char** argv) {
                 } else if(app.editor.panel==EditorSession::Panel::Data) {
                     const CatalogEntry* entry=app.editor.selected(app.project);
                     line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT / SHIFT+TAB PREV");
-                    line(62,2.0f,"CTRL+F SEARCH  CTRL+R RENAME ID  UP/DOWN PROPERTY  ENTER EDIT  CTRL+N FIELD  CTRL+D DERIVE");
+                    line(62,2.0f,"CTRL+F SEARCH  CTRL+R RENAME  DELETE REMOVE  ENTER EDIT  CTRL+N FIELD  CTRL+D DERIVE");
                     const std::size_t matches=app.editor.matchingCatalogCount(app.project);
                     line(87,2.0f,"OBJECTS "+std::to_string(matches)+" / "+
                          std::to_string(app.project.catalog.entries().size())+

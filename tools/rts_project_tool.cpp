@@ -17,6 +17,7 @@ static void usage() {
       << "RTSProjectTool --set path object-id field json-value\n"
       << "RTSProjectTool --derive path parent-id new-id\n"
       << "RTSProjectTool --rename path old-id new-id\n"
+      << "RTSProjectTool --remove path object-id\n"
       << "RTSProjectTool --place path kind catalog-id x z owner\n"
       << "RTSProjectTool --placements path\n";
 }
@@ -146,6 +147,11 @@ int main(int argc,char** argv) {
             if(!error.empty())value=picojson::value(input);
             if(!project.catalog.setField(argv[3],argv[4],value))
                 throw std::invalid_argument("Invalid catalog object or property key");
+        }else if(action=="--remove") {
+            if(argc!=4){usage();return 2;}
+            std::string why;
+            if(!project.removeCatalogObject(argv[3],&why))
+                throw std::invalid_argument("Cannot remove catalog object: "+why);
         }else if(action=="--rename") {
             if(argc!=5){usage();return 2;}
             if(!project.renameCatalogObject(argv[3],argv[4]))
