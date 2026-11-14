@@ -218,3 +218,10 @@ The F6 Trigger Editor now has a functional ECA form/tree: choose event types, co
 ## Mouse-editable catalog reference lists (November 14)
 
 F7 Data Editor now provides a visual list editor for **trainable units** on Unit catalogs and **Effect sequence children** on Effect catalogs. Select the corresponding field in the Inspector to open, add, remove, and reorder referenced objects without writing JSON. The `Open` action follows an object link into the same Data Editor. All mutations call `EditorSession::setCatalogField`, so the shared validators reject invalid, duplicate, cyclic, or out-of-range changes atomically and one undo covers each successful edit. No new GUI dependency was introduced.
+
+
+## Playtest trigger diagnostics and native UI navigation (November 14)
+
+The creator now has an optional **live trigger monitor** in View or F6: per-rule attempt/fired/blocked counts, timestamped ECA execution/failure records, search, and one-click navigation to the rule. The trace is bounded to 192 entries and never serialized. `projects/trigger_diagnostics_showcase.rtsproject.json` provides a ready-to-run example. See [Trigger Editor guide](docs/TRIGGER_EDITOR.md).
+
+The native game pause interface supports mouse **and** keyboard (arrows/W/S, Enter/Space, Esc) through reusable dependency-free `NativeFocus` logic; the editor's ImGui adapter remains temporary. Both features are compiled from identical source and tested on Windows/Linux.

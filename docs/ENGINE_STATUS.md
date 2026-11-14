@@ -232,3 +232,8 @@ The trigger authoring surface is no longer only raw JSON. The F6 inspector displ
 ## Visual catalog reference editing
 
 Production lists (`trainable_units`) and Effect `Sequence.children` lists no longer require manually typing arrays. A specialized in-editor reference widget supports Add/Open/Reorder/Remove, resolves only compatible catalog types, and commits through headless `EditorSession::setCatalogField`. Duplicate, missing, invalid, cyclic, or oversized references are rejected by the existing project/effect compilers without mutating the project. Native GUI migration remains a separate future stage.
+
+
+## New functional creator diagnostics (November 14)
+
+The editor can now inspect actual rule execution with a 192-entry ring, per-rule attempted/fired/blocked counters, failed condition reasons, and subject unit IDs. `CreatorTriggerMonitor.hpp` is UI-only; `TriggerEngine` owns the authoritative trace in shared C++ simulation. Traces reset on project reload and never become saved map state. It adds no third-party dependencies and keeps identical executable capabilities across Windows/Linux. The native pause menu also has reusable keyboard focus. Still missing: breakpoints, stepping, script variable inspection and complete native dockable editor tooling.

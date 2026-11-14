@@ -70,3 +70,10 @@ Authoring now recognizes `Effect` object catalogs with typed operations: Damage,
 ## First visual ECA authoring milestone
 
 The Trigger Editor now has a true event/condition/action inspector. Edit event kind and parameters, one-shot state, add or reorder typed conditions/actions, edit Unit/Region/Effect references with dropdowns, and use advanced JSON for more complex/extension data. `TriggerDefinition` supplies a single compiled rule validation authority for both authoring and simulation. Invalid edits are transactional and do not corrupt the open project. It is still rendered by the existing workbench adapter while the engine-native widget tree/docking system is developed. Implementation and next-stage constraints: `TRIGGER_EDITOR.md`.
+
+
+## Current G0 increment: keyboard focus plus observable scripting
+
+The native gameplay HUD/pause interface now has a reusable `FocusList` controller, keyboard arrows/W/S navigation, Enter/Space activation and Esc handling. Geometry, input selection and CTest remain independent of any GUI library; actual rendering still uses the engine's OpenGL resources.
+
+The headless ECA runtime publishes a bounded execution history. The current editor adapter exposes a searchable playtest monitor and direct links back to ECA rules. This is **not** full native editor docking, rich text input, a variable-watch debugger or breakpoint stepping. The migration remains: native widget hierarchy/text/scroll/input → editor browser/inspector/terrain/trigger parity → remove the temporary ImGui adapter.

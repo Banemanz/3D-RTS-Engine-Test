@@ -172,3 +172,8 @@ The F6 Trigger Editor now exposes the ECA tree as typed controls (event, repeat,
 ## Reference-array inspector improvement
 
 The creator workbench now adds a typed list editor for `Unit.trainable_units` and `Effect.children`, including a catalog-link opener and reordering controls. This builds on the current generalized catalog storage and uses `EditorSession` transactions for correctness. It is a useful Galaxy-inspired authoring workflow but does not imply the engine implements Galaxy Editor's full catalog variety or behavior graph UI.
+
+
+## Execution monitor and native focus status
+
+Implemented: a searchable trigger trace monitor and per-rule execution statistics, deterministic timestamped ECA records and a bundled original map demonstrating a successful and blocked trigger. New pure-C++ focus navigation controls the existing native pause menu. These are editor/engine fundamentals inspired by public RTS authoring UX, not copied Galaxy code/content. Future: breakpoint/step debugger, variable/function libraries, visual condition grouping and full native editor tree and widgets.

@@ -77,3 +77,8 @@ This does not substitute for a manual Windows OpenGL graphics-driver test.
 
 ## Native gameplay menu in shipped builds
 Open the game and press **Esc** outside an active order to reach the engine-native pause menu. It is present in the Windows and Linux executable without any additional UI dependencies; `--features` reports `RTS_FEATURE_NATIVE_PAUSE_MENU=1`. The creator/editor still includes the pinned ImGui backend until an in-house dockable replacement is complete. Documentation for migration: `docs/CREATOR_ARCHITECTURE.md`.
+
+
+## Trigger monitor in shipped builds
+
+Both Windows/Linux Release executables self-report `RTS_FEATURE_TRIGGER_TRACE_MONITOR=1` and existing native UI/visual ECA flags, checked by `tools/verify_build_bundle.py`. GitHub Actions' **Tests + screenshots** workflow now produces `rts-trigger-trace-monitor-screenshot` from a Linux Mesa/Xvfb run of the actual executable, not a mockup. The downloadable executable ZIPs remain in the **Download Windows EXE and Linux RTS Builds** workflow. The new sample map is copied by the existing `projects/` install rule. Native keyboard-focus controls use exactly the same code on Windows and Linux.

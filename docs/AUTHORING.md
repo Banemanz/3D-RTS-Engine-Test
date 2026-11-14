@@ -389,3 +389,10 @@ See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for action types, creation steps, Eff
 ## Editing linked Unit production and Effect sequences
 
 Select **F7 Data Editor**, choose a Unit or Effect catalog entry, then select its `trainable_units` or `children` field in the resolved-property inspector. The panel now shows each target reference with **Open**, **Up**, **Down**, and **Remove** controls. **Add reference** lists compatible Unit/Effect entries from the map's own catalog. A trainable Unit list is limited to twelve eligible units and may not contain duplicate IDs or structures. Sequence children may contain up to eight Effect IDs and must not form reference cycles or an empty Sequence. Editing a reference list creates a single validated undo action; Ctrl+Z restores the previous ordering/contents. The original JSON editor remains available for custom fields. This UI uses the existing temporary ImGui presentation adapter, while the project/schema code stays headless and portable.
+
+
+## Trigger debugger and diagnostic test map
+
+Use **View → Playtest trigger monitor** or the F6 inspector's **Open playtest monitor**. Play a map (F9), inspect captured rule events, search logs, clear trace entries, and click **Open rule** to edit a rule. The monitor logs first-failed conditions and the actions that executed. Script execution is unchanged when capture is disabled. A project reset/edit starts a fresh trace. `projects/trigger_diagnostics_showcase.rtsproject.json` is a new original sample: successful initialization, blocked condition and a region Effect.
+
+See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for operation, limitations, the screenshot smoke command and future debugger scope.

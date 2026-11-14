@@ -124,3 +124,10 @@ Headless tests now exercise all-new starter IDs and a previously serialized map'
 ## Trainable and Effect reference-list regressions
 
 `RTSReferenceAuthoringTests` checks that adding/reordering production and Effect sequence references uses the same validated, undoable project transaction. Tests cover duplicate training IDs, illegal structure training targets, effect graph cycles, empty sequences, undo/redo and JSON round trips. It is built and run through CTest in both Windows/Linux Debug and Release configurations. The visual reference list itself is rendered by `CreatorReferenceWidgets.hpp` in the regular Linux GUI smoke, with manual Windows GUI verification still required.
+
+
+## New regression tests and GPU captures
+
+`RTSTriggerTraceTests` runs on Windows/Linux CTest and checks chronological timestamps, fired/blocked event reasons, opt-in capture, default gameplay equivalence with tracing on/off, bounded 192-record history, and reset semantics. `RTSNativeMenuTests` now exercises focus movement/wrapping and focused action selection, in addition to size-dependent hit-testing. `RTSProjectTool --validate projects/trigger_diagnostics_showcase.rtsproject.json` runs in both suites.
+
+Linux Debug additionally executes the real `--smoke-trigger-monitor` OpenGL editor with the sample project, converts the screenshot to PNG and uploads `rts-trigger-trace-monitor-screenshot`. Windows/Linux Release packaging verifies `RTS_FEATURE_TRIGGER_TRACE_MONITOR=1` from the actual executable. Native Windows GPU testing remains a manual acceptance step, not implied by Linux software OpenGL verification.

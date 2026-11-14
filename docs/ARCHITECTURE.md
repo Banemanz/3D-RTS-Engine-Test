@@ -114,3 +114,10 @@ Catalog entries can be enumerated as a const vector; mutable edit operations
 go through `find` and `setField`. Direct changes to an entry's ID are
 unsupported and rejected by validation; a safe rename/reference migration
 API remains an outstanding creator-suite feature.
+
+
+## Headless trace channel and native focus component
+
+`TriggerEngine` now exposes opt-in, fixed-step ECA trace records and per-rule counters. Each record contains a rule/event ID, monotonic sequence number, simulation timestamp, subject ID, outcome and first failed condition or executed actions. Trace history is ring-bounded to 192 records; project reconfiguration resets diagnostics, and map JSON is unaffected. The creator UI consumes that data without reinterpreting the scripting system. Capture off does not disable scripts. The trace is observational, not a breakpoint debugger.
+
+`NativeFocus.hpp` holds a pure-C++ cyclic focus-list used for keyboard navigation in the custom OpenGL pause menu. Key and mouse actions share one handler. It has no platform or GPU dependencies; later native editor widgets can reuse this input primitive.
