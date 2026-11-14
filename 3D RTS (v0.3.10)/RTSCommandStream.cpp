@@ -1,4 +1,5 @@
 #include "RTSCommandStream.hpp"
+#include "RTSSkirmish.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -236,4 +237,46 @@ void RTSReplayTape::saveFile(const std::string& path)const{
     if(!out)throw std::runtime_error("Cannot write replay file: "+path);
     out<<data<<"\n";
     if(!out)throw std::runtime_error("Replay file write failed");
+}
+
+bool verifyRTSReplay(const RTSReplayTape& tape,std::string* diagnostic){
+    const auto fail=[&](const std::string& reason){
+        if(diagnostic)*diagnostic=reason;
+        return false;
+    };
+    try {
+        (void)tape.toJson(); // strict schema, command ordering and bounds
+        RTSSkirmish game;
+        game.loadProject(tape.project);
+        std::size_t commandIndex=0,checkpointIndex=0;
+        const auto verifyTick=[&](std::uint64_t tick)->bool{
+            if(checkpointIndex<tape.checkpoints.size() &&
+               tape.checkpoints[checkpointIndex].tick==tick){
+                const std::string actual=game.stateDigest();
+                const auto& check=tape.checkpoints[checkpointIndex++];
+                if(check.digest!=actual)
+                    return fail("Replay diverged at tick "+std::to_string(tick)+
+                                ": expected "+check.digest+" got "+actual);
+            }
+            return true;
+        };
+        if(!verifyTick(0))return false;
+        for(std::uint64_t tick=1;tick<=tape.totalTicks;++tick){
+            while(commandIndex<tape.commands.size() &&
+                  tape.commands[commandIndex].tick==tick){
+                if(!game.queueCommand(tape.commands[commandIndex++]))
+                    return fail("Rejected command at replay tick "+std::to_string(tick));
+            }
+            game.update(1.f/60.f);
+            if(game.simulationTick()!=tick)
+                return fail("Replay simulation ended early at tick "+std::to_string(tick));
+            if(!verifyTick(tick))return false;
+        }
+        if(commandIndex!=tape.commands.size() ||
+           checkpointIndex!=tape.checkpoints.size())
+            return fail("Replay has commands or checkpoints outside executed timeline");
+        if(diagnostic)*diagnostic="Replay verified for "+
+                                  std::to_string(tape.totalTicks)+" simulation ticks";
+        return true;
+    }catch(const std::exception& e){return fail(e.what());}
 }

@@ -57,3 +57,7 @@ struct RTSReplayTape {
     static RTSReplayTape loadFile(const std::string& path);
     void saveFile(const std::string& path)const;
 };
+
+// Reconstruct the saved map, reissue commands at recorded ticks and verify
+// every checkpoint. Never require a window, GPU, OS clock or network.
+bool verifyRTSReplay(const RTSReplayTape& tape,std::string* diagnostic=nullptr);

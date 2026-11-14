@@ -34,6 +34,10 @@ target_include_directories(RTSSimulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(RTSSimulation PUBLIC RTSNavigation RTSAuthoring)
 
 if(BUILD_TESTING)
+    add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
+    target_link_libraries(RTSCommandReplayTests PRIVATE RTSSimulation)
+    add_test(NAME command_replay COMMAND RTSCommandReplayTests)
+
     add_executable(RTSNativeMenuTests tests/native_menu_tests.cpp)
     target_include_directories(RTSNativeMenuTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_test(NAME native_menu COMMAND RTSNativeMenuTests)
@@ -137,7 +141,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests)
+    foreach(test_target IN ITEMS RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()

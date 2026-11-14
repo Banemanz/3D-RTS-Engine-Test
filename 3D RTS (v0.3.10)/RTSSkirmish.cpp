@@ -102,6 +102,7 @@ void RTSSkirmish::reset() {
     recordedCommands_.clear();
     checkpoints_.clear();
     tick_=0;
+    navigationGeneration_=0;
     replayValid_=true;
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
