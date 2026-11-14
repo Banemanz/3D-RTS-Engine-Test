@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 
 int main(){
@@ -43,6 +44,17 @@ int main(){
     assert(tape.checkpoints.back().tick==205);
     assert(tape.checkpoints.front().digest==starting);
     assert(tape.checkpoints.back().digest==game.stateDigest());
+    // Cross-compiler parity artifact: compare *every* state checkpoint from
+    // the same scripted inputs in the Windows and Linux CI jobs.
+    {
+        std::ofstream fingerprint("command_replay_fingerprint.txt",
+                                  std::ios::binary|std::ios::trunc);
+        assert(fingerprint.is_open());
+        for(const auto& check:tape.checkpoints)
+            fingerprint<<check.tick<<" "<<check.digest<<"\n";
+        fingerprint.flush();
+        assert(fingerprint.good());
+    }
     std::string reason;
     assert(verifyRTSReplay(tape,&reason));
     assert(reason.find("verified")!=std::string::npos);

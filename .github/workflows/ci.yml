@@ -17,6 +17,12 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Unit tests (no display required)
         run: ctest --test-dir build --output-on-failure
+      - name: Upload Linux replay state fingerprints
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-replay-fingerprint-linux
+          path: build/command_replay_fingerprint.txt
+          if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
       - name: Run headless OpenGL renderer and capture frame
@@ -121,3 +127,26 @@ jobs:
         run: cmake --build build --config Debug
       - name: Unit tests
         run: ctest --test-dir build -C Debug --output-on-failure
+      - name: Upload Windows replay state fingerprints
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-replay-fingerprint-windows
+          path: build/command_replay_fingerprint.txt
+          if-no-files-found: error
+
+  replay-parity:
+    runs-on: ubuntu-latest
+    needs: [linux, windows]
+    steps:
+      - name: Download Windows state fingerprints
+        uses: actions/download-artifact@v4
+        with:
+          name: rts-replay-fingerprint-windows
+          path: fingerprints/windows
+      - name: Download Linux state fingerprints
+        uses: actions/download-artifact@v4
+        with:
+          name: rts-replay-fingerprint-linux
+          path: fingerprints/linux
+      - name: Require identical replay state checkpoints across operating systems
+        run: diff -u fingerprints/linux/command_replay_fingerprint.txt fingerprints/windows/command_replay_fingerprint.txt
