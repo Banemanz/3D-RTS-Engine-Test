@@ -23,6 +23,7 @@ target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
     RTSSkirmish.cpp
+    RTSCommandStream.cpp
     RTSVision.cpp
     RTSFormation.cpp
     UnitSpatialIndex.cpp

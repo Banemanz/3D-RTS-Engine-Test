@@ -5,6 +5,7 @@
 #include "Unit.hpp"
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
+#include "RTSCommandStream.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -35,6 +36,16 @@ public:
     void syncTerrain(const TerrainMap& terrain);
     const RTSProject& project() const { return project_; }
     void update(float fixedDt);
+    // Apply immutable gameplay orders at a fixed simulation tick. The UI
+    // captures the selected entity IDs before the command is queued.
+    bool queueCommand(RTSCommand command);
+    bool queuePlayerCommand(RTSCommandKind kind,const Vec3& point=Vec3{},
+                            int targetId=-1,bool append=false,
+                            const std::string& catalog="");
+    std::uint64_t simulationTick()const{return tick_;}
+    std::string stateDigest()const;
+    RTSReplayTape replayTape()const;
+    bool replayRecordingValid()const{return replayValid_;}
     // Playtest diagnostics are ephemeral, never saved to authored map data.
     void setTriggerTracing(bool enabled){triggers_.enableTracing(enabled);}
     const TriggerEngine& triggerDiagnostics()const{return triggers_;}
@@ -99,6 +110,12 @@ private:
     double elapsedSeconds_=0.0;
     std::unordered_set<int> observedDead_;
     TriggerEngine triggers_;
+    RTSCommandStream commandStream_;
+    std::uint64_t tick_=0;
+    bool replayValid_=true;
+    std::vector<RTSCommand> recordedCommands_;
+    std::vector<RTSReplayCheckpoint> checkpoints_;
+    bool applyCommand(const RTSCommand& command);
     void rebuildNavigation();
     std::uint64_t navigationGeneration_=0;
     struct Route {

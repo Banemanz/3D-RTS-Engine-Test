@@ -1,4 +1,6 @@
 #include "RTSSkirmish.hpp"
+#include <iomanip>
+#include <cstdint>
 #include "InstanceOverrides.hpp"
 #include "RTSFormation.hpp"
 #include <algorithm>
@@ -56,6 +58,9 @@ void RTSSkirmish::rebuildNavigation(){
     ++navigationGeneration_;
 }
 void RTSSkirmish::syncTerrain(const TerrainMap& t){
+    // Editor terrain changes are not yet represented as a gameplay command.
+    // Do not offer a replay falsely claiming it can reproduce that change.
+    replayValid_=false;
     project_.terrain=t;
     routes_.clear();queued_.clear();jobs_.clear();
     for(auto& u:units){u.navAgent.stop();if(!u.isStructure)u.state=UnitState::IDLE;
@@ -94,6 +99,11 @@ const Unit* RTSSkirmish::find(int id)const {
     return nullptr;
 }
 void RTSSkirmish::reset() {
+    commandStream_.clear();
+    recordedCommands_.clear();
+    checkpoints_.clear();
+    tick_=0;
+    replayValid_=true;
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
@@ -150,6 +160,7 @@ void RTSSkirmish::reset() {
     triggers_.configure(project_);
     triggers_.start(*this);
     vision.update(project_.terrain,units);
+    checkpoints_.push_back({0,stateDigest()});
 }
 bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     if(!u.isAlive() || u.isStructure)return false;
@@ -663,6 +674,16 @@ void RTSSkirmish::updateEnemy(float dt) {
 void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
     dt=std::clamp(dt,0.0f,0.1f);
+    if(std::fabs(dt-1.f/60.f)>0.000001f)replayValid_=false;
+    ++tick_;
+    const auto pending=commandStream_.take(tick_);
+    for(const auto& command:pending){
+        (void)applyCommand(command);
+        if(replayValid_){
+            if(recordedCommands_.size()<32768)recordedCommands_.push_back(command);
+            else replayValid_=false; // bounded tape, never silently truncated
+        }
+    }
     spatial_.rebuild(units);
     // Two-phase combat: every actor gets its chance to fire before damage
     // is applied, making mutually lethal hits independent of update order.
@@ -724,6 +745,8 @@ void RTSSkirmish::update(float dt) {
     const Unit* human=find(friendlyBaseId_),*enemy=find(enemyBaseId_);
     if(!human || !human->isAlive())result=MatchResult::Defeat;
     else if(!enemy || !enemy->isAlive())result=MatchResult::Victory;
+    if(replayValid_ && tick_%60==0)
+        checkpoints_.push_back({tick_,stateDigest()});
 }
 int RTSSkirmish::activeWorkerCount()const {
     int n=0;for(const auto& u:units)if(u.isAlive() && u.isWorker && u.ownerId==0)++n;
@@ -801,4 +824,201 @@ int RTSSkirmish::ownerForTrigger(int id)const {
 const ProjectPlacement* RTSSkirmish::regionForTrigger(const std::string& id)const {
     for(const auto& p:project_.placements)if(p.id==id && p.kind=="Region")return &p;
     return nullptr;
+}
+
+bool RTSSkirmish::queueCommand(RTSCommand command){
+    if(result!=MatchResult::Playing || tick_>=RTSReplayTape::MaxTicks)return false;
+    return commandStream_.enqueue(std::move(command),tick_);
+}
+bool RTSSkirmish::queuePlayerCommand(RTSCommandKind kind,const Vec3& point,
+                                     int targetId,bool append,
+                                     const std::string& catalog){
+    RTSCommand command;
+    command.tick=tick_+1;
+    command.kind=kind;
+    command.point=point;
+    command.targetId=targetId;
+    command.append=append;
+    command.catalog=catalog;
+    for(const auto& u:units)
+        if(u.isSelected && u.isAlive() && u.ownerId==0)
+            command.units.push_back(u.id);
+    std::sort(command.units.begin(),command.units.end());
+    command.units.erase(std::unique(command.units.begin(),command.units.end()),
+                        command.units.end());
+    return queueCommand(std::move(command));
+}
+bool RTSSkirmish::applyCommand(const RTSCommand& command){
+    // Commands reference identities, never a live selection flag or pointer.
+    // Restore visual selection even if execution spawns a new vector element
+    // or validation throws, so replays cannot alter UI selection state.
+    std::vector<int> previouslySelected;
+    for(const auto& unit:units)if(unit.isSelected)previouslySelected.push_back(unit.id);
+    std::sort(previouslySelected.begin(),previouslySelected.end());
+    auto select=[&](const std::vector<int>& ids){
+        for(auto& unit:units)
+            unit.isSelected=unit.isAlive() && unit.ownerId==0 &&
+                std::binary_search(ids.begin(),ids.end(),unit.id);
+    };
+    select(command.units);
+    bool result=false;
+    try {
+        switch(command.kind){
+        case RTSCommandKind::Move:
+            result=orderMove(command.point,false,command.append);break;
+        case RTSCommandKind::AttackMove:
+            result=orderMove(command.point,true,command.append);break;
+        case RTSCommandKind::Patrol:
+            result=orderPatrol(command.point);break;
+        case RTSCommandKind::Gather:
+            result=orderGather(command.point);break;
+        case RTSCommandKind::Attack:
+            result=orderAttack(command.targetId);break;
+        case RTSCommandKind::Stop:
+            orderStop();result=true;break;
+        case RTSCommandKind::Hold:
+            orderHold();result=true;break;
+        case RTSCommandKind::Build:
+            result=buildBarracks(command.point);break;
+        case RTSCommandKind::Rally:
+            result=setRallyPoint(command.point);break;
+        case RTSCommandKind::TrainCatalog: {
+            const int producer=selectedProducerId();
+            result=producer>0 && queueAt(producer,command.catalog);
+            break;
+        }
+        case RTSCommandKind::TrainRanger:
+            result=queueRanger();break;
+        case RTSCommandKind::TrainWorker:
+            result=queueWorker();break;
+        case RTSCommandKind::CancelTraining:
+            result=cancelSelectedProduction();break;
+        case RTSCommandKind::Context:
+            result=(command.targetId>=0 && orderAttack(command.targetId)) ||
+                   setRallyPoint(command.point) ||
+                   orderGather(command.point) ||
+                   orderMove(command.point,false,command.append);
+            break;
+        }
+    }catch(...){
+        select(previouslySelected);
+        throw;
+    }
+    select(previouslySelected);
+    return result;
+}
+std::string RTSSkirmish::stateDigest()const{
+    // Canonical integer/quantized serialization; no object pointers, padding,
+    // unordered hash iteration or platform-dependent std::hash.
+    struct Hash {
+        std::uint64_t value=14695981039346656037ULL;
+        void number(std::uint64_t n){
+            for(int byte=0;byte<8;++byte){
+                value^=(n>>(byte*8))&0xffULL;
+                value*=1099511628211ULL;
+            }
+        }
+        void signedNumber(std::int64_t n){number(static_cast<std::uint64_t>(n));}
+        void boolean(bool b){number(b?1:0);}
+        void scalar(double v){
+            const double fixed=std::round(v*4096.0);
+            signedNumber(std::isfinite(fixed) && std::abs(fixed)<9.0e18
+                ?static_cast<std::int64_t>(fixed):0);
+        }
+        void text(const std::string& s){
+            number(s.size());for(unsigned char ch:s){value^=ch;value*=1099511628211ULL;}
+        }
+        void point(const Vec3& p){scalar(p.x);scalar(p.y);scalar(p.z);}
+    } hash;
+    hash.number(tick_);
+    hash.signedNumber(playerMinerals);
+    hash.signedNumber(supplyUsed);
+    hash.signedNumber(supplyCap);
+    hash.signedNumber(static_cast<int>(result));
+    hash.number(navigationGeneration_);
+    hash.number(navigation.revision());
+    for(int z=0;z<navigation.height();++z)for(int x=0;x<navigation.width();++x){
+        hash.boolean(navigation.walkable(x,z));
+        hash.scalar(navigation.traversalCost(x,z));
+    }
+    hash.number(minerals.size());
+    for(const auto& node:minerals){hash.point(node.position);hash.signedNumber(node.remaining);}
+    std::vector<const Unit*> ordered;
+    ordered.reserve(units.size());
+    for(const auto& unit:units)ordered.push_back(&unit);
+    std::sort(ordered.begin(),ordered.end(),
+        [](const Unit* a,const Unit* b){return a->id<b->id;});
+    hash.number(ordered.size());
+    for(const Unit* u:ordered){
+        hash.signedNumber(u->id);hash.signedNumber(u->ownerId);
+        hash.text(u->catalogId);hash.boolean(u->isStructure);
+        hash.boolean(u->isWorker);hash.scalar(u->currentHp);
+        hash.point(u->position);hash.scalar(u->facingYawRad);
+        hash.signedNumber(static_cast<int>(u->state));
+        hash.signedNumber(u->targetUnitId);
+        hash.boolean(u->attackMoveEnabled);hash.boolean(u->holdPositionEnabled);
+        hash.scalar(u->attackCooldownTimer);hash.scalar(u->attackFlashTimer);
+        hash.point(u->navAgent.targetPosition);hash.boolean(u->navAgent.hasDestination);
+        hash.point(u->currentVelocity);
+    }
+    hash.number(routes_.size());
+    for(const auto& item:routes_){
+        const auto& r=item.second;
+        hash.signedNumber(item.first);hash.number(r.next);hash.point(r.requestedGoal);
+        hash.boolean(r.attackMove);hash.boolean(r.patrol);hash.boolean(r.returning);
+        hash.boolean(r.engagementInterrupted);hash.point(r.patrolStart);hash.point(r.patrolGoal);
+        hash.number(r.points.size());for(const auto& p:r.points)hash.point(p);
+    }
+    std::vector<int> pendingIds;
+    for(const auto& p:queued_)pendingIds.push_back(p.first);
+    std::sort(pendingIds.begin(),pendingIds.end());
+    hash.number(pendingIds.size());
+    for(int id:pendingIds){
+        hash.signedNumber(id);const auto& q=queued_.at(id);
+        hash.number(q.size());
+        for(const auto& move:q){hash.point(move.target);hash.boolean(move.attackMove);}
+    }
+    hash.number(jobs_.size());
+    for(const auto& pair:jobs_){
+        hash.signedNumber(pair.first);const auto& job=pair.second;
+        hash.number(job.mineralIndex);hash.signedNumber(static_cast<int>(job.phase));
+        hash.scalar(job.timer);hash.signedNumber(job.cargo);
+    }
+    hash.number(production_.size());
+    for(const auto& p:production_){
+        hash.signedNumber(p.buildingId);hash.text(p.catalogId);
+        hash.scalar(p.remaining);hash.signedNumber(p.reservedSupply);
+        hash.signedNumber(p.paidMinerals);hash.scalar(p.totalTime);
+    }
+    std::vector<int> constructionIds;
+    for(const auto& p:construction_)constructionIds.push_back(p.first);
+    std::sort(constructionIds.begin(),constructionIds.end());
+    for(int id:constructionIds){hash.signedNumber(id);hash.scalar(construction_.at(id));}
+    std::vector<int> rallyIds;
+    for(const auto& p:rallyPoints_)rallyIds.push_back(p.first);
+    std::sort(rallyIds.begin(),rallyIds.end());
+    for(int id:rallyIds){hash.signedNumber(id);hash.point(rallyPoints_.at(id));}
+    hash.number(vision.width());hash.number(vision.depth());
+    for(std::uint8_t value:vision.textureBytes())hash.number(value);
+    for(const auto& rule:triggers_.rules()){
+        hash.text(rule.id);hash.boolean(rule.fired);
+        hash.number(rule.executions);hash.number(rule.blocked);
+    }
+    hash.text(triggerMessage);
+    std::ostringstream s;
+    s<<std::hex<<std::setfill('0')<<std::setw(16)<<hash.value;
+    return s.str();
+}
+RTSReplayTape RTSSkirmish::replayTape()const{
+    if(!replayValid_ || tick_>RTSReplayTape::MaxTicks)
+        throw std::runtime_error("Cannot record replay after untracked editor changes or non-60Hz simulation");
+    RTSReplayTape tape;
+    tape.project=project_;
+    tape.totalTicks=tick_;
+    tape.commands=recordedCommands_;
+    tape.checkpoints=checkpoints_;
+    if(tape.checkpoints.empty() || tape.checkpoints.back().tick!=tick_)
+        tape.checkpoints.push_back({tick_,stateDigest()});
+    (void)tape.toJson();
+    return tape;
 }

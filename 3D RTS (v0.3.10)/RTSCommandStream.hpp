@@ -47,7 +47,7 @@ picojson::value commandToJson(const RTSCommand& command);
 RTSCommand commandFromJson(const picojson::value& root);
 
 struct RTSReplayTape {
-    static constexpr std::uint64_t MaxTicks=216000; // 1 hour at 60Hz
+    static constexpr std::uint64_t MaxTicks=5184000; // 24 hours at 60Hz
     RTSProject project;
     std::uint64_t totalTicks=0;
     std::vector<RTSCommand> commands;
