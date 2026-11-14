@@ -37,7 +37,7 @@ int main(){
         assert(plan[i].units==reversedPlan[i].units &&
                plan[i].targetId==reversedPlan[i].targetId);
 
-    auto* home=std::find_if(game.units.begin(),game.units.end(),
+    auto home=std::find_if(game.units.begin(),game.units.end(),
         [&](const Unit& unit){return unit.id==fortress;});
     assert(home!=game.units.end());
     int forwardTarget=-1,backTarget=-1;
