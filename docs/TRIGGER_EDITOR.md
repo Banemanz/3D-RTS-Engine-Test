@@ -40,7 +40,7 @@ To use **OnRegionEnter**, first create a Region in the **SCENE** editor and save
 
 ### Map variables (shared trigger state)
 
-F6 now has **Map variables (shared trigger state)** above the ECA inspector. Add a variable by ID, edit its initial integer, or remove it using the mouse. IDs use ASCII letters/digits/underscores and must begin with a letter or underscore. Project JSON stores these in the optional `top-level `trigger_variables`` object (for example `{"wave":0,"score":0}`).
+F6 now has **Map variables (shared trigger state)** above the ECA inspector. Add a variable by ID, edit its initial integer, or remove it using the mouse. IDs use ASCII letters/digits/underscores and must begin with a letter or underscore. Project JSON stores these in the optional top-level `trigger_variables` object (for example `{"wave":0,"score":0}`).
 
 All triggers in one map share the values; restarting the match restores the authored initial values. Map variables are signed **integers limited to -100000000..100000000**, with a maximum of 64 per map. Addition saturates at the bounds. References are validated during authoring/loading: deleting a variable still used by a rule is rejected, preserving history and project data.
 
