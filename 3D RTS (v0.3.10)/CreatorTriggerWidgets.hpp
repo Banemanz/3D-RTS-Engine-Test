@@ -252,7 +252,7 @@ void draw(App& app){
         if(ImGui::BeginCombo("Event kind",active.c_str())){
             std::string next;
             for(const char* type:{"OnMapStart","After","Every","OnUnitDeath",
-                                  "OnRegionEnter","MineralsBelow"}){
+                                  "OnRegionEnter","MineralsBelow","OnVariableChanged"}){
                 if(ImGui::Selectable(type,active==type))next=type;
             }
             ImGui::EndCombo();
