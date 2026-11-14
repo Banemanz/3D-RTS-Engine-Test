@@ -75,7 +75,8 @@ int main(){
     const std::string path="command_replay_regression.rtsreplay.json";
     tape.saveFile(path);
     const auto fromDisk=RTSReplayTape::loadFile(path);
-    std::remove(path.c_str());
+    // Keep a tiny test fixture in the build directory for the separate
+    // RTSProjectTool --verify-replay CTest invocation.
     assert(verifyRTSReplay(fromDisk));
     assert(fromDisk.commands.size()==4);
 

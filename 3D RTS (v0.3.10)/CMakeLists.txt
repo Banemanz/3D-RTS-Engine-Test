@@ -37,6 +37,10 @@ if(BUILD_TESTING)
     add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
     target_link_libraries(RTSCommandReplayTests PRIVATE RTSSimulation)
     add_test(NAME command_replay COMMAND RTSCommandReplayTests)
+    set_tests_properties(command_replay PROPERTIES FIXTURES_SETUP replay_fixture)
+    add_test(NAME replay_cli COMMAND RTSProjectTool --verify-replay
+             "${CMAKE_CURRENT_BINARY_DIR}/command_replay_regression.rtsreplay.json")
+    set_tests_properties(replay_cli PROPERTIES FIXTURES_REQUIRED replay_fixture)
 
     add_executable(RTSNativeMenuTests tests/native_menu_tests.cpp)
     target_include_directories(RTSNativeMenuTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -199,7 +203,8 @@ if(RTS_BUILD_DEMO)
         RTS_FEATURE_CREATOR_GUI=1 RTS_FEATURE_FOG_OF_WAR=1
         RTS_FEATURE_GAMEPLAY_HUD=1 RTS_FEATURE_NATIVE_PAUSE_MENU=1
         RTS_FEATURE_VISUAL_ECA_EDITOR=1 RTS_FEATURE_TRIGGER_TRACE_MONITOR=1
-        RTS_FEATURE_DYNAMIC_NAV_REPLAN=1 RTS_FEATURE_STABLE_SIM_ORDER=1)
+        RTS_FEATURE_DYNAMIC_NAV_REPLAN=1 RTS_FEATURE_STABLE_SIM_ORDER=1
+        RTS_FEATURE_COMMAND_STREAM=1 RTS_FEATURE_REPLAY_VERIFY=1)
     if(WIN32)
         target_link_libraries(RTSCameraTerrain PRIVATE dbghelp)
     endif()
@@ -241,6 +246,7 @@ install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_ARCHITECTURE.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TRIGGER_EDITOR.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/RTS_ENGINE_AUDIT.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/REPLAY_COMMANDS.md"
     DESTINATION "docs")
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PICOJSON_LICENSE"
