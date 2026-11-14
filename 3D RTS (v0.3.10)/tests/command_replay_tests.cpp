@@ -35,11 +35,18 @@ int main(){
     assert(game.simulationTick()==205);
     const auto tape=game.replayTape();
     assert(tape.totalTicks==205);
-    assert(tape.commands.size()==4);
-    assert(tape.commands[0].tick==1);
-    assert(tape.commands[1].tick==36);
-    assert(tape.commands[2].tick==71);
-    assert(tape.commands[3].tick==141);
+    std::vector<RTSCommand> playerOrders;
+    std::vector<RTSCommand> enemyOrders;
+    for(const auto& command:tape.commands)
+        (command.source==0?playerOrders:enemyOrders).push_back(command);
+    assert(playerOrders.size()==4);
+    assert(!enemyOrders.empty()); // AI now shares the recorded input stream
+    assert(playerOrders[0].tick==1);
+    assert(playerOrders[1].tick==36);
+    assert(playerOrders[2].tick==71);
+    assert(playerOrders[3].tick==141);
+    for(const auto& ai:enemyOrders)
+        assert(ai.source==1 && ai.kind==RTSCommandKind::Attack);
     assert(tape.checkpoints.front().tick==0);
     assert(tape.checkpoints.back().tick==205);
     assert(tape.checkpoints.front().digest==starting);
@@ -153,7 +160,7 @@ int main(){
     // Keep a tiny test fixture in the build directory for the separate
     // RTSProjectTool --verify-replay CTest invocation.
     assert(verifyRTSReplay(fromDisk));
-    assert(fromDisk.commands.size()==4);
+    assert(fromDisk.commands.size()==tape.commands.size());
 
     auto changed=fromDisk;
     changed.commands[0].point.z=-35.f;
