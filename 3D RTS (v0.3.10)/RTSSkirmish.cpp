@@ -835,6 +835,19 @@ std::string RTSSkirmish::statusLine()const {
     return s.str();
 }
 
+std::vector<RTSSkirmish::BehaviorWatch> RTSSkirmish::behaviorWatch(
+    std::size_t limit)const{
+    std::vector<BehaviorWatch> list;
+    const std::size_t cap=std::min(limit,std::size_t(256));
+    list.reserve(std::min(cap,behaviors_.size()));
+    for(const auto& item:behaviors_){
+        if(list.size()>=cap)break;
+        if(item.second.expiresTick<=tick_)continue;
+        list.push_back({item.first.first,item.first.second,item.second.stacks,
+                        item.second.expiresTick-tick_});
+    }
+    return list;
+}
 int RTSSkirmish::unitBehaviorCount(int id)const{
     int count=0;
     auto it=behaviors_.lower_bound({id,std::string{}});

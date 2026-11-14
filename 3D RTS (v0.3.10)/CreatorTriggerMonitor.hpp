@@ -34,6 +34,31 @@ void draw(App& app){
                 app.game.activePeriodicEffectCount());
     ImGui::Text("Active status behaviors: %zu",
                 app.game.activeBehaviorCount());
+    if(app.game.activeBehaviorCount()>0 &&
+       ImGui::CollapsingHeader("Active status watch",ImGuiTreeNodeFlags_DefaultOpen)){
+        const auto status=app.game.behaviorWatch(48);
+        if(ImGui::BeginTable("##statusWatch",4,
+               ImGuiTableFlags_RowBg|ImGuiTableFlags_BordersInnerV|
+               ImGuiTableFlags_SizingStretchProp,ImVec2(0,125))){
+            ImGui::TableSetupColumn("Unit");
+            ImGui::TableSetupColumn("Behavior");
+            ImGui::TableSetupColumn("Stacks");
+            ImGui::TableSetupColumn("Remaining");
+            ImGui::TableHeadersRow();
+            for(const auto& item:status){
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();ImGui::Text("%d",item.unitId);
+                ImGui::TableNextColumn();ImGui::TextUnformatted(item.behaviorId.c_str());
+                ImGui::TableNextColumn();ImGui::Text("%d",item.stacks);
+                ImGui::TableNextColumn();ImGui::Text("%.1fs",
+                        double(item.remainingTicks)/60.);
+            }
+            ImGui::EndTable();
+        }
+        if(app.game.activeBehaviorCount()>status.size())
+            ImGui::TextDisabled("Showing first %zu of %zu status instances",
+                                 status.size(),app.game.activeBehaviorCount());
+    }
     static ImGuiTextFilter search;
     search.Draw("Search rules / event details");
     // The monitor reads the headless interpreter state. It never changes it:

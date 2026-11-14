@@ -100,7 +100,14 @@ public:
     int completedBarracksCount() const;
     int playerBaseId() const { return friendlyBaseId_; }
     std::size_t activePeriodicEffectCount()const{return periodicEffects_.size();}
+    struct BehaviorWatch {
+        int unitId=0;
+        std::string behaviorId;
+        int stacks=0;
+        std::uint64_t remainingTicks=0;
+    };
     std::size_t activeBehaviorCount()const{return behaviors_.size();}
+    std::vector<BehaviorWatch> behaviorWatch(std::size_t limit=64)const;
     int unitBehaviorStacks(int unitId,const std::string& behaviorId)const;
     int unitBehaviorCount(int unitId)const;
     std::uint64_t unitBehaviorTicksRemaining(int unitId,
