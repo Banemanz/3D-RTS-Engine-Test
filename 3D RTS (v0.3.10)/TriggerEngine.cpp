@@ -118,7 +118,8 @@ std::vector<TriggerEngine::Rule> TriggerEngine::parse(const RTSProject& project)
             if(!entry.is<picojson::object>())throw std::invalid_argument("Trigger action must be object");
             auto ob=entry.get<picojson::object>();
             auto type=str(ob,"type");
-            requireType(type,{"GrantMinerals","SpawnUnit","EndMatch","ShowMessage"});
+            requireType(type,{"GrantMinerals","SpawnUnit","EndMatch","ShowMessage",
+                              "ApplyEffect"});
             if(type=="SpawnUnit") {
                 auto catalog=str(ob,"catalog");
                 auto unit=project.catalog.find(catalog);
@@ -128,6 +129,15 @@ std::vector<TriggerEngine::Rule> TriggerEngine::parse(const RTSProject& project)
                 const double x=num(ob,"x"),z=num(ob,"z");
                 if(!project.terrain.insideWorld(float(x),float(z)))
                     throw std::invalid_argument("Trigger spawn is outside map bounds");
+            }
+            if(type=="ApplyEffect"){
+                if(rule.event!="OnRegionEnter")
+                    throw std::invalid_argument("ApplyEffect requires OnRegionEnter subject");
+                const auto effect=str(ob,"effect");
+                const auto* object=project.catalog.find(effect);
+                if(!object || object->type!="Effect")
+                    throw std::invalid_argument("ApplyEffect references missing Effect: "+effect);
+                (void)compileEffect(project.catalog,effect);
             }
             if(type=="GrantMinerals")
                 (void)intField(ob,"amount",0,-100000000,100000000);
@@ -184,6 +194,8 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId) {
             game.endMatchForTrigger(outcome=="Victory");
         }else if(type=="ShowMessage")
             game.showMessageForTrigger(str(action,"text"));
+        else if(type=="ApplyEffect")
+            game.applyEffectForTrigger(str(action,"effect"),subjectId);
     }
 }
 void TriggerEngine::start(RTSSkirmish& game) {

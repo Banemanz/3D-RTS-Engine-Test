@@ -363,3 +363,17 @@ During play, **Esc** opens the engine's custom pause menu. No additional UI depe
 ## Original starter content, legacy projects, and type filtering
 
 The built-in demo is a self-contained original sandbox, **not a StarCraft II map or asset pack**. New project templates use `ranger`, `rift_raider` and `rift_bastion` with authored display names and actor IDs. Prior project JSON files that embed their own older catalog names remain supported through legacy role lookups. The `player_ranger` metadata role is optional for new projects; `player_marine` is accepted only as a compatibility fallback. The Data Editor's type selector lists types from the active catalog, not a hardcoded list, so creators can add new object categories. Object browsing uses clipped visible rows for scalability. References to SC2 Galaxy Editor describe architecture and UX only, never imported content.
+
+
+## Typed Effect graphs (Damage, Heal, Sequence)
+
+The shared project catalog supports `type: "Effect"` entries with:
+- `{"kind":"Damage","amount":12}` — deals damage to a target unit, using normal armor mitigation.
+- `{"kind":"Heal","amount":8}` — heals a living target, clamped to maximum health.
+- `{"kind":"Sequence","children":["kinetic_pulse","restorative_pulse"]}` — executes a bounded list of other Effect IDs in order.
+
+All effect nodes are validated before map load/save: maximum 16 stack depth, at most 64 total visited nodes, 1–8 children per Sequence and a numeric amount in the range 0–100000. Cycles, missing or mismatched referenced Effect IDs, and invalid effect kinds fail validation. Renaming/deleting effects observes graph references, inherited values and typed trigger references.
+
+Trigger ECA gains `ApplyEffect` for **OnRegionEnter** events, operating on the entering subject unit and optionally filtered with `SubjectOwnerIs`. For example, an action can be `{"type":"ApplyEffect","effect":"kinetic_pulse"}`. This is the first concrete data-driven effect executor, not yet a general targeting/ability/weapons system.
+
+Run `RTSCameraTerrain --project projects/effects_showcase.rtsproject.json` (Windows: `RTSCameraTerrain.exe`) to load the included playable example, or `--editor --project projects/effects_showcase.rtsproject.json` to inspect the region, event rule and linked Effect objects through F7/F6/F8. Its region applies a short damage/heal sequence to an entering friendly unit once. Existing custom maps do not require adding these entries.

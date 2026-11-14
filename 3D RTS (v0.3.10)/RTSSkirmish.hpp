@@ -74,6 +74,9 @@ public:
 
     // Script actions expose only explicit, bounded game-state mutations.
     void addMineralsForTrigger(int amount);
+    // The trigger supplies a subject from an OnRegionEnter event. The
+    // authored Effect catalog graph remains bounded/validated headlessly.
+    bool applyEffectForTrigger(const std::string& effectId,int subjectId);
     bool spawnForTrigger(const std::string& catalogId,int owner,const Vec3& at);
     void endMatchForTrigger(bool victory);
     void showMessageForTrigger(const std::string& message);

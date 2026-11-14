@@ -300,6 +300,22 @@
           "worker"
         ]
       }
+    },
+    {
+      "id": "restorative_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Heal",
+        "amount": 8
+      }
+    },
+    {
+      "id": "kinetic_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Damage",
+        "amount": 12
+      }
     }
   ],
   "placements": [

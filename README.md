@@ -203,3 +203,8 @@ The F7 Data Editor also supports clickable Parent / Unit / Actor / Model / train
 ## Original starter roster and scalable Data Editor (2026-11-14)
 
 The included starter data now uses **Frontier Ranger** (`ranger`), **Rift Raider** (`rift_raider`) and **Rift Bastion** (`rift_bastion`) as original example units/structures. These are starter templates, not mandated engine types. Existing serialized projects with older IDs remain loadable; the engine resolves role fallbacks from the embedded catalog. The F7 Data Editor now has a dynamic type/family selector (including custom mod-defined families) and clipped object-list rendering to keep large catalogs navigable. See `docs/AUTHORING.md` and the `archive/new chat` handoff.
+
+
+## New authored effect demo
+
+The engine now exposes the beginning of an original **data-driven effect graph**: `Effect` catalog nodes with Damage, Heal and Sequence, validated for cycles and complexity, and a bounded `ApplyEffect` ECA action for the unit entering a map Region. Use `--project projects/effects_showcase.rtsproject.json` to play the included map, or open it in the editor with `--editor --project ...` and inspect the Effect catalog, region and trigger. There is no SC2 content dependency. This is not yet a complete ability/weapon/behavior graph.

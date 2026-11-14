@@ -89,6 +89,13 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Effect" && entry.type=="Effect"){
+            auto field=entry.fields.find("children");
+            if(field!=entry.fields.end() && field->second.is<picojson::array>())
+                for(auto& child:field->second.get<picojson::array>())
+                    if(child.is<std::string>() && child.get<std::string>()==oldId)
+                        child=picojson::value(newId);
+        }
         if(type=="Unit" && entry.type=="Unit") {
             auto field=entry.fields.find("trainable_units");
             if(field!=entry.fields.end() && field->second.is<picojson::array>())
@@ -142,6 +149,59 @@ picojson::object DataCatalog::resolvedFields(const std::string& id)const {
     resolveInto(id,result,stack);
     return result;
 }
+namespace {
+// Bound both graph traversal and terminal effect steps. Cycles and maliciously
+// large graphs are rejected before a project can be saved or executed.
+void collectEffect(const DataCatalog& catalog,const std::string& id,
+                   std::vector<std::string>& stack,
+                   std::vector<EffectOperation>& output,std::size_t& visits) {
+    const auto* entry=catalog.find(id);
+    if(!entry || entry->type!="Effect")
+        throw std::invalid_argument("Missing Effect reference: "+id);
+    if(stack.size()>=16 || ++visits>64)
+        throw std::invalid_argument("Effect graph exceeds depth/step limit: "+id);
+    if(std::find(stack.begin(),stack.end(),id)!=stack.end())
+        throw std::invalid_argument("Effect graph cycle: "+id);
+    stack.push_back(id);
+    const auto fields=catalog.resolvedFields(id);
+    const auto kind=fields.find("kind");
+    if(kind==fields.end() || !kind->second.is<std::string>())
+        throw std::invalid_argument("Effect requires kind: "+id);
+    const std::string op=kind->second.get<std::string>();
+    if(op=="Sequence"){
+        auto children=fields.find("children");
+        if(children==fields.end() || !children->second.is<picojson::array>())
+            throw std::invalid_argument("Sequence requires children: "+id);
+        const auto& refs=children->second.get<picojson::array>();
+        if(refs.empty() || refs.size()>8)
+            throw std::invalid_argument("Sequence requires 1..8 children: "+id);
+        for(const auto& ref:refs){
+            if(!ref.is<std::string>())
+                throw std::invalid_argument("Effect child must be an ID: "+id);
+            collectEffect(catalog,ref.get<std::string>(),stack,output,visits);
+        }
+    }else if(op=="Damage" || op=="Heal"){
+        const auto amount=fields.find("amount");
+        if(amount==fields.end() || !amount->second.is<double>() ||
+           !std::isfinite(amount->second.get<double>()) ||
+           amount->second.get<double>()<=0.0 ||
+           amount->second.get<double>()>100000.0)
+            throw std::invalid_argument("Effect amount must be 0..100000: "+id);
+        output.push_back({op=="Damage"?EffectOperationKind::Damage:
+                                        EffectOperationKind::Heal,
+                          float(amount->second.get<double>())});
+    }else throw std::invalid_argument("Unknown Effect kind: "+op);
+    stack.pop_back();
+}
+} // namespace
+std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
+                                           const std::string& id) {
+    std::vector<EffectOperation> output;
+    std::vector<std::string> stack;
+    std::size_t visits=0;
+    collectEffect(catalog,id,stack,output,visits);
+    return output;
+}
 void DataCatalog::validate()const {
     if(idIndex_.size()!=entries_.size())
         throw std::invalid_argument("Catalog ID index is inconsistent");
@@ -163,6 +223,7 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Effect")(void)compileEffect(*this,e.id);
         if(reference && fields.count(reference)) {
             std::string id=stringField(fields,reference,"");
             const auto* linked=find(id);
@@ -278,6 +339,14 @@ DataCatalog DataCatalog::defaults() {
         {"visual_scale",picojson::value(2.0)},{"build_time",picojson::value(9.0)},
         {"mineral_cost",picojson::value(150.0)},
         {"trainable_units",picojson::value(picojson::array{picojson::value("ranger")})}
+    }));
+    // Original, tool-visible effect templates; consumed by the trigger
+    // runtime and future unit abilities. Neither is tied to a specific IP.
+    c.add(make("Effect","restorative_pulse","",{
+        {"kind",picojson::value("Heal")},{"amount",picojson::value(8.0)}
+    }));
+    c.add(make("Effect","kinetic_pulse","",{
+        {"kind",picojson::value("Damage")},{"amount",picojson::value(12.0)}
     }));
     c.validate();
     return c;

@@ -60,3 +60,8 @@ The Data Editor now has parent/Unit/Actor/Model/trainable-object navigation, rec
 - Keep the work in PR #1, keep it a draft and update `arcrift_bastion/new chat/RTS_HANDOFF.md` whenever a major implementation stage changes.
 
 This project is **not** currently a clone of StarCraft II's editor. The priority is a robust and extensible engine/authoring architecture so those features can be implemented incrementally without separate platform forks.
+
+
+## First graph execution milestone (implemented after native UI)
+
+Authoring now recognizes `Effect` object catalogs with typed operations: Damage, Heal, Sequence. Graph validation enforces cycle detection and bounded complexity; editor links, incoming references, rename/delete migration and region trigger execution are integrated. This is a **headless C++ interpreter**, not copied from Galaxy or Recoil. Next design work: unit ability catalogs, target filters and effect contexts, scheduled behaviors, actor events and gameplay/perception-specific UI widgets.

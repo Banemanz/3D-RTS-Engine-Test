@@ -217,3 +217,8 @@ Editor F7 now follows stable IDs for inherited links and production objects, sho
 ## Creator workflow improvements and sample-content identity
 
 Default and shipped map catalogs have original Ranger/Rift Raider/Rift Bastion examples. Existing maps using the previous embedded catalog IDs are still loadable without replacing their data. The browser now filters by data type/family and virtualizes visible list rows; switching via catalog links selects the target family even when another filter is active. This improves the existing workbench without adding UI dependencies. The editor is still not a complete Galaxy Editor and the game mode remains a prototype.
+
+
+## Bounded effect runtime — first authored graph
+
+Effects are now named typed catalog entries: damage/heal leaves and ordered child sequences, bounded by traversal budget/depth, with cycle detection. `ApplyEffect` on `OnRegionEnter` applies the compiled graph to the actual entering unit in fixed-step simulation. Effect IDs are migrated and dependency-checked on rename/delete, including trigger references. Default starter catalogs include `kinetic_pulse` and `restorative_pulse`. The `effects_showcase` project contains an authored sequence and target region. The engine still lacks arbitrary weapon/ability activations, projectiles, area queries, behaviors and VFX actor dispatch.

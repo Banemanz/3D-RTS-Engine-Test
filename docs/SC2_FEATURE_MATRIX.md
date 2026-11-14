@@ -157,3 +157,8 @@ Current editor object navigation supports Parent, Unit/Actor/Model links, produc
 ## Independent example content and Data Editor module workflow
 
 The example unit definitions have distinct IDs and presentation names; SC2-specific unit names are not shipped wholesale as game content. This engine can load author-created catalogs and is not intended to emulate SC2's copyrighted art, code, story or audio. The F7 catalog list now exposes every present category through a dynamic type selector, works with the inherited/searchable object inspector, and only submits visible list rows to ImGui each frame. Architectural references: [Galaxy Data Editor](https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/058_Data_Editor_Introduction/), [Recoil](https://recoilengine.org/), and [0 A.D.](https://play0ad.com/).
+
+
+## Small typed effect graph and region trigger (November 14)
+
+`Effect` is a new mod-authored catalog family using `Damage`, `Heal` and bounded `Sequence` nodes. References participate in rename/delete dependency tracking. The trigger runtime can invoke an Effect on a region-entering subject through `ApplyEffect`. `projects/effects_showcase.rtsproject.json` demonstrates a sequence while retaining the same pure-C++ simulation on Windows and Linux. This is an early prerequisite for later abilities/behaviors/validators, not the SC2 effect system.

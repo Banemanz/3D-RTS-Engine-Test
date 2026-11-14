@@ -702,6 +702,20 @@ std::string RTSSkirmish::statusLine()const {
     return s.str();
 }
 
+bool RTSSkirmish::applyEffectForTrigger(const std::string& effectId,int subjectId){
+    Unit* target=find(subjectId);
+    if(!target || !target->isAlive())return false;
+    const auto operations=compileEffect(project_.catalog,effectId);
+    for(const auto& op:operations){
+        if(!target->isAlive())break;
+        if(op.kind==EffectOperationKind::Damage)
+            target->takeDamage(op.amount,"Effect "+effectId);
+        else
+            target->currentHp=std::clamp(target->currentHp+op.amount,0.f,
+                                         target->data.max_hp);
+    }
+    return true;
+}
 void RTSSkirmish::addMineralsForTrigger(int amount) {
     const std::int64_t updated=static_cast<std::int64_t>(playerMinerals)+amount;
     playerMinerals=static_cast<int>(std::clamp(updated,std::int64_t(0),std::int64_t(100000000)));

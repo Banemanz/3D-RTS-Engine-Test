@@ -42,6 +42,16 @@ private:
                      std::vector<std::string>& stack) const;
 };
 
+// Bounded simulation effects are stored in the same editable catalog graph.
+// Gameplay logic can compile them without knowing anything about OpenGL/UI.
+enum class EffectOperationKind { Damage, Heal };
+struct EffectOperation {
+    EffectOperationKind kind=EffectOperationKind::Damage;
+    float amount=0.f;
+};
+std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
+                                            const std::string& id);
+
 // Typed runtime adapters. Unknown catalog fields are not deleted or discarded.
 UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id);
 struct ActorVisual {

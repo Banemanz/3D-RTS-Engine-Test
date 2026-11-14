@@ -31,6 +31,7 @@ def main() -> int:
         "LICENSE",
         "projects/default.rtsproject.json",
         "projects/terrain_showcase.rtsproject.json",
+        "projects/effects_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
@@ -61,7 +62,7 @@ def main() -> int:
         if not header.startswith(expected_magic):
             raise RuntimeError(f"Not a native executable: {exe}: {header!r}")
 
-    for name in ("default", "terrain_showcase"):
+    for name in ("default", "terrain_showcase", "effects_showcase"):
         p = root / "projects" / f"{name}.rtsproject.json"
         project = json.loads(p.read_text(encoding="utf-8"))
         if project.get("schema_version") != 1 or not project.get("catalog"):

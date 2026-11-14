@@ -319,6 +319,29 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
             }
         }
     }
+    if(type=="Effect"){
+        // Trigger ApplyEffect nodes are typed graph references, not arbitrary
+        // user JSON. Keep them valid when an effect is renamed.
+        auto trigger=next.extensions.find("triggers");
+        if(trigger!=next.extensions.end() && trigger->second.is<picojson::array>())
+            for(auto& val:trigger->second.get<picojson::array>()){
+                if(!val.is<picojson::object>())continue;
+                auto& rule=val.get<picojson::object>();
+                auto actions=rule.find("actions");
+                if(actions==rule.end() || !actions->second.is<picojson::array>())continue;
+                for(auto& action:actions->second.get<picojson::array>()){
+                    if(!action.is<picojson::object>())continue;
+                    auto& node=action.get<picojson::object>();
+                    auto kind=node.find("type");
+                    auto effect=node.find("effect");
+                    if(kind!=node.end() && kind->second.is<std::string>() &&
+                       kind->second.get<std::string>()=="ApplyEffect" &&
+                       effect!=node.end() && effect->second.is<std::string>() &&
+                       effect->second.get<std::string>()==oldId)
+                        effect->second=picojson::value(newId);
+                }
+            }
+    }
     next.validate();
     *this=std::move(next);
     return true;
@@ -337,6 +360,13 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
             if(it!=properties.end() && it->second.is<std::string>() &&
                it->second.get<std::string>()==id)
                 refs.push_back(entry.id+"."+typed);
+        }
+        if(original->type=="Effect" && entry.type=="Effect"){
+            auto it=properties.find("children");
+            if(it!=properties.end() && it->second.is<picojson::array>())
+                for(const auto& child:it->second.get<picojson::array>())
+                    if(child.is<std::string>() && child.get<std::string>()==id)
+                        refs.push_back(entry.id+".children");
         }
         if(original->type=="Unit" && entry.type=="Unit") {
             auto it=properties.find("trainable_units");
@@ -402,6 +432,31 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                                 name->second.get<std::string>():"<unnamed>";
                             refs.push_back("trigger "+ruleName+"."+section);
                         }
+                    }
+                }
+            }
+    }
+    if(original->type=="Effect"){
+        auto trigger=extensions.find("triggers");
+        if(trigger!=extensions.end() && trigger->second.is<picojson::array>())
+            for(const auto& val:trigger->second.get<picojson::array>()){
+                if(!val.is<picojson::object>())continue;
+                const auto& rule=val.get<picojson::object>();
+                auto actions=rule.find("actions");
+                if(actions==rule.end() || !actions->second.is<picojson::array>())continue;
+                for(const auto& action:actions->second.get<picojson::array>()){
+                    if(!action.is<picojson::object>())continue;
+                    const auto& node=action.get<picojson::object>();
+                    auto kind=node.find("type"),target=node.find("effect");
+                    if(kind!=node.end() && kind->second.is<std::string>() &&
+                       kind->second.get<std::string>()=="ApplyEffect" &&
+                       target!=node.end() && target->second.is<std::string>() &&
+                       target->second.get<std::string>()==id){
+                        auto name=rule.find("id");
+                        refs.push_back("trigger "+
+                            (name!=rule.end() && name->second.is<std::string>()?
+                             name->second.get<std::string>():"<unnamed>")+
+                            ".actions.ApplyEffect");
                     }
                 }
             }
