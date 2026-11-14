@@ -32,6 +32,7 @@ def main() -> int:
         "projects/default.rtsproject.json",
         "projects/terrain_showcase.rtsproject.json",
         "projects/effects_showcase.rtsproject.json",
+        "projects/ai_defense_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
@@ -102,6 +103,7 @@ def main() -> int:
         "RTS_FEATURE_STABLE_SIM_ORDER",
         "RTS_FEATURE_COMMAND_STREAM",
         "RTS_FEATURE_REPLAY_VERIFY",
+        "RTS_FEATURE_AI_COMMAND_PLANNER",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

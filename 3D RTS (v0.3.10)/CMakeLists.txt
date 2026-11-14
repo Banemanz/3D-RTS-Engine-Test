@@ -132,6 +132,7 @@ if(BUILD_TESTING)
     add_test(NAME production_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/production_showcase.rtsproject.json")
     add_test(NAME effects_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/effects_showcase.rtsproject.json")
     add_test(NAME diagnostics_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/trigger_diagnostics_showcase.rtsproject.json")
+    add_test(NAME ai_defense_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_defense_showcase.rtsproject.json")
     add_executable(RTSModdedProjectTests tests/modded_project_tests.cpp)
     target_link_libraries(RTSModdedProjectTests PRIVATE RTSSimulation)
     add_test(NAME modded_project COMMAND RTSModdedProjectTests)
@@ -208,7 +209,8 @@ if(RTS_BUILD_DEMO)
         RTS_FEATURE_GAMEPLAY_HUD=1 RTS_FEATURE_NATIVE_PAUSE_MENU=1
         RTS_FEATURE_VISUAL_ECA_EDITOR=1 RTS_FEATURE_TRIGGER_TRACE_MONITOR=1
         RTS_FEATURE_DYNAMIC_NAV_REPLAN=1 RTS_FEATURE_STABLE_SIM_ORDER=1
-        RTS_FEATURE_COMMAND_STREAM=1 RTS_FEATURE_REPLAY_VERIFY=1)
+        RTS_FEATURE_COMMAND_STREAM=1 RTS_FEATURE_REPLAY_VERIFY=1
+        RTS_FEATURE_AI_COMMAND_PLANNER=1)
     if(WIN32)
         target_link_libraries(RTSCameraTerrain PRIVATE dbghelp)
     endif()
