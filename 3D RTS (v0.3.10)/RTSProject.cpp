@@ -206,6 +206,18 @@ void RTSProject::validate() const {
     if(schemaVersion!=1 || name.empty() || name.size()>256 || !terrain.valid())
         throw std::invalid_argument("Invalid project name/version/terrain");
     catalog.validate();
+    // Author-facing AI parameters are validated before saving/replaying;
+    // malformed metadata must not silently change AI policy.
+    const auto aiEnabled=metadata.find("enemy_ai_enabled");
+    if(aiEnabled!=metadata.end() && !aiEnabled->second.is<bool>())
+        throw std::invalid_argument("enemy_ai_enabled must be boolean");
+    const auto guardRadius=metadata.find("enemy_ai_guard_radius");
+    if(guardRadius!=metadata.end() &&
+       (!guardRadius->second.is<double>() ||
+        !std::isfinite(guardRadius->second.get<double>()) ||
+        guardRadius->second.get<double>()<0. ||
+        guardRadius->second.get<double>()>80.))
+        throw std::invalid_argument("enemy_ai_guard_radius must be between 0 and 80");
     // Any game-facing data object must be valid before we allow project saves.
     for(const auto& e:catalog.entries()) {
         if(e.type=="Unit") {

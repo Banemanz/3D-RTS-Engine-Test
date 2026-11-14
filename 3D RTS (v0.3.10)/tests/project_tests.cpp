@@ -6,6 +6,26 @@
 #include <stdexcept>
 
 int main() {
+    RTSProject ai=RTSProject::defaults();
+    ai.metadata["enemy_ai_enabled"]=picojson::value(false);
+    ai.metadata["enemy_ai_guard_radius"]=picojson::value(26.0);
+    ai.validate();
+    assert(RTSProject::fromJson(ai.toJson()).metadata.at("enemy_ai_guard_radius")
+        .get<double>()==26.0);
+    ai.metadata["enemy_ai_guard_radius"]=picojson::value(-1.0);
+    bool rejectedAI=false;
+    try{ai.validate();}catch(const std::invalid_argument&){rejectedAI=true;}
+    assert(rejectedAI);
+    ai.metadata["enemy_ai_guard_radius"]=picojson::value(81.0);
+    rejectedAI=false;
+    try{ai.validate();}catch(const std::invalid_argument&){rejectedAI=true;}
+    assert(rejectedAI);
+    ai.metadata["enemy_ai_guard_radius"]=picojson::value(12.0);
+    ai.metadata["enemy_ai_enabled"]=picojson::value("wrong");
+    rejectedAI=false;
+    try{ai.validate();}catch(const std::invalid_argument&){rejectedAI=true;}
+    assert(rejectedAI);
+
     RTSProject p=RTSProject::defaults();
     assert(p.placements.size()==13);
     assert(p.catalog.find("ranger") && p.catalog.find("ranger_actor"));
