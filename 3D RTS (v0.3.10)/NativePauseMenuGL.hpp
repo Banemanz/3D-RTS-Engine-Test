@@ -25,15 +25,21 @@ class PauseMenuGL {
     }
 public:
     PauseMenuGL(GLuint shader,GLuint vao,GLuint vbo):shader_(shader),vao_(vao),vbo_(vbo){}
-    void draw(const PauseMenu& m,double mouseX,double mouseY)const{
+    void draw(const PauseMenu& m,double mouseX,double mouseY,
+              std::size_t focusIndex=0)const{
+        const int hoveredIndex=m.indexAt(mouseX,mouseY);
+        std::size_t buttonIndex=0;
         box(m,{0.f,0.f,float(m.width()),float(m.height())},.012f,.021f,.031f,.82f);
         const auto p=m.bounds;
         box(m,p,.036f,.059f,.083f,.99f);
         box(m,{p.x,p.y,p.w,4.f},.22f,.71f,.78f,1.f);
         text(m,p.x+24.f,p.y+23.f,3.f,"MATCH PAUSED",.92f,.96f,.97f);
-        text(m,p.x+24.f,p.y+58.f,1.7f,"ESC TO RESUME",.63f,.79f,.86f);
+        text(m,p.x+24.f,p.y+58.f,1.7f,"UP/DOWN SELECT | ENTER CONFIRM | ESC RESUME",.63f,.79f,.86f);
         for(const auto& b:m.buttons()){
-            const bool hover=b.bounds.contains(mouseX,mouseY);
+            const bool hover=hoveredIndex>=0
+                ?hoveredIndex==static_cast<int>(buttonIndex)
+                :buttonIndex==focusIndex;
+            ++buttonIndex;
             box(m,b.bounds,hover?.16f:.085f,hover?.31f:.16f,hover?.37f:.21f,.98f);
             box(m,{b.bounds.x,b.bounds.y,4.f,b.bounds.h},hover?.96f:.20f,
                 hover?.73f:.51f,hover?.34f:.58f,1.f);

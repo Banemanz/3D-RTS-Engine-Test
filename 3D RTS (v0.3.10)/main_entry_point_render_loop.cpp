@@ -47,6 +47,7 @@ struct AppState {
     std::string projectPath="projects/working.rtsproject.json";
     bool mouseStroke=false;
     bool pauseMenu=false;
+    NativeUI::FocusList pauseFocus;
     bool triggerTraceVisible=false;
     bool triggerTracingEnabled=true;
     bool hoveredTerrain=false;
@@ -208,6 +209,20 @@ struct AppState {
 };
 
 
+void performPauseAction(GLFWwindow* window,AppState& state,NativeUI::Action action){
+    switch(action){
+    case NativeUI::Action::Resume:state.pauseMenu=false;break;
+    case NativeUI::Action::Restart:
+        state.game.reset();state.controlGroups={};
+        state.mode=AppState::Mode::Normal;state.hasMoveMarker=false;
+        state.pauseMenu=false;break;
+    case NativeUI::Action::Editor:
+        state.editor.panel=EditorSession::Panel::Terrain;
+        state.reloadFromProject();state.pauseMenu=false;break;
+    case NativeUI::Action::Exit:glfwSetWindowShouldClose(window,true);break;
+    default:break;
+    }
+}
 void reportInputFailure(GLFWwindow* window,const char* source,const char* message) noexcept {
     try {
         auto* state=static_cast<AppState*>(glfwGetWindowUserPointer(window));
@@ -348,18 +363,10 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             double mx=0.,my=0.;
             glfwGetCursorPos(window,&mx,&my);
             NativeUI::PauseMenu menu(state->windowWidth,state->windowHeight);
-            switch(menu.hit(mx,my)){
-            case NativeUI::Action::Resume:state->pauseMenu=false;break;
-            case NativeUI::Action::Restart:
-                state->game.reset();state->controlGroups={};
-                state->mode=AppState::Mode::Normal;state->hasMoveMarker=false;
-                state->pauseMenu=false;break;
-            case NativeUI::Action::Editor:
-                state->editor.panel=EditorSession::Panel::Terrain;
-                state->reloadFromProject();state->pauseMenu=false;break;
-            case NativeUI::Action::Exit:glfwSetWindowShouldClose(window,true);break;
-            default:break;
-            }
+            const int buttonIndex=menu.indexAt(mx,my);
+            if(buttonIndex>=0)state->pauseFocus.select(
+                static_cast<std::size_t>(buttonIndex),menu.buttons().size());
+            performPauseAction(window,*state,menu.hit(mx,my));
         }
         return;
     }
@@ -520,7 +527,17 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     if(!s)return;
     const bool ctrl=(mods & GLFW_MOD_CONTROL)!=0;
     if(s->pauseMenu && s->editor.panel==EditorSession::Panel::Play){
-        if(key==GLFW_KEY_ESCAPE && action==GLFW_PRESS)s->pauseMenu=false;
+        if(key==GLFW_KEY_ESCAPE && action==GLFW_PRESS)
+            performPauseAction(window,*s,NativeUI::Action::Resume);
+        else if(key==GLFW_KEY_UP || key==GLFW_KEY_W)
+            s->pauseFocus.move(-1,4);
+        else if(key==GLFW_KEY_DOWN || key==GLFW_KEY_S)
+            s->pauseFocus.move(1,4);
+        else if((key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER ||
+                 key==GLFW_KEY_SPACE) && action==GLFW_PRESS){
+            NativeUI::PauseMenu menu(s->windowWidth,s->windowHeight);
+            performPauseAction(window,*s,menu.actionAt(s->pauseFocus.index()));
+        }
         return;
     }
     if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard &&
@@ -606,6 +623,7 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
             s->inform("COMMAND CANCELLED");
         }else {
             s->pauseMenu=true;
+            s->pauseFocus.reset();
             s->selectionManager.isDragging=false;
         }
         return;
@@ -1442,7 +1460,8 @@ int main(int argc, char** argv) {
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
                 NativeUI::PauseMenuGL native(hudBoxShader,hudVAO,hudVBO);
-                native.draw(NativeUI::PauseMenu(app.windowWidth,app.windowHeight),mx,my);
+                native.draw(NativeUI::PauseMenu(app.windowWidth,app.windowHeight),
+                            mx,my,app.pauseFocus.index());
             }
             glEnable(GL_DEPTH_TEST);
 
