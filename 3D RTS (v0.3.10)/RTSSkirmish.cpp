@@ -1081,6 +1081,17 @@ std::string RTSSkirmish::stateDigest()const{
         hash.text(rule.id);hash.boolean(rule.fired);
         hash.number(rule.executions);hash.number(rule.blocked);
     }
+    // Preserve v1/v2 replay hashes for maps with no authored globals.
+    // Nonempty variable state is part of the authoritative simulation and
+    // must be included in cross-platform fingerprints and replay verification.
+    if(!triggers_.variables().empty()) {
+        hash.text("trigger_variables");
+        hash.number(triggers_.variables().size());
+        for(const auto& entry:triggers_.variables()) {
+            hash.text(entry.first);
+            hash.signedNumber(entry.second);
+        }
+    }
     hash.text(triggerMessage);
     std::ostringstream s;
     s<<std::hex<<std::setfill('0')<<std::setw(16)<<hash.value;
