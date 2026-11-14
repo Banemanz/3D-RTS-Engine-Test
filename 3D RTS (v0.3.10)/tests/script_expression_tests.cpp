@@ -3,6 +3,9 @@
 #include "EditorSession.hpp"
 #include "TriggerDefinition.hpp"
 #include <cassert>
+#if defined(NDEBUG)
+#error "This CTest target requires live assertions in every build configuration"
+#endif
 #include <fstream>
 #include <iostream>
 #include <stdexcept>

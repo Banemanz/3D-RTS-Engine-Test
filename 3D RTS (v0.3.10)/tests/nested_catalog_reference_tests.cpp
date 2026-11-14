@@ -1,6 +1,9 @@
 #include "RTSProject.hpp"
 #include "TriggerDefinition.hpp"
 #include <cassert>
+#if defined(NDEBUG)
+#error "This CTest target requires live assertions in every build configuration"
+#endif
 #include <iostream>
 #include <string>
 
@@ -94,22 +97,10 @@ int main(){
     assert(!p.removeCatalogObject("scripted_effect",&error));
     assert(error.find("trigger")!=std::string::npos);
 
-    try{
-        std::cerr<<"STAGE: rename nested Unit refs\n";
-        assert(p.renameCatalogObject("scripted_ranger","archer_variant"));
-        std::cerr<<"STAGE: rename nested Effect refs\n";
-        assert(p.renameCatalogObject("scripted_effect","kinetic_variant"));
-        std::cerr<<"STAGE: nested ref renames complete\n";
-    }catch(const std::exception& e){
-        std::cerr<<"nested rename failed: "<<e.what()<<"\n";
-        throw;
-    }
-    std::cerr<<"STAGE: parse renamed project\n";
-    std::cerr<<"catalog old="<<(p.catalog.find("scripted_ranger")!=nullptr)
-             <<" new="<<(p.catalog.find("archer_variant")!=nullptr)
-             <<" / effect old="<<(p.catalog.find("scripted_effect")!=nullptr)
-             <<" new="<<(p.catalog.find("kinetic_variant")!=nullptr)<<"\n";
-    std::cerr<<"rules="<<p.extensions.at("triggers").serialize()<<"\n";
+    assert(p.renameCatalogObject("scripted_ranger","archer_variant"));
+    assert(p.renameCatalogObject("scripted_effect","kinetic_variant"));
+    assert(!p.catalog.find("scripted_ranger") && p.catalog.find("archer_variant"));
+    assert(!p.catalog.find("scripted_effect") && p.catalog.find("kinetic_variant"));
     const auto rules=parseTriggerRules(p);
     assert(rules.size()==2);
     const auto& branch=rules[0].actions[0];
@@ -129,11 +120,8 @@ int main(){
     assert(effect.at("effect").get<std::string>()=="kinetic_variant");
     assert(!p.catalogReferences("kinetic_variant").empty());
     assert(!p.catalogReferences("archer_variant").empty());
-    std::cerr<<"STAGE: JSON roundtrip\n";
     const auto roundtrip=RTSProject::fromJson(p.toJson());
-    std::cerr<<"STAGE: parse roundtrip\n";
     assert(parseTriggerRules(roundtrip).size()==2);
-    std::cerr<<"STAGE: removing script references\n";
     p.extensions.erase("triggers");
     assert(p.removeCatalogObject("archer_variant",&error));
     assert(p.removeCatalogObject("kinetic_variant",&error));
