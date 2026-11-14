@@ -44,7 +44,9 @@ std::vector<TriggerEngine::Rule> TriggerEngine::parse(const RTSProject& project)
 void TriggerEngine::validate(const RTSProject& p){ TriggerEngine e;(void)e.parse(p); }
 void TriggerEngine::configure(const RTSProject& p){
     auto next=parse(p);
+    auto initialVariables=parseTriggerVariables(p);
     rules_=std::move(next);
+    variables_=std::move(initialVariables);
     trace_.clear();
     nextSequence_=1;
     lastSimulationSeconds_=0.;
@@ -66,6 +68,17 @@ bool TriggerEngine::conditionsPass(const Rule& rule,const RTSSkirmish& game,
         else if(type=="SubjectOwnerIs")
             failed=subjectId<0 ||
                    game.ownerForTrigger(subjectId)!=intField(condition,"owner",0,0,15);
+        else if(type=="VariableCompare"){
+            const int current=variables_.at(str(condition,"variable"));
+            const int reference=intField(condition,"value",0,-100000000,100000000);
+            const auto comparison=str(condition,"operator");
+            if(comparison=="==")failed=current!=reference;
+            else if(comparison=="!=")failed=current==reference;
+            else if(comparison=="<")failed=!(current<reference);
+            else if(comparison=="<=")failed=!(current<=reference);
+            else if(comparison==">")failed=!(current>reference);
+            else if(comparison==">=")failed=!(current>=reference);
+        }
         if(failed){
             if(failedCondition)*failedCondition=i;
             return false;
@@ -114,6 +127,15 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapse
                 game.showMessageForTrigger(str(action,"text"));
             else if(type=="ApplyEffect")
                 game.applyEffectForTrigger(str(action,"effect"),subjectId);
+            else if(type=="SetVariable" || type=="AddVariable"){
+                const std::string name=str(action,"variable");
+                const int value=intField(action,"value",0,-100000000,100000000);
+                int& current=variables_.at(name); // validated reference
+                const std::int64_t next=type=="SetVariable"
+                    ?std::int64_t(value):std::int64_t(current)+value;
+                current=static_cast<int>(std::clamp(next,
+                    std::int64_t(-100000000),std::int64_t(100000000)));
+            }
             if(tracingEnabled_){
                 if(!summary.empty())summary+=", ";
                 summary+=type;
