@@ -585,6 +585,133 @@ bool EditorSession::deleteTrigger(RTSProject& project) {
     modified=true;message="TRIGGER REMOVED";
     return true;
 }
+picojson::object EditorSession::triggerObject(const RTSProject& project,std::size_t index) const {
+    const auto& a=triggerArray(project);
+    if(index>=a.size() || !a[index].is<picojson::object>())return {};
+    return a[index].get<picojson::object>();
+}
+bool EditorSession::mutateTrigger(
+    RTSProject& project,const std::function<void(picojson::object&)>& change,
+    const std::string& status) {
+    if(textEditing || triggerCount(project)==0)return false;
+    RTSProject candidate=project;
+    try{
+        auto& a=mutableTriggers(candidate);
+        auto& rule=a[selectedTrigger%a.size()].get<picojson::object>();
+        const std::string original=a[selectedTrigger%a.size()].serialize();
+        change(rule);
+        if(a[selectedTrigger%a.size()].serialize()==original)return false;
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+    }catch(const std::exception& e){
+        message=std::string("TRIGGER REJECTED: ")+e.what();
+        return false;
+    }
+    remember(project);
+    project=std::move(candidate);
+    modified=true;message=status;
+    return true;
+}
+bool EditorSession::setTriggerEvent(RTSProject& project,const std::string& type) {
+    if(type!="OnMapStart" && type!="After" && type!="Every" &&
+       type!="OnUnitDeath" && type!="OnRegionEnter" && type!="MineralsBelow")return false;
+    picojson::object event{{"type",picojson::value(type)}};
+    if(type=="After" || type=="Every")event["seconds"]=picojson::value(1.0);
+    if(type=="MineralsBelow")event["amount"]=picojson::value(100.0);
+    if(type=="OnRegionEnter") {
+        auto it=std::find_if(project.placements.begin(),project.placements.end(),
+            [](const ProjectPlacement& p){return p.kind=="Region";});
+        if(it==project.placements.end()) {
+            message="CREATE A REGION BEFORE USING OnRegionEnter";
+            return false;
+        }
+        event["region"]=picojson::value(it->id);
+    }
+    return mutateTrigger(project,[&](picojson::object& rule) {
+        rule["event"]=picojson::value(event);
+        rule["once"]=picojson::value(type=="OnMapStart" || type=="After");
+    },"TRIGGER EVENT UPDATED");
+}
+bool EditorSession::setTriggerOnce(RTSProject& project,bool once){
+    return mutateTrigger(project,[&](picojson::object& rule){
+        rule["once"]=picojson::value(once);
+    },"TRIGGER REPETITION UPDATED");
+}
+bool EditorSession::setTriggerEventField(RTSProject& project,
+    const std::string& key,const picojson::value& value){
+    if(key=="type")return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& event=rule.at("event").get<picojson::object>();
+        if(!event.count(key))throw std::invalid_argument("Unknown event field");
+        event[key]=value;
+    },"EVENT FIELD UPDATED");
+}
+bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std::string& type){
+    picojson::object node{{"type",picojson::value(type)}};
+    if(condition){
+        if(type=="PlayerMineralsAtLeast")node["amount"]=picojson::value(100.0);
+        else if(type=="UnitCountAtLeast"){
+            node["count"]=picojson::value(1.0);
+            node["owner"]=picojson::value(0.0);
+        }else if(type=="UnitTypeCountAtLeast"){
+            node["count"]=picojson::value(1.0);
+            node["owner"]=picojson::value(0.0);
+        }else if(type=="SubjectOwnerIs")node["owner"]=picojson::value(0.0);
+        else return false;
+    }else{
+        if(type=="ShowMessage")node["text"]=picojson::value("NEW MESSAGE");
+        else if(type=="GrantMinerals")node["amount"]=picojson::value(25.0);
+        else if(type=="SpawnUnit"){
+            node["owner"]=picojson::value(0.0);
+            node["x"]=picojson::value(double(project.terrain.minX()+
+                      .5f*(project.terrain.width()-1)*project.terrain.spacing()));
+            node["z"]=picojson::value(double(project.terrain.minZ()+
+                      .5f*(project.terrain.depth()-1)*project.terrain.spacing()));
+        }else if(type=="EndMatch")node["result"]=picojson::value("Victory");
+        else return false;
+    }
+    if(type=="SpawnUnit" || type=="UnitTypeCountAtLeast"){
+        auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
+            [](const CatalogEntry& item){return item.type=="Unit";});
+        if(it==project.catalog.entries().end())return false;
+        node["catalog"]=picojson::value(it->id);
+    }
+    const std::string key=condition?"conditions":"actions";
+    return mutateTrigger(project,[&](picojson::object& rule){
+        if(!rule.count(key))rule[key]=picojson::value(picojson::array{});
+        auto& nodes=rule.at(key).get<picojson::array>();
+        nodes.emplace_back(node);
+    },condition?"CONDITION CREATED":"ACTION CREATED");
+}
+bool EditorSession::removeTriggerNode(RTSProject& project,bool condition,std::size_t index){
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& a=rule.at(condition?"conditions":"actions").get<picojson::array>();
+        if(index>=a.size())throw std::invalid_argument("Node index out of range");
+        a.erase(a.begin()+static_cast<std::ptrdiff_t>(index));
+    },"TRIGGER NODE REMOVED");
+}
+bool EditorSession::moveTriggerNode(RTSProject& project,bool condition,std::size_t index,
+                                    int direction){
+    if(direction!=1 && direction!=-1)return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& a=rule.at(condition?"conditions":"actions").get<picojson::array>();
+        const auto dest=static_cast<std::ptrdiff_t>(index)+direction;
+        if(index>=a.size() || dest<0 || dest>=static_cast<std::ptrdiff_t>(a.size()))
+            throw std::invalid_argument("Cannot move node outside list");
+        std::swap(a[index],a[static_cast<std::size_t>(dest)]);
+    },"TRIGGER NODE MOVED");
+}
+bool EditorSession::setTriggerNodeField(RTSProject& project,bool condition,std::size_t index,
+    const std::string& key,const picojson::value& value){
+    if(key=="type")return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& a=rule.at(condition?"conditions":"actions").get<picojson::array>();
+        if(index>=a.size())throw std::invalid_argument("Node index out of range");
+        auto& fields=a[index].get<picojson::object>();
+        if(!fields.count(key))throw std::invalid_argument("Unknown node field");
+        fields[key]=value;
+    },"TRIGGER FIELD UPDATED");
+}
 bool EditorSession::beginTriggerEdit(const RTSProject& project) {
     if(textEditing || triggerCount(project)==0)return false;
     editText=triggerJSON(project,selectedTrigger%triggerCount(project));

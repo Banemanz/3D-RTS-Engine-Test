@@ -2,6 +2,7 @@
 #include "RTSProject.hpp"
 #include <cstddef>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -102,6 +103,17 @@ public:
     bool createTrigger(RTSProject& project);
     bool duplicateTrigger(RTSProject& project);
     bool deleteTrigger(RTSProject& project);
+    // Same typed trigger commands serve desktop GUI and headless tools.
+    picojson::object triggerObject(const RTSProject& project,std::size_t index) const;
+    bool setTriggerEvent(RTSProject& project,const std::string& type);
+    bool setTriggerOnce(RTSProject& project,bool once);
+    bool setTriggerEventField(RTSProject& project,const std::string& key,
+                              const picojson::value& value);
+    bool addTriggerNode(RTSProject& project,bool condition,const std::string& type);
+    bool removeTriggerNode(RTSProject& project,bool condition,std::size_t index);
+    bool moveTriggerNode(RTSProject& project,bool condition,std::size_t index,int direction);
+    bool setTriggerNodeField(RTSProject& project,bool condition,std::size_t index,
+                             const std::string& key,const picojson::value& value);
     bool beginTriggerEdit(const RTSProject& project);
     bool finishTriggerEdit(RTSProject& project);
     std::string panelName() const;
@@ -116,6 +128,9 @@ private:
     std::deque<RTSProject> undo_,redo_;
     std::string pendingNewField_;
     std::size_t maxHistory_=32;
+    bool mutateTrigger(RTSProject& project,
+                       const std::function<void(picojson::object&)>& change,
+                       const std::string& status);
     void remember(const RTSProject& project);
     void rememberPlacement(const RTSProject& project) { remember(project); }
 };
