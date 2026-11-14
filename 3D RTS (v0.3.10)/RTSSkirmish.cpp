@@ -455,6 +455,11 @@ bool RTSSkirmish::buildBarracks(const Vec3& target) {
     for(const auto& u:units)if(u.isStructure && u.isAlive() &&
         distanceXZ(pos,u.position)<u.radius+3.2f)return false;
     for(const auto& m:minerals)if(distanceXZ(pos,m.position)<5.0f)return false;
+    // Production RTS footprints must not be stamped onto active mobile
+    // units. Otherwise the new dynamic nav blocker traps those units inside
+    // their current cell and their current orders can never finish.
+    for(const auto& u:units)if(u.isAlive() && !u.isStructure &&
+        distanceXZ(pos,u.position)<2.5f+u.radius)return false;
     auto cell=navigation.toCell(pos);
     for(int z=cell.z-2;z<=cell.z+2;++z)
         for(int x=cell.x-2;x<=cell.x+2;++x)

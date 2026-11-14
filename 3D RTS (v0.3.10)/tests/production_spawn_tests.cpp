@@ -45,5 +45,27 @@ int main(){
         gathering.update(1.f/60.f);
     assert(gathering.minerals[0].remaining==0);
     assert(gathering.navigation.walkable(mineralCell.x,mineralCell.z));
+    // Prevent new buildings from appearing directly on top of mobile
+    // units; rejected construction must not spend any minerals.
+    RTSProject safeBuild=RTSProject::defaults();
+    for(auto& placement:safeBuild.placements)
+        if(placement.id=="worker_1")
+            placement.position={-12.f,0.f,24.f};
+    safeBuild.validate();
+    RTSSkirmish building;
+    building.loadProject(safeBuild);
+    for(auto& u:building.units)u.isSelected=(u.catalogId=="worker" &&
+        (u.position-Vec3{-12.f,0.f,24.f}).lengthXZ()<.2f);
+    const int oldResources=building.playerMinerals;
+    const auto oldRevision=building.navigation.revision();
+    assert(!building.buildBarracks({-12.f,0.f,24.f}));
+    assert(building.playerMinerals==oldResources);
+    assert(building.navigation.revision()==oldRevision);
+    assert(building.buildBarracks({-12.f,0.f,30.f}));
+    assert(building.playerMinerals<oldResources);
+    assert(building.navigation.revision()>oldRevision);
+    const auto newFootprint=building.navigation.toCell({-12.f,0.f,30.f});
+    assert(!building.navigation.walkable(newFootprint.x,newFootprint.z));
+
     std::cout<<"production spawns: walkable outlets, rally, destroyed blockers and depleted minerals passed\n";
 }
