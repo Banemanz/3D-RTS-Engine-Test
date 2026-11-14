@@ -209,6 +209,24 @@ void globals(App& app){
             if(ImGui::SmallButton("Remove")){
                 refresh(app,ed.removeTriggerVariable(project,name));
             }
+            ImGui::SameLine();
+            static std::string renameDraft;
+            if(ImGui::SmallButton("Rename")){
+                renameDraft=name;
+                ImGui::OpenPopup("Rename script global");
+            }
+            if(ImGui::BeginPopup("Rename script global")){
+                ImGui::TextUnformatted("Rename and migrate all typed ECA references");
+                ImGui::InputText("New ID",&renameDraft);
+                if(ImGui::Button("Apply rename") &&
+                   ed.renameTriggerVariable(project,name,renameDraft)){
+                    refresh(app,true);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
             ImGui::PopID();
         }
     }
