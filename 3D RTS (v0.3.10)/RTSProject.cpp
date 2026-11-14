@@ -1,5 +1,6 @@
 #include "RTSProject.hpp"
 #include "InstanceOverrides.hpp"
+#include "TriggerDefinition.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -62,6 +63,38 @@ ProjectPlacement makePlacement(std::string id,std::string kind,std::string catal
     ProjectPlacement p;p.id=std::move(id);p.kind=std::move(kind);
     p.catalogId=std::move(catalog);p.name=std::move(name);
     p.owner=owner;p.position={x,0,z};p.amount=amount;return p;
+}
+
+// Walk only typed ECA nodes. The same visitor handles mutable rename
+// migration and const inbound-reference inspection, including nested branches.
+template<class RuleObject,class Visitor>
+void visitECARule(RuleObject& rule,Visitor visitor){
+    const auto descend=[&](auto&& self,auto& value,const char* section,int depth)->void{
+        if(depth>6 || !value.template is<picojson::object>())return;
+        auto& node=value.template get<picojson::object>();
+        visitor(node,section);
+        auto kind=node.find("type");
+        if(kind==node.end() || !kind->second.template is<std::string>())return;
+        const auto& type=kind->second.template get<std::string>();
+        const auto nested=[&](const char* key,const char* nestedSection){
+            auto children=node.find(key);
+            if(children==node.end() || !children->second.template is<picojson::array>())
+                return;
+            for(auto& child:children->second.template get<picojson::array>())
+                self(self,child,nestedSection,depth+1);
+        };
+        if(type=="IfThenElse"){
+            nested("conditions","conditions");
+            nested("then","actions");
+            nested("else","actions");
+        }else if(type=="Repeat")nested("actions","actions");
+    };
+    for(const char* section:{"conditions","actions"}){
+        auto group=rule.find(section);
+        if(group==rule.end() || !group->second.template is<picojson::array>())continue;
+        for(auto& item:group->second.template get<picojson::array>())
+            descend(descend,item,section,0);
+    }
 }
 }
 RTSProject RTSProject::defaults() {
@@ -304,57 +337,34 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
                      field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
-        auto triggers=next.extensions.find("triggers");
-        if(triggers!=next.extensions.end() && triggers->second.is<picojson::array>()) {
-            for(auto& ruleValue:triggers->second.get<picojson::array>()) {
-                if(!ruleValue.is<picojson::object>())continue;
-                auto& rule=ruleValue.get<picojson::object>();
-                for(const char* key:{"conditions","actions"}) {
-                    auto group=rule.find(key);
-                    if(group==rule.end() || !group->second.is<picojson::array>())continue;
-                    for(auto& nodeValue:group->second.get<picojson::array>()) {
-                        if(!nodeValue.is<picojson::object>())continue;
-                        auto& node=nodeValue.get<picojson::object>();
-                        auto kind=node.find("type");
-                        if(kind==node.end() || !kind->second.is<std::string>())continue;
-                        const auto& op=kind->second.get<std::string>();
-                        const bool typed=(std::string(key)=="actions" && op=="SpawnUnit") ||
-                            (std::string(key)=="conditions" &&
-                            (op=="UnitTypeCountAtLeast" || op=="UnitCountAtLeast"));
-                        if(!typed)continue;
-                        auto field=node.find("catalog");
-                        if(field!=node.end() && field->second.is<std::string>() &&
-                           field->second.get<std::string>()==oldId)
-                            field->second=picojson::value(newId);
-                    }
-                }
-            }
-        }
     }
-    if(type=="Effect"){
-        // Trigger ApplyEffect nodes are typed graph references, not arbitrary
-        // user JSON. Keep them valid when an effect is renamed.
-        auto trigger=next.extensions.find("triggers");
-        if(trigger!=next.extensions.end() && trigger->second.is<picojson::array>())
-            for(auto& val:trigger->second.get<picojson::array>()){
-                if(!val.is<picojson::object>())continue;
-                auto& rule=val.get<picojson::object>();
-                auto actions=rule.find("actions");
-                if(actions==rule.end() || !actions->second.is<picojson::array>())continue;
-                for(auto& action:actions->second.get<picojson::array>()){
-                    if(!action.is<picojson::object>())continue;
-                    auto& node=action.get<picojson::object>();
-                    auto kind=node.find("type");
-                    auto effect=node.find("effect");
-                    if(kind!=node.end() && kind->second.is<std::string>() &&
-                       kind->second.get<std::string>()=="ApplyEffect" &&
-                       effect!=node.end() && effect->second.is<std::string>() &&
-                       effect->second.get<std::string>()==oldId)
-                        effect->second=picojson::value(newId);
-                }
+    if(type=="Unit" || type=="Effect"){
+        auto triggers=next.extensions.find("triggers");
+        if(triggers!=next.extensions.end() && triggers->second.is<picojson::array>())
+            for(auto& value:triggers->second.get<picojson::array>()){
+                if(!value.is<picojson::object>())continue;
+                auto& rule=value.get<picojson::object>();
+                visitECARule(rule,[&](picojson::object& node,const char* section){
+                    const auto kind=node.find("type");
+                    if(kind==node.end() || !kind->second.is<std::string>())return;
+                    const std::string& op=kind->second.get<std::string>();
+                    const bool unitRef=type=="Unit" &&
+                        ((std::string(section)=="actions" && op=="SpawnUnit") ||
+                         (std::string(section)=="conditions" &&
+                          (op=="UnitTypeCountAtLeast" || op=="UnitCountAtLeast")));
+                    const bool effectRef=type=="Effect" &&
+                        std::string(section)=="actions" && op=="ApplyEffect";
+                    if(!unitRef && !effectRef)return;
+                    const char* field=unitRef?"catalog":"effect";
+                    auto ref=node.find(field);
+                    if(ref!=node.end() && ref->second.is<std::string>() &&
+                       ref->second.get<std::string>()==oldId)
+                        ref->second=picojson::value(newId);
+                });
             }
     }
     next.validate();
+    (void)parseTriggerRules(next); // typed ECA links must also remain valid
     *this=std::move(next);
     return true;
 }
@@ -418,59 +428,33 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                 it->second.get<std::string>()==id))
                 refs.push_back(std::string("skirmish role ")+role.first);
         }
-        auto trigger=extensions.find("triggers");
-        if(trigger!=extensions.end() && trigger->second.is<picojson::array>())
-            for(const auto& val:trigger->second.get<picojson::array>()) {
-                if(!val.is<picojson::object>())continue;
-                const auto& rule=val.get<picojson::object>();
-                for(const char* section:{"conditions","actions"}) {
-                    auto array=rule.find(section);
-                    if(array==rule.end() || !array->second.is<picojson::array>())continue;
-                    for(const auto& action:array->second.get<picojson::array>()) {
-                        if(!action.is<picojson::object>())continue;
-                        const auto& node=action.get<picojson::object>();
-                        auto op=node.find("type");
-                        auto unit=node.find("catalog");
-                        if(op==node.end() || !op->second.is<std::string>() ||
-                           unit==node.end() || !unit->second.is<std::string>() ||
-                           unit->second.get<std::string>()!=id)continue;
-                        const auto& kind=op->second.get<std::string>();
-                        if((std::string(section)=="actions" && kind=="SpawnUnit") ||
-                           (std::string(section)=="conditions" &&
-                            (kind=="UnitTypeCountAtLeast" || kind=="UnitCountAtLeast"))) {
-                            auto name=rule.find("id");
-                            const std::string ruleName=
-                                name!=rule.end() && name->second.is<std::string>()?
-                                name->second.get<std::string>():"<unnamed>";
-                            refs.push_back("trigger "+ruleName+"."+section);
-                        }
-                    }
-                }
-            }
     }
-    if(original->type=="Effect"){
+    if(original->type=="Unit" || original->type=="Effect"){
         auto trigger=extensions.find("triggers");
         if(trigger!=extensions.end() && trigger->second.is<picojson::array>())
-            for(const auto& val:trigger->second.get<picojson::array>()){
-                if(!val.is<picojson::object>())continue;
-                const auto& rule=val.get<picojson::object>();
-                auto actions=rule.find("actions");
-                if(actions==rule.end() || !actions->second.is<picojson::array>())continue;
-                for(const auto& action:actions->second.get<picojson::array>()){
-                    if(!action.is<picojson::object>())continue;
-                    const auto& node=action.get<picojson::object>();
-                    auto kind=node.find("type"),target=node.find("effect");
-                    if(kind!=node.end() && kind->second.is<std::string>() &&
-                       kind->second.get<std::string>()=="ApplyEffect" &&
-                       target!=node.end() && target->second.is<std::string>() &&
-                       target->second.get<std::string>()==id){
-                        auto name=rule.find("id");
-                        refs.push_back("trigger "+
-                            (name!=rule.end() && name->second.is<std::string>()?
-                             name->second.get<std::string>():"<unnamed>")+
-                            ".actions.ApplyEffect");
-                    }
-                }
+            for(const auto& value:trigger->second.get<picojson::array>()){
+                if(!value.is<picojson::object>())continue;
+                const auto& rule=value.get<picojson::object>();
+                const auto name=rule.find("id");
+                const std::string ruleName=name!=rule.end() &&
+                    name->second.is<std::string>()?
+                    name->second.get<std::string>():"<unnamed>";
+                visitECARule(rule,[&](const picojson::object& node,const char* section){
+                    const auto kind=node.find("type");
+                    if(kind==node.end() || !kind->second.is<std::string>())return;
+                    const std::string& op=kind->second.get<std::string>();
+                    const bool unitRef=original->type=="Unit" &&
+                        ((std::string(section)=="actions" && op=="SpawnUnit") ||
+                         (std::string(section)=="conditions" &&
+                          (op=="UnitTypeCountAtLeast" || op=="UnitCountAtLeast")));
+                    const bool effectRef=original->type=="Effect" &&
+                        std::string(section)=="actions" && op=="ApplyEffect";
+                    if(!unitRef && !effectRef)return;
+                    const auto ref=node.find(unitRef?"catalog":"effect");
+                    if(ref!=node.end() && ref->second.is<std::string>() &&
+                       ref->second.get<std::string>()==id)
+                        refs.push_back("trigger "+ruleName+"."+section+"."+op);
+                });
             }
     }
     return refs;
