@@ -899,11 +899,23 @@ void RTSSkirmish::removeBehavior(int targetId,const std::string& id){
     recalculateBehaviorStats(targetId);
 }
 void RTSSkirmish::updateBehaviors(){
+    // Status count is bounded, but a 4000-Unit map can have many statuses.
+    // For dense status maps, resolve alive Unit IDs in one linear pass rather
+    // than 256 separate linear scans. For sparse statuses avoid the index cost.
+    const bool dense=behaviors_.size()>32;
+    std::unordered_set<int> aliveIds;
+    if(dense){
+        aliveIds.reserve(units.size());
+        for(const auto& unit:units)if(unit.isAlive())aliveIds.insert(unit.id);
+    }
     // std::map provides stable key order; recalc only changed target IDs.
     std::vector<int> changed;
     for(auto it=behaviors_.begin();it!=behaviors_.end();){
-        const Unit* target=find(it->first.first);
-        if(!target || !target->isAlive() || tick_>=it->second.expiresTick){
+        const int id=it->first.first;
+        const Unit* sparseTarget=dense?nullptr:find(id);
+        const bool alive=dense?aliveIds.count(id)>0:
+                           sparseTarget && sparseTarget->isAlive();
+        if(!alive || tick_>=it->second.expiresTick){
             changed.push_back(it->first.first);
             it=behaviors_.erase(it);
         }else ++it;

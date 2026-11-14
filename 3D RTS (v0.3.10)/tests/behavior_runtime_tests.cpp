@@ -64,6 +64,17 @@ int main(){
         {"children",picojson::value(picojson::array{
             picojson::value("grant_guard"),picojson::value("grant_guard")})}};
     assert(project.catalog.add(combo));
+    CatalogEntry immediate;
+    immediate.id="status_damage";immediate.type="Effect";
+    immediate.fields={{"kind",picojson::value("Damage")},
+                      {"amount",picojson::value(10.0)}};
+    assert(project.catalog.add(immediate));
+    CatalogEntry mixed;
+    mixed.id="status_damage_and_guard";mixed.type="Effect";
+    mixed.fields={{"kind",picojson::value("Sequence")},
+        {"children",picojson::value(picojson::array{
+            picojson::value("status_damage"),picojson::value("grant_guard")})}};
+    assert(project.catalog.add(mixed));
     assert(project.catalog.add(ability("guard_stance","grant_guard")));
     assert(project.catalog.setField("ranger","abilities",picojson::value(
         picojson::array{picojson::value("guard_stance")})));
@@ -89,6 +100,12 @@ int main(){
     assert(game.applyEffectForTrigger("double_guard",id));
     assert(game.activeBehaviorCount()==1);
     assert(game.unitBehaviorStacks(id,"guarded")==2);
+    assert(game.unitBehaviorCount(id)==1);
+    const auto watch=game.behaviorWatch(4);
+    assert(watch.size()==1 && watch[0].unitId==id &&
+           watch[0].behaviorId=="guarded" && watch[0].stacks==2 &&
+           watch[0].remainingTicks==6);
+    assert(game.behaviorWatch(0).empty());
     assert(game.unitBehaviorTicksRemaining(id,"guarded")==6);
     near(unit->behaviorArmorBonus,8.f);
     near(unit->behaviorDamageBonus,4.f);
@@ -214,8 +231,9 @@ int main(){
     const int extra=bounded.units.back().id;
     const float hpBefore=bounded.units.back().currentHp;
     assert(!bounded.applyEffectForTrigger("new_guard_effect",extra));
+    assert(!bounded.applyEffectForTrigger("status_damage_and_guard",extra));
     assert(bounded.activeBehaviorCount()==256);
-    near(bounded.units.back().currentHp,hpBefore);
+    near(bounded.units.back().currentHp,hpBefore); // no partial immediate damage
     bounded.reset();
     assert(bounded.activeBehaviorCount()==0);
     std::cout<<"behaviors: stacks, combat stats, movement, expiry, dispels, authoring refs, replay passed\n";
