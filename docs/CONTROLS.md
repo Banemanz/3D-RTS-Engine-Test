@@ -148,3 +148,7 @@ minerals/energy or an active cooldown; cooldown seconds and per-Unit
 energy appear in the existing native HUD. Select F7 to edit the
 catalog and loadouts. Up to eight skills may be authored per Unit;
 HUD pagination beyond three skills is not yet implemented.
+
+### Eight-skill command-card paging
+
+Unit loadouts can contain up to eight Ability IDs. For a single selected caster with more than three skills, the bottom-right command-grid button shows SKILLS page/count. Click it or press TAB to cycle the 3-slot Ability command pages (F/J/K remain the cast hotkeys on each page). This card page is UI-only state: it cannot change the fixed simulation or recorded replay hash. Producer training pages retain priority when a structure is selected.

@@ -155,6 +155,40 @@ int main(){
     assert(bad.catalog.setField("ranger","abilities",picojson::value(picojson::array{
         picojson::value("self_repair"),picojson::value("self_repair")})));
     assert(invalid(bad));
+    // UI ability card pagination is selection-only state: it must expose all
+    // valid authored skills without mutating authoritative replay digests.
+    RTSProject paged=project;
+    assert(paged.catalog.cloneDerived("self_repair","mend_variant_a"));
+    assert(paged.catalog.cloneDerived("self_repair","mend_variant_b"));
+    assert(paged.catalog.cloneDerived("self_repair","mend_variant_c"));
+    assert(paged.catalog.cloneDerived("self_repair","mend_variant_d"));
+    assert(paged.catalog.setField("ranger","abilities",picojson::value(
+        picojson::array{picojson::value("self_repair"),
+            picojson::value("energy_bolt_v2"),picojson::value("mend_variant_a"),
+            picojson::value("mend_variant_b"),picojson::value("mend_variant_c"),
+            picojson::value("mend_variant_d")})));
+    paged.validate();
+    RTSSkirmish pageGame;
+    pageGame.loadProject(paged);
+    for(auto& u:pageGame.units)u.isSelected=false;
+    bool assigned=false;
+    for(auto& u:pageGame.units)
+        if(!assigned && u.ownerId==0 && u.catalogId=="ranger"){
+            u.isSelected=true;assigned=true;
+        }
+    assert(assigned && pageGame.abilityPageCount()==2);
+    assert(pageGame.selectedAbilityId(0)=="self_repair");
+    assert(pageGame.selectedAbilityId(2)=="mend_variant_a");
+    const std::string beforePage=pageGame.stateDigest();
+    assert(pageGame.nextAbilityPage());
+    assert(pageGame.abilityPage()==1);
+    assert(pageGame.selectedAbilityId(0)=="mend_variant_b");
+    assert(pageGame.selectedAbilityId(2)=="mend_variant_d");
+    assert(pageGame.stateDigest()==beforePage);
+    assert(pageGame.nextAbilityPage());
+    assert(pageGame.selectedAbilityId(0)=="self_repair");
+    assert(pageGame.stateDigest()==beforePage);
+
     game.reset();
     assert(game.abilityCooldownRemaining(caster,"self_repair")==0);
     assert(game.playerMinerals==initialMinerals);

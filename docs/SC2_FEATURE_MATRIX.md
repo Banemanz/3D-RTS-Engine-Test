@@ -250,3 +250,5 @@ area and terrain targeting, cast interruption/channeling, tech trees
 and upgrades, editor user-defined scripting functions/libraries,
 arbitrary advanced data schemas and localization. This progress is
 not StarCraft/Galaxy feature parity and does not reuse Blizzard assets.
+
+**UI pagination follow-up:** F9 now pages through the full eight-Ability loadout in three-slot pages using TAB or the SKILLS x/y button; the current page does not enter authoritative replay hashes. This closes the initial three-slot reachability gap, though custom card-layout authoring and per-Ability icon/smart hotkey binding remain future work.

@@ -488,3 +488,7 @@ nonattacking training dummy. This is intentionally not a copy of any
 existing RTS's units or assets. Current scope omits autocast, terrain/
 AoE targets, projectiles, channeled casts, upgrades and visual behavior
 stacks; those are subsequent engine/editor tasks.
+
+### Playtest all eight Ability slots
+
+The Ability loadout allows eight distinct skill references. If the selected Unit has more than three, the tactical HUD's SKILLS x/y button (or TAB) pages through the command grid in groups of three. F/J/K cast whichever three slots are currently visible. This is pure presentation/selection state; replay commands include the actual Ability catalog ID, not a page index.
