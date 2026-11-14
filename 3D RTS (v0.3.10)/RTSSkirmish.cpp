@@ -104,6 +104,7 @@ void RTSSkirmish::reset() {
     tick_=0;
     navigationGeneration_=0;
     replayValid_=true;
+    applyingCommand_=false;
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
@@ -176,6 +177,7 @@ bool RTSSkirmish::setRoute(Unit& u,const Vec3& to,bool attackMove) {
     return true;
 }
 bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append) {
+    if(!applyingCommand_)replayValid_=false;
     if(result!=MatchResult::Playing)return false;
     bool ok=false;
     std::vector<RTSFormationMember> selected;
@@ -204,6 +206,7 @@ bool RTSSkirmish::orderMove(const Vec3& destination,bool attackMove,bool append)
     return ok;
 }
 bool RTSSkirmish::orderPatrol(const Vec3& destination) {
+    if(!applyingCommand_)replayValid_=false;
     if(result!=MatchResult::Playing)return false;
     bool issued=false;
     std::vector<RTSFormationMember> selected;
@@ -233,6 +236,7 @@ bool RTSSkirmish::orderPatrol(const Vec3& destination) {
     return issued;
 }
 bool RTSSkirmish::setRallyPoint(const Vec3& destination) {
+    if(!applyingCommand_)replayValid_=false;
     if(result!=MatchResult::Playing)return false;
     for(const auto& u:units)if(u.isAlive() && u.ownerId==0 &&
                                u.isSelected && !u.isStructure)return false;
@@ -258,6 +262,7 @@ float RTSSkirmish::productionProgress(int buildingId) const {
     return -1.f;
 }
 bool RTSSkirmish::cancelSelectedProduction() {
+    if(!applyingCommand_)replayValid_=false;
     if(result!=MatchResult::Playing)return false;
     for(const auto& u:units)if(u.isSelected && u.isAlive() &&
                                u.ownerId==0 && u.isStructure) {
@@ -273,6 +278,7 @@ bool RTSSkirmish::cancelSelectedProduction() {
     return false;
 }
 bool RTSSkirmish::orderAttack(int targetId) {
+    if(!applyingCommand_)replayValid_=false;
     Unit* target=find(targetId);
     if(result!=MatchResult::Playing || !target || !target->isAlive() || target->ownerId==0)return false;
     bool any=false;
@@ -283,6 +289,7 @@ bool RTSSkirmish::orderAttack(int targetId) {
     return any;
 }
 void RTSSkirmish::orderHold() {
+    if(!applyingCommand_)replayValid_=false;
     if(result!=MatchResult::Playing)return;
     for(auto& u:units)if(u.isAlive() && u.ownerId==0 &&
                           u.isSelected && !u.isStructure) {
@@ -294,6 +301,7 @@ void RTSSkirmish::orderHold() {
 }
 
 void RTSSkirmish::orderStop() {
+    if(!applyingCommand_)replayValid_=false;
     for(auto& u:units)if(u.isAlive() && u.isSelected && u.ownerId==0 && !u.isStructure) {
         routes_.erase(u.id);queued_.erase(u.id);jobs_.erase(u.id);u.navAgent.stop();
         u.targetUnitId=-1;u.state=UnitState::IDLE;u.attackMoveEnabled=false;
@@ -301,6 +309,7 @@ void RTSSkirmish::orderStop() {
     }
 }
 bool RTSSkirmish::orderGather(const Vec3& click) {
+    if(!applyingCommand_)replayValid_=false;
     if(result!=MatchResult::Playing)return false;
     size_t index=minerals.size();
     float best=3.5f;
@@ -448,6 +457,7 @@ void RTSSkirmish::updateGathering(float dt) {
     }
 }
 bool RTSSkirmish::buildBarracks(const Vec3& target) {
+    if(!applyingCommand_)replayValid_=false;
     const auto barracksData=unitFromCatalog(project_.catalog,barracksId_);
     const int price=barracksData.mineral_cost;
     if(result!=MatchResult::Playing || playerMinerals<price)return false;
@@ -562,15 +572,18 @@ bool RTSSkirmish::queueAt(int id,const std::string& unitId) {
     return true;
 }
 bool RTSSkirmish::queueSelectedTrainingSlot(int slot) {
+    if(!applyingCommand_)replayValid_=false;
     if(!canQueueSelectedTrainingSlot(slot))return false;
     return queueAt(selectedProducerId(),selectedTrainableId(slot));
 }
 bool RTSSkirmish::queueRanger() {
+    if(!applyingCommand_)replayValid_=false;
     for(const auto& u:units)if(u.isStructure && u.isAlive() && u.ownerId==0 &&
         u.catalogId==barracksId_ && queueAt(u.id,rangerId_))return true;
     return false;
 }
 bool RTSSkirmish::queueWorker() {
+    if(!applyingCommand_)replayValid_=false;
     return queueAt(friendlyBaseId_,workerId_);
 }
 bool RTSSkirmish::findProductionSpawn(const Unit& producer,const UnitData& type,
@@ -861,6 +874,8 @@ bool RTSSkirmish::applyCommand(const RTSCommand& command){
                 std::binary_search(ids.begin(),ids.end(),unit.id);
     };
     select(command.units);
+    const bool previous=applyingCommand_;
+    applyingCommand_=true;
     bool result=false;
     try {
         switch(command.kind){
@@ -901,9 +916,11 @@ bool RTSSkirmish::applyCommand(const RTSCommand& command){
             break;
         }
     }catch(...){
+        applyingCommand_=previous;
         select(previouslySelected);
         throw;
     }
+    applyingCommand_=previous;
     select(previouslySelected);
     return result;
 }
@@ -931,6 +948,12 @@ std::string RTSSkirmish::stateDigest()const{
         void point(const Vec3& p){scalar(p.x);scalar(p.y);scalar(p.z);}
     } hash;
     hash.number(tick_);
+    hash.signedNumber(nextId_);
+    hash.signedNumber(friendlyBaseId_);
+    hash.signedNumber(enemyBaseId_);
+    hash.scalar(elapsedSeconds_);
+    hash.scalar(enemySpawnTimer_);
+    hash.scalar(visionIntervalTimer_);
     hash.signedNumber(playerMinerals);
     hash.signedNumber(supplyUsed);
     hash.signedNumber(supplyCap);
@@ -967,6 +990,7 @@ std::string RTSSkirmish::stateDigest()const{
         hash.signedNumber(item.first);hash.number(r.next);hash.point(r.requestedGoal);
         hash.boolean(r.attackMove);hash.boolean(r.patrol);hash.boolean(r.returning);
         hash.boolean(r.engagementInterrupted);hash.point(r.patrolStart);hash.point(r.patrolGoal);
+        hash.number(r.navigationGeneration);hash.number(r.gridRevision);
         hash.number(r.points.size());for(const auto& p:r.points)hash.point(p);
     }
     std::vector<int> pendingIds;
@@ -993,10 +1017,12 @@ std::string RTSSkirmish::stateDigest()const{
     std::vector<int> constructionIds;
     for(const auto& p:construction_)constructionIds.push_back(p.first);
     std::sort(constructionIds.begin(),constructionIds.end());
+    hash.number(constructionIds.size());
     for(int id:constructionIds){hash.signedNumber(id);hash.scalar(construction_.at(id));}
     std::vector<int> rallyIds;
     for(const auto& p:rallyPoints_)rallyIds.push_back(p.first);
     std::sort(rallyIds.begin(),rallyIds.end());
+    hash.number(rallyIds.size());
     for(int id:rallyIds){hash.signedNumber(id);hash.point(rallyPoints_.at(id));}
     hash.number(vision.width());hash.number(vision.depth());
     for(std::uint8_t value:vision.textureBytes())hash.number(value);

@@ -47,6 +47,17 @@ int main(){
     assert(verifyRTSReplay(tape,&reason));
     assert(reason.find("verified")!=std::string::npos);
 
+    // Direct mutation API is still available to integrations, but cannot
+    // masquerade as a complete replay recording.
+    RTSSkirmish untracked;
+    untracked.loadProject(project);
+    for(auto& u:untracked.units)
+        u.isSelected=u.ownerId==0 && u.catalogId=="ranger";
+    assert(untracked.orderMove({-14.f,0.f,20.f},false));
+    assert(!untracked.replayRecordingValid());
+    bool invalidExport=false;
+    try{(void)untracked.replayTape();}catch(const std::runtime_error&){invalidExport=true;}
+    assert(invalidExport);
     const RTSReplayTape encoded=RTSReplayTape::fromJson(tape.toJson());
     assert(verifyRTSReplay(encoded));
     const std::string path="command_replay_regression.rtsreplay.json";

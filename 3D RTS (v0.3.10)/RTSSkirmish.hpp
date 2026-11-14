@@ -113,6 +113,7 @@ private:
     RTSCommandStream commandStream_;
     std::uint64_t tick_=0;
     bool replayValid_=true;
+    bool applyingCommand_=false;
     std::vector<RTSCommand> recordedCommands_;
     std::vector<RTSReplayCheckpoint> checkpoints_;
     bool applyCommand(const RTSCommand& command);
