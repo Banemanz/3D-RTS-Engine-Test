@@ -1011,20 +1011,15 @@ int main(int argc, char** argv) {
                 if(u.isSelected && u.isAlive() && u.ownerId==0){casterId=u.id;break;}
             if(casterId<=0)throw std::invalid_argument("No selected caster");
             std::string skill;
+            const auto caster=std::find_if(app.game.units.begin(),
+                app.game.units.end(),
+                [&](const Unit& u){return u.id==casterId;});
+            if(caster==app.game.units.end())
+                throw std::invalid_argument("Smoke caster missing");
             for(const auto& candidate:unitAbilityIds(
-                    app.project.catalog,app.game.units.front().catalogId)){
+                    app.project.catalog,caster->catalogId))
                 if(compileAbility(app.project.catalog,candidate).target==
                    AbilityTarget::Ground){skill=candidate;break;}
-            }
-            if(skill.empty()){
-                const auto* caster=std::find_if(app.game.units.begin(),
-                    app.game.units.end(),[&](const Unit& u){return u.id==casterId;});
-                if(caster==app.game.units.end())throw std::invalid_argument("Caster missing");
-                for(const auto& candidate:unitAbilityIds(
-                        app.project.catalog,caster->catalogId))
-                    if(compileAbility(app.project.catalog,candidate).target==
-                       AbilityTarget::Ground){skill=candidate;break;}
-            }
             if(skill.empty())throw std::invalid_argument("No authored Ground Ability");
             Vec3 point=app.game.units.front().position;
             for(const auto& u:app.game.units)if(u.ownerId!=0 && u.isAlive() &&
