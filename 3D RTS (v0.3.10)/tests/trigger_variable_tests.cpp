@@ -16,6 +16,8 @@ picojson::value rule(const char* id,const char* event,double seconds,
     picojson::object e{{"type",picojson::value(event)}};
     if(std::string(event)=="Every" || std::string(event)=="After")
         e["seconds"]=picojson::value(seconds);
+    if(std::string(event)=="OnVariableChanged")
+        e["variable"]=picojson::value("counter");
     return picojson::value(picojson::object{
         {"id",picojson::value(id)},
         {"event",picojson::value(e)},
@@ -58,10 +60,13 @@ int main(){
         },{node("VariableCompare",compare)}),
         rule("blocked","After",.5,{
             node("GrantMinerals",{{"amount",picojson::value(999.0)}})
-        },{node("VariableCompare",blocked)})
+        },{node("VariableCompare",blocked)}),
+        rule("watch_counter","OnVariableChanged",0.,{
+            node("GrantMinerals",{{"amount",picojson::value(1.0)}})
+        })
     });
     assert(parseTriggerVariables(project).at("counter")==0);
-    assert(parseTriggerRules(project).size()==4);
+    assert(parseTriggerRules(project).size()==5);
     project.validate();
 
     RTSSkirmish game;
@@ -82,7 +87,10 @@ int main(){
         }
         assert(fingerprint.good());
     }
-    assert(game.playerMinerals==initialMinerals+10);
+    // Each net variable change triggers exactly once on the following tick.
+    const auto& watch=game.triggerDiagnostics().rules()[4];
+    assert(watch.executions>=10);
+    assert(game.playerMinerals==initialMinerals+10+int(watch.executions));
     assert(game.triggerDiagnostics().variables().at("counter")>=15);
     assert(game.triggerDiagnostics().rules()[2].executions==1);
     assert(game.triggerDiagnostics().rules()[3].executions==0);
@@ -101,6 +109,32 @@ int main(){
     game.reset();
     assert(game.triggerDiagnostics().variables().at("counter")==3);
     assert(game.triggerDiagnostics().rules()[2].executions==0);
+    assert(game.triggerDiagnostics().rules()[4].executions==0);
+
+    // Multiple same-tick writes are coalesced. Returning to the starting
+    // value produces no event at all (regardless of intermediate states).
+    RTSProject cancelled=RTSProject::defaults();
+    cancelled.metadata["enemy_ai_enabled"]=picojson::value(false);
+    cancelled.extensions["trigger_variables"]=picojson::value(picojson::object{
+        {"counter",picojson::value(0.0)}
+    });
+    picojson::object one=counter,zero=counter;
+    one["value"]=picojson::value(1.0);
+    zero["value"]=picojson::value(0.0);
+    cancelled.extensions["triggers"]=picojson::value(picojson::array{
+        rule("back_to_zero","OnMapStart",0.,{
+            node("SetVariable",one),node("SetVariable",zero)
+        }),
+        rule("no_event","OnVariableChanged",0.,{
+            node("GrantMinerals",{{"amount",picojson::value(55.0)}})
+        })
+    });
+    RTSSkirmish noNetChange;
+    noNetChange.loadProject(cancelled);
+    const int beforeCoalesced=noNetChange.playerMinerals;
+    noNetChange.update(1.f/60.f);
+    assert(noNetChange.playerMinerals==beforeCoalesced);
+    assert(noNetChange.triggerDiagnostics().rules()[1].executions==0);
 
     // Unknown identifiers and malformed declarations never become live scripts.
     auto invalid=project;
@@ -118,6 +152,11 @@ int main(){
     invalid=project;
     invalid.extensions["trigger_variables"].get<picojson::object>().erase("counter");
     rejected(invalid); // references cannot dangle
+    invalid=project;
+    invalid.extensions["triggers"].get<picojson::array>()[4]
+        .get<picojson::object>().at("event").get<picojson::object>()["variable"]=
+        picojson::value("missingGlobal");
+    rejected(invalid);
     invalid=project;
     auto& reward=invalid.extensions["triggers"].get<picojson::array>()[2]
         .get<picojson::object>().at("conditions").get<picojson::array>()[0]
@@ -149,6 +188,10 @@ int main(){
                                       picojson::value("missingGlobal")));
     assert(editor.setTriggerNodeField(project,false,2,"variable",
                                      picojson::value("limit")));
-    assert(parseTriggerRules(project).size()==4);
+    assert(parseTriggerRules(project).size()==5);
+    assert(editor.setTriggerEvent(project,"OnVariableChanged"));
+    assert(editor.setTriggerEventField(project,"variable",picojson::value("limit")));
+    assert(!editor.setTriggerEventField(project,"variable",
+                                       picojson::value("missingGlobal")));
     std::cout<<"trigger globals: lifecycle, ECA, bounds, undo, replay and parity passed\n";
 }
