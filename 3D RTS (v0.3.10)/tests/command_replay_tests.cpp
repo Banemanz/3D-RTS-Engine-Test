@@ -86,6 +86,65 @@ int main(){
     assert(denied.takeCommandOutcomes().empty());
     assert(verifyRTSReplay(denied.replayTape()));
 
+    // Enemy plans are not a privileged direct mutation: AI orders must use
+    // the same source-labeled, tick-indexed stream as human player commands.
+    RTSSkirmish automated;
+    automated.loadProject(project);
+    automated.update(1.f/60.f);
+    assert(automated.replayTape().commands.empty()); // AI just planned tick 2
+    automated.update(1.f/60.f);
+    auto aiTape=automated.replayTape();
+    std::vector<int> expectedAI;
+    for(const auto& u:automated.units)
+        if(u.isAlive() && !u.isStructure && u.ownerId==1)
+            expectedAI.push_back(u.id);
+    assert(!expectedAI.empty());
+    assert(aiTape.version==2);
+    assert(aiTape.commands.size()==expectedAI.size());
+    int lastID=0;
+    for(const auto& ai:aiTape.commands){
+        assert(ai.tick==2 && ai.source==1 && ai.kind==RTSCommandKind::Attack);
+        assert(ai.targetId==automated.playerBaseId());
+        assert(ai.units.size()==1 && ai.units[0]>lastID);
+        lastID=ai.units[0];
+    }
+    for(int i=0;i<118;++i)automated.update(1.f/60.f);
+    aiTape=automated.replayTape();
+    assert(verifyRTSReplay(aiTape,&reason));
+    assert(verifyRTSReplay(RTSReplayTape::fromJson(aiTape.toJson())));
+    auto aiTampered=aiTape;
+    aiTampered.commands[0].units={999999};
+    assert(!verifyRTSReplay(aiTampered,&reason));
+    assert(reason.find("diverged")!=std::string::npos);
+    auto invalidAI=aiTape.commands[0];
+    invalidAI.kind=RTSCommandKind::Build;
+    bool invalidAIRejected=false;
+    try{validateRTSCommand(invalidAI);}
+    catch(const std::invalid_argument&){invalidAIRejected=true;}
+    assert(invalidAIRejected);
+    invalidAI=aiTape.commands[0];
+    invalidAI.targetId=-1;
+    invalidAIRejected=false;
+    try{validateRTSCommand(invalidAI);}
+    catch(const std::invalid_argument&){invalidAIRejected=true;}
+    assert(invalidAIRejected);
+    // Compatibility: v1 tapes used direct simulation AI, not recorded
+    // source=1 commands; the verifier must still load those user recordings.
+    RTSSkirmish legacyAI;
+    legacyAI.loadProject(project);
+    legacyAI.setReplayAIMode(1);
+    for(int i=0;i<120;++i)legacyAI.update(1.f/60.f);
+    auto oldTape=legacyAI.replayTape();
+    oldTape.version=1;
+    assert(oldTape.commands.empty());
+    assert(verifyRTSReplay(RTSReplayTape::fromJson(oldTape.toJson())));
+    auto disallowedV1=aiTape;
+    disallowedV1.version=1;
+    invalidAIRejected=false;
+    try{(void)disallowedV1.toJson();}
+    catch(const std::invalid_argument&){invalidAIRejected=true;}
+    assert(invalidAIRejected);
+
     const RTSReplayTape encoded=RTSReplayTape::fromJson(tape.toJson());
     assert(verifyRTSReplay(encoded));
     const std::string path="command_replay_regression.rtsreplay.json";
