@@ -94,3 +94,34 @@ This is **execution logging, not yet breakpoints, single-stepping, a watch debug
 Load `projects/script_relay_showcase.rtsproject.json` from the bundled `projects/` folder and open F6. Two map globals (`alarm_level` and `raid_count`) are initialized by project data. A 2-second timer increments the alarm; a variable-change event reacts by spawning a creator-catalog Raider and incrementing the raid count; another variable-change listener rewards resources after multiple raids. Open the Playtest trigger monitor to watch the initial/current values and executed rule history. Automated tests verify the same sample through the headless interpreter, a 330-tick scenario and replay verification on Windows and Linux. The Linux screenshot artifact is `rts-scripted-relay-screenshot` from the **Tests + screenshots (NOT executables)** workflow; the playable ZIP is in **Download Windows EXE and Linux RTS Builds**.
 
 Variable IDs also have an **F6 → Rename** control. Renaming is one validated, undoable operation: it migrates precisely typed `OnVariableChanged`, `VariableCompare`, `SetVariable`, and `AddVariable` references in every trigger, while leaving unrelated text and custom-extension fields untouched. Invalid names and duplicate IDs are rejected without changing the project.
+
+### Typed integer expressions (November 14 continuation)
+
+Actions and conditions that previously required fixed numeric operands may now
+use **bounded expression trees** with map-global references. This is
+independent, original engine behavior, not a Galaxy source-code parser.
+
+- For a VariableCompare condition or SetVariable/AddVariable action, replace
+  `"value": 5` with `"value_expr": {"op":"Variable","name":"raid_count"}`.
+  For a GrantMinerals action, replace `"amount": 5` with
+  `"amount_expr": {"op":"Variable","name":"raid_count"}`.
+- Supported operations: Literal, Variable, Add, Subtract, Multiply, Divide,
+  Modulo, Min, Max, Negate, Absolute, Clamp (value/minimum/maximum).
+  Binary nodes use `left` and `right`; unary nodes use `operand`.
+- A nested example:
+  `{"op":"Multiply","left":{"op":"Variable","name":"raid_count"},"right":{"op":"Literal","value":10}}`.
+- The F6 trigger inspector can switch these operands between literal and a
+  direct map-variable reference using validated undoable widgets. More complex
+  expressions are edited through **Advanced JSON**; the shared headless parser
+  validates them before committing.
+- The engine enforces at most **8 expression levels and 64 nodes per expression**.
+  Every intermediate result is clamped to the integer range -100000000 to
+  100000000; division truncates toward zero. Division and modulo by zero
+  deterministically produce 0. References must resolve to declared globals.
+  Ambiguous simultaneous literal/expression fields and unexpected AST keys fail
+  validation. Expression references migrate during safe global rename.
+
+The runnable `script_relay_showcase.rtsproject.json` now uses an expression for
+its reward size. The new `RTSScriptExpressionTests` checks math boundaries,
+validation, editor transactions, replay verification and generates the
+Windows/Linux strict parity file `script_expression_fingerprint.txt`.

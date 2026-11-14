@@ -202,3 +202,7 @@ Missing: AI harvesting, resource/supply optimization, construction strategies, t
 ## Bounded shared trigger variables (November 14)
 
 F6 now exposes authorable map-global integer values and reference-aware editor controls. The headless ECA parser validates IDs, signed range, references and comparison operators; SetVariable, AddVariable and VariableCompare execute in the actual fixed-step simulation. Globals are saved as optional project extensions and reset on map restart. Their state is included in replay digests only for authored nonempty sets, preserving old map digests. A dedicated scenario's Windows/Linux fingerprints are compared by CI. This is a **first scoped script-state primitive**, not Galaxy Script language parity: local variables, expression ASTs, user functions, loops, waits/coroutines and VM/debugger remain pending.
+
+## Typed expression foundation (November 14 continuation)
+
+The trigger runtime now evaluates a bounded integer AST in VariableCompare, SetVariable, AddVariable and GrantMinerals rather than only fixed numbers. It supports variables, arithmetic, min/max and clamping, strict authoring validation, undoable literal/reference widgets and global rename migration. The implementation is deterministic and included in strict cross-platform replay fingerprints. This is **not** a Galaxy text compiler, general script function system, event coroutine executor or branch/loop runtime yet.

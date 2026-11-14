@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Frontier Relay - Scripted Operations",
-  "description": "Original RTS creator example: map globals, timed changes, deferred variable events, catalog-driven reinforcements, a counter-gated resource reward and visual debugger watch.",
+  "description": "Original RTS creator example: map globals, timed changes, deferred variable events, catalog-driven reinforcements, a counter-gated resource reward and visual debugger watch. Resource rewards are evaluated from an authored arithmetic expression.",
   "terrain": {
     "width": 49,
     "depth": 49,
@@ -621,7 +621,17 @@
       "actions": [
         {
           "type": "GrantMinerals",
-          "amount": 20
+          "amount_expr": {
+            "op": "Multiply",
+            "left": {
+              "op": "Variable",
+              "name": "raid_count"
+            },
+            "right": {
+              "op": "Literal",
+              "value": 10
+            }
+          }
         },
         {
           "type": "ShowMessage",
