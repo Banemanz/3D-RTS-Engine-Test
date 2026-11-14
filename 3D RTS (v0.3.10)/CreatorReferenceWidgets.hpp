@@ -38,6 +38,15 @@ bool draw(App& app,const std::string& parentId,const std::string& field,
         const std::string target=items[index].template get<std::string>();
         ImGui::PushID(static_cast<int>(index));
         ImGui::TextWrapped("%zu. %s",index+1,target.c_str());
+        if(category=="Ability" && project.catalog.find(target)){
+            const auto data=compileAbility(project.catalog,target);
+            const char* policy=data.target==AbilityTarget::Self?"SELF":
+                data.target==AbilityTarget::Ally?"ALLY":
+                data.target==AbilityTarget::Enemy?"ENEMY":"ANY";
+            ImGui::TextDisabled("  %s | %.1fs CD | %d Energy | %d Minerals",
+                                policy,double(data.cooldownTicks)/60.,
+                                data.energyCost,data.mineralCost);
+        }
         if(project.catalog.find(target)){
             ImGui::SameLine();
             if(ImGui::SmallButton("Open")){

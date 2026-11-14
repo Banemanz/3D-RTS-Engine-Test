@@ -162,6 +162,26 @@ jobs:
           name: rts-ability-command-hud-screenshot
           path: rts-abilities.png
           if-no-files-found: error
+      - name: Capture F7 native Ability catalog inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ability_workshop_showcase.rtsproject.json --smoke-select-catalog-id arc_lance --smoke-frames 90 --screenshot rts-ability-editor.ppm
+      - name: Convert Ability catalog inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-ability-editor.ppm rts-ability-editor.png
+      - name: Upload Ability inspector screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ability-editor-screenshot
+          path: rts-ability-editor.png
+          if-no-files-found: error
+      - name: Capture F7 Unit loadout assignment editor
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ability_workshop_showcase.rtsproject.json --smoke-select-catalog-id ranger --smoke-frames 90 --screenshot rts-ability-loadout.ppm
+      - name: Convert Unit loadout screenshot
+        run: python3 tools/ppm_to_png.py rts-ability-loadout.ppm rts-ability-loadout.png
+      - name: Upload Unit loadout screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-unit-ability-loadout-screenshot
+          path: rts-ability-loadout.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor

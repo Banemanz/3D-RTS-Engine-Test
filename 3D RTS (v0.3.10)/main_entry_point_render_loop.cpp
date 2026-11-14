@@ -893,6 +893,7 @@ int main(int argc, char** argv) {
     bool triggerMonitorSmoke=false;
     bool liveTriggerMonitorSmoke=false;
     std::string smokeTriggerId;
+    std::string smokeCatalogId;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -913,6 +914,8 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-live-trigger-monitor")liveTriggerMonitorSmoke=true;
         else if(arg == "--smoke-select-trigger-id" && i+1<argc)
             smokeTriggerId=argv[++i];
+        else if(arg == "--smoke-select-catalog-id" && i+1<argc)
+            smokeCatalogId=argv[++i];
     }
     int renderedFrames = 0;
     try {
@@ -987,6 +990,14 @@ int main(int argc, char** argv) {
                     std::clamp(read("zoom",42),app.camera.minZoomDistance,app.camera.maxZoomDistance);
                 app.camera.targetZoomDistance=app.camera.currentZoomDistance;
             }
+        }
+        // Verify F7's actual typed inspector for a named data object;
+        // fail smoke runs on missing catalog objects instead of showing a
+        // misleading default unit selection screenshot.
+        if(smokeFrames>0 && !smokeCatalogId.empty()){
+            if(!app.editor.selectCatalogId(app.project,smokeCatalogId))
+                throw std::invalid_argument("Unknown smoke catalog ID: "+smokeCatalogId);
+            app.editor.panel=EditorSession::Panel::Data;
         }
         // Deterministically choose a real authored rule for screenshot
         // verification; never modify normal editor startup selection.
