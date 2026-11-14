@@ -42,64 +42,107 @@ std::vector<TriggerEngine::Rule> TriggerEngine::parse(const RTSProject& project)
     return parseTriggerRules(project);
 }
 void TriggerEngine::validate(const RTSProject& p){ TriggerEngine e;(void)e.parse(p); }
-void TriggerEngine::configure(const RTSProject& p){rules_=parse(p);}
-bool TriggerEngine::conditionsPass(const Rule& rule,const RTSSkirmish& game,int subjectId)const {
-    for(const auto& condition:rule.conditions) {
-        std::string type=str(condition,"type");
-        if(type=="PlayerMineralsAtLeast" && game.playerMinerals<num(condition,"amount"))
+void TriggerEngine::configure(const RTSProject& p){
+    auto next=parse(p);
+    rules_=std::move(next);
+    trace_.clear();
+    nextSequence_=1;
+    lastSimulationSeconds_=0.;
+}
+bool TriggerEngine::conditionsPass(const Rule& rule,const RTSSkirmish& game,
+                                  int subjectId,std::size_t* failedCondition)const{
+    for(std::size_t i=0;i<rule.conditions.size();++i) {
+        const auto& condition=rule.conditions[i];
+        const std::string type=str(condition,"type");
+        bool failed=false;
+        if(type=="PlayerMineralsAtLeast")
+            failed=game.playerMinerals<num(condition,"amount");
+        else if(type=="UnitCountAtLeast")
+            failed=game.countUnitsForTrigger(intField(condition,"owner",0,-1,15),
+                                             str(condition,"catalog"))<num(condition,"count",1);
+        else if(type=="UnitTypeCountAtLeast")
+            failed=game.countUnitsForTrigger(intField(condition,"owner",0,-1,15),
+                                             str(condition,"catalog"))<num(condition,"count",1);
+        else if(type=="SubjectOwnerIs")
+            failed=subjectId<0 ||
+                   game.ownerForTrigger(subjectId)!=intField(condition,"owner",0,0,15);
+        if(failed){
+            if(failedCondition)*failedCondition=i;
             return false;
-        if(type=="UnitCountAtLeast" &&
-           game.countUnitsForTrigger(intField(condition,"owner",0,-1,15),
-                                     str(condition,"catalog"))<num(condition,"count",1))
-            return false;
-        if(type=="UnitTypeCountAtLeast" &&
-           game.countUnitsForTrigger(int(num(condition,"owner",0)),
-                                     str(condition,"catalog"))<num(condition,"count",1))
-            return false;
-        if(type=="SubjectOwnerIs" &&
-           (subjectId<0 || game.ownerForTrigger(subjectId)!=intField(condition,"owner",0,0,15)))
-            return false;
+        }
     }
     return true;
 }
-void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId) {
+void TriggerEngine::record(const Rule& rule,double elapsed,int subjectId,
+                           TraceStatus status,const std::string& detail){
+    if(!tracingEnabled_)return; // zero allocations unless tracing is enabled
+    if(trace_.size()==TraceCapacity)trace_.pop_front();
+    trace_.push_back({nextSequence_++,rule.id,rule.event,detail,elapsed,subjectId,status});
+}
+void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapsed) {
     if(rule.once && rule.fired)return;
-    if(!conditionsPass(rule,game,subjectId))return;
-    rule.fired=true;
-    for(const auto& action:rule.actions) {
-        const std::string type=str(action,"type");
-        if(type=="GrantMinerals")
-            game.addMineralsForTrigger(intField(action,"amount",0,-100000000,100000000));
-        else if(type=="SpawnUnit")
-            game.spawnForTrigger(str(action,"catalog"),
-                                intField(action,"owner",1,0,15),
-                                Vec3(float(num(action,"x")),0,float(num(action,"z"))));
-        else if(type=="EndMatch") {
-            auto outcome=str(action,"result","Victory");
-            if(outcome!="Victory" && outcome!="Defeat")
-                throw std::invalid_argument("EndMatch result must be Victory or Defeat");
-            game.endMatchForTrigger(outcome=="Victory");
-        }else if(type=="ShowMessage")
-            game.showMessageForTrigger(str(action,"text"));
-        else if(type=="ApplyEffect")
-            game.applyEffectForTrigger(str(action,"effect"),subjectId);
+    ++rule.attempts;
+    std::size_t failedIndex=0;
+    if(!conditionsPass(rule,game,subjectId,&failedIndex)){
+        ++rule.blocked;
+        if(tracingEnabled_){
+            const std::string conditionType=str(rule.conditions[failedIndex],"type");
+            record(rule,elapsed,subjectId,TraceStatus::ConditionBlocked,
+                   "Condition "+std::to_string(failedIndex+1)+" failed: "+conditionType);
+        }
+        return;
     }
+    rule.fired=true;
+    // Capture actions *after* successful execution. In an invalid runtime
+    // state, keep a bounded error record before propagating to the host.
+    std::string summary;
+    try {
+        for(const auto& action:rule.actions) {
+            const std::string type=str(action,"type");
+            if(type=="GrantMinerals")
+                game.addMineralsForTrigger(intField(action,"amount",0,-100000000,100000000));
+            else if(type=="SpawnUnit")
+                game.spawnForTrigger(str(action,"catalog"),
+                                     intField(action,"owner",1,0,15),
+                                     Vec3(float(num(action,"x")),0,float(num(action,"z"))));
+            else if(type=="EndMatch") {
+                auto outcome=str(action,"result","Victory");
+                if(outcome!="Victory" && outcome!="Defeat")
+                    throw std::invalid_argument("EndMatch result must be Victory or Defeat");
+                game.endMatchForTrigger(outcome=="Victory");
+            }else if(type=="ShowMessage")
+                game.showMessageForTrigger(str(action,"text"));
+            else if(type=="ApplyEffect")
+                game.applyEffectForTrigger(str(action,"effect"),subjectId);
+            if(tracingEnabled_){
+                if(!summary.empty())summary+=", ";
+                summary+=type;
+            }
+        }
+    }catch(const std::exception& e) {
+        record(rule,elapsed,subjectId,TraceStatus::ActionError,e.what());
+        throw;
+    }
+    ++rule.executions;
+    record(rule,elapsed,subjectId,TraceStatus::Executed,summary);
 }
 void TriggerEngine::start(RTSSkirmish& game) {
-    for(auto& r:rules_)if(r.event=="OnMapStart")run(r,game,-1);
+    lastSimulationSeconds_=0.;
+    for(auto& r:rules_)if(r.event=="OnMapStart")run(r,game,-1,0.);
 }
 void TriggerEngine::tick(RTSSkirmish& game,double elapsed,
                          const std::vector<int>& killed) {
+    lastSimulationSeconds_=elapsed;
     for(auto& r:rules_) {
         if(r.once && r.fired)continue;
-        if(r.event=="After" && elapsed>=r.interval)run(r,game,-1);
+        if(r.event=="After" && elapsed>=r.interval)run(r,game,-1,elapsed);
         else if(r.event=="Every" && elapsed>=r.startTime+r.interval) {
             r.startTime=elapsed;
-            run(r,game,-1);
+            run(r,game,-1,elapsed);
         }else if(r.event=="MineralsBelow") {
-            if(game.playerMinerals<r.threshold)run(r,game,-1);
+            if(game.playerMinerals<r.threshold)run(r,game,-1,elapsed);
         }else if(r.event=="OnUnitDeath") {
-            for(int id:killed)run(r,game,id);
+            for(int id:killed)run(r,game,id,elapsed);
         }else if(r.event=="OnRegionEnter") {
             const auto* region=game.regionForTrigger(r.region);
             if(!region)continue;
@@ -119,7 +162,7 @@ void TriggerEngine::tick(RTSSkirmish& game,double elapsed,
             r.occupants=std::move(current);
             // A SpawnUnit action may reallocate game.units; never execute it
             // while walking that vector.
-            for(int id:entered)run(r,game,id);
+            for(int id:entered)run(r,game,id,elapsed);
         }
     }
 }

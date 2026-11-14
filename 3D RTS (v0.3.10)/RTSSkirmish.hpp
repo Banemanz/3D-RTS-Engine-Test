@@ -33,6 +33,10 @@ public:
     void syncTerrain(const TerrainMap& terrain);
     const RTSProject& project() const { return project_; }
     void update(float fixedDt);
+    // Playtest diagnostics are ephemeral, never saved to authored map data.
+    void setTriggerTracing(bool enabled){triggers_.enableTracing(enabled);}
+    const TriggerEngine& triggerDiagnostics()const{return triggers_;}
+    TriggerEngine& triggerDiagnostics(){return triggers_;}
 
     std::vector<Unit> units;
     std::vector<MineralNode> minerals;
