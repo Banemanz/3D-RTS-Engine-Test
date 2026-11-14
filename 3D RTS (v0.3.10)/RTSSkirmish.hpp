@@ -118,6 +118,7 @@ private:
         float totalTime = 0.f;
     };
     int nextId_ = 1;
+    bool occupancyDirty_ = false;
     int trainingPage_ = 0;
     float enemySpawnTimer_ = 12.0f;
     float visionIntervalTimer_=0.0f;
@@ -137,6 +138,7 @@ private:
     void advanceRoutes();
     void updateGathering(float dt);
     void updateProduction(float dt);
+    bool findProductionSpawn(const Unit& producer,const UnitData& type,Vec3& out) const;
     void updateEnemy(float dt);
     bool canQueueAt(int buildingId,const std::string& unitId) const;
     bool queueAt(int buildingId,const std::string& unitId);

@@ -95,7 +95,7 @@ const Unit* RTSSkirmish::find(int id)const {
 void RTSSkirmish::reset() {
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
-    nextId_=1;trainingPage_=0;friendlyBaseId_=-1;enemyBaseId_=-1;
+    nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     visionIntervalTimer_=0.f;
     vision.reset(project_.terrain);
@@ -377,6 +377,7 @@ void RTSSkirmish::updateGathering(float dt) {
             job.timer-=dt;
             if(job.timer<=0){
                 job.cargo=std::min(10,node.remaining);node.remaining-=job.cargo;
+                if(node.remaining==0 && job.cargo>0)occupancyDirty_=true;
                 if(job.cargo>0 && setRoute(*u,base->position,false)) {
                     job.phase=WorkerPhase::ToBase;
                 }else{it=jobs_.erase(it);continue;}
@@ -514,6 +515,46 @@ bool RTSSkirmish::queueMarine() {
 bool RTSSkirmish::queueWorker() {
     return queueAt(friendlyBaseId_,workerId_);
 }
+bool RTSSkirmish::findProductionSpawn(const Unit& producer,const UnitData& type,
+                                      Vec3& out) const {
+    // Deterministic bounded outlet search: first try the producer's rally
+    // direction, then adjacent arcs and a second ring. No per-map exhaustive
+    // scan and no spawns inside static navigation blockers or existing units.
+    const float unitRadius=std::max(0.5f,0.62f*type.visual_scale);
+    Vec3 forward{-1.f,0.f,0.35f};
+    auto rally=rallyPoints_.find(producer.id);
+    if(rally!=rallyPoints_.end()) {
+        forward=rally->second-producer.position;forward.y=0;
+        if(forward.lengthXZ()<0.01f)forward={-1.f,0.f,0.35f};
+    }
+    const float angle=std::atan2(forward.z,forward.x);
+    constexpr float tau=6.2831853071795864769f;
+    const float base=producer.radius+unitRadius+0.75f;
+    for(int ring=0;ring<2;++ring)for(int k=0;k<12;++k) {
+        // Alternate left/right angles so the chosen spawn stays near rally.
+        const int side=(k%2==0)?1:-1;
+        const int step=(k+1)/2;
+        const float direction=angle+side*step*(tau/12.f);
+        const float radius=base+ring*2.5f;
+        const Vec3 desired=producer.position+
+            Vec3(std::cos(direction)*radius,0.f,std::sin(direction)*radius);
+        const Vec3 inside=navigation.clampWorld(desired);
+        if((inside-desired).lengthXZ()>0.1f)continue;
+        const auto cell=navigation.toCell(inside);
+        if(!navigation.walkable(cell.x,cell.z))continue;
+        Vec3 spot=navigation.centerOf(cell);
+        bool occupied=false;
+        for(const auto& mobile:units)if(mobile.isAlive() && !mobile.isStructure &&
+          (mobile.position-spot).lengthXZ()<mobile.radius+unitRadius+0.25f) {
+            occupied=true;break;
+        }
+        if(occupied)continue;
+        spot.y=project_.terrain.sampleHeight(spot.x,spot.z);
+        out=spot;
+        return true;
+    }
+    return false;
+}
 void RTSSkirmish::updateProduction(float dt) {
     for(auto it=construction_.begin();it!=construction_.end();) {
         const Unit* u=find(it->first);
@@ -536,16 +577,15 @@ void RTSSkirmish::updateProduction(float dt) {
         if(!front){++it;continue;}
         it->remaining-=dt;
         if(it->remaining>0){++it;continue;}
-        Vec3 origin=building->position;
-        Vec3 spawnPos=origin+Vec3(-5,0,3);
-        auto route=navigation.findPath(spawnPos,spawnPos);
-        if(route.empty()){++it;continue;}
         const UnitData type=unitFromCatalog(project_.catalog,it->catalogId);
+        Vec3 spawnPos{};
+        // Finished jobs wait when every legal outlet is blocked.
+        if(!findProductionSpawn(*building,type,spawnPos)){++it;continue;}
         const auto fields=project_.catalog.resolvedFields(it->catalogId);
         const bool worker=boolField(fields,"is_worker");
         const std::string prefix=worker?"Worker ":
             it->catalogId==marineId_?"Marine ":type.resourceName+" ";
-        Unit& produced=spawn(type,navigation.clampWorld(spawnPos),0,
+        Unit& produced=spawn(type,spawnPos,0,
                              prefix+std::to_string(nextId_),false,worker,it->catalogId);
         const auto rally=rallyPoints_.find(it->buildingId);
         if(rally!=rallyPoints_.end())setRoute(produced,rally->second,false);
@@ -563,8 +603,10 @@ void RTSSkirmish::updateEnemy(float dt) {
     enemySpawnTimer_-=dt;
     if(enemySpawnTimer_<=0 && countOwnerUnits(1)<12) {
         enemySpawnTimer_=enemyInterval_;
-        spawn(unitFromCatalog(project_.catalog,enemyId_),{hive->position.x-5,0,hive->position.z+4},1,
-              "Hybrid "+std::to_string(nextId_),false,false,enemyId_);
+        const UnitData enemy=unitFromCatalog(project_.catalog,enemyId_);
+        Vec3 spawnPos{};
+        if(findProductionSpawn(*hive,enemy,spawnPos))
+            spawn(enemy,spawnPos,1,"Hybrid "+std::to_string(nextId_),false,false,enemyId_);
     }
     for(auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&
                           u.state==UnitState::IDLE)u.attackTarget(friendlyBaseId_);
@@ -598,6 +640,12 @@ void RTSSkirmish::update(float dt) {
         });
     for(const auto& hit:pendingHits)
         if(Unit* target=find(hit.targetId))target->takeDamage(hit.rawDamage,hit.attackerName);
+    // Dead structures are no longer static navigation blockers. Rebuild just
+    // once on each newly destroyed structure, not in every simulation tick.
+    bool staticChanged=false;
+    for(const auto& u:units)if(u.isStructure && !u.isAlive() &&
+       observedDead_.count(u.id)==0){staticChanged=true;break;}
+    if(staticChanged)rebuildNavigation();
     // Dead army units return their supply exactly once. Production still reserves
     // supply at queue time, even before the unit exists.
     for(const auto& u:units)if(u.ownerId==0 && !u.isStructure && !u.isAlive()) {
@@ -606,6 +654,7 @@ void RTSSkirmish::update(float dt) {
     }
     advanceRoutes();
     updateGathering(dt);
+    if(occupancyDirty_) {rebuildNavigation();occupancyDirty_=false;}
     updateProduction(dt);
     for(auto it=rallyPoints_.begin();it!=rallyPoints_.end();) {
         const Unit* building=find(it->first);

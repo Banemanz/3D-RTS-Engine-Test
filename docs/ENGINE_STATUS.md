@@ -177,3 +177,14 @@ inheritance, Unit/Actor/Model links, scene placements, known instance overrides,
 Skirmish role metadata and recognized trigger ECA catalog fields. Arbitrary
 mod extension strings remain untouched; full schema-aware reference tracking
 for third-party systems is still needed.
+
+## Dynamic nav obstacles and production exits
+
+Production now chooses a deterministic walkable outlet near its producing
+building, biased toward the rally direction, from at most 24 candidate cells.
+The outlet must be free of static pathing blockers and living mobile occupants;
+a completed job remains pending if none is available. Enemy wave spawning uses
+the same safe outlet search. Dead structures and depleted mineral patches now
+release their blocked navigation cells via an event-driven grid rebuild rather
+than leaving permanent invisible obstacles. These are not a full collision or
+crowd solver and dynamic units can still congest chokepoints.

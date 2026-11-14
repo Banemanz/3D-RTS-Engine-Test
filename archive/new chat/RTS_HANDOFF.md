@@ -341,3 +341,13 @@ become three configurable training slots, with Tab and HUD page buttons
 for up to four pages. `RTSProductionCatalogTests` covers catalog entries,
 paging, HUD hit tests, reservation/refund, save/load and invalid definitions.
 Do not describe this as a full SC2 ability/tech/production system.
+
+## Safe production exits / dynamic navigation blockers
+
+Production now chooses up to 24 deterministic ring candidates near a building,
+preferring the rally direction, and requires walkable unoccupied navigation
+cells; blocked outlets postpone a finished job. Enemy spawns also check legal
+outlets. Structure deaths release blocked footprints (one rebuild per new
+structure death), and exhausted mineral deposits release pathing cells.
+`RTSProductionSpawnTests` checks producer outlet legality, a destroyed
+structure, rally and mineral depletion. Still no general collision solver.
