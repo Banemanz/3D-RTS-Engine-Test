@@ -90,8 +90,15 @@ int main(){
     assert(effectEditor.setTriggerEvent(withEffect,"OnRegionEnter"));
     assert(effectEditor.addTriggerNode(withEffect,false,"ApplyEffect"));
     assert(nodes(effectEditor.triggerObject(withEffect,0),"actions").size()==2);
+    const auto effectNodes=nodes(effectEditor.triggerObject(withEffect,0),"actions");
+    const auto initialEffect=effectNodes[1].get<picojson::object>()
+        .at("effect").get<std::string>();
+    assert(!effectEditor.setTriggerNodeField(withEffect,false,1,"effect",
+                                             picojson::value(initialEffect))); // no-op
+    const std::string nextEffect=initialEffect=="kinetic_pulse"
+        ?"restorative_pulse":"kinetic_pulse";
     assert(effectEditor.setTriggerNodeField(withEffect,false,1,"effect",
-                                            picojson::value("restorative_pulse")));
+                                            picojson::value(nextEffect)));
     assert(!effectEditor.setTriggerNodeField(withEffect,false,1,"effect",
                                              picojson::value("does_not_exist")));
     assert(parseTriggerRules(withEffect).size()==1);
