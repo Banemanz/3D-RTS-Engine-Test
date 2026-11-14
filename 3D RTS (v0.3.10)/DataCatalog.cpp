@@ -180,16 +180,34 @@ void collectEffect(const DataCatalog& catalog,const std::string& id,
                 throw std::invalid_argument("Effect child must be an ID: "+id);
             collectEffect(catalog,ref.get<std::string>(),stack,output,visits);
         }
-    }else if(op=="Damage" || op=="Heal"){
+    }else if(op=="Damage" || op=="Heal" ||
+             op=="PeriodicDamage" || op=="PeriodicHeal"){
         const auto amount=fields.find("amount");
         if(amount==fields.end() || !amount->second.is<double>() ||
            !std::isfinite(amount->second.get<double>()) ||
            amount->second.get<double>()<=0.0 ||
            amount->second.get<double>()>100000.0)
             throw std::invalid_argument("Effect amount must be 0..100000: "+id);
-        output.push_back({op=="Damage"?EffectOperationKind::Damage:
-                                        EffectOperationKind::Heal,
-                          float(amount->second.get<double>())});
+        EffectOperation terminal;
+        terminal.amount=float(amount->second.get<double>());
+        terminal.kind=op=="Damage"?EffectOperationKind::Damage:
+                      op=="Heal"?EffectOperationKind::Heal:
+                      op=="PeriodicDamage"?EffectOperationKind::PeriodicDamage:
+                      EffectOperationKind::PeriodicHeal;
+        if(op=="PeriodicDamage" || op=="PeriodicHeal"){
+            const auto ticks=[&](const char* key,int low,int high){
+                const auto it=fields.find(key);
+                if(it==fields.end() || !it->second.is<double>())
+                    throw std::invalid_argument("Periodic effect requires integer "+std::string(key));
+                const double n=it->second.get<double>();
+                if(!std::isfinite(n) || std::floor(n)!=n || n<low || n>high)
+                    throw std::invalid_argument("Invalid periodic "+std::string(key)+": "+id);
+                return static_cast<std::uint32_t>(n);
+            };
+            terminal.intervalTicks=ticks("interval_ticks",1,600);
+            terminal.durationTicks=ticks("duration_ticks",1,3600);
+        }
+        output.push_back(terminal);
     }else throw std::invalid_argument("Unknown Effect kind: "+op);
     stack.pop_back();
 }
@@ -348,6 +366,18 @@ DataCatalog DataCatalog::defaults() {
     c.add(make("Effect","kinetic_pulse","",{
         {"kind",picojson::value("Damage")},{"amount",picojson::value(12.0)}
     }));
+    c.add(make("Effect","stinging_cloud","",{
+        {"kind",picojson::value("PeriodicDamage")},
+        {"amount",picojson::value(3.0)},
+        {"interval_ticks",picojson::value(60.0)},
+        {"duration_ticks",picojson::value(300.0)}
+    }));
+    c.add(make("Effect","renewal_field","",{
+        {"kind",picojson::value("PeriodicHeal")},
+        {"amount",picojson::value(4.0)},
+        {"interval_ticks",picojson::value(60.0)},
+        {"duration_ticks",picojson::value(240.0)}
+    }));
     c.validate();
     return c;
 }
@@ -362,6 +392,7 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     else if(faction=="Hybrid")d.faction=Faction::Hybrid;
     else throw std::invalid_argument("Unsupported faction: "+faction);
     d.max_hp=float(numeric(f,"max_hp",d.max_hp));
+    d.hp_regen=float(numeric(f,"hp_regen",d.hp_regen));
     d.armor=float(numeric(f,"armor",d.armor));
     d.damage=float(numeric(f,"damage",d.damage));
     d.attack_range=float(numeric(f,"attack_range",d.attack_range));
@@ -373,7 +404,8 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     d.mineral_cost=int(numeric(f,"mineral_cost",d.mineral_cost));
     d.build_time=float(numeric(f,"build_time",d.build_time));
     d.visual_scale=float(numeric(f,"visual_scale",d.visual_scale));
-    if(d.max_hp<=0 || d.armor<0 || d.damage<0 || d.attack_range<0 ||
+    if(d.max_hp<=0 || d.hp_regen<0 || d.hp_regen>1000 ||
+       d.armor<0 || d.damage<0 || d.attack_range<0 ||
        d.attack_cooldown<=0 || d.aggro_range<0 ||
        d.sight_range<0 || d.sight_range>128 || d.move_speed<0 ||
        d.supply_cost<0 || d.mineral_cost<0 || d.build_time<0 || d.visual_scale<=0)

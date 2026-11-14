@@ -110,6 +110,7 @@ void RTSSkirmish::reset() {
     aiInputMode_=AIInputMode::Live;
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
+    periodicEffects_.clear();
     nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     visionIntervalTimer_=0.f;
@@ -757,6 +758,13 @@ void RTSSkirmish::update(float dt) {
         });
     for(const auto& hit:pendingHits)
         if(Unit* target=find(hit.targetId))target->takeDamage(hit.rawDamage,hit.attackerName);
+    // Unit catalog passive regeneration is evaluated in the authoritative
+    // fixed step, independently of rendering and active navigation.
+    for(auto& unit:units)
+        if(unit.isAlive() && unit.data.hp_regen>0.f)
+            unit.currentHp=std::min(unit.data.max_hp,
+                                    unit.currentHp+unit.data.hp_regen*dt);
+    updatePeriodicEffects();
     // Dead structures are no longer static navigation blockers. Rebuild just
     // once on each newly destroyed structure, not in every simulation tick.
     bool staticChanged=false;
@@ -815,17 +823,48 @@ std::string RTSSkirmish::statusLine()const {
     return s.str();
 }
 
+void RTSSkirmish::updatePeriodicEffects(){
+    for(auto it=periodicEffects_.begin();it!=periodicEffects_.end();){
+        Unit* target=find(it->targetId);
+        if(!target || !target->isAlive() || tick_>it->finalTick){
+            it=periodicEffects_.erase(it);
+            continue;
+        }
+        if(tick_>=it->nextTick){
+            if(it->kind==EffectOperationKind::PeriodicDamage)
+                target->takeDamage(it->amount,"Effect "+it->sourceEffect);
+            else
+                target->currentHp=std::min(target->data.max_hp,
+                                            target->currentHp+it->amount);
+            it->nextTick+=it->intervalTicks;
+        }
+        if(!target->isAlive() || it->nextTick>it->finalTick)
+            it=periodicEffects_.erase(it);
+        else ++it;
+    }
+}
+
 bool RTSSkirmish::applyEffectForTrigger(const std::string& effectId,int subjectId){
     Unit* target=find(subjectId);
     if(!target || !target->isAlive())return false;
     const auto operations=compileEffect(project_.catalog,effectId);
+    std::size_t pending=0;
+    for(const auto& operation:operations)
+        if(operation.kind==EffectOperationKind::PeriodicDamage ||
+           operation.kind==EffectOperationKind::PeriodicHeal)++pending;
+    if(pending>MaxPeriodicEffects-periodicEffects_.size())
+        return false; // atomic scheduling admission, no partial effect graph
     for(const auto& op:operations){
         if(!target->isAlive())break;
         if(op.kind==EffectOperationKind::Damage)
             target->takeDamage(op.amount,"Effect "+effectId);
+        else if(op.kind==EffectOperationKind::Heal)
+            target->currentHp=std::min(target->data.max_hp,
+                                       target->currentHp+op.amount);
         else
-            target->currentHp=std::clamp(target->currentHp+op.amount,0.f,
-                                         target->data.max_hp);
+            periodicEffects_.push_back({subjectId,op.kind,op.amount,
+                op.intervalTicks,tick_+op.intervalTicks,
+                tick_+op.durationTicks,effectId});
     }
     return true;
 }
@@ -1034,6 +1073,20 @@ std::string RTSSkirmish::stateDigest()const{
         hash.scalar(u->attackCooldownTimer);hash.scalar(u->attackFlashTimer);
         hash.point(u->navAgent.targetPosition);hash.boolean(u->navAgent.hasDestination);
         hash.point(u->velocity());
+    }
+    // Empty arrays preserve all pre-periodic-effect replay fingerprints.
+    // Otherwise include the exact active duration/next pulse state.
+    if(!periodicEffects_.empty()){
+        hash.number(periodicEffects_.size());
+        for(const auto& effect:periodicEffects_){
+            hash.signedNumber(effect.targetId);
+            hash.signedNumber(static_cast<int>(effect.kind));
+            hash.scalar(effect.amount);
+            hash.number(effect.intervalTicks);
+            hash.number(effect.nextTick);
+            hash.number(effect.finalTick);
+            hash.text(effect.sourceEffect);
+        }
     }
     hash.number(routes_.size());
     for(const auto& item:routes_){

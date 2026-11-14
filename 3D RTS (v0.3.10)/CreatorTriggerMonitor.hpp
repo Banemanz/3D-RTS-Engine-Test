@@ -28,6 +28,8 @@ void draw(App& app){
                          engine.lastSimulationSeconds(),engine.trace().size(),
                          TriggerEngine::TraceCapacity);
     ImGui::TextWrapped("Run F9 to play, then F6 to inspect. Editing map data restarts the preview.");
+    ImGui::Text("Active timed gameplay effects: %zu",
+                app.game.activePeriodicEffectCount());
     static ImGuiTextFilter search;
     search.Draw("Search rules / event details");
     // The monitor reads the headless interpreter state. It never changes it:

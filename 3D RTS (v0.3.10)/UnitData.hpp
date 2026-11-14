@@ -17,6 +17,7 @@ public:
     std::string resourceName = "UnnamedUnit";
     Faction faction          = Faction::Humanity;
     float max_hp             = 45.0f;
+    float hp_regen           = 0.0f; // hp/second; optional Unit catalog stat
     float armor              = 0.0f;
     float damage             = 6.0f;
     float attack_range       = 6.0f;

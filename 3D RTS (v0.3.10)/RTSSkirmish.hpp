@@ -99,6 +99,7 @@ public:
     int activeWorkerCount() const;
     int completedBarracksCount() const;
     int playerBaseId() const { return friendlyBaseId_; }
+    std::size_t activePeriodicEffectCount()const{return periodicEffects_.size();}
 
     // Script actions expose only explicit, bounded game-state mutations.
     void addMineralsForTrigger(int amount);
@@ -121,6 +122,18 @@ private:
     double elapsedSeconds_=0.0;
     std::unordered_set<int> observedDead_;
     TriggerEngine triggers_;
+    struct PeriodicEffect {
+        int targetId=0;
+        EffectOperationKind kind=EffectOperationKind::PeriodicDamage;
+        float amount=0.f;
+        std::uint32_t intervalTicks=0;
+        std::uint64_t nextTick=0;
+        std::uint64_t finalTick=0;
+        std::string sourceEffect;
+    };
+    static constexpr std::size_t MaxPeriodicEffects=256;
+    std::vector<PeriodicEffect> periodicEffects_;
+    void updatePeriodicEffects();
     RTSCommandStream commandStream_;
     std::uint64_t tick_=0;
     bool replayValid_=true;

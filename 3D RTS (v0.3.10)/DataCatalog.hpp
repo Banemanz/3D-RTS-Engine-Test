@@ -2,6 +2,7 @@
 #include "UnitData.hpp"
 #include "third_party/picojson.h"
 #include <stdexcept>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -44,10 +45,12 @@ private:
 
 // Bounded simulation effects are stored in the same editable catalog graph.
 // Gameplay logic can compile them without knowing anything about OpenGL/UI.
-enum class EffectOperationKind { Damage, Heal };
+enum class EffectOperationKind { Damage, Heal, PeriodicDamage, PeriodicHeal };
 struct EffectOperation {
     EffectOperationKind kind=EffectOperationKind::Damage;
     float amount=0.f;
+    std::uint32_t intervalTicks=0;
+    std::uint32_t durationTicks=0;
 };
 std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
                                             const std::string& id);
