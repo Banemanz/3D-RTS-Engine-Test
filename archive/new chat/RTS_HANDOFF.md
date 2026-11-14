@@ -785,3 +785,42 @@ The first real F9 ability-HUD screenshot selected the command_center rather than
 ### Follow-up: paged gameplay Ability command cards
 
 RTSSkirmish.hpp/.cpp now stores UI-only abilityPage_, supports abilityPageCount/nextAbilityPage, and selectedAbilityId resolves 3-slot pages across all eight authored Unit Abilities. RTSHUDLayout.hpp uses its bottom-right button as SKILLS x/y for single Ability-equipped casters with >3 assigned skills; main_entry_point_render_loop.cpp binds TAB to page abilities unless a producer's training page takes precedence. F/J/K cast the visible slots. page state is never included in stateDigest. RTSAbilityCastTests has a six-skill derived Ability fixture verifying page 1/page 2 labels, wraparound and unaltered state digest. Windows/Linux CTest, replay-parity and real screenshots must still pass on current HEAD.
+
+
+## November 14 final cross-OS verification of Ability/energy/creator pass
+
+**Verified functional commit:** 2ef5a392292b064c9273cef5a24241250593714b.
+
+- Release Windows x64 + Linux x86_64 binary build, CTest, packaging,
+  bundled map/feature verification and headless OpenGL completed SUCCESS:
+  https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43642832888
+- Windows + Linux Debug tests and mandatory byte-identical replay
+  fingerprint comparison completed SUCCESS:
+  https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43642832901
+- Linux Mesa GUI screenshot smokes, Windows Debug and replay-parity
+  checks completed SUCCESS:
+  https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43642836997
+- Latest checked out editor views show Arc Lance in F7 with editable
+  target/effect/cost/cooldown, and Ranger's ordered Field Mend/Arc
+  Lance loadout with explicit typed links. F9 screenshot confirms
+  Ranger 1 selected, energy 100/100, and working F/J Ability buttons.
+  The earlier mistaken Command Center screenshot was caused by
+  catalog inheritance into a producer and fixed via an empty base
+  abilities override + nonstructure caster smoke selector.
+- Paged loadout implementation commit 0d4f82c22ca3572dbb8f69fe92146483dfdf4fd9
+  extends F9 to three-slot skill pages via TAB/ SKILLS x/y,
+  all eight authored Ability references accessible for non-producers.
+  Test in ability_cast_tests.cpp checks a six-skill map fixture,
+  page wrap and unchanged digest across UI-only page changes.
+- Known current limitations: producer Unit training pages take
+  priority over Ability paging; ability targeting supports units
+  only; build/command-card customization, behavior stacks and actor
+  events remain future work. Disabled non-ability command slots
+  may remain visible next to skills and need UI polish.
+
+**The branch remains open and the PR remains draft/unmerged.**
+The documentation-only commit containing this note follows the
+verified functional commit, so a new Actions run may be pending
+for documentation changes. Do not confuse the doc-only HEAD with
+the last code-tested parent. Future sessions should fetch this
+handoff and the current latest branch source before editing.
