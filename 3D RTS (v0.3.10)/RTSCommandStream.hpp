@@ -30,6 +30,7 @@ struct RTSReplayCheckpoint {
 
 class RTSCommandStream {
 public:
+    static constexpr std::uint64_t MaxCommandTick=9007199254740991ULL;
     static constexpr std::size_t MaxPending=512;
     static constexpr std::size_t MaxUnitIds=128;
     static constexpr std::uint64_t MaxAhead=1200;

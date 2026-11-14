@@ -54,7 +54,7 @@ bool commandLess(const RTSCommand& a,const RTSCommand& b){
 }
 }
 void validateRTSCommand(const RTSCommand& c){
-    if(c.tick==0 || c.tick>RTSReplayTape::MaxTicks)
+    if(c.tick==0 || c.tick>RTSCommandStream::MaxCommandTick)
         throw std::invalid_argument("Command tick outside supported replay duration");
     if(c.sequence>1000000000ULL || c.source!=0 ||
        static_cast<unsigned>(c.kind)>=names.size() ||
@@ -119,7 +119,7 @@ RTSCommand commandFromJson(const picojson::value& value){
     if(!value.is<picojson::object>())throw std::invalid_argument("Command must be object");
     const auto& o=value.get<picojson::object>();
     RTSCommand c;
-    c.tick=integer(o,"tick",1,RTSReplayTape::MaxTicks);
+    c.tick=integer(o,"tick",1,RTSCommandStream::MaxCommandTick);
     c.sequence=integer(o,"sequence",1,1000000000ULL);
     c.source=int(integer(o,"source",0,0));
     const auto kind=string(o,"kind");

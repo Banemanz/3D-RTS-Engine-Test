@@ -101,6 +101,11 @@ int main(){
     assert(!stream.enqueue(action,1)); // no late commands
     action.tick=1+RTSCommandStream::MaxAhead+1;
     assert(!stream.enqueue(action,0)); // no unbounded future queue
+    stream.clear();
+    action.tick=RTSReplayTape::MaxTicks+1;
+    action.units={2};
+    assert(stream.enqueue(action,RTSReplayTape::MaxTicks)); // game stays playable
+    assert(stream.take(RTSReplayTape::MaxTicks+1).size()==1);
     action.tick=2;action.units={9,9};
     bool rejected=false;
     try{(void)stream.enqueue(action,0);}catch(const std::invalid_argument&){rejected=true;}

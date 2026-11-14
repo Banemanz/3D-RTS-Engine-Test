@@ -689,6 +689,7 @@ void RTSSkirmish::update(float dt) {
     dt=std::clamp(dt,0.0f,0.1f);
     if(std::fabs(dt-1.f/60.f)>0.000001f)replayValid_=false;
     ++tick_;
+    if(tick_>RTSReplayTape::MaxTicks)replayValid_=false;
     const auto pending=commandStream_.take(tick_);
     for(const auto& command:pending){
         (void)applyCommand(command);
@@ -840,7 +841,7 @@ const ProjectPlacement* RTSSkirmish::regionForTrigger(const std::string& id)cons
 }
 
 bool RTSSkirmish::queueCommand(RTSCommand command){
-    if(result!=MatchResult::Playing || tick_>=RTSReplayTape::MaxTicks)return false;
+    if(result!=MatchResult::Playing || tick_>=RTSCommandStream::MaxCommandTick)return false;
     return commandStream_.enqueue(std::move(command),tick_);
 }
 bool RTSSkirmish::queuePlayerCommand(RTSCommandKind kind,const Vec3& point,
