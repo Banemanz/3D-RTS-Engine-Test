@@ -21,7 +21,8 @@ picojson::value rule(const char* id,const char* event,double seconds,
     return picojson::value(picojson::object{
         {"id",picojson::value(id)},
         {"event",picojson::value(e)},
-        {"once",picojson::value(std::string(event)!="Every")},
+        {"once",picojson::value(std::string(event)!="Every" &&
+                                 std::string(event)!="OnVariableChanged")},
         {"conditions",picojson::value(conditions)},
         {"actions",picojson::value(actions)}
     });
