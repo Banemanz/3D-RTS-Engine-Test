@@ -1563,6 +1563,57 @@ int main(int argc, char** argv) {
                 glBindVertexArray(ringVAO);
                 glDrawArrays(GL_TRIANGLES,0,6);
             }
+            // Dynamic AoE targeting feedback uses the same ground marker
+            // pipeline as terrain brushes. It is render-only: never
+            // influences the authoritative fixed-step area target resolver.
+            if(app.editor.panel==EditorSession::Panel::Play) {
+                const auto previewRing=[&](const Vec3& ground,float radius,
+                                           float red,float green,float blue,
+                                           float alpha){
+                    const Vec3 pos(ground.x,
+                        app.project.terrain.sampleHeight(ground.x,ground.z),
+                        ground.z);
+                    const Mat4 marker=Mat4::translate(pos+Vec3(0,.10f,0))*
+                        Mat4::scale(Vec3(radius,1.f,radius));
+                    glUseProgram(ringShader);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uModel"),
+                                       1,GL_FALSE,marker.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(ringShader,"uColor"),
+                                red,green,blue,alpha);
+                    glBindVertexArray(ringVAO);
+                    glDrawArrays(GL_TRIANGLES,0,6);
+                };
+                for(const auto& impact:app.game.areaImpactWatch())
+                    previewRing(impact.center,impact.radius,.98f,.60f,.16f,.48f);
+                if(app.mode==AppState::Mode::CastAbility &&
+                   !app.pendingAbilityId.empty()) {
+                    const auto ability=compileAbility(app.project.catalog,
+                                                     app.pendingAbilityId);
+                    if(ability.target==AbilityTarget::Ground){
+                        double mx=0.,my=0.;
+                        glfwGetCursorPos(window,&mx,&my);
+                        Vec3 ground;
+                        if(app.camera.screenToGroundRaycast(
+                                mx,my,app.windowWidth,app.windowHeight,ground) &&
+                           app.project.terrain.insideWorld(ground.x,ground.z)){
+                            int casterId=-1;
+                            for(const auto& unit:app.game.units)
+                                if(unit.isSelected && unit.ownerId==0 &&
+                                   unit.isAlive()){casterId=unit.id;break;}
+                            const bool valid=app.game.canCastAbilityAt(
+                                casterId,app.pendingAbilityId,ground);
+                            previewRing(ground,ability.areaRadius,
+                                        valid?.20f:.90f,valid?.92f:.25f,
+                                        valid?.92f:.30f,.63f);
+                        }
+                    }
+                }
+            }
+
             if(app.editor.panel==EditorSession::Panel::Terrain && app.hoveredTerrain) {
                 glUseProgram(ringShader);
                 Mat4 brush=Mat4::translate(app.hoveredWorld+Vec3(0,.06f,0))
