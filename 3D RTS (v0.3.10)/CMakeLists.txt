@@ -34,6 +34,7 @@ target_link_libraries(RTSSimulation PUBLIC RTSNavigation RTSAuthoring)
 
 if(BUILD_TESTING)
     add_executable(RTSNativeMenuTests tests/native_menu_tests.cpp)
+    target_include_directories(RTSNativeMenuTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_test(NAME native_menu COMMAND RTSNativeMenuTests)
     add_executable(RTSNavigationTests tests/navigation_tests.cpp)
     target_link_libraries(RTSNavigationTests PRIVATE RTSNavigation)
