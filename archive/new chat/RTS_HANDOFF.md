@@ -665,3 +665,7 @@ data schemas/localization, full GUI replacing ImGui, script
 functions/local scopes, advanced terrain layers and robust import
 pipelines remain missing. Continue adding actual vertical slices
 rather than dummy checkboxes; preserve Win/Linux parity.
+
+### CI screenshot review and realistic F6 diagnostics (November 14 follow-up)
+
+The first genuine Linux Mesa screenshots revealed an inspector default width of only 360px, clipped recursive fields, and a timed-effects monitor stuck at 0.00 seconds because the ordinary F6 editor correctly freezes the gameplay clock. Fixed the initial F6 inspector width to 490px (user docking/resizing remains authoritative) and moved the monitor to an adjacent 445px default window. A new **screenshot-only** `--smoke-live-trigger-monitor` flag advances exactly one real fixed 60Hz engine tick per rendered smoke frame while the F6 monitor is open. This does **not** enable simulation during ordinary editing. `--smoke-select-trigger-id <ID>` verifies and displays a chosen authored script rule, allowing screenshot jobs to show the actual nested IfThenElse/Repeat rather than the first basic rule. Updated scripted-relay and timed-effects CI captures use these flags. Gameplay script trace, active timed effects, rules and health update from the actual deterministic simulation; no synthetic diagnostics. Revalidate current HEAD Windows/Linux Debug/Release and strict replay diff, then fetch screenshot artifacts for inspection.

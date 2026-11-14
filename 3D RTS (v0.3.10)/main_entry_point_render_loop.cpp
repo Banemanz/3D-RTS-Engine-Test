@@ -829,6 +829,8 @@ int main(int argc, char** argv) {
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
+    bool liveTriggerMonitorSmoke=false;
+    std::string smokeTriggerId;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -845,6 +847,9 @@ int main(int argc, char** argv) {
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
+        else if(arg == "--smoke-live-trigger-monitor")liveTriggerMonitorSmoke=true;
+        else if(arg == "--smoke-select-trigger-id" && i+1<argc)
+            smokeTriggerId=argv[++i];
     }
     int renderedFrames = 0;
     try {
@@ -869,7 +874,8 @@ int main(int argc, char** argv) {
         }
         app.recoverAutosave();
         app.reloadFromProject();
-        if(triggerMonitorSmoke && smokeFrames>0)app.triggerTraceVisible=true;
+        if((triggerMonitorSmoke || liveTriggerMonitorSmoke) && smokeFrames>0)
+            app.triggerTraceVisible=true;
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
         if(selectProducerForSmoke && smokeFrames>0) {
@@ -903,6 +909,20 @@ int main(int argc, char** argv) {
                     std::clamp(read("zoom",42),app.camera.minZoomDistance,app.camera.maxZoomDistance);
                 app.camera.targetZoomDistance=app.camera.currentZoomDistance;
             }
+        }
+        // Deterministically choose a real authored rule for screenshot
+        // verification; never modify normal editor startup selection.
+        if(smokeFrames>0 && !smokeTriggerId.empty()){
+            bool found=false;
+            const auto& authored=app.game.triggerDiagnostics().rules();
+            for(std::size_t i=0;i<authored.size();++i)
+                if(authored[i].id==smokeTriggerId){
+                    app.editor.selectedTrigger=i;
+                    found=true;
+                    break;
+                }
+            if(!found)
+                throw std::invalid_argument("Unknown smoke trigger ID: "+smokeTriggerId);
         }
         if(pauseMenuSmoke && smokeFrames>0 &&
            app.editor.panel==EditorSession::Panel::Play)app.pauseMenu=true;
@@ -1157,7 +1177,20 @@ int main(int argc, char** argv) {
                 }
                 if (steps == 8 && accumulator >= fixedStep)
                     accumulator = std::fmod(accumulator, fixedStep);
-            }else accumulator=0.0f; // editor never advances gameplay
+            }else accumulator=0.0f; // normal editor never advances gameplay
+            // Screenshot-only deterministic simulated playtest mode. An
+            // authored trigger monitor may be visible while the F6 tree is
+            // inspected, but regular editing never advances simulation.
+            if(liveTriggerMonitorSmoke && smokeFrames>0 &&
+               app.editor.panel==EditorSession::Panel::Triggers &&
+               app.game.result==MatchResult::Playing){
+                try{
+                    app.game.update(fixedStep);
+                }catch(const std::exception& e){
+                    reportInputFailure(window,"scripted monitor smoke",e.what());
+                    throw;
+                }
+            }
 
             if (currentTime - lastTitleUpdate > 0.35) {
                 const char* mode = app.mode == AppState::Mode::BuildBarracks ? "PLACE BARRACKS: RMB" :

@@ -248,10 +248,15 @@ void inspector(App& app){
     auto& ed=app.editor;
     auto& project=app.project;
     const auto w=ImGui::GetIO().DisplaySize;
-    ImGui::SetNextWindowPos(ImVec2(std::max(320.f,w.x-375.f),50.f),
-                            ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(360.f,std::max(330.f,w.y-112.f)),
-                             ImGuiCond_FirstUseEver);
+    // Nested ECA expressions need more than the narrow generic inspector.
+    // This is only the initial width: user-resized/docked windows are retained.
+    const float inspectorWidth=ed.panel==EditorSession::Panel::Triggers?490.f:360.f;
+    ImGui::SetNextWindowPos(
+        ImVec2(std::max(320.f,w.x-inspectorWidth-15.f),50.f),
+        ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(
+        ImVec2(inspectorWidth,std::max(330.f,w.y-112.f)),
+        ImGuiCond_FirstUseEver);
     if(!ImGui::Begin("Creator | Inspector")){ImGui::End();return;}
     ImGui::TextDisabled("PROJECT  %s",project.name.c_str());
     ImGui::TextDisabled("MAP  %d x %d",project.terrain.width(),project.terrain.depth());

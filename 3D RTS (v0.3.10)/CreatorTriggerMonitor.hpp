@@ -9,8 +9,10 @@ namespace CreatorTriggerMonitor {
 template<class App>
 void draw(App& app){
     if(!app.triggerTraceVisible)return;
-    ImGui::SetNextWindowPos(ImVec2(348.f,65.f),ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(490.f,500.f),ImGuiCond_FirstUseEver);
+    // Initial monitor placement leaves the F6 recursive inspector visible
+    // beside it at the standard 1280px smoke-test resolution.
+    ImGui::SetNextWindowPos(ImVec2(310.f,65.f),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(445.f,500.f),ImGuiCond_FirstUseEver);
     bool opened=app.triggerTraceVisible;
     if(!ImGui::Begin("Creator | Trigger Monitor",&opened)){
         app.triggerTraceVisible=opened;ImGui::End();return;

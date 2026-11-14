@@ -213,3 +213,7 @@ must validate `timed_effects_showcase.rtsproject.json` and self-report
 Linux Mesa/Xvfb separately captures `rts-recursive-trigger-editor-screenshot`
 and `rts-timed-effects-screenshot` from the real OpenGL executable.
 Actual Windows 10/11 interactive use remains a manual smoke requirement.
+
+### Meaningful screenshot capture
+
+The screenshot-only `--smoke-live-trigger-monitor` argument advances one authoritative fixed 60Hz simulation step per smoke frame without affecting normal paused F6 editor behavior. Thus the timed-effects monitor at smoke frame 180 should show real elapsed simulation time, an executed trigger and live queued effects, rather than the initial zero-state. `--smoke-select-trigger-id relay_support_award` opens the authored nested ECA branch during the recursive editor screenshot; unknown IDs fail startup. Both are CI-only presentation/simulation harness controls and do not affect replay format or normal gameplay. Widened initial F6 inspector/adjacent monitor placement remains user-customizable.
