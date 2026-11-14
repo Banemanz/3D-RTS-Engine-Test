@@ -403,3 +403,8 @@ See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for operation, limitations, the scree
 Edited terrain slope/pathing and new or destroyed structures are reflected in the shared navigation grid. On a topology change, in-flight orders check their remaining waypoints and lazily replan if invalid. If a destination becomes completely unreachable, that leg is abandoned; a subsequent queued move command is then attempted. Circular structure/mineral blockers update a local region of the grid. Building placement does not allow placing a footprint over a live mobile unit.
 
 No movement-class, hover/air navigation or hierarchical flow-field solver has been added yet. Maps with many units are better served by the existing grid/cost system until benchmarked upgrades are ready; see [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md).
+
+
+## Spawning from the creator's catalog
+
+The unit display name in a Unit catalog's inherited/resolved `name` field now controls **production-spawned units, AI reinforcements and structures built in gameplay**, not only placed scene instances. For example, deriving a Unit named `Field Medic` and adding it to a producer's `trainable_units` list creates `Field Medic <id>` units. This avoids special cases for the demo's Ranger/Worker/Raider roles and makes custom maps less tied to any example roster. Legacy project IDs and catalog data are preserved.

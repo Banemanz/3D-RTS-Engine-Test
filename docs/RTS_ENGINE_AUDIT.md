@@ -57,3 +57,8 @@ This pass does **not** create a flow-field solver, hierarchical pathfinder, aeri
 - Linux Mesa/Xvfb renders the actual gameplay and authoring workspaces (terrain, scene, data, triggers, HUD, native pause and trigger monitor). Screenshots are debug artifacts, **not executable ZIPs**.
 - Manual Windows 10/11 GPU/editor input validation is still required in addition to automated parity tests.
 - Keep working inside the existing **Draft PR #1**, keep this audit and `archive/new chat/RTS_HANDOFF.md` updated and do not merge the PR without review.
+
+
+## Data-driven display names
+
+The game runtime now resolves spawned entity names from `UnitData::resourceName` (inherited Unit catalog `name`) for production, construction and AI reinforcement paths. Previous hardcoded example roles are no longer responsible for spawned display labels. The `RTSProductionCatalogTests` fixture verifies that a custom `Field Medic` produces an appropriately named live unit. Scene placements continue honoring explicit per-instance names. These changes are original and retain compatibility with existing project/catalog identities.

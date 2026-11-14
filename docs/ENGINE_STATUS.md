@@ -244,3 +244,8 @@ The editor can now inspect actual rule execution with a 192-entry ring, per-rule
 A preexisting failure mode let live move orders continue toward now-blocked waypoints after construction or terrain changes. The engine now tracks changed navigation generations and cell revisions, validates remaining routes, replans affected ones and retires impossible legs so queued commands still execute. New building footprints refuse intersections with live mobile units. `blockDisc` avoids full terrain scans when updating small circular obstacles. Route and worker-harvesting execution is now ordered by unit ID instead of unspecified hash bucket iteration.
 
 Tests include new moving-order reroutes and sealed/queued fallback, a large-map footprint equivalence fixture, invalid/no-op revision assertions, building occupancy protection and identical resource-contest simulations under opposite job insertion orders. These are essential groundwork for a recorded command stream and deterministic multiplayer, not claims those are already complete. [Open-source engine gap audit](RTS_ENGINE_AUDIT.md).
+
+
+## Sample-independent runtime naming
+
+Runtime production no longer injects fixed `Ranger`, `Worker`, `Barracks` or `Hybrid` prefixes. Names for created units and buildings resolve from the catalog's `name` property; AI reinforcements use the same path. Catalog-driven Field Medic production is verified headlessly. This matters for mod projects and does not require Blizzard-style unit types.

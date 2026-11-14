@@ -480,3 +480,8 @@ Read the Recoil/Spring `IPathManager`/MoveDef interfaces (terrain-change invalid
 Next big foundations: typed tick-indexed command stream and reproducible replay/state digest (first before network); unit-specific movement/passability/footprints; localized path-request budgeting on large maps; ability/behavior/actor and AI systems; reliable asset ingestion; true native editor widgets/docking. Never claim deterministic cross-platform lockstep merely from stable iteration. Run real Windows GPU input tests, check Windows/Linux CTest and both Release ZIPs, then update this handoff.
 
 **Latest validation instructions:** use the PR head SHA, not earlier passing builds; check .github/actions `Tests + screenshots (NOT executables)` for both OS Debug and Linux Mesa/Xvfb, and `Download Windows EXE and Linux RTS Builds` for both Release native bundles. Review failed jobs and fix before saying parity is proven for the latest revision.
+
+
+### Creator independence correction
+
+The latest code also removes hardcoded `Ranger`/`Worker`/`Barracks`/`Hybrid` production spawn name prefixes from the runtime: `RTSSkirmish` now derives new entity names from the authored/inherited Unit catalog `name` via `UnitData::resourceName`, for player units, new structures and AI reinforcements. The default legacy UnitData fallback now reads `Frontier Ranger`. `tests/production_catalog_tests.cpp` asserts a modded `Field Medic` entity actually spawns with that prefix. **Do not rewrite user-created or legacy map IDs**; this changes only fresh runtime spawn labels. Same Draft PR #1, same Windows/Linux CMake source, and no new library.

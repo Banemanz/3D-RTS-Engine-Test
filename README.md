@@ -232,3 +232,8 @@ The native game pause interface supports mouse **and** keyboard (arrows/W/S, Ent
 New buildings, exhausted mineral deposits and terrain/pathing changes no longer leave active movement routes silently stuck against invalid waypoints. The engine marks grid/terrain generations, checks only routes affected by topology changes and replans those whose remaining corridors are blocked. A fully unreachable route retires so queued move orders can continue. New structure placement rejects living units in its footprint before spending resources. Circular path blockers are now stamped using a local cell bounding rectangle rather than traversing the whole terrain grid.
 
 Movement and gathering updates now run in stable numeric unit-ID order, an important foundation for reproducible multiplayer/replay testing, although **full cross-platform deterministic networking is not implemented**. Windows/Linux CTest includes new dynamic navigation and contested-resource determinism fixtures. The full original-engine gap audit, based on Recoil/Spring, 0 A.D., OpenRA and Zero-K architecture, is in [docs/RTS_ENGINE_AUDIT.md](docs/RTS_ENGINE_AUDIT.md).
+
+
+## Authored unit names in the runtime (November 14)
+
+Production-spawned units, AI reinforcements and newly built structures now use the `name` field resolved from their catalog definition. This removes remaining hardcoded starter-spawn labels from the simulation, allowing custom maps to train named units without exposing a baked-in faction identity. The fallback text data also uses the original Frontier Ranger example. The data-driven production regression suite asserts a custom **Field Medic** actually spawns with that name.
