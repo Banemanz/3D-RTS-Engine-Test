@@ -96,6 +96,20 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                     if(child.is<std::string>() && child.get<std::string>()==oldId)
                         child=picojson::value(newId);
         }
+        if(type=="Ability" && entry.type=="Unit") {
+            auto field=entry.fields.find("abilities");
+            if(field!=entry.fields.end() && field->second.is<picojson::array>())
+                for(auto& candidate:field->second.get<picojson::array>())
+                    if(candidate.is<std::string>() &&
+                       candidate.get<std::string>()==oldId)
+                        candidate=picojson::value(newId);
+        }
+        if(type=="Effect" && entry.type=="Ability"){
+            auto field=entry.fields.find("effect");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
         if(type=="Unit" && entry.type=="Unit") {
             auto field=entry.fields.find("trainable_units");
             if(field!=entry.fields.end() && field->second.is<picojson::array>())
@@ -220,6 +234,66 @@ std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
     collectEffect(catalog,id,stack,output,visits);
     return output;
 }
+AbilityDefinition compileAbility(const DataCatalog& catalog,
+                                 const std::string& id){
+    const auto* entry=catalog.find(id);
+    if(!entry || entry->type!="Ability")
+        throw std::invalid_argument("Missing Ability catalog reference: "+id);
+    const auto fields=catalog.resolvedFields(id);
+    AbilityDefinition ability;
+    ability.id=id;
+    ability.effect=stringField(fields,"effect","");
+    if(ability.effect.empty())
+        throw std::invalid_argument("Ability requires an Effect: "+id);
+    const auto* effect=catalog.find(ability.effect);
+    if(!effect || effect->type!="Effect")
+        throw std::invalid_argument("Ability references invalid Effect: "+id);
+    (void)compileEffect(catalog,ability.effect);
+
+    const std::string target=stringField(fields,"target","Self");
+    if(target=="Self")ability.target=AbilityTarget::Self;
+    else if(target=="Ally")ability.target=AbilityTarget::Ally;
+    else if(target=="Enemy")ability.target=AbilityTarget::Enemy;
+    else if(target=="Any")ability.target=AbilityTarget::Any;
+    else throw std::invalid_argument("Invalid Ability target type: "+id);
+    const double cooldown=numeric(fields,"cooldown_ticks",60.);
+    const double range=numeric(fields,"cast_range",ability.target==AbilityTarget::Self?0.:8.);
+    const double minerals=numeric(fields,"mineral_cost",0.);
+    if(std::floor(cooldown)!=cooldown || cooldown<0 || cooldown>36000 ||
+       range<0 || range>128 ||
+       std::floor(minerals)!=minerals || minerals<0 || minerals>100000)
+        throw std::invalid_argument("Invalid Ability cost/range/cooldown: "+id);
+    ability.cooldownTicks=static_cast<std::uint32_t>(cooldown);
+    ability.castRange=static_cast<float>(range);
+    ability.mineralCost=static_cast<int>(minerals);
+    return ability;
+}
+std::vector<std::string> unitAbilityIds(const DataCatalog& catalog,
+                                         const std::string& unitId){
+    const auto* entry=catalog.find(unitId);
+    if(!entry || entry->type!="Unit")
+        throw std::invalid_argument("Missing Unit for abilities: "+unitId);
+    const auto fields=catalog.resolvedFields(unitId);
+    const auto refs=fields.find("abilities");
+    if(refs==fields.end())return {};
+    if(!refs->second.is<picojson::array>())
+        throw std::invalid_argument("Unit abilities must be an array: "+unitId);
+    const auto& entries=refs->second.get<picojson::array>();
+    if(entries.size()>8)
+        throw std::invalid_argument("Unit exceeds 8 Abilities: "+unitId);
+    std::vector<std::string> ids;
+    std::set<std::string> unique;
+    for(const auto& value:entries){
+        if(!value.is<std::string>())
+            throw std::invalid_argument("Unit abilities must contain string IDs: "+unitId);
+        const std::string id=value.get<std::string>();
+        if(!unique.insert(id).second)
+            throw std::invalid_argument("Duplicate Ability on Unit: "+unitId);
+        (void)compileAbility(catalog,id);
+        ids.push_back(id);
+    }
+    return ids;
+}
 void DataCatalog::validate()const {
     if(idIndex_.size()!=entries_.size())
         throw std::invalid_argument("Catalog ID index is inconsistent");
@@ -242,6 +316,8 @@ void DataCatalog::validate()const {
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
         if(e.type=="Effect")(void)compileEffect(*this,e.id);
+        if(e.type=="Ability")(void)compileAbility(*this,e.id);
+        if(e.type=="Unit")(void)unitAbilityIds(*this,e.id);
         if(reference && fields.count(reference)) {
             std::string id=stringField(fields,reference,"");
             const auto* linked=find(id);

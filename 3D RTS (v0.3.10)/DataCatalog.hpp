@@ -55,6 +55,22 @@ struct EffectOperation {
 std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
                                             const std::string& id);
 
+// Abilities bind an authored Effect graph to a Unit command. Only the
+// data objects are stored in the map; cooldown clocks live in simulation.
+enum class AbilityTarget { Self, Ally, Enemy, Any };
+struct AbilityDefinition {
+    std::string id;
+    std::string effect;
+    AbilityTarget target=AbilityTarget::Self;
+    std::uint32_t cooldownTicks=60;
+    float castRange=0.f;
+    int mineralCost=0;
+};
+AbilityDefinition compileAbility(const DataCatalog& catalog,
+                                 const std::string& id);
+std::vector<std::string> unitAbilityIds(const DataCatalog& catalog,
+                                         const std::string& unitId);
+
 // Typed runtime adapters. Unknown catalog fields are not deleted or discarded.
 UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id);
 struct ActorVisual {

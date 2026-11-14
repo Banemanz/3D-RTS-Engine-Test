@@ -255,6 +255,7 @@ void RTSProject::validate() const {
     for(const auto& e:catalog.entries()) {
         if(e.type=="Unit") {
             (void)unitFromCatalog(catalog,e.id);
+            (void)unitAbilityIds(catalog,e.id);
             const auto fields=catalog.resolvedFields(e.id);
             const auto trains=fields.find("trainable_units");
             if(trains!=fields.end()) {
@@ -382,6 +383,19 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
             if(it!=properties.end() && it->second.is<std::string>() &&
                it->second.get<std::string>()==id)
                 refs.push_back(entry.id+"."+typed);
+        }
+        if(original->type=="Ability" && entry.type=="Unit"){
+            const auto refs=properties.find("abilities");
+            if(refs!=properties.end() && refs->second.is<picojson::array>())
+                for(const auto& ref:refs->second.get<picojson::array>())
+                    if(ref.is<std::string>() && ref.get<std::string>()==id)
+                        refs.push_back(entry.id+".abilities");
+        }
+        if(original->type=="Effect" && entry.type=="Ability"){
+            const auto effect=properties.find("effect");
+            if(effect!=properties.end() && effect->second.is<std::string>() &&
+               effect->second.get<std::string>()==id)
+                refs.push_back(entry.id+".effect");
         }
         if(original->type=="Effect" && entry.type=="Effect"){
             auto it=properties.find("children");
