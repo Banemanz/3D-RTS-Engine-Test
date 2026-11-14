@@ -808,7 +808,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_STABLE_SIM_ORDER=1\n"
                  <<"RTS_FEATURE_COMMAND_STREAM=1\n"
                  <<"RTS_FEATURE_REPLAY_VERIFY=1\n"
-                 <<"RTS_FEATURE_AI_COMMAND_PLANNER=1\n";
+                 <<"RTS_FEATURE_AI_COMMAND_PLANNER=1\n"
+                 <<"RTS_FEATURE_SCRIPT_GLOBALS=1\n";
         return 0;
     }
     RTSCrashReporter::install();
