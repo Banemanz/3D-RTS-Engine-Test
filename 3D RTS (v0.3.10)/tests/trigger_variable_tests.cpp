@@ -84,16 +84,21 @@ int main(int argc,char** argv){
     const auto firstDigest=game.stateDigest();
     assert(firstDigest.size()==16);
     {
-        std::ofstream fingerprint("trigger_globals_fingerprint.txt",
-                                  std::ios::binary|std::ios::trunc);
-        assert(fingerprint.is_open());
-        fingerprint<<"0 "<<firstDigest<<"\n";
+        // Only the primary test owns the cross-OS fingerprint artifact.
+        // The sample-map CTest can run concurrently without racing this file.
+        std::ofstream fingerprint;
+        if(argc==1){
+            fingerprint.open("trigger_globals_fingerprint.txt",
+                             std::ios::binary|std::ios::trunc);
+            assert(fingerprint.is_open());
+            fingerprint<<"0 "<<firstDigest<<"\n";
+        }
         for(int i=1;i<=120;++i){
             game.update(1.f/60.f);
-            if(i%30==0)
+            if(argc==1 && i%30==0)
                 fingerprint<<i<<" "<<game.stateDigest()<<"\n";
         }
-        assert(fingerprint.good());
+        if(argc==1)assert(fingerprint.good());
     }
     // Each net variable change triggers exactly once on the following tick.
     const auto& watch=game.triggerDiagnostics().rules()[4];
