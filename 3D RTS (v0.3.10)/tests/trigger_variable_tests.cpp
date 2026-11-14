@@ -125,10 +125,9 @@ int main(){
     reward["operator"]=picojson::value("exec");
     rejected(invalid);
     invalid=project;
-    reward=invalid.extensions["triggers"].get<picojson::array>()[2]
+    invalid.extensions["triggers"].get<picojson::array>()[2]
         .get<picojson::object>().at("conditions").get<picojson::array>()[0]
-        .get<picojson::object>(); // ensure this test changes the actual array
-    reward["value"]=picojson::value(1.25);
+        .get<picojson::object>()["value"]=picojson::value(1.25);
     rejected(invalid);
 
     // The visual ECA workbench uses exactly the same safe mutation layer.
