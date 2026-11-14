@@ -148,6 +148,8 @@ if(BUILD_TESTING)
     add_executable(RTSTriggerVariableTests tests/trigger_variable_tests.cpp)
     target_link_libraries(RTSTriggerVariableTests PRIVATE RTSSimulation)
     add_test(NAME trigger_variables COMMAND RTSTriggerVariableTests)
+    add_test(NAME script_relay_runtime COMMAND RTSTriggerVariableTests
+             "${CMAKE_CURRENT_SOURCE_DIR}/../projects/script_relay_showcase.rtsproject.json")
     add_executable(RTSTriggerTraceTests tests/trigger_trace_tests.cpp)
     target_link_libraries(RTSTriggerTraceTests PRIVATE RTSSimulation)
     add_test(NAME trigger_trace COMMAND RTSTriggerTraceTests RTSTriggerVariableTests)
