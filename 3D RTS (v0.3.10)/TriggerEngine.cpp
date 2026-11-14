@@ -1,4 +1,5 @@
 #include "TriggerEngine.hpp"
+#include "TriggerDefinition.hpp"
 #include "RTSSkirmish.hpp"
 #include <algorithm>
 #include <cmath>
@@ -38,121 +39,7 @@ void requireType(const std::string& type,const std::set<std::string>& allowed) {
 }
 }
 std::vector<TriggerEngine::Rule> TriggerEngine::parse(const RTSProject& project)const {
-    std::vector<Rule> result;
-    auto it=project.extensions.find("triggers");
-    if(it==project.extensions.end())return result;
-    if(!it->second.is<picojson::array>())
-        throw std::invalid_argument("triggers must be a JSON array");
-    const auto& definitions=it->second.get<picojson::array>();
-    if(definitions.size()>256)throw std::invalid_argument("At most 256 triggers per project");
-    std::set<std::string> ids;
-    for(const auto& val:definitions) {
-        if(!val.is<picojson::object>())throw std::invalid_argument("Trigger must be an object");
-        const auto& o=val.get<picojson::object>();
-        Rule rule;
-        rule.id=str(o,"id");
-        if(rule.id.empty() || rule.id.size()>128 || !ids.insert(rule.id).second)
-            throw std::invalid_argument("Invalid or duplicate trigger ID");
-        auto event=o.find("event");
-        if(event==o.end() || !event->second.is<picojson::object>())
-            throw std::invalid_argument("Trigger event must be object");
-        const auto& e=event->second.get<picojson::object>();
-        rule.event=str(e,"type");
-        requireType(rule.event,{"OnMapStart","After","Every","OnUnitDeath","OnRegionEnter","MineralsBelow"});
-        rule.region=str(e,"region");
-        if(rule.event=="OnRegionEnter") {
-            bool found=false;
-            for(const auto& p:project.placements)
-                if(p.id==rule.region && p.kind=="Region")found=true;
-            if(!found)throw std::invalid_argument("Trigger missing Region placement: "+rule.region);
-        }
-        if(rule.event=="After" || rule.event=="Every")
-            rule.interval=num(e,"seconds");
-        if(rule.event=="OnUnitDeath") {
-            // Optional filters should be provided through SubjectOwnerIs condition.
-        }
-        if(rule.event=="MineralsBelow") {
-            rule.threshold=num(e,"amount",-1);
-            if(rule.threshold<0 || rule.threshold>100000000)
-                throw std::invalid_argument("MineralsBelow requires valid amount");
-        }
-        if(rule.event=="Every" && (rule.interval<.1 || rule.interval>360000))
-            throw std::invalid_argument("Periodic interval must be 0.1..360000 seconds");
-        if(rule.event=="After" && (rule.interval<0 || rule.interval>360000))
-            throw std::invalid_argument("Delayed time must be 0..360000 seconds");
-        rule.once=flag(o,"once",rule.event=="OnMapStart" || rule.event=="After");
-        auto cond=o.find("conditions");
-        if(cond!=o.end()) {
-            if(!cond->second.is<picojson::array>() ||
-               cond->second.get<picojson::array>().size()>32)
-                throw std::invalid_argument("Invalid trigger conditions");
-            for(const auto& entry:cond->second.get<picojson::array>()) {
-                if(!entry.is<picojson::object>())throw std::invalid_argument("Invalid trigger condition");
-                const auto& ob=entry.get<picojson::object>();
-                auto type=str(ob,"type");
-                requireType(type,{"PlayerMineralsAtLeast","UnitCountAtLeast",
-                                  "UnitTypeCountAtLeast","SubjectOwnerIs"});
-                if(type=="PlayerMineralsAtLeast")
-                    (void)intField(ob,"amount",0,0,100000000);
-                if(type=="UnitCountAtLeast" || type=="UnitTypeCountAtLeast") {
-                    (void)intField(ob,"owner",0,-1,15);
-                    (void)intField(ob,"count",1,0,4000);
-                    if(type=="UnitTypeCountAtLeast") {
-                        const std::string id=str(ob,"catalog");
-                        const auto* entry=project.catalog.find(id);
-                        if(!entry || entry->type!="Unit")
-                            throw std::invalid_argument("Missing unit catalog for condition");
-                    }
-                }
-                if(type=="SubjectOwnerIs")
-                    (void)intField(ob,"owner",0,0,15);
-                rule.conditions.push_back(ob);
-            }
-        }
-        auto actions=o.find("actions");
-        if(actions==o.end() || !actions->second.is<picojson::array>() ||
-           actions->second.get<picojson::array>().empty() ||
-           actions->second.get<picojson::array>().size()>64)
-            throw std::invalid_argument("Trigger requires 1..64 actions");
-        for(const auto& entry:actions->second.get<picojson::array>()) {
-            if(!entry.is<picojson::object>())throw std::invalid_argument("Trigger action must be object");
-            auto ob=entry.get<picojson::object>();
-            auto type=str(ob,"type");
-            requireType(type,{"GrantMinerals","SpawnUnit","EndMatch","ShowMessage",
-                              "ApplyEffect"});
-            if(type=="SpawnUnit") {
-                auto catalog=str(ob,"catalog");
-                auto unit=project.catalog.find(catalog);
-                if(!unit || unit->type!="Unit")
-                    throw std::invalid_argument("Trigger spawn catalog is not a Unit: "+catalog);
-                (void)intField(ob,"owner",1,0,15);
-                const double x=num(ob,"x"),z=num(ob,"z");
-                if(!project.terrain.insideWorld(float(x),float(z)))
-                    throw std::invalid_argument("Trigger spawn is outside map bounds");
-            }
-            if(type=="ApplyEffect"){
-                if(rule.event!="OnRegionEnter")
-                    throw std::invalid_argument("ApplyEffect requires OnRegionEnter subject");
-                const auto effect=str(ob,"effect");
-                const auto* object=project.catalog.find(effect);
-                if(!object || object->type!="Effect")
-                    throw std::invalid_argument("ApplyEffect references missing Effect: "+effect);
-                (void)compileEffect(project.catalog,effect);
-            }
-            if(type=="GrantMinerals")
-                (void)intField(ob,"amount",0,-100000000,100000000);
-            if(type=="EndMatch") {
-                const auto result=str(ob,"result","Victory");
-                if(result!="Victory" && result!="Defeat")
-                    throw std::invalid_argument("Trigger must end Victory or Defeat");
-            }
-            if(type=="ShowMessage" && str(ob,"text").size()>256)
-                throw std::invalid_argument("Trigger message exceeds 256 bytes");
-            rule.actions.push_back(std::move(ob));
-        }
-        result.push_back(std::move(rule));
-    }
-    return result;
+    return parseTriggerRules(project);
 }
 void TriggerEngine::validate(const RTSProject& p){ TriggerEngine e;(void)e.parse(p); }
 void TriggerEngine::configure(const RTSProject& p){rules_=parse(p);}

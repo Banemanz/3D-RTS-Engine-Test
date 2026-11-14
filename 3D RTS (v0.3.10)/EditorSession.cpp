@@ -1,4 +1,5 @@
 #include "EditorSession.hpp"
+#include "TriggerDefinition.hpp"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -609,10 +610,18 @@ bool EditorSession::finishTriggerEdit(RTSProject& project) {
         if(i!=selectedTrigger%rules.size() && triggerId(rules[i])==id) {
             message="DUPLICATE TRIGGER ID";return false;
         }
-    const RTSProject before=project;
-    auto& writable=mutableTriggers(project);
-    writable[selectedTrigger%writable.size()]=std::move(parsed);
-    remember(before);
+    RTSProject candidate=project;
+    try {
+        auto& writable=mutableTriggers(candidate);
+        writable[selectedTrigger%writable.size()]=std::move(parsed);
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+    }catch(const std::exception& e) {
+        message=std::string("INVALID TRIGGER JSON: ")+e.what();
+        return false;
+    }
+    remember(project);
+    project=std::move(candidate);
     textEditing=false;editText.clear();
     modified=true;message="TRIGGER JSON UPDATED";
     return true;

@@ -18,7 +18,7 @@ include(CTest)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp SceneEditor.cpp InstanceOverrides.cpp)
+add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSProject.cpp EditorSession.cpp SceneEditor.cpp InstanceOverrides.cpp TriggerDefinition.cpp)
 target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
