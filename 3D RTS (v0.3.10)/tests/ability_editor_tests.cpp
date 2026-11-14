@@ -22,12 +22,14 @@ int main(){
     assert(editor.setCatalogField(project,"effect",picojson::value("kinetic_pulse")));
     assert(editor.setCatalogField(project,"cast_range",picojson::value(9.0)));
     assert(editor.setCatalogField(project,"mineral_cost",picojson::value(10.0)));
+    assert(editor.setCatalogField(project,"energy_cost",picojson::value(15.0)));
     assert(editor.setCatalogField(project,"cooldown_ticks",picojson::value(90.0)));
     const auto def=compileAbility(project.catalog,enemy);
     assert(def.target==AbilityTarget::Enemy && def.effect=="kinetic_pulse");
-    assert(def.mineralCost==10 && def.cooldownTicks==90);
+    assert(def.mineralCost==10 && def.energyCost==15 && def.cooldownTicks==90);
     assert(!editor.setCatalogField(project,"cast_range",picojson::value(-8.0)));
     assert(compileAbility(project.catalog,enemy).castRange==9.f);
+    assert(!editor.setCatalogField(project,"energy_cost",picojson::value(-10.0)));
     assert(!editor.setCatalogField(project,"target",picojson::value("Terrain")));
     assert(compileAbility(project.catalog,enemy).target==AbilityTarget::Enemy);
     assert(!editor.createCatalogObject(project,"Ability","Invalid"));

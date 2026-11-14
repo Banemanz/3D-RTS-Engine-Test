@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Frontier Ability Workshop",
-  "description": "Original ability casting workshop: F7 Data Editor creates and assigns Ability objects, F9 playtest reveals ability command slots. Select a Frontier Ranger and press F for self repair, J then left-click the training dummy for a targeted energy bolt.",
+  "description": "Original ability casting workshop: F7 Data Editor creates and assigns Ability objects, F9 playtest reveals ability command slots. Select a Frontier Ranger and press F for self repair, J then left-click the training dummy for a targeted energy bolt. Ranger Units have an energy pool that regenerates during play; authored abilities consume energy as well as minerals.",
   "terrain": {
     "width": 49,
     "depth": 49,
@@ -118,7 +118,9 @@
         "abilities": [
           "field_mend",
           "arc_lance"
-        ]
+        ],
+        "max_energy": 100,
+        "energy_regen": 4
       }
     },
     {
@@ -222,7 +224,8 @@
         "target": "Self",
         "cooldown_ticks": 120,
         "cast_range": 0,
-        "mineral_cost": 5
+        "mineral_cost": 5,
+        "energy_cost": 15
       }
     },
     {
@@ -234,7 +237,8 @@
         "target": "Enemy",
         "cooldown_ticks": 90,
         "cast_range": 13,
-        "mineral_cost": 10
+        "mineral_cost": 10,
+        "energy_cost": 25
       }
     },
     {

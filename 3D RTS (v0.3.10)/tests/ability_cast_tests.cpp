@@ -36,7 +36,11 @@ int main(){
     project.metadata["enemy_ai_enabled"]=picojson::value(false);
     project.metadata["enemy_spawn_interval"]=picojson::value(999.0);
     assert(project.catalog.add(ability("self_repair","restorative_pulse","Self",60,0,8)));
+    assert(project.catalog.setField("self_repair","energy_cost",picojson::value(25.0)));
+    assert(project.catalog.setField("ranger","max_energy",picojson::value(100.0)));
+    assert(project.catalog.setField("ranger","energy_regen",picojson::value(60.0)));
     assert(project.catalog.add(ability("energy_bolt","kinetic_pulse","Enemy",120,12,10)));
+    assert(project.catalog.setField("energy_bolt","energy_cost",picojson::value(40.0)));
     assert(project.catalog.setField("ranger","abilities",picojson::value(picojson::array{
         picojson::value("self_repair"),picojson::value("energy_bolt")})));
     assert(project.catalog.cloneDerived("rift_raider","dummy_target"));
@@ -76,6 +80,8 @@ int main(){
     assert(game.queuePlayerCommand(RTSCommandKind::CastAbility,{},-1,false,"self_repair"));
     game.update(1.f/60.f);
     assert(game.playerMinerals==initialMinerals-8);
+    for(const auto& u:game.units)if(u.id==caster)
+        assert(u.currentEnergy==76.f);
     assert(game.abilityCooldownRemaining(caster,"self_repair")==60);
     assert(!game.canPrepareAbility(caster,"self_repair"));
     assert(game.queuePlayerCommand(RTSCommandKind::CastAbility,{},-1,false,"self_repair"));
@@ -86,6 +92,8 @@ int main(){
     assert(game.queuePlayerCommand(RTSCommandKind::CastAbility,{},enemy,false,"energy_bolt"));
     game.update(1.f/60.f);
     assert(game.playerMinerals==initialMinerals-18);
+    for(const auto& u:game.units)if(u.id==caster)
+        assert(u.currentEnergy==38.f);
     assert(std::fabs(hp(game,enemy)-(initialHp-12.f))<.02f);
     assert(game.abilityCooldownRemaining(caster,"energy_bolt")==120);
     for(int tick=4;tick<=90;++tick){
@@ -97,6 +105,8 @@ int main(){
         if(tick%15==0)out<<tick<<" "<<game.stateDigest()<<"\n";
     }
     assert(game.playerMinerals==initialMinerals-26);
+    for(const auto& u:game.units)if(u.id==caster)
+        assert(u.currentEnergy<=u.data.max_energy && u.currentEnergy>=0.f);
     out.flush();assert(out.good());
     const auto tape=game.replayTape();
     assert(tape.commands.size()==4);
@@ -127,6 +137,12 @@ int main(){
     assert(invalid(bad));
     bad=project;
     assert(bad.catalog.setField("energy_bolt_v2","cooldown_ticks",picojson::value(1.5)));
+    assert(invalid(bad));
+    bad=project;
+    assert(bad.catalog.setField("energy_bolt_v2","energy_cost",picojson::value(-2.0)));
+    assert(invalid(bad));
+    bad=project;
+    assert(bad.catalog.setField("ranger","max_energy",picojson::value(-1.0)));
     assert(invalid(bad));
     bad=project;
     assert(bad.catalog.setField("energy_bolt_v2","target",picojson::value("Terrain")));
