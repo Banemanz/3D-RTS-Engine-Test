@@ -64,6 +64,10 @@ RTSProject projectFixture(){
     assert(p.catalog.add(ground("instant_pulse","safe_pulse","Enemy",0)));
     assert(p.catalog.setField("ranger","max_energy",picojson::value(200.0)));
     assert(p.catalog.setField("ranger","energy_regen",picojson::value(0.0)));
+    // Keep combat inert so all damage assertions exercise only the area Effect.
+    assert(p.catalog.setField("ranger","damage",picojson::value(0.0)));
+    assert(p.catalog.setField("ranger","aggro_range",picojson::value(0.0)));
+    assert(p.catalog.setField("ranger","attack_range",picojson::value(0.0)));
     assert(p.catalog.setField("ranger","abilities",picojson::value(
         picojson::array{picojson::value("ground_burst"),
                         picojson::value("area_mend"),
