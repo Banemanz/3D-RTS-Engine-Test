@@ -35,7 +35,7 @@ void rejected(const RTSProject& project) {
 }
 }
 
-int main(){
+int main(int argc,char** argv){
     RTSProject project=RTSProject::defaults();
     project.metadata["enemy_spawn_interval"]=picojson::value(999.0);
     project.metadata["enemy_ai_enabled"]=picojson::value(false);
@@ -69,6 +69,13 @@ int main(){
     assert(parseTriggerVariables(project).at("counter")==0);
     assert(parseTriggerRules(project).size()==5);
     project.validate();
+    // The authored globals and event subscriptions must survive exact
+    // serializer/deserializer round-trip, including replay snapshots.
+    const RTSProject roundtrip=RTSProject::fromJson(project.toJson());
+    assert(parseTriggerVariables(roundtrip)==parseTriggerVariables(project));
+    assert(parseTriggerRules(roundtrip).size()==5);
+    assert(roundtrip.extensions.at("triggers").serialize()==
+           project.extensions.at("triggers").serialize());
 
     RTSSkirmish game;
     game.loadProject(project);
@@ -194,5 +201,20 @@ int main(){
     assert(editor.setTriggerEventField(project,"variable",picojson::value("limit")));
     assert(!editor.setTriggerEventField(project,"variable",
                                        picojson::value("missingGlobal")));
+    if(argc>1) {
+        // Test the actual shipped creator map, not only a synthetic test graph.
+        RTSProject shipped;
+        shipped.loadFile(argv[1]);
+        assert(parseTriggerRules(shipped).size()==4);
+        RTSSkirmish sample;
+        sample.loadProject(shipped);
+        for(int i=0;i<330;++i)sample.update(1.f/60.f);
+        const auto& globals=sample.triggerDiagnostics().variables();
+        assert(globals.at("alarm_level")>=3);
+        assert(globals.at("raid_count")>=2);
+        assert(sample.triggerDiagnostics().rules()[2].executions>=2);
+        assert(sample.triggerDiagnostics().rules()[3].executions>=1);
+        assert(verifyRTSReplay(sample.replayTape()));
+    }
     std::cout<<"trigger globals: lifecycle, ECA, bounds, undo, replay and parity passed\n";
 }
