@@ -16,6 +16,10 @@
 #include "RTSProject.hpp"
 #include "InstanceOverrides.hpp"
 #include "EditorSession.hpp"
+#include "CreatorWorkbench.hpp"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include <filesystem>
 #include <cstdlib>
 #include <fstream>
@@ -291,6 +295,7 @@ void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
     try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
+        if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)return;
         if(state->editor.panel==EditorSession::Panel::Terrain &&
            glfwGetKey(window,GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS) {
             state->editor.brushRadius=std::clamp(state->editor.brushRadius+
@@ -308,6 +313,7 @@ void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
+        if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)return;
         if(state->editor.panel!=EditorSession::Panel::Play) {
             Vec3 hit;
             state->hoveredTerrain=state->camera.screenToGroundRaycast(
@@ -329,6 +335,18 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (!state) return;
+    // Dear ImGui handles its own widgets. A click on a docked panel must not
+    // also trigger world selection, terrain sculpting, or combat orders.
+    if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse){
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE){
+            if(state->mouseStroke){
+                state->editor.finishStroke(state->project);
+                state->mouseStroke=false;
+            }
+            state->selectionManager.isDragging=false;
+        }
+        return;
+    }
 
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
@@ -456,6 +474,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 void characterCallback(GLFWwindow* window,unsigned int codepoint) {
     try {
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if(ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)return;
     if(s && (s->editor.panel==EditorSession::Panel::Data ||
              s->editor.panel==EditorSession::Panel::Triggers ||
              s->editor.panel==EditorSession::Panel::Scene))
@@ -471,8 +490,12 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     if(action!=GLFW_PRESS && action!=GLFW_REPEAT)return;
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if(!s)return;
-    auto& edit=s->editor;
     const bool ctrl=(mods & GLFW_MOD_CONTROL)!=0;
+    if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard &&
+       !(ctrl && key==GLFW_KEY_S) &&
+       !(key>=GLFW_KEY_F5 && key<=GLFW_KEY_F9))
+        return;
+    auto& edit=s->editor;
     if(edit.textEditing) {
         if(ctrl && key==GLFW_KEY_V) {
             const char* clip=glfwGetClipboardString(window);
@@ -695,6 +718,20 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
 }
 
 int main(int argc, char** argv) {
+    // No graphics context needed. CI checks this exact native executable,
+    // not merely the CMake project or a build-info.json written afterward.
+    if(argc>=2 && (std::string(argv[1])=="--version" ||
+                   std::string(argv[1])=="--features")){
+        std::cout<<"RTS_BUILD_COMMIT="<<RTS_SOURCE_COMMIT<<"\n"
+                 <<"RTS_FEATURE_FOG_OF_WAR=1\n"
+                 <<"RTS_FEATURE_GAMEPLAY_HUD=1\n"
+                 <<"RTS_FEATURE_CREATOR_GUI=1\n"
+                 <<"RTS_FEATURE_TERRAIN_EDITOR=1\n"
+                 <<"RTS_FEATURE_SCENE_EDITOR=1\n"
+                 <<"RTS_FEATURE_DATA_EDITOR=1\n"
+                 <<"RTS_FEATURE_TRIGGER_EDITOR=1\n";
+        return 0;
+    }
     RTSCrashReporter::install();
     int smokeFrames = -1;
     std::string screenshotPath;
@@ -780,7 +817,7 @@ int main(int argc, char** argv) {
         }
         GLFWwindow* window = glfwCreateWindow(
             app.windowWidth, app.windowHeight,
-            "3D RTS Engine - Modular Architecture",
+            "RTS Creator - Game & World Editor",
             nullptr, nullptr
         );
         if (!window) {
@@ -809,6 +846,16 @@ int main(int argc, char** argv) {
         glfwSetMouseButtonCallback(window, mouseButtonCallback);
         glfwSetKeyCallback(window,editorKeyCallback);
         glfwSetCharCallback(window,characterCallback);
+
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        auto& io=ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        ImGui::StyleColorsDark();
+        // Init after game callbacks; the official GLFW backend chains them.
+        ImGui_ImplGlfw_InitForOpenGL(window,true);
+        ImGui_ImplOpenGL3_Init("#version 330");
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
@@ -922,6 +969,9 @@ int main(int argc, char** argv) {
         double lastAutosave=lastTime;
 
         while (!glfwWindowShouldClose(window)) {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
             if(stressEditor && smokeFrames>0)
                 exerciseEditorLifecycle(app,renderedFrames);
             double currentTime = glfwGetTime();
@@ -1335,159 +1385,11 @@ int main(int argc, char** argv) {
                     app.mode==AppState::Mode::Patrol?4:0;
                 hud.draw(app.game,app.project,app.camera,commandMode,app.notice);
             }
-            // Editor UI is intentionally drawn in the same OpenGL window:
-            // project assets and game logic both use this exact document.
-            if(app.editor.panel!=EditorSession::Panel::Play &&
-               app.windowWidth>0 && app.windowHeight>0) {
-                const bool dataPanel=app.editor.panel==EditorSession::Panel::Data ||
-                                     app.editor.panel==EditorSession::Panel::Triggers ||
-                                      app.editor.panel==EditorSession::Panel::Scene;
-                const float bottom=dataPanel?-1.0f:
-                    1.0f-2.0f*220.0f/float(app.windowHeight);
-                float panelQuad[]={
-                    -1,1, 1,1, 1,bottom,
-                    -1,1, 1,bottom, -1,bottom
-                };
-                glUseProgram(hudBoxShader);
-                glUniform4f(glGetUniformLocation(hudBoxShader,"uColor"),
-                            .035f,.061f,.095f,.96f);
-                glBindVertexArray(hudVAO);
-                glBindBuffer(GL_ARRAY_BUFFER,hudVBO);
-                glBufferData(GL_ARRAY_BUFFER,sizeof(panelQuad),panelQuad,GL_DYNAMIC_DRAW);
-                glDrawArrays(GL_TRIANGLES,0,6);
-                const auto line=[&](float y,float size,const std::string& msg,
-                                   float r=.76f,float g=.87f,float b=.95f){
-                    std::string display=msg;
-                    if(display.size()>115)display=display.substr(0,112)+"...";
-                    drawHUDText(hudBoxShader,hudVAO,hudVBO,
-                                app.windowWidth,app.windowHeight,
-                                15.f,y,size,display,r,g,b);
-                };
-                line(12,2.8f,app.editor.panelName()+
-                     (app.editor.modified?"  * UNSAVED":"  SAVED"),.31f,.94f,.67f);
-                if(app.editor.panel==EditorSession::Panel::Terrain) {
-                    line(38,2.0f,"F5 PLAY  F7 DATA  F9 TEST MAP  CTRL+S SAVE  CTRL+Z/Y UNDO/REDO");
-                    line(60,2.0f,"1 RAISE  2 LOWER  3 SMOOTH  4 FLATTEN  5 PAINT  6 BLOCK  7 CLEAR  8 MINERAL  9 UNIT  0 DOODAD");
-                    line(82,2.0f,"LMB BRUSH/PLACE  RMB DELETE NEARBY  [/] RADIUS  -/= STRENGTH  M MATERIAL  P UNIT  SHIFT+P ACTOR");
-                    line(104,2.0f,"TOOL "+app.editor.toolName()+
-                         "  RADIUS "+std::to_string(int(app.editor.brushRadius*10)/10.0f)+
-                         "  STRENGTH "+std::to_string(app.editor.brushStrength).substr(0,4)+
-                         "  MATERIAL "+std::to_string(app.editor.materialId),1.f,.80f,.37f);
-                    line(126,2.0f,"PLACEMENT "+app.editor.placementArchetype+
-                         "  ACTOR "+app.editor.placementDoodad+
-                         "  OWNER "+std::to_string(app.editor.placementOwner),.71f,.84f,1.f);
-                    line(148,2.0f,"MAP "+app.project.name+
-                         "  SIZE "+std::to_string(app.project.terrain.width())+" X "+
-                         std::to_string(app.project.terrain.depth())+
-                         "  OBJECTS "+std::to_string(app.project.placements.size()));
-                    if(app.hoveredTerrain)
-                        line(171,1.8f,"CURSOR X "+
-                             std::to_string(app.hoveredWorld.x).substr(0,6)+
-                             " Y "+std::to_string(app.hoveredWorld.y).substr(0,6)+
-                             " Z "+std::to_string(app.hoveredWorld.z).substr(0,6));
-                } else if(app.editor.panel==EditorSession::Panel::Data) {
-                    const CatalogEntry* entry=app.editor.selected(app.project);
-                    line(40,2.0f,"F7 PLAY  F5 TERRAIN  F9 TEST MAP  CTRL+S SAVE  TAB NEXT / SHIFT+TAB PREV");
-                    line(62,2.0f,"CTRL+F SEARCH  CTRL+R RENAME  DELETE REMOVE  ENTER EDIT  CTRL+N FIELD  CTRL+D DERIVE");
-                    const std::size_t matches=app.editor.matchingCatalogCount(app.project);
-                    line(87,2.0f,"OBJECTS "+std::to_string(matches)+" / "+
-                         std::to_string(app.project.catalog.entries().size())+
-                         "  FILTER: "+(app.editor.catalogFilter.empty()?"ALL":app.editor.catalogFilter),
-                         .61f,.91f,.76f);
-                    if(entry) {
-                        line(118,2.7f,entry->type+" / "+entry->id+
-                             (entry->parent.empty()?"":"  PARENT "+entry->parent),
-                             1.f,.80f,.36f);
-                        auto keys=app.editor.fields(app.project);
-                        auto values=app.project.catalog.resolvedFields(entry->id);
-                        int selectedIndex=keys.empty()?0:int(app.editor.selectedField%keys.size());
-                        int first=std::max(0,selectedIndex-10);
-                        if(int(keys.size())>18)first=std::min(first,int(keys.size())-18);
-                        for(int idx=first;idx<int(keys.size()) && idx<first+18;++idx) {
-                            const auto& key=keys[static_cast<std::size_t>(idx)];
-                            std::string value=values.at(key).serialize();
-                            if(value.size()>65)value=value.substr(0,62)+"...";
-                            bool highlight=idx==selectedIndex;
-                            line(153+float(idx-first)*25,2.1f,
-                                 std::string(highlight?"> ":"  ")+key+" = "+value,
-                                 highlight?1.0f:.68f,highlight?.87f:.81f,
-                                 highlight?.41f:.92f);
-                        }
-                        if(app.editor.textEditing)
-                            line(float(app.windowHeight)-58,2.25f,
-                                 std::string(app.editor.filterEditing?"SEARCH: ":(app.editor.renamingCatalog?"RENAME ID: ":"EDIT: "))+
-                                     app.editor.editText,1.f,.81f,.40f);
-                    }
-                } else if(app.editor.panel==EditorSession::Panel::Scene) {
-                    line(40,2.0f,"F8 PLAY  F5 TERRAIN  F6 TRIGGERS  F7 DATA  CTRL+S SAVE  CTRL+Z/Y UNDO");
-                    line(64,1.9f,"LMB SELECT  SHIFT+LMB MOVE  G MOVE TO CURSOR  TAB NEXT  SHIFT+TAB PREV");
-                    line(87,1.9f,"P PLACE POINT  R PLACE REGION  J/K ROTATE  ,/. SCALE  O OWNER");
-                    line(110,1.9f,"[/] REGION RADIUS  CTRL+D DUPLICATE  DEL DELETE  ENTER OVERRIDE JSON");
-                    line(146,2.5f,"SCENE PLACEMENTS: "+std::to_string(app.project.placements.size()),
-                         1.f,.79f,.38f);
-                    const auto* selected=app.editor.selectedPlacement(app.project);
-                    if(selected) {
-                        line(185,2.5f,"SELECTED "+selected->id+" / "+selected->kind,
-                             1.f,.82f,.41f);
-                        line(220,2.2f,"CATALOG "+selected->catalogId+
-                             "  OWNER "+std::to_string(selected->owner));
-                        line(253,2.0f,"POSITION "+std::to_string(selected->position.x).substr(0,7)+
-                             ", "+std::to_string(selected->position.y).substr(0,7)+
-                             ", "+std::to_string(selected->position.z).substr(0,7));
-                        line(286,2.0f,"ROTATION Y "+std::to_string(selected->rotation.y).substr(0,7)+
-                             "  SCALE "+std::to_string(selected->scale.x).substr(0,6));
-                        if(selected->kind=="Region") {
-                            const auto rad=selected->overrides.find("radius");
-                            const double radius=rad!=selected->overrides.end() &&
-                                                rad->second.is<double>()
-                                                ? rad->second.get<double>():5.0;
-                            line(318,2.0f,"REGION RADIUS "+std::to_string(radius).substr(0,7),
-                                 .55f,.9f,.98f);
-                        }
-                        std::string overrides=picojson::value(selected->overrides).serialize();
-                        if(overrides.size()>155)overrides=overrides.substr(0,152)+"...";
-                        line(360,1.8f,"OVERRIDES "+overrides,.76f,.9f,.66f);
-                    } else line(190,2.0f,"CLICK A PLACED OBJECT OR PRESS TAB TO CHOOSE ONE.");
-                    if(app.editor.textEditing) {
-                        line(600,2.1f,"EDIT INSTANCE OVERRIDES JSON; CTRL+V PASTE",
-                             1.f,.75f,.32f);
-                        std::string snippet=app.editor.editText;
-                        if(snippet.size()>160)snippet=snippet.substr(0,157)+"...";
-                        line(635,1.7f,snippet,1.f,.88f,.65f);
-                    }
-                } else if(app.editor.panel==EditorSession::Panel::Triggers) {
-                    line(40,2.0f,"F6 PLAY  F5 TERRAIN  F7 DATA  F9 TEST MAP  CTRL+S SAVE");
-                    line(64,2.0f,"UP/DOWN TRIGGERS  ENTER EDIT JSON  CTRL+V PASTE  CTRL+C COPY  CTRL+N NEW");
-                    line(88,2.0f,"CTRL+D DUPLICATE  DELETE REMOVE  ENTER APPLY EDIT  ESC CANCEL");
-                    const std::size_t count=app.editor.triggerCount(app.project);
-                    line(120,2.6f,"MAP LOGIC: "+std::to_string(count)+" EVENT-CONDITION-ACTION RULES",
-                         1.f,.80f,.35f);
-                    if(count==0)line(160,2.0f,"NO TRIGGERS. CTRL+N TO ADD A MAP START EVENT.");
-                    const std::size_t current=count?app.editor.selectedTrigger%count:0;
-                    const std::size_t first=count && current>10?current-10:0;
-                    for(std::size_t idx=first;idx<count && idx<first+14;++idx) {
-                        const bool active=idx==current;
-                        line(158+float(idx-first)*28,2.0f,
-                             std::string(active?"> ":"  ")+
-                             app.editor.triggerLabel(app.project,idx),
-                             active?1.f:.72f,active?.84f:.83f,active?.40f:.95f);
-                    }
-                    if(count>0) {
-                        std::string json=app.editor.triggerJSON(app.project,current);
-                        if(json.size()>150)json=json.substr(0,147)+"...";
-                        line(565,1.8f,"SELECTED: "+json,.61f,.88f,.72f);
-                    }
-                    if(app.editor.textEditing) {
-                        line(614,2.1f,"RAW JSON EDIT (CTRL+V TO PASTE):",1.f,.77f,.38f);
-                        std::string src=app.editor.editText;
-                        if(src.size()>190)src=src.substr(0,187)+"...";
-                        line(643,1.8f,src,1.f,.89f,.63f);
-                    }
-                }
-                if(!app.editor.message.empty())
-                    line(float(app.windowHeight)-(dataPanel?24:float(app.windowHeight)-199),
-                         1.8f,app.editor.message,1.f,.63f,.33f);
-            }
+            // Shared dockable creator tools. Unlike the previous huge debug
+            // text overlay, every tool/property here is mouse-operable.
+            CreatorWorkbench::draw(app);
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             glEnable(GL_DEPTH_TEST);
 
             if (smokeFrames > 0 && ++renderedFrames >= smokeFrames) {
@@ -1510,6 +1412,9 @@ int main(int argc, char** argv) {
         }
 
         glDeleteTextures(1,&fogTexture);
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
         glfwDestroyWindow(window);
         glfwTerminate();
     } catch (const std::exception& e) {

@@ -63,3 +63,13 @@ The packaged Windows executable is runtime-only: third-party GLFW headers,
 CMake package files and static libraries are excluded from the installer
 layout. CI treats inclusion of a development SDK in the end-user archive
 as a packaging regression. The engine's own debug PDB remains in `symbols/`.
+
+## Runtime verification
+
+Launch the extracted `RTSCameraTerrain.exe --features` on Windows or
+`./RTSCameraTerrain --features` on Linux to see the feature list embedded in
+the executable itself. Compare `RTS_BUILD_COMMIT` with `build-info.json` to
+detect stale/copied binaries. The release packaging script now does this on
+both operating systems and rejects missing fog, HUD, creator GUI or editor
+workspaces. Bundle format version 2 also includes a native feature manifest.
+This does not substitute for a manual Windows OpenGL graphics-driver test.

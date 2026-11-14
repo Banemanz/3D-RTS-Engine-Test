@@ -188,3 +188,21 @@ the same safe outlet search. Dead structures and depleted mineral patches now
 release their blocked navigation cells via an event-driven grid rebuild rather
 than leaving permanent invisible obstacles. These are not a full collision or
 crowd solver and dynamic units can still congest chokepoints.
+
+## Integrated dockable GUI and platform feature contract (new)
+
+A pinned Dear ImGui docking layer (GLFW/OpenGL3 backend, same source for
+Windows and Linux) replaces the old debug-text editor panels with mouse-
+accessible browser and inspector workspaces. Terrain tools, brush settings,
+catalog navigation/properties, scene hierarchy/transforms, and ECA trigger
+authoring use EditorSession's existing editing logic. The original gameplay
+HUD remains integrated; the top menu also allows switching directly into
+the editor. Input is separated through ImGui's capture flags so clicking a
+dock panel does not also issue game orders or terrain brush strokes.
+
+Native binaries now expose a versioned, CI-verified `--features` contract
+with the exact Git source SHA. The package verifier runs each built binary
+on its host platform and compares flags/commit to the artifact identity.
+Editor GUIs, fog, and HUD must all be compiled into both release outputs.
+The Windows GUI still requires real local GPU/driver testing beyond headless
+native verification.

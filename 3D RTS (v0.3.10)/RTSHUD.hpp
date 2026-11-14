@@ -40,21 +40,21 @@ public:
         const auto& top=ui_.topBar;
         const auto& bottom=ui_.bottom;
         rect(top.x,top.y,top.w,top.h,.045f,.073f,.105f,.96f);
-        rect(0,top.h-3,float(w_),3,.10f,.56f,.61f);
-        text(16,11,2.5f,"FRONTIER COMMAND",.72f,.92f,.94f);
+        rect(0,top.y+top.h-3,float(w_),3,.10f,.56f,.61f);
+        text(16,top.y+11,2.5f,"FRONTIER COMMAND",.72f,.92f,.94f);
         const float anchor=std::max(235.f,float(w_)-565.f);
-        text(anchor,9,1.8f,"MINERALS",.53f,.71f,.75f);
-        text(anchor,24,2.2f,std::to_string(game.playerMinerals),.94f,.78f,.30f);
-        text(anchor+140,9,1.8f,"SUPPLY",.53f,.71f,.75f);
-        text(anchor+140,24,2.2f,std::to_string(game.supplyUsed)+"/"+
+        text(anchor,top.y+9,1.8f,"MINERALS",.53f,.71f,.75f);
+        text(anchor,top.y+24,2.2f,std::to_string(game.playerMinerals),.94f,.78f,.30f);
+        text(anchor+140,top.y+9,1.8f,"SUPPLY",.53f,.71f,.75f);
+        text(anchor+140,top.y+24,2.2f,std::to_string(game.supplyUsed)+"/"+
              std::to_string(game.supplyCap),.88f,.94f,.95f);
-        text(anchor+270,9,1.8f,"WORKERS",.53f,.71f,.75f);
-        text(anchor+270,24,2.2f,std::to_string(game.activeWorkerCount()),.84f,.94f,.83f);
-        text(anchor+402,9,1.8f,"ARMY",.53f,.71f,.75f);
+        text(anchor+270,top.y+9,1.8f,"WORKERS",.53f,.71f,.75f);
+        text(anchor+270,top.y+24,2.2f,std::to_string(game.activeWorkerCount()),.84f,.94f,.83f);
+        text(anchor+402,top.y+9,1.8f,"ARMY",.53f,.71f,.75f);
         int army=0;
         for(const auto& u:game.units)if(u.isAlive() && u.ownerId==0 &&
                                         !u.isWorker && !u.isStructure)++army;
-        text(anchor+402,24,2.2f,std::to_string(army),.84f,.94f,.83f);
+        text(anchor+402,top.y+24,2.2f,std::to_string(army),.84f,.94f,.83f);
 
         rect(bottom.x,bottom.y,bottom.w,bottom.h,.035f,.055f,.079f,.985f);
         rect(0,bottom.y,float(w_),3,.18f,.41f,.47f);

@@ -94,3 +94,14 @@ IDs, verifies constant-time indexed lookup through repeated vector growth,
 copy/move and serialization, checks inherited field isolation, and
 confirms out-of-band ID mutation is detected before project save.
 This is a correctness/scaling regression, not a portable timing benchmark.
+
+### Executable build identity and GUI parity
+
+Each Windows/Linux Release package is rejected unless the shipped
+`RTSCameraTerrain[.exe] --features` output includes the expected Git commit
+SHA and the fog/gameplay HUD/creator GUI/terrain/data/scene/trigger editor
+capabilities. This verification executes the **native binary** on each
+runner, not a Python mirror or manually authored manifest. The Linux CI
+OpenGL smoke captures provide graphical regression evidence of the docked
+creator workspace; Windows Release executes the binary without an OpenGL
+context for feature/identity parity but still needs a real GPU UI test.

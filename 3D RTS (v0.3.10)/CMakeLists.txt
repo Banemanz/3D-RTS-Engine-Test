@@ -4,6 +4,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(RTS_BUILD_DEMO "Build OpenGL demo application" ON)
+# Every platform compiles the same feature configuration; only platform
+# dependencies differ. The git revision is embedded in the native executable.
+execute_process(COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}" rev-parse HEAD
+    OUTPUT_VARIABLE RTS_SOURCE_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(NOT RTS_SOURCE_COMMIT)
+    set(RTS_SOURCE_COMMIT "unknown")
+endif()
 include(CTest)
 
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
@@ -132,12 +141,37 @@ if(RTS_BUILD_DEMO)
         FetchContent_MakeAvailable(glfw)
     endif()
     find_package(OpenGL REQUIRED)
+    include(FetchContent)
+    # Pinned docking-enabled Dear ImGui, cross-platform GLFW/OpenGL3 backends.
+    # Core game/simulation libraries remain independent of the GUI library.
+    FetchContent_Declare(imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.91.9b-docking
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(imgui)
+    add_library(RTSCreatorGui STATIC
+        "${imgui_SOURCE_DIR}/imgui.cpp"
+        "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+        "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+        "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+        "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp")
+    target_include_directories(RTSCreatorGui PUBLIC
+        "${imgui_SOURCE_DIR}"
+        "${imgui_SOURCE_DIR}/backends"
+        "${imgui_SOURCE_DIR}/misc/cpp")
+    target_link_libraries(RTSCreatorGui PUBLIC glfw OpenGL::GL)
     add_executable(RTSCameraTerrain
         main_entry_point_render_loop.cpp
         opengl_3_3_core_function_loader_implementation.cpp
         rts_camera_rig_implementation.cpp
         selection_manager_implementation.cpp)
-    target_link_libraries(RTSCameraTerrain PRIVATE glfw OpenGL::GL RTSSimulation)
+    target_link_libraries(RTSCameraTerrain PRIVATE glfw OpenGL::GL RTSSimulation RTSCreatorGui)
+    target_compile_definitions(RTSCameraTerrain PRIVATE
+        RTS_SOURCE_COMMIT="${RTS_SOURCE_COMMIT}"
+        RTS_FEATURE_CREATOR_GUI=1 RTS_FEATURE_FOG_OF_WAR=1
+        RTS_FEATURE_GAMEPLAY_HUD=1)
     if(WIN32)
         target_link_libraries(RTSCameraTerrain PRIVATE dbghelp)
     endif()
@@ -180,6 +214,10 @@ install(FILES
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PICOJSON_LICENSE"
     DESTINATION "licenses")
+if(RTS_BUILD_DEMO)
+    install(FILES "${imgui_SOURCE_DIR}/LICENSE.txt"
+            DESTINATION "licenses" RENAME "IMGUI_LICENSE")
+endif()
 if(WIN32)
     install(FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.bat"

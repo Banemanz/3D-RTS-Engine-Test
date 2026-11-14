@@ -318,3 +318,37 @@ build. `projects/production_showcase.rtsproject.json` demonstrates Unit
 inheritance, actor tint, two distinct training lists, six units (including
 catalog-derived Medic/Guard/Scout/Sniper), pages, rally points and per-building
 queues without editing source code. F7 edits those fields; F9 play-tests.
+
+## Native creator GUI / docking workspace
+
+The editor now has a **real mouse-driven GUI** rather than a text-only HUD.
+Click the **Workspace** menu or the Play/Terrain/Data/Triggers/Scene tabs
+at the top to switch modes. Dock, move and resize the **Creator | Browser**
+and **Creator | Inspector** windows; the central world view remains an
+interactive 3D viewport.
+
+- **Terrain:** click the tool palette to sculpt, smooth, flatten, paint
+  textures, edit blockers, or place Units/Doodads/Minerals. Use brush
+  radius/strength and catalog dropdowns; paint the 3D viewport with LMB.
+- **Data:** search object IDs/types, select definitions in the list, inspect
+  resolved properties, rename/derive, and edit or add JSON values.
+- **Scene:** select placed instances in the hierarchy, change owners, apply
+  numeric position/yaw, scale, duplicate or delete, and edit instance JSON.
+- **Triggers:** select, create, duplicate or remove ECA rules and edit JSON
+  using a multiline input field.
+- **Project:** save, undo or redo from the menu. Ctrl+S, Ctrl+Z and Ctrl+Y
+  remain keyboard accelerators.
+
+These controls invoke the existing **EditorSession** authoring methods. This
+pass is a functional GUI foundation, not yet the full Galaxy Editor's object
+model, trigger wizard, terrain paint layers or visual actor/action graphs.
+
+### Confirming Windows/Linux binary parity
+
+Run `RTSCameraTerrain.exe --version` (Windows), or
+`./RTSCameraTerrain --version` (Linux), from the **extracted release bundle**.
+It reports `RTS_BUILD_COMMIT` and `RTS_FEATURE_*` entries, including
+`FOG_OF_WAR`, `GAMEPLAY_HUD`, and `CREATOR_GUI`. Compare the commit to
+`build-info.json`. The build workflow now executes the **bundled native
+executable** and refuses to upload when commit or required features do not
+match; simply producing a successful compiler exit no longer suffices.

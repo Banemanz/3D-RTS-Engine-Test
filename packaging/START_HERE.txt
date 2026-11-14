@@ -28,3 +28,14 @@ CREATOR FEATURE DEMO: run-production-lab.bat (Windows) or
 Fabrication Bay. Click it, use B/T/C to train, Tab to change page,
 right-click to rally, and V to cancel/refund a job. Open F7 to modify
 its trainable_units catalog array and F9 to test the changes.
+
+GUI WORKBENCH:
+  Use the top Workspace menu or PLAY/TERRAIN/DATA/TRIGGERS/SCENE tabs.
+  The creator's Browser and Inspector windows are dockable, mouse-driven,
+  and directly operate on the project you have open.
+
+VERIFY YOU ARE RUNNING THE RIGHT EXE:
+  Windows: RTSCameraTerrain.exe --version
+  Linux:   ./RTSCameraTerrain --version
+  Compare RTS_BUILD_COMMIT against build-info.json in this directory.
+  Release CI rejects executables missing the compiled GUI/fog/HUD features.

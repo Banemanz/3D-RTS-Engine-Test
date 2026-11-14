@@ -176,3 +176,18 @@ Select the Fabrication Bay (gold-tinted building), train units, set a rally
 point, cancel production with V, or open F7 to modify the catalog live.
 The CI OpenGL smoke test captures the *actual contextual production HUD* with
 `--smoke-select-producer`, not a generated mockup.
+
+## Integrated creator workbench (Windows + Linux)
+
+The game and editor now share **Dear ImGui docking** (pinned v1.91.9b-docking).
+The editor no longer relies on the original full-screen keyboard-only debug
+text. Open any executable's **Workspace** menu, switch between Play, Terrain,
+Data, Triggers and Scene, and use dockable **Browser** and **Inspector** panels
+with mouse-driven controls. F5–F9 continue to work as keyboard shortcuts.
+World painting and unit commands are gated while GUI widgets capture input.
+
+The release workflow validates the *native executable's* `--features` output,
+including its embedded commit SHA, before uploading either platform package.
+Run `RTSCameraTerrain.exe --version` on Windows (or `./RTSCameraTerrain --version`
+on Linux) to check whether an older build has been launched. Both packages
+use the same creator GUI, gameplay HUD, fog, terrain and editor source.

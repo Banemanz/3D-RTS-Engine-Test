@@ -362,3 +362,28 @@ extra starting resources for hands-on playtesting. Windows/Linux launchers
 validation and an actual Mesa/Xvfb `--smoke-select-producer` screenshot are in
 GitHub Actions. This makes the data-driven production subsystem testable from
 the downloadable executable, not only unit tests.
+
+## Windows/Linux integrated creator GUI and feature parity (November 2026)
+
+Both platforms build the same pinned Dear ImGui v1.91.9b-docking sources
+directly into RTSCameraTerrain. `CreatorWorkbench.hpp` is a GUI-only
+controller/presentation layer over existing `EditorSession` data and
+undoable actions; GUI modes are Play, Terrain, Data, Scene, Triggers with
+dockable Browser and Inspector panels. `main_entry_point_render_loop.cpp`
+sets up GLFW/OpenGL3 backends after existing callbacks and honors
+`ImGui::GetIO().WantCaptureMouse/Keyboard/TextInput` to avoid issuing world
+orders while panels are active. The previous full-screen editor debug
+text block is removed. The native GUI dependency's MIT license is installed
+in `licenses/IMGUI_LICENSE`.
+
+For diagnosing a user screenshot with the outdated debug HUD, compare
+the extracted package's `build-info.json` to the binary's
+`RTSCameraTerrain.exe --version` (or Linux equivalent). CMake embeds a Git
+source SHA, and `tools/verify_build_bundle.py` executes the native binary
+to assert the source SHA and required feature flags, including FOG_OF_WAR,
+GAMEPLAY_HUD and CREATOR_GUI. Only the exact compiled release is accepted.
+
+Remaining major editor work: real property schemas/wizards, actor/ability/
+effect/dependency graph editors, script debugger, terrain layer pipeline,
+collision/gizmos, assets, selection/list virtualisation and advanced UI
+polish. Real Windows GPU testing is still required.

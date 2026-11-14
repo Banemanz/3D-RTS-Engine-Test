@@ -28,7 +28,7 @@ class RTSHUDLayout {
 public:
     explicit RTSHUDLayout(int w,int h):width(std::max(w,1)),height(std::max(h,1)){
         const float panel=height<620?160.f:194.f;
-        topBar={0,0,float(width),46};
+        topBar={0,22,float(width),46};
         bottom={0,float(height)-panel,float(width),panel};
         minimap={14,bottom.y+22,panel-37,panel-40};
         commandArea={float(width)-344,bottom.y+20,330,panel-34};

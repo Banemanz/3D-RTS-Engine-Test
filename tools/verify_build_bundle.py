@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import subprocess
 import sys
 
 
@@ -34,6 +35,7 @@ def main() -> int:
         "docs/BUILD_ARTIFACTS.md",
         "docs/SC2_FEATURE_MATRIX.md",
         "licenses/PICOJSON_LICENSE",
+        "licenses/IMGUI_LICENSE",
         "run-game.bat" if windows else "run-game.sh",
         "run-editor.bat" if windows else "run-editor.sh",
     ]
@@ -64,13 +66,43 @@ def main() -> int:
         if project.get("schema_version") != 1 or not project.get("catalog"):
             raise RuntimeError(f"Invalid bundled starter project: {p}")
 
+    # Enforce parity against the binary, not just a JSON file that the
+    # packaging script can write while accidentally shipping an older EXE.
+    native = root / f"RTSCameraTerrain{ext}"
+    feature_text = subprocess.check_output(
+        [str(native), "--features"], text=True, timeout=20
+    )
+    features = dict(
+        line.strip().split("=", 1)
+        for line in feature_text.splitlines()
+        if "=" in line
+    )
+    if features.get("RTS_BUILD_COMMIT") != sha:
+        raise RuntimeError(
+            f"Native executable commit mismatch: expected {sha}, "
+            f"got {features.get('RTS_BUILD_COMMIT')!r}"
+        )
+    required = (
+        "RTS_FEATURE_FOG_OF_WAR",
+        "RTS_FEATURE_GAMEPLAY_HUD",
+        "RTS_FEATURE_CREATOR_GUI",
+        "RTS_FEATURE_TERRAIN_EDITOR",
+        "RTS_FEATURE_SCENE_EDITOR",
+        "RTS_FEATURE_DATA_EDITOR",
+        "RTS_FEATURE_TRIGGER_EDITOR",
+    )
+    missing = [flag for flag in required if features.get(flag) != "1"]
+    if missing:
+        raise RuntimeError(f"Native executable is missing expected features: {missing}")
+
     info = {
         "project": "3D-RTS-Engine-Test",
         "variant": "Release",
         "platform": platform,
         "commit": sha,
         "github_actions_run_id": str(run_id),
-        "bundle_format_version": 1,
+        "bundle_format_version": 2,
+        "native_executable_features": {key: features[key] for key in required},
     }
     (root / "build-info.json").write_text(
         json.dumps(info, indent=2) + "\n", encoding="utf-8"
