@@ -465,8 +465,9 @@ bool RTSSkirmish::buildBarracks(const Vec3& target) {
         for(int x=cell.x-2;x<=cell.x+2;++x)
             if(!navigation.walkable(x,z))return false;
     playerMinerals-=price;
-    Unit& b=spawn(unitFromCatalog(project_.catalog,barracksId_),navigation.centerOf(cell),0,
-                  "Barracks "+std::to_string(nextId_),true,false,barracksId_);
+    Unit& b=spawn(barracksData,navigation.centerOf(cell),0,
+                  barracksData.resourceName+" "+std::to_string(nextId_),
+                  true,false,barracksId_);
     construction_[b.id]=barracksData.build_time;
     navigation.blockDisc(b.position,2.25f);
     return true;
@@ -629,8 +630,9 @@ void RTSSkirmish::updateProduction(float dt) {
         if(!findProductionSpawn(*building,type,spawnPos)){++it;continue;}
         const auto fields=project_.catalog.resolvedFields(it->catalogId);
         const bool worker=boolField(fields,"is_worker");
-        const std::string prefix=worker?"Worker ":
-            it->catalogId==rangerId_?"Ranger ":type.resourceName+" ";
+        // Content authors control visible names through catalog data.
+        // Runtime spawning must not hardcode a particular starter roster.
+        const std::string prefix=type.resourceName+" ";
         Unit& produced=spawn(type,spawnPos,0,
                              prefix+std::to_string(nextId_),false,worker,it->catalogId);
         const auto rally=rallyPoints_.find(it->buildingId);
@@ -652,7 +654,8 @@ void RTSSkirmish::updateEnemy(float dt) {
         const UnitData enemy=unitFromCatalog(project_.catalog,enemyId_);
         Vec3 spawnPos{};
         if(findProductionSpawn(*rift_bastion,enemy,spawnPos))
-            spawn(enemy,spawnPos,1,"Hybrid "+std::to_string(nextId_),false,false,enemyId_);
+            spawn(enemy,spawnPos,1,enemy.resourceName+" "+
+                  std::to_string(nextId_),false,false,enemyId_);
     }
     for(auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&
                           u.state==UnitState::IDLE)u.attackTarget(friendlyBaseId_);

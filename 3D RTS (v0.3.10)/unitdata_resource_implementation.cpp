@@ -7,7 +7,7 @@ const char* HUMAN_RANGER_TRES = R"(
 [gd_resource type="UnitData" format=3]
 
 [resource]
-resource_name = "Human Ranger"
+resource_name = "Frontier Ranger"
 faction = "Humanity"
 max_hp = 45.0
 armor = 0.0

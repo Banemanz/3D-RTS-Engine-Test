@@ -70,8 +70,10 @@ int main(){
     assert(!game.nextTrainingPage() || game.trainingPage()==0);
     for(int t=0;t<90;++t)game.update(1.f/60.f);
     bool medicCreated=false;
-    for(const auto& u:game.units)if(u.catalogId=="medic" && u.ownerId==0)
+    for(const auto& u:game.units)if(u.catalogId=="medic" && u.ownerId==0){
         medicCreated=true;
+        assert(u.instanceName.find("Field Medic ")==0);
+    }
     assert(medicCreated);
     assert(game.pendingProduction(producer)==0);
     // Disabled at full supply, but a built-in legacy project still loads.
