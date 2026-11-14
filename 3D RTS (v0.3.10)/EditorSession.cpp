@@ -548,6 +548,70 @@ bool EditorSession::removeTriggerVariable(RTSProject& project,
         if(!vars.erase(name))throw std::invalid_argument("Unknown variable: "+name);
     },"VARIABLE REMOVED");
 }
+bool EditorSession::renameTriggerVariable(RTSProject& project,
+                                          const std::string& oldName,
+                                          const std::string& newName){
+    if(textEditing || oldName==newName)return false;
+    RTSProject candidate=project;
+    try{
+        auto globals=candidate.extensions.find("trigger_variables");
+        if(globals==candidate.extensions.end() ||
+           !globals->second.is<picojson::object>())
+            throw std::invalid_argument("Missing trigger variables");
+        auto& vars=globals->second.get<picojson::object>();
+        auto original=vars.find(oldName);
+        if(original==vars.end())throw std::invalid_argument("Unknown variable: "+oldName);
+        if(vars.count(newName))throw std::invalid_argument("Variable already exists: "+newName);
+        const picojson::value startingValue=original->second;
+        vars.erase(original);
+        vars.emplace(newName,startingValue);
+
+        const auto updateReference=[&](picojson::object& node,
+                                       const char* requiredKind){
+            auto type=node.find("type");
+            auto ref=node.find("variable");
+            if(type!=node.end() && type->second.is<std::string>() &&
+               type->second.get<std::string>()==requiredKind &&
+               ref!=node.end() && ref->second.is<std::string>() &&
+               ref->second.get<std::string>()==oldName)
+                ref->second=picojson::value(newName);
+        };
+        auto rules=candidate.extensions.find("triggers");
+        if(rules!=candidate.extensions.end() && rules->second.is<picojson::array>()) {
+            for(auto& item:rules->second.get<picojson::array>()) {
+                if(!item.is<picojson::object>())continue;
+                auto& rule=item.get<picojson::object>();
+                auto event=rule.find("event");
+                if(event!=rule.end() && event->second.is<picojson::object>())
+                    updateReference(event->second.get<picojson::object>(),"OnVariableChanged");
+                for(const char* category:{"conditions","actions"}) {
+                    auto nodes=rule.find(category);
+                    if(nodes==rule.end() || !nodes->second.is<picojson::array>())continue;
+                    for(auto& node:nodes->second.get<picojson::array>()) {
+                        if(!node.is<picojson::object>())continue;
+                        auto& o=node.get<picojson::object>();
+                        if(std::string(category)=="conditions")
+                            updateReference(o,"VariableCompare");
+                        else {
+                            updateReference(o,"SetVariable");
+                            updateReference(o,"AddVariable");
+                        }
+                    }
+                }
+            }
+        }
+        (void)parseTriggerRules(candidate);
+        candidate.validate();
+    }catch(const std::exception& e){
+        message=std::string("VARIABLE RENAME REJECTED: ")+e.what();
+        return false;
+    }
+    remember(project);
+    project=std::move(candidate);
+    modified=true;
+    message="VARIABLE REFERENCES RENAMED";
+    return true;
+}
 std::size_t EditorSession::triggerCount(const RTSProject& project)const {
     return triggerArray(project).size();
 }
