@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
 #include <set>
 #include <stdexcept>
 namespace {
@@ -37,7 +38,43 @@ void requireType(const std::string& type,const std::set<std::string>& allowed) {
 }
 }
 
+// Script state is a typed, bounded project resource, not arbitrary code.
+// Integer semantics avoid cross-compiler floating point and replay ambiguity.
+std::map<std::string,int> parseTriggerVariables(const RTSProject& project) {
+    std::map<std::string,int> result;
+    const auto it=project.extensions.find("trigger_variables");
+    if(it==project.extensions.end())return result;
+    if(!it->second.is<picojson::object>())
+        throw std::invalid_argument("trigger_variables must be an object");
+    const auto& globals=it->second.get<picojson::object>();
+    if(globals.size()>64)throw std::invalid_argument("At most 64 trigger variables");
+    for(const auto& entry:globals) {
+        const std::string& name=entry.first;
+        if(name.empty() || name.size()>64 ||
+           !(name[0]=='_' || (name[0]>='A' && name[0]<='Z') ||
+             (name[0]>='a' && name[0]<='z')))
+            throw std::invalid_argument("Invalid trigger variable name: "+name);
+        for(char ch:name)if(!(ch=='_' || (ch>='A' && ch<='Z') ||
+                               (ch>='a' && ch<='z') || (ch>='0' && ch<='9')))
+            throw std::invalid_argument("Invalid trigger variable name: "+name);
+        if(!entry.second.is<double>())
+            throw std::invalid_argument("Trigger variable must be integer: "+name);
+        const double value=entry.second.get<double>();
+        if(!std::isfinite(value) || std::floor(value)!=value ||
+           value<-100000000. || value>100000000.)
+            throw std::invalid_argument("Trigger variable out of range: "+name);
+        result.emplace(name,static_cast<int>(value));
+    }
+    return result;
+}
+
 std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
+    const auto variables=parseTriggerVariables(project);
+    auto requireVariable=[&](const picojson::object& node) {
+        const auto name=str(node,"variable");
+        if(!variables.count(name))
+            throw std::invalid_argument("Trigger references missing variable: "+name);
+    };
     std::vector<TriggerEngine::Rule> result;
     auto it=project.extensions.find("triggers");
     if(it==project.extensions.end())return result;
@@ -91,7 +128,7 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                 const auto& ob=entry.get<picojson::object>();
                 auto type=str(ob,"type");
                 requireType(type,{"PlayerMineralsAtLeast","UnitCountAtLeast",
-                                  "UnitTypeCountAtLeast","SubjectOwnerIs"});
+                                  "UnitTypeCountAtLeast","SubjectOwnerIs","VariableCompare"});
                 if(type=="PlayerMineralsAtLeast")
                     (void)intField(ob,"amount",0,0,100000000);
                 if(type=="UnitCountAtLeast" || type=="UnitTypeCountAtLeast") {
@@ -106,6 +143,12 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                 }
                 if(type=="SubjectOwnerIs")
                     (void)intField(ob,"owner",0,0,15);
+                if(type=="VariableCompare") {
+                    requireVariable(ob);
+                    const std::string comparison=str(ob,"operator");
+                    requireType(comparison,{"==","!=","<","<=",">",">="});
+                    (void)intField(ob,"value",0,-100000000,100000000);
+                }
                 rule.conditions.push_back(ob);
             }
         }
@@ -119,7 +162,7 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
             auto ob=entry.get<picojson::object>();
             auto type=str(ob,"type");
             requireType(type,{"GrantMinerals","SpawnUnit","EndMatch","ShowMessage",
-                              "ApplyEffect"});
+                              "ApplyEffect","SetVariable","AddVariable"});
             if(type=="SpawnUnit") {
                 auto catalog=str(ob,"catalog");
                 auto unit=project.catalog.find(catalog);
@@ -141,6 +184,10 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
             }
             if(type=="GrantMinerals")
                 (void)intField(ob,"amount",0,-100000000,100000000);
+            if(type=="SetVariable" || type=="AddVariable") {
+                requireVariable(ob);
+                (void)intField(ob,"value",0,-100000000,100000000);
+            }
             if(type=="EndMatch") {
                 const auto result=str(ob,"result","Victory");
                 if(result!="Victory" && result!="Defeat")
