@@ -106,6 +106,7 @@ void RTSSkirmish::reset() {
     navigationGeneration_=0;
     replayValid_=true;
     applyingCommand_=false;
+    aiInputMode_=AIInputMode::Live;
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
@@ -682,8 +683,28 @@ void RTSSkirmish::updateEnemy(float dt) {
             spawn(enemy,spawnPos,1,enemy.resourceName+" "+
                   std::to_string(nextId_),false,false,enemyId_);
     }
-    for(auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&
-                          u.state==UnitState::IDLE)u.attackTarget(friendlyBaseId_);
+    // All new enemy decisions enter the very same tick-indexed command
+    // queue as player input. Legacy tapes alone use direct historical AI.
+    if(aiInputMode_==AIInputMode::ReplayRecorded)return;
+    std::vector<int> idleEnemies;
+    for(const auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&
+                                u.state==UnitState::IDLE)idleEnemies.push_back(u.id);
+    std::sort(idleEnemies.begin(),idleEnemies.end());
+    for(int id:idleEnemies){
+        if(aiInputMode_==AIInputMode::LegacyDirect){
+            if(Unit* u=find(id))u->attackTarget(friendlyBaseId_);
+        }else{
+            RTSCommand command;
+            command.tick=tick_+1;
+            command.source=1;
+            command.kind=RTSCommandKind::Attack;
+            command.units={id};
+            command.targetId=friendlyBaseId_;
+            // A bounded queue may refuse additional orders. Those units
+            // simply retry next tick; never mutate the world as a fallback.
+            (void)queueCommand(std::move(command));
+        }
+    }
 }
 void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
@@ -696,11 +717,11 @@ void RTSSkirmish::update(float dt) {
         bool accepted=false;
         try{accepted=applyCommand(command);}
         catch(...){
-            commandOutcomes_.push_back({tick_,command.sequence,command.kind,false});
+            commandOutcomes_.push_back({tick_,command.sequence,command.kind,false,command.source});
             if(commandOutcomes_.size()>128)commandOutcomes_.pop_front();
             throw;
         }
-        commandOutcomes_.push_back({tick_,command.sequence,command.kind,accepted});
+        commandOutcomes_.push_back({tick_,command.sequence,command.kind,accepted,command.source});
         if(commandOutcomes_.size()>128)commandOutcomes_.pop_front();
         if(replayValid_){
             if(recordedCommands_.size()<32768)recordedCommands_.push_back(command);
@@ -872,6 +893,23 @@ bool RTSSkirmish::queuePlayerCommand(RTSCommandKind kind,const Vec3& point,
     return queueCommand(std::move(command));
 }
 bool RTSSkirmish::applyCommand(const RTSCommand& command){
+    // Enemy AI uses explicit IDs and a restricted attack command without
+    // touching the player's selection or invoking player-only order APIs.
+    if(command.source==1){
+        if(command.kind!=RTSCommandKind::Attack)return false;
+        Unit* target=find(command.targetId);
+        if(!target || !target->isAlive() || target->ownerId!=0)return false;
+        bool issued=false;
+        for(int id:command.units){
+            Unit* unit=find(id);
+            if(!unit || !unit->isAlive() || unit->isStructure ||
+               unit->ownerId!=1)continue;
+            routes_.erase(id);queued_.erase(id);jobs_.erase(id);
+            unit->attackTarget(command.targetId);
+            issued=true;
+        }
+        return issued;
+    }
     // Commands reference identities, never a live selection flag or pointer.
     // Restore visual selection even if execution spawns a new vector element
     // or validation throws, so replays cannot alter UI selection state.
@@ -1063,4 +1101,11 @@ std::vector<RTSSkirmish::CommandOutcome> RTSSkirmish::takeCommandOutcomes(){
     std::vector<CommandOutcome> result(commandOutcomes_.begin(),commandOutcomes_.end());
     commandOutcomes_.clear();
     return result;
+}
+
+void RTSSkirmish::setReplayAIMode(int formatVersion){
+    if(formatVersion!=1 && formatVersion!=2)
+        throw std::invalid_argument("Unsupported replay AI format");
+    aiInputMode_=formatVersion==1?AIInputMode::LegacyDirect:
+                                  AIInputMode::ReplayRecorded;
 }

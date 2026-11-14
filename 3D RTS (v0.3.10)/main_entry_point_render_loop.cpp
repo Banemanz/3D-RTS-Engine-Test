@@ -1136,7 +1136,7 @@ int main(int argc, char** argv) {
                     try{
                         app.game.update(fixedStep);
                         for(const auto& order:app.game.takeCommandOutcomes())
-                            if(!order.accepted)
+                            if(!order.accepted && order.source==0)
                                 app.inform(std::string("COMMAND REJECTED: ")+
                                            rtsCommandName(order.kind));
                     }

@@ -30,6 +30,7 @@ public:
         std::uint64_t tick=0,sequence=0;
         RTSCommandKind kind=RTSCommandKind::Move;
         bool accepted=false;
+        int source=0;
     };
     RTSSkirmish();
     RTSSkirmish(const RTSSkirmish&) = delete;
@@ -51,6 +52,9 @@ public:
     std::string stateDigest()const;
     RTSReplayTape replayTape()const;
     bool replayRecordingValid()const{return replayValid_;}
+    // Verification mode: v1 replays retain old direct orders; v2 uses only
+    // their recorded AI inputs. Call only after loading a replay project.
+    void setReplayAIMode(int formatVersion);
     // Small UI-observable result channel; never part of game-state hashing.
     std::vector<CommandOutcome> takeCommandOutcomes();
     // Playtest diagnostics are ephemeral, never saved to authored map data.
@@ -121,6 +125,8 @@ private:
     std::uint64_t tick_=0;
     bool replayValid_=true;
     bool applyingCommand_=false;
+    enum class AIInputMode{Live,ReplayRecorded,LegacyDirect};
+    AIInputMode aiInputMode_=AIInputMode::Live;
     std::deque<CommandOutcome> commandOutcomes_;
     std::vector<RTSCommand> recordedCommands_;
     std::vector<RTSReplayCheckpoint> checkpoints_;

@@ -15,7 +15,7 @@ enum class RTSCommandKind {
 struct RTSCommand {
     std::uint64_t tick=0;
     std::uint64_t sequence=0;
-    int source=0; // currently local human 0; retained for future command routing
+    int source=0; // 0 = player; 1 = game-owned enemy AI (Attack only)
     RTSCommandKind kind=RTSCommandKind::Move;
     std::vector<int> units;
     Vec3 point{};
@@ -49,6 +49,7 @@ picojson::value commandToJson(const RTSCommand& command);
 RTSCommand commandFromJson(const picojson::value& root);
 
 struct RTSReplayTape {
+    int version=2; // v2 records AI commands; v1 preserves legacy direct-AI playback
     static constexpr std::uint64_t MaxTicks=5184000; // 24 hours at 60Hz
     RTSProject project;
     std::uint64_t totalTicks=0;

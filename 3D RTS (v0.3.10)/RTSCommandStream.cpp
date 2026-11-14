@@ -60,7 +60,7 @@ const char* rtsCommandName(RTSCommandKind kind){
 void validateRTSCommand(const RTSCommand& c){
     if(c.tick==0 || c.tick>RTSCommandStream::MaxCommandTick)
         throw std::invalid_argument("Command tick outside supported replay duration");
-    if(c.sequence>1000000000ULL || c.source!=0 ||
+    if(c.sequence>1000000000ULL || (c.source!=0 && c.source!=1) ||
        static_cast<unsigned>(c.kind)>=names.size() ||
        c.units.size()>RTSCommandStream::MaxUnitIds ||
        c.catalog.size()>128 || c.targetId < -1 || c.targetId>10000000 ||
@@ -68,6 +68,11 @@ void validateRTSCommand(const RTSCommand& c){
        !std::isfinite(c.point.z) || std::fabs(c.point.x)>100000.f ||
        std::fabs(c.point.z)>100000.f)
         throw std::invalid_argument("Invalid command parameters");
+    // Internal AI has one explicitly authorized action. This prevents
+    // game-owned input from issuing human-only economy/production orders.
+    if(c.source==1 && (c.kind!=RTSCommandKind::Attack ||
+       c.targetId<1 || c.units.empty()))
+        throw std::invalid_argument("AI commands require an attack target and unit IDs");
     for(std::size_t i=0;i<c.units.size();++i)
         if(c.units[i]<1 || c.units[i]>10000000 ||
            (i>0 && c.units[i-1]>=c.units[i]))
@@ -125,7 +130,7 @@ RTSCommand commandFromJson(const picojson::value& value){
     RTSCommand c;
     c.tick=integer(o,"tick",1,RTSCommandStream::MaxCommandTick);
     c.sequence=integer(o,"sequence",1,1000000000ULL);
-    c.source=int(integer(o,"source",0,0));
+    c.source=int(integer(o,"source",0,1));
     const auto kind=string(o,"kind");
     auto it=std::find_if(names.begin(),names.end(),[&](const char* name){return kind==name;});
     if(it==names.end())throw std::invalid_argument("Unknown command kind");
@@ -155,7 +160,7 @@ RTSCommand commandFromJson(const picojson::value& value){
     return c;
 }
 picojson::value RTSReplayTape::toJson()const{
-    if(totalTicks>MaxTicks || commands.size()>MaxTicks*2 ||
+    if((version!=1 && version!=2) || totalTicks>MaxTicks || commands.size()>MaxTicks*2 ||
        checkpoints.size()>MaxTicks/60+2)
         throw std::invalid_argument("Replay exceeds bounded limits");
     project.validate();
@@ -167,6 +172,8 @@ picojson::value RTSReplayTape::toJson()const{
              (previous.tick==command.tick && previous.source==command.source &&
               previous.sequence==command.sequence))))
             throw std::invalid_argument("Replay commands are not strictly ordered");
+        if(version==1 && command.source!=0)
+            throw std::invalid_argument("Version 1 replays cannot contain AI commands");
         list.push_back(commandToJson(command));
         previous=command;
     }
@@ -184,7 +191,7 @@ picojson::value RTSReplayTape::toJson()const{
         previousTick=check.tick;
     }
     return picojson::value(picojson::object{
-        {"version",picojson::value(1.0)},
+        {"version",picojson::value(double(version))},
         {"tick_hz",picojson::value(60.0)},
         {"ticks",picojson::value(double(totalTicks))},
         {"project",project.toJson()},
@@ -195,9 +202,11 @@ picojson::value RTSReplayTape::toJson()const{
 RTSReplayTape RTSReplayTape::fromJson(const picojson::value& input){
     if(!input.is<picojson::object>())throw std::invalid_argument("Replay must be JSON object");
     const auto& o=input.get<picojson::object>();
-    if(integer(o,"version",1,1)!=1 || integer(o,"tick_hz",60,60)!=60)
+    const int format=int(integer(o,"version",1,2));
+    if(integer(o,"tick_hz",60,60)!=60)
         throw std::invalid_argument("Unsupported replay version or tick rate");
     RTSReplayTape tape;
+    tape.version=format;
     tape.totalTicks=integer(o,"ticks",0,MaxTicks);
     tape.project=RTSProject::fromJson(required(o,"project"));
     tape.project.validate();
@@ -252,6 +261,9 @@ bool verifyRTSReplay(const RTSReplayTape& tape,std::string* diagnostic){
         (void)tape.toJson(); // strict schema, command ordering and bounds
         RTSSkirmish game;
         game.loadProject(tape.project);
+        // Version 1 depended on the old direct-AI behaviour. Version 2
+        // supplies recorded AI decisions and must not plan duplicates.
+        game.setReplayAIMode(tape.version);
         std::size_t commandIndex=0,checkpointIndex=0;
         const auto verifyTick=[&](std::uint64_t tick)->bool{
             if(checkpointIndex<tape.checkpoints.size() &&
