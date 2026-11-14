@@ -38,6 +38,8 @@ if(BUILD_TESTING)
     add_executable(RTSAIPlannerTests tests/ai_planner_tests.cpp)
     target_link_libraries(RTSAIPlannerTests PRIVATE RTSSimulation)
     add_test(NAME ai_planner COMMAND RTSAIPlannerTests)
+    add_test(NAME ai_defense_behavior COMMAND RTSAIPlannerTests
+             "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_defense_showcase.rtsproject.json")
     add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
     target_link_libraries(RTSCommandReplayTests PRIVATE RTSSimulation)
     add_test(NAME command_replay COMMAND RTSCommandReplayTests)

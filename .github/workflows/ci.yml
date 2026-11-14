@@ -21,7 +21,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rts-replay-fingerprint-linux
-          path: build/command_replay_fingerprint.txt
+          path: |
+            build/command_replay_fingerprint.txt
+            build/ai_defense_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -34,6 +36,16 @@ jobs:
         with:
           name: rts-software-opengl-screenshot
           path: rts-smoke.png
+          if-no-files-found: error
+      - name: Capture AI defense combat laboratory (actual OpenGL renderer)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ai_defense_showcase.rtsproject.json --smoke-frames 180 --screenshot rts-ai-defense.ppm
+      - name: Convert AI defense screenshot
+        run: python3 tools/ppm_to_png.py rts-ai-defense.ppm rts-ai-defense.png
+      - name: Upload rendered AI defense scene
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ai-defense-screenshot
+          path: rts-ai-defense.png
           if-no-files-found: error
       - name: Capture native pause menu with software OpenGL
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-pause-menu --smoke-frames 35 --screenshot rts-pause.ppm
@@ -149,4 +161,6 @@ jobs:
           name: rts-replay-fingerprint-linux
           path: fingerprints/linux
       - name: Require identical replay state checkpoints across operating systems
-        run: diff -u fingerprints/linux/command_replay_fingerprint.txt fingerprints/windows/command_replay_fingerprint.txt
+        run: |
+          diff -u fingerprints/linux/command_replay_fingerprint.txt fingerprints/windows/command_replay_fingerprint.txt
+          diff -u fingerprints/linux/ai_defense_fingerprint.txt fingerprints/windows/ai_defense_fingerprint.txt

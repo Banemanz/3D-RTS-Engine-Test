@@ -3,9 +3,10 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 
-int main(){
+int main(int argc,char** argv){
     RTSSkirmish game;
     const int homeId=game.countUnitsForTrigger(1,"rift_bastion");
     assert(homeId==1);
@@ -75,5 +76,37 @@ int main(){
     for(int i=0;i<120;++i)disabledGame.update(1.f/60.f);
     assert(disabledGame.replayTape().commands.empty());
     assert(verifyRTSReplay(disabledGame.replayTape()));
+    if(argc>1){
+        RTSProject scenario;
+        scenario.loadFile(argv[1]);
+        RTSSkirmish match;
+        match.loadProject(scenario);
+        int scout=-1,decoy=-1;
+        for(const auto& unit:match.units){
+            if(unit.instanceName=="Frontier Scout")scout=unit.id;
+            if(unit.instanceName=="Frontier Decoy")decoy=unit.id;
+        }
+        assert(scout>0 && decoy>0);
+        match.update(1.f/60.f);
+        match.update(1.f/60.f);
+        const auto startup=match.replayTape();
+        bool choseDefense=false;
+        for(const auto& command:startup.commands)
+            if(command.source==1 && (command.targetId==scout ||
+                                      command.targetId==decoy))
+                choseDefense=true;
+        assert(choseDefense);
+        for(int tick=2;tick<180;++tick)match.update(1.f/60.f);
+        const auto recorded=match.replayTape();
+        assert(recorded.version==2 && recorded.totalTicks==180);
+        assert(verifyRTSReplay(recorded));
+        std::ofstream fingerprints("ai_defense_fingerprint.txt",
+                                   std::ios::binary|std::ios::trunc);
+        assert(fingerprints.is_open());
+        for(const auto& point:recorded.checkpoints)
+            fingerprints<<point.tick<<" "<<point.digest<<"\n";
+        fingerprints.flush();
+        assert(fingerprints.good());
+    }
     std::cout<<"AI policy: deterministic unit IDs, local defense, opt-out and replay passed\n";
 }
