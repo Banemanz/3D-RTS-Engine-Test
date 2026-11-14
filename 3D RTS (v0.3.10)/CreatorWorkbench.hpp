@@ -149,7 +149,8 @@ void browser(App& app){
             ed.matchingCatalogCount(p),p.catalog.entries().size());
         if(ImGui::SmallButton("Clear search"))ed.clearCatalogSearch(p);
         if(ImGui::BeginCombo("##createCatalogObject","New catalog object...")){
-            const struct {const char* type;const char* preset;const char* label;} presets[]={
+            struct PresetChoice {const char* type;const char* preset;const char* label;};
+            const PresetChoice presets[]={
                 {"Unit","Combat","Unit | Combat"},
                 {"Unit","Worker","Unit | Worker"},
                 {"Unit","Structure","Unit | Structure"},
@@ -310,6 +311,27 @@ void inspector(App& app){
                                 ImGui::End();return;
                             }
                         }
+                    }
+                }
+                if(entry->type=="Effect"){
+                    const auto kindIt=resolved.find("kind");
+                    const std::string currentKind=kindIt!=resolved.end() &&
+                        kindIt->second.template is<std::string>()?
+                        kindIt->second.template get<std::string>():"(unset)";
+                    if(ImGui::BeginCombo("Effect operation",currentKind.c_str())){
+                        for(const char* kind:{"Damage","Heal","PeriodicDamage",
+                                             "PeriodicHeal","Sequence"}){
+                            if(ImGui::Selectable(kind,kind==currentKind) &&
+                               kind!=currentKind){
+                                refresh(app,ed.convertEffectKind(project,kind));
+                                ImGui::EndCombo();ImGui::End();return;
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+                    if(currentKind=="PeriodicDamage" || currentKind=="PeriodicHeal"){
+                        ImGui::TextDisabled("Ticks at 60 Hz | interval 1..600, duration 1..3600");
+                        ImGui::TextWrapped("Use Resolved properties below to edit pulse size, interval_ticks and duration_ticks.");
                     }
                 }
                 if(entry->type=="Effect"){

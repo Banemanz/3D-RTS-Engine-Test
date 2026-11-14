@@ -94,6 +94,7 @@ public:
     // All presets use the same transactional catalog/undo API as F7 editing.
     bool createCatalogObject(RTSProject& project,const std::string& type,
                              const std::string& preset);
+    bool convertEffectKind(RTSProject& project,const std::string& kind);
     bool duplicateCatalogObject(RTSProject& project);
     bool beginCatalogRename(const RTSProject& project);
     bool finishCatalogRename(RTSProject& project);

@@ -497,6 +497,71 @@ bool EditorSession::createCatalogObject(RTSProject& project,
         return false;
     }
 }
+bool EditorSession::convertEffectKind(RTSProject& project,
+                                      const std::string& kind){
+    if(textEditing)return false;
+    if(kind!="Damage" && kind!="Heal" && kind!="PeriodicDamage" &&
+       kind!="PeriodicHeal" && kind!="Sequence")return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Effect")return false;
+    RTSProject candidate=project;
+    try{
+        auto* effect=candidate.catalog.find(current->id);
+        if(!effect)throw std::invalid_argument("Selected Effect no longer exists");
+        auto& fields=effect->fields;
+        const auto resolved=candidate.catalog.resolvedFields(effect->id);
+        const auto found=resolved.find("kind");
+        if(found!=resolved.end() && found->second.is<std::string>() &&
+           found->second.get<std::string>()==kind)return false;
+        fields["kind"]=picojson::value(kind);
+        if(kind=="Sequence"){
+            const auto refs=resolved.find("children");
+            if(refs==resolved.end() || !refs->second.is<picojson::array>() ||
+               refs->second.get<picojson::array>().empty()){
+                bool foundOther=false;
+                for(const auto& object:candidate.catalog.entries())
+                    if(object.type=="Effect" && object.id!=effect->id){
+                        fields["children"]=picojson::value(
+                            picojson::array{picojson::value(object.id)});
+                        foundOther=true;break;
+                    }
+                if(!foundOther)
+                    throw std::invalid_argument("A Sequence needs another Effect first");
+            }
+        }else{
+            const auto amount=resolved.find("amount");
+            if(amount==resolved.end() || !amount->second.is<double>() ||
+               !std::isfinite(amount->second.get<double>()) ||
+               amount->second.get<double>()<=0.0 ||
+               amount->second.get<double>()>100000.0)
+                fields["amount"]=picojson::value(8.0);
+            if(kind=="PeriodicDamage" || kind=="PeriodicHeal"){
+                const auto ensureTicks=[&](const char* key,double fallback,
+                                           double maximum){
+                    auto prior=resolved.find(key);
+                    if(prior!=resolved.end() && prior->second.is<double>()){
+                        const double n=prior->second.get<double>();
+                        if(std::isfinite(n) && std::floor(n)==n &&
+                           n>=1.0 && n<=maximum)return;
+                    }
+                    fields[key]=picojson::value(fallback);
+                };
+                ensureTicks("interval_ticks",60.0,600.0);
+                ensureTicks("duration_ticks",240.0,3600.0);
+            }
+        }
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+    }catch(const std::exception& e){
+        message=std::string("EFFECT CONVERSION REJECTED: ")+e.what();
+        return false;
+    }
+    remember(project);
+    project=std::move(candidate);
+    modified=true;
+    message="EFFECT KIND CONVERTED TO "+kind;
+    return true;
+}
 bool EditorSession::duplicateCatalogObject(RTSProject& project) {
     const auto* e=selected(project);if(!e)return false;
     const std::string base=e->id+"_copy";
