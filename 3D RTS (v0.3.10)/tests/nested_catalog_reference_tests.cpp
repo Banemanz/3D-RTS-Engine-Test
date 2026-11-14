@@ -94,8 +94,16 @@ int main(){
     assert(!p.removeCatalogObject("scripted_effect",&error));
     assert(error.find("trigger")!=std::string::npos);
 
-    assert(p.renameCatalogObject("scripted_ranger","archer_variant"));
-    assert(p.renameCatalogObject("scripted_effect","kinetic_variant"));
+    try{
+        std::cerr<<"STAGE: rename nested Unit refs\n";
+        assert(p.renameCatalogObject("scripted_ranger","archer_variant"));
+        std::cerr<<"STAGE: rename nested Effect refs\n";
+        assert(p.renameCatalogObject("scripted_effect","kinetic_variant"));
+        std::cerr<<"STAGE: nested ref renames complete\n";
+    }catch(const std::exception& e){
+        std::cerr<<"nested rename failed: "<<e.what()<<"\n";
+        throw;
+    }
     const auto rules=parseTriggerRules(p);
     assert(rules.size()==2);
     const auto& branch=rules[0].actions[0];
