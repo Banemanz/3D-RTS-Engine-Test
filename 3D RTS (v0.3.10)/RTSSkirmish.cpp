@@ -1091,6 +1091,13 @@ std::string RTSSkirmish::stateDigest()const{
             hash.text(entry.first);
             hash.signedNumber(entry.second);
         }
+        // Deferred script events are also part of future authoritative state.
+        hash.number(triggers_.pendingVariableChanges().size());
+        for(const auto& pending:triggers_.pendingVariableChanges()) {
+            hash.text(pending.first);
+            hash.signedNumber(pending.second.first);
+            hash.signedNumber(pending.second.second);
+        }
     }
     hash.text(triggerMessage);
     std::ostringstream s;
