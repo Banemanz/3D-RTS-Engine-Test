@@ -10,7 +10,7 @@
 enum class RTSCommandKind {
     Move, AttackMove, Patrol, Gather, Attack, Stop, Hold,
     Build, Rally, TrainCatalog, TrainRanger, TrainWorker,
-    CancelTraining, Context
+    CancelTraining, Context, CastAbility
 };
 struct RTSCommand {
     std::uint64_t tick=0;

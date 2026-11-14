@@ -100,6 +100,10 @@ public:
     int completedBarracksCount() const;
     int playerBaseId() const { return friendlyBaseId_; }
     std::size_t activePeriodicEffectCount()const{return periodicEffects_.size();}
+    std::string selectedAbilityId(int slot) const;
+    bool canPrepareAbility(int casterId,const std::string& abilityId) const;
+    bool canCastAbility(int casterId,const std::string& abilityId,int targetId) const;
+    std::uint64_t abilityCooldownRemaining(int casterId,const std::string& abilityId) const;
 
     // Script actions expose only explicit, bounded game-state mutations.
     void addMineralsForTrigger(int amount);
@@ -134,6 +138,8 @@ private:
     static constexpr std::size_t MaxPeriodicEffects=256;
     std::vector<PeriodicEffect> periodicEffects_;
     void updatePeriodicEffects();
+    std::map<std::pair<int,std::string>,std::uint64_t> abilityReadyAt_;
+    bool castAbility(int casterId,const std::string& abilityId,int targetId);
     RTSCommandStream commandStream_;
     std::uint64_t tick_=0;
     bool replayValid_=true;

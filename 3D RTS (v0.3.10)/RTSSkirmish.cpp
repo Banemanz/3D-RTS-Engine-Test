@@ -111,6 +111,7 @@ void RTSSkirmish::reset() {
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     periodicEffects_.clear();
+    abilityReadyAt_.clear();
     nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     visionIntervalTimer_=0.f;
@@ -912,6 +913,63 @@ const ProjectPlacement* RTSSkirmish::regionForTrigger(const std::string& id)cons
     return nullptr;
 }
 
+std::string RTSSkirmish::selectedAbilityId(int slot) const {
+    if(slot<0 || slot>=8)return "";
+    const Unit* caster=nullptr;
+    for(const auto& u:units)if(u.isSelected && u.isAlive() && u.ownerId==0){
+        if(caster)return ""; // ambiguity: HUD abilities require one caster
+        caster=&u;
+    }
+    if(!caster || caster->catalogId.empty())return "";
+    const auto abilities=unitAbilityIds(project_.catalog,caster->catalogId);
+    return static_cast<std::size_t>(slot)<abilities.size()?abilities[slot]:"";
+}
+std::uint64_t RTSSkirmish::abilityCooldownRemaining(
+    int casterId,const std::string& abilityId)const{
+    auto it=abilityReadyAt_.find({casterId,abilityId});
+    if(it==abilityReadyAt_.end() || it->second<=tick_)return 0;
+    return it->second-tick_;
+}
+bool RTSSkirmish::canPrepareAbility(int casterId,
+                                    const std::string& abilityId)const{
+    if(result!=MatchResult::Playing)return false;
+    const Unit* caster=find(casterId);
+    if(!caster || !caster->isAlive() || caster->ownerId!=0 ||
+       caster->catalogId.empty())return false;
+    const auto options=unitAbilityIds(project_.catalog,caster->catalogId);
+    if(std::find(options.begin(),options.end(),abilityId)==options.end())return false;
+    const auto ability=compileAbility(project_.catalog,abilityId);
+    return abilityCooldownRemaining(casterId,abilityId)==0 &&
+           playerMinerals>=ability.mineralCost;
+}
+bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
+                                int targetId)const{
+    if(!canPrepareAbility(casterId,abilityId))return false;
+    const Unit* caster=find(casterId);
+    const auto ability=compileAbility(project_.catalog,abilityId);
+    if(ability.target==AbilityTarget::Self)
+        return targetId==-1 || targetId==casterId;
+    const Unit* target=find(targetId);
+    if(!target || !target->isAlive())return false;
+    if(ability.target==AbilityTarget::Ally && target->ownerId!=caster->ownerId)
+        return false;
+    if(ability.target==AbilityTarget::Enemy && target->ownerId==caster->ownerId)
+        return false;
+    if(target->ownerId!=caster->ownerId && !vision.visible(target->position))
+        return false;
+    return (target->position-caster->position).lengthXZ()<=ability.castRange;
+}
+bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,int targetId){
+    if(!canCastAbility(casterId,abilityId,targetId))return false;
+    const auto ability=compileAbility(project_.catalog,abilityId);
+    const int appliedTarget=ability.target==AbilityTarget::Self?casterId:targetId;
+    if(!applyEffectForTrigger(ability.effect,appliedTarget))return false;
+    playerMinerals-=ability.mineralCost;
+    abilityReadyAt_[{casterId,abilityId}]=tick_+ability.cooldownTicks;
+    if(Unit* caster=find(casterId))
+        caster->attackFlashTimer=std::max(caster->attackFlashTimer,.35f);
+    return true;
+}
 bool RTSSkirmish::queueCommand(RTSCommand command){
     if(result!=MatchResult::Playing || tick_>=RTSCommandStream::MaxCommandTick)return false;
     return commandStream_.enqueue(std::move(command),tick_);
@@ -998,6 +1056,11 @@ bool RTSSkirmish::applyCommand(const RTSCommand& command){
             result=queueWorker();break;
         case RTSCommandKind::CancelTraining:
             result=cancelSelectedProduction();break;
+        case RTSCommandKind::CastAbility:
+            for(const int casterId:command.units)
+                if(castAbility(casterId,command.catalog,command.targetId))
+                    result=true;
+            break;
         case RTSCommandKind::Context:
             result=(command.targetId>=0 && orderAttack(command.targetId)) ||
                    setRallyPoint(command.point) ||
@@ -1073,6 +1136,16 @@ std::string RTSSkirmish::stateDigest()const{
         hash.scalar(u->attackCooldownTimer);hash.scalar(u->attackFlashTimer);
         hash.point(u->navAgent.targetPosition);hash.boolean(u->navAgent.hasDestination);
         hash.point(u->velocity());
+    }
+    // Only authored ability usage contributes to state hashes, maintaining
+    // compatibility with legacy replays on maps without abilities.
+    if(!abilityReadyAt_.empty()){
+        hash.number(abilityReadyAt_.size());
+        for(const auto& cooldown:abilityReadyAt_){
+            hash.signedNumber(cooldown.first.first);
+            hash.text(cooldown.first.second);
+            hash.number(cooldown.second);
+        }
     }
     // Empty arrays preserve all pre-periodic-effect replay fingerprints.
     // Otherwise include the exact active duration/next pulse state.
