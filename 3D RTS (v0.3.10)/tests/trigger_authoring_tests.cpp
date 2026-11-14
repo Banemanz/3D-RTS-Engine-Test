@@ -27,7 +27,10 @@ int main(){
     assert(!editor.setTriggerNodeField(project,true,0,"amount",picojson::value(-1.0)));
     assert(editor.triggerObject(project,0).at("conditions").get<picojson::array>()[0]
         .get<picojson::object>().at("amount").get<double>()==130.0);
-    assert(editor.setTriggerNodeField(project,true,1,"catalog",picojson::value("ranger")));
+    // The first Unit is already the template default; changing to another
+    // valid catalog is a real edit, whereas a no-op should not make history.
+    assert(!editor.setTriggerNodeField(project,true,1,"catalog",picojson::value("ranger")));
+    assert(editor.setTriggerNodeField(project,true,1,"catalog",picojson::value("worker")));
     assert(!editor.setTriggerNodeField(project,true,1,"catalog",picojson::value("missing_unit")));
     assert(editor.addTriggerNode(project,false,"GrantMinerals"));
     assert(editor.addTriggerNode(project,false,"SpawnUnit"));
