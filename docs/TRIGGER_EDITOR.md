@@ -48,7 +48,7 @@ All triggers in one map share the values; restarting the match restores the auth
 - **SetVariable** action: assign an integer literal.
 - **AddVariable** action: increment or decrement by an integer, clamped to the permitted range.
 
-Example: OnMapStart → SetVariable `wave` to 1; Every 15 seconds → AddVariable `wave` by 1; a second rule with VariableCompare `wave >= 4` → SpawnUnit using an original map Unit catalog. These are bounded sandboxed nodes, **not** a Galaxy-language compiler, local scopes, branching, loops or coroutines.
+Example: OnMapStart → SetVariable `wave` to 1; Every 15 seconds → AddVariable `wave` by 1; a second rule with VariableCompare `wave >= 4` → SpawnUnit using an original map Unit catalog. A **OnVariableChanged** event can subscribe to a map variable and react on the following 60 Hz simulation tick. Repeated writes to one variable within a tick are coalesced; a change that returns to the starting value does not emit an event. This avoids recursive calls and bounds the number of pending variables to 64. The changed event has no old/new-value payload yet: use VariableCompare to test its current value. These are bounded sandboxed nodes, **not** a Galaxy-language compiler, local scopes, branching, loops or coroutines.
 
 Replay state digests include nonempty trigger globals; maps without globals retain the older digest behavior for v1/v2 compatibility. `RTSTriggerVariableTests` produces `trigger_globals_fingerprint.txt` and CI compares Windows and Linux digests.
 ### Example: announce a map objective after a delay
