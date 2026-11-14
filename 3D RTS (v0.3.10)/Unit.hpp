@@ -105,6 +105,7 @@ public:
                 const UnitSpatialIndex* spatial=nullptr,
                 std::vector<CombatHit>* pendingHits=nullptr);
     bool intersectRay(const Ray& ray, float& outDistance) const;
+    const Vec3& velocity()const{return currentVelocity;} // headless state digest
 
 private:
     Vec3 currentVelocity{0.0f, 0.0f, 0.0f};
