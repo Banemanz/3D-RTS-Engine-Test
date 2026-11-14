@@ -595,31 +595,50 @@ bool EditorSession::renameTriggerVariable(RTSProject& project,
                 if(child!=object.end())self(self,child->second);
             }
         };
+        // Walk only recognized ECA tree nodes. Leave unrelated custom JSON
+        // extensions and free-form text intact during dependency migrations.
+        const auto updateNode=[&](auto&& self,picojson::object& node)->void {
+            const auto t=node.find("type");
+            if(t==node.end() || !t->second.is<std::string>())return;
+            const auto& type=t->second.get<std::string>();
+            if(type=="OnVariableChanged" || type=="VariableCompare" ||
+               type=="SetVariable" || type=="AddVariable")
+                updateReference(node,type.c_str());
+            for(const char* exprKey:{"value_expr","amount_expr","times_expr"}){
+                auto expression=node.find(exprKey);
+                if(expression!=node.end())
+                    updateExpression(updateExpression,expression->second);
+            }
+            if(type=="IfThenElse"){
+                for(const char* key:{"conditions","then","else"}){
+                    auto subtree=node.find(key);
+                    if(subtree==node.end() || !subtree->second.is<picojson::array>())continue;
+                    for(auto& child:subtree->second.get<picojson::array>())
+                        if(child.is<picojson::object>())
+                            self(self,child.get<picojson::object>());
+                }
+            }else if(type=="Repeat"){
+                auto subtree=node.find("actions");
+                if(subtree!=node.end() && subtree->second.is<picojson::array>())
+                    for(auto& child:subtree->second.get<picojson::array>())
+                        if(child.is<picojson::object>())
+                            self(self,child.get<picojson::object>());
+            }
+        };
         auto rules=candidate.extensions.find("triggers");
-        if(rules!=candidate.extensions.end() && rules->second.is<picojson::array>()) {
-            for(auto& item:rules->second.get<picojson::array>()) {
+        if(rules!=candidate.extensions.end() && rules->second.is<picojson::array>()){
+            for(auto& item:rules->second.get<picojson::array>()){
                 if(!item.is<picojson::object>())continue;
                 auto& rule=item.get<picojson::object>();
                 auto event=rule.find("event");
                 if(event!=rule.end() && event->second.is<picojson::object>())
-                    updateReference(event->second.get<picojson::object>(),"OnVariableChanged");
-                for(const char* category:{"conditions","actions"}) {
+                    updateNode(updateNode,event->second.get<picojson::object>());
+                for(const char* category:{"conditions","actions"}){
                     auto nodes=rule.find(category);
                     if(nodes==rule.end() || !nodes->second.is<picojson::array>())continue;
-                    for(auto& node:nodes->second.get<picojson::array>()) {
-                        if(!node.is<picojson::object>())continue;
-                        auto& o=node.get<picojson::object>();
-                        if(std::string(category)=="conditions")
-                            updateReference(o,"VariableCompare");
-                        else {
-                            updateReference(o,"SetVariable");
-                            updateReference(o,"AddVariable");
-                        }
-                        for(const char* key:{"value_expr","amount_expr"}){
-                            auto expr=o.find(key);
-                            if(expr!=o.end())updateExpression(updateExpression,expr->second);
-                        }
-                    }
+                    for(auto& child:nodes->second.get<picojson::array>())
+                        if(child.is<picojson::object>())
+                            updateNode(updateNode,child.get<picojson::object>());
                 }
             }
         }
