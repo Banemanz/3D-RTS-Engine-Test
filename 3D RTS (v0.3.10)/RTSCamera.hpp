@@ -1,20 +1,18 @@
 #pragma once
 
 #include "Math3D.hpp"
+#include "Ray.hpp"
+#include "TerrainMap.hpp"
 #include <GLFW/glfw3.h>
-
-struct Ray {
-    Vec3 origin;
-    Vec3 direction;
-};
 
 class RTSCamera {
 public:
+    const TerrainMap* terrain=nullptr; // borrowed from the currently loaded project
     Vec3 focalPoint{0.0f, 0.0f, 0.0f};
     Vec3 targetFocalPoint{0.0f, 0.0f, 0.0f};
 
-    float currentZoomDistance = 26.0f;
-    float targetZoomDistance  = 26.0f;
+    float currentZoomDistance = 42.0f;
+    float targetZoomDistance  = 42.0f;
     float minZoomDistance     = 7.0f;
     float maxZoomDistance     = 55.0f;
 

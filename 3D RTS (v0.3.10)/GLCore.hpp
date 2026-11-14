@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_WIN32) && !defined(NOMINMAX)
+#define NOMINMAX
+#endif
+
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
 #include <cstddef>
@@ -19,6 +23,15 @@ typedef char GLchar;
 typedef ptrdiff_t GLsizeiptr;
 typedef ptrdiff_t GLintptr;
 
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
+#ifndef GL_R8
+#define GL_R8 0x8229
+#endif
+#ifndef GL_RED
+#define GL_RED 0x1903
+#endif
 #define GL_ARRAY_BUFFER                   0x8892
 #define GL_DYNAMIC_DRAW                   0x88E8
 #define GL_STATIC_DRAW                    0x88E4

@@ -3,6 +3,7 @@
 #include "Math3D.hpp"
 #include "RTSCamera.hpp"
 #include "Unit.hpp"
+#include "RTSVision.hpp"
 #include <vector>
 
 class SelectionManager {
@@ -16,10 +17,11 @@ public:
     void onMouseMove(double mouseX, double mouseY);
     void onLeftMouseUp(double mouseX, double mouseY, bool shiftHeld,
                        const RTSCamera& camera, int screenWidth, int screenHeight,
-                       std::vector<Unit>& units);
+                       std::vector<Unit>& units,const RTSVision* vision=nullptr);
 
     Unit* raycastEnemyUnit(double mouseX, double mouseY, const RTSCamera& camera,
-                           int screenWidth, int screenHeight, std::vector<Unit>& units);
+                           int screenWidth, int screenHeight, std::vector<Unit>& units,
+                           const RTSVision* vision=nullptr);
 
     void issueAttackOrder(Unit* targetEnemy, std::vector<Unit>& units);
     void issueMoveCommand(const Vec3& groundClickPos, bool isAttackMove, std::vector<Unit>& units);
@@ -29,7 +31,7 @@ private:
     void clearSelection(std::vector<Unit>& units);
     void performSingleClickSelection(double mouseX, double mouseY, bool shiftHeld,
                                      const RTSCamera& camera, int screenWidth, int screenHeight,
-                                     std::vector<Unit>& units);
+                                     std::vector<Unit>& units,const RTSVision* vision);
     void performBoxSelection(bool shiftHeld, const RTSCamera& camera,
                              int screenWidth, int screenHeight, std::vector<Unit>& units);
 };

@@ -23,7 +23,7 @@ void RTSCamera::update(float deltaTime, GLFWwindow* window, int windowWidth, int
         else if (mouseY >= windowHeight - edgeMarginPixels) panInput.z += 1.0f;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         panInput.x -= 1.0f;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         panInput.x += 1.0f;
@@ -42,8 +42,12 @@ void RTSCamera::update(float deltaTime, GLFWwindow* window, int windowWidth, int
         Vec3 worldMove = (right * panInput.x + forward * (-panInput.z)) * (panSpeed * heightScale * deltaTime);
 
         targetFocalPoint = targetFocalPoint + worldMove;
-        targetFocalPoint.x = std::clamp(targetFocalPoint.x, -mapBoundary, mapBoundary);
-        targetFocalPoint.z = std::clamp(targetFocalPoint.z, -mapBoundary, mapBoundary);
+        const float loX=terrain?terrain->minX():-mapBoundary;
+        const float loZ=terrain?terrain->minZ():-mapBoundary;
+        const float hiX=terrain?(terrain->minX()+(terrain->width()-1)*terrain->spacing()):mapBoundary;
+        const float hiZ=terrain?(terrain->minZ()+(terrain->depth()-1)*terrain->spacing()):mapBoundary;
+        targetFocalPoint.x=std::clamp(targetFocalPoint.x,loX,hiX);
+        targetFocalPoint.z=std::clamp(targetFocalPoint.z,loZ,hiZ);
     }
 
     float t = 1.0f - std::exp(-smoothingFactor * deltaTime);
@@ -105,6 +109,7 @@ bool RTSCamera::screenPointToRay(double mouseX, double mouseY, int screenWidth, 
 bool RTSCamera::screenToGroundRaycast(double mouseX, double mouseY, int screenWidth, int screenHeight, Vec3& outHitPoint) const {
     Ray ray;
     if (!screenPointToRay(mouseX, mouseY, screenWidth, screenHeight, ray)) return false;
+    if (terrain)return terrain->raycast(ray,outHitPoint);
     if (std::abs(ray.direction.y) < 1e-6f) return false;
 
     float t = -ray.origin.y / ray.direction.y;

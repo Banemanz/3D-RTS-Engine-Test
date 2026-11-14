@@ -1,0 +1,41 @@
+RTS CREATOR - QUICK START
+========================
+
+WINDOWS (x64):
+  1) Extract this downloaded GitHub Actions ZIP to a folder.
+  2) Double-click run-game.bat to play the RTS skirmish.
+  3) Double-click run-editor.bat for the terrain editor.
+  Or double-click RTSCameraTerrain.exe in this same folder.
+
+EDITOR MODES:
+  F5 Terrain editor | F6 Triggers | F7 Data | F8 Scene | F9 Play/test
+  Ctrl+S saves projects. See docs/AUTHORING.md for all controls.
+
+PROJECTS:
+  projects/default.rtsproject.json
+  projects/terrain_showcase.rtsproject.json
+
+LINUX:
+  Run ./run-game.sh or ./run-editor.sh. Requires desktop OpenGL 3.3
+  and GLFW/X11 runtime libraries on your system.
+
+This prototype requires an OpenGL 3.3-capable graphics driver.
+The map editor, assets, scripting and gameplay are all still evolving.
+Source revision / CI run: see build-info.json.
+
+CREATOR FEATURE DEMO: run-production-lab.bat (Windows) or
+./run-production-lab.sh (Linux) launches a new map with a prebuilt
+Fabrication Bay. Click it, use B/T/C to train, Tab to change page,
+right-click to rally, and V to cancel/refund a job. Open F7 to modify
+its trainable_units catalog array and F9 to test the changes.
+
+GUI WORKBENCH:
+  Use the top Workspace menu or PLAY/TERRAIN/DATA/TRIGGERS/SCENE tabs.
+  The creator's Browser and Inspector windows are dockable, mouse-driven,
+  and directly operate on the project you have open.
+
+VERIFY YOU ARE RUNNING THE RIGHT EXE:
+  Windows: RTSCameraTerrain.exe --version
+  Linux:   ./RTSCameraTerrain --version
+  Compare RTS_BUILD_COMMIT against build-info.json in this directory.
+  Release CI rejects executables missing the compiled GUI/fog/HUD features.

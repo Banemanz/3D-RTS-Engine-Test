@@ -1,0 +1,136 @@
+#pragma once
+#include "RTSProject.hpp"
+#include <cstddef>
+#include <deque>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+// Pure data/editing state: renderer and GLFW only translate input into these
+// commands. A whole project can be edited and saved without any GPU.
+class EditorSession {
+public:
+    enum class Panel { Play, Terrain, Data, Triggers, Scene };
+    enum class Tool { Raise, Lower, Smooth, Flatten, Paint, Block, Unblock,
+                      PlaceMineral, PlaceUnit, PlaceDoodad };
+    Panel panel=Panel::Play;
+    Tool tool=Tool::Raise;
+    float brushRadius=4.0f;
+    float brushStrength=0.8f;
+    int materialId=1;
+    int placementOwner=0;
+    std::string placementArchetype="ranger";
+    std::string placementDoodad="ranger_actor";
+    std::string message;
+
+    std::size_t selectedObject=0;
+    std::string catalogFilter;
+    // Filter by catalog family (empty means all). Not tied to a particular UI.
+    std::string catalogTypeFilter;
+    bool filterEditing=false;
+    bool renamingCatalog=false;
+    std::size_t selectedField=0;
+    std::size_t selectedTrigger=0;
+    std::string selectedPlacementId;
+    bool textEditing=false;
+    bool newFieldEditing=false;
+    std::string editText;
+    bool modified=false;
+
+    void startStroke(RTSProject& project);
+    bool paint(RTSProject& project,const Vec3& worldPos);
+    void finishStroke(RTSProject& project);
+    bool undo(RTSProject& project);
+    bool redo(RTSProject& project);
+    // Used only to discard a tentative edit rejected by the runtime validator.
+    void discardRejectedChange();
+
+    bool place(RTSProject& project,const Vec3& worldPos);
+    bool removeNearest(RTSProject& project,const Vec3& worldPos,float radius=3.0f);
+    bool cyclePlacementCatalog(const RTSProject& project,int direction,bool doodad=false);
+
+    // Scene editor uses stable IDs rather than indices that move when deleting
+    // and inserting scene entities.
+    const ProjectPlacement* selectedPlacement(const RTSProject& project) const;
+    bool selectNearestPlacement(const RTSProject& project,const Vec3& world,float radius=3.5f);
+    bool cycleSceneSelection(const RTSProject& project,int direction);
+    bool moveSelectedPlacement(RTSProject& project,const Vec3& world);
+    bool rotateSelectedPlacement(RTSProject& project,float degrees);
+    bool scaleSelectedPlacement(RTSProject& project,float factor);
+    bool toggleSelectedOwner(RTSProject& project);
+    bool adjustSelectedRegionRadius(RTSProject& project,float delta);
+    bool duplicateSelectedPlacement(RTSProject& project);
+    bool deleteSelectedPlacement(RTSProject& project);
+    bool placeSceneMarker(RTSProject& project,const Vec3& world,bool region);
+    bool beginSceneOverrideEdit(const RTSProject& project);
+    bool finishSceneOverrideEdit(RTSProject& project);
+
+    void cycleObject(const RTSProject& project,int delta);
+    bool setCatalogTypeFilter(const RTSProject& project,const std::string& type);
+    // Stable-ID navigation survives catalog filters and derives; no GPU/UI dependency.
+    bool selectCatalogId(const RTSProject& project,const std::string& id);
+    // Validated, atomic, undoable typed field editing for property widgets.
+    bool setCatalogField(RTSProject& project,const std::string& key,
+                         const picojson::value& value);
+    void beginCatalogSearch();
+    void clearCatalogSearch(const RTSProject& project);
+    bool finishCatalogSearch(const RTSProject& project);
+    std::size_t matchingCatalogCount(const RTSProject& project) const;
+    bool catalogMatches(const CatalogEntry& entry) const;
+    void cycleField(const RTSProject& project,int delta);
+    std::vector<std::string> fields(const RTSProject& project) const;
+    const CatalogEntry* selected(const RTSProject& project) const;
+    std::string selectedFieldName(const RTSProject& project) const;
+    bool beginValueEdit(const RTSProject& project);
+    void beginNewField();
+    void addChar(unsigned int codepoint);
+    void backspace();
+    void cancelEdit();
+    bool finishEdit(RTSProject& project);
+    bool removeLocalOverride(RTSProject& project);
+    bool duplicateCatalogObject(RTSProject& project);
+    bool beginCatalogRename(const RTSProject& project);
+    bool finishCatalogRename(RTSProject& project);
+    bool deleteCatalogObject(RTSProject& project);
+
+    // First trigger authoring panel: raw JSON rule inspector/editor. A future
+    // node-graph can use the same serialized ECA object model.
+    std::size_t triggerCount(const RTSProject& project) const;
+    std::string triggerLabel(const RTSProject& project,std::size_t index) const;
+    std::string triggerJSON(const RTSProject& project,std::size_t index) const;
+    void cycleTrigger(const RTSProject& project,int delta);
+    bool createTrigger(RTSProject& project);
+    bool duplicateTrigger(RTSProject& project);
+    bool deleteTrigger(RTSProject& project);
+    // Same typed trigger commands serve desktop GUI and headless tools.
+    picojson::object triggerObject(const RTSProject& project,std::size_t index) const;
+    bool setTriggerEvent(RTSProject& project,const std::string& type);
+    bool setTriggerOnce(RTSProject& project,bool once);
+    bool setTriggerEventField(RTSProject& project,const std::string& key,
+                              const picojson::value& value);
+    bool addTriggerNode(RTSProject& project,bool condition,const std::string& type);
+    bool removeTriggerNode(RTSProject& project,bool condition,std::size_t index);
+    bool moveTriggerNode(RTSProject& project,bool condition,std::size_t index,int direction);
+    bool setTriggerNodeField(RTSProject& project,bool condition,std::size_t index,
+                             const std::string& key,const picojson::value& value);
+    bool beginTriggerEdit(const RTSProject& project);
+    bool finishTriggerEdit(RTSProject& project);
+    std::string panelName() const;
+    std::string toolName() const;
+
+private:
+    bool painting_=false;
+    bool strokeActionRecorded_=false;
+    std::unique_ptr<RTSProject> strokeBefore_;
+    // One chronological undo stack across terrain, instances, catalogs and triggers.
+    // Snapshots never embed TerrainMap's own undo history.
+    std::deque<RTSProject> undo_,redo_;
+    std::string pendingNewField_;
+    std::size_t maxHistory_=32;
+    bool mutateTrigger(RTSProject& project,
+                       const std::function<void(picojson::object&)>& change,
+                       const std::string& status);
+    void remember(const RTSProject& project);
+    void rememberPlacement(const RTSProject& project) { remember(project); }
+};

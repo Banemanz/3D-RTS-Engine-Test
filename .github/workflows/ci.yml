@@ -1,0 +1,123 @@
+name: Tests + screenshots (NOT executables)
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenGL and GLFW headers
+        run: sudo apt-get update && sudo apt-get install -y libglfw3-dev libgl1-mesa-dev
+      - name: Configure
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Compile
+        run: cmake --build build --parallel 2
+      - name: Unit tests (no display required)
+        run: ctest --test-dir build --output-on-failure
+      - name: Install software OpenGL smoke test dependencies
+        run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
+      - name: Run headless OpenGL renderer and capture frame
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-frames 120 --screenshot rts-smoke.ppm
+      - name: Convert screenshot without extra dependencies
+        run: python3 tools/ppm_to_png.py rts-smoke.ppm rts-smoke.png
+      - name: Upload rendered screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-software-opengl-screenshot
+          path: rts-smoke.png
+          if-no-files-found: error
+      - name: Capture native pause menu with software OpenGL
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-pause-menu --smoke-frames 35 --screenshot rts-pause.ppm
+      - name: Convert native UI screenshot
+        run: python3 tools/ppm_to_png.py rts-pause.ppm rts-pause.png
+      - name: Upload native pause UI capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-native-pause-menu-screenshot
+          path: rts-pause.png
+          if-no-files-found: error
+      - name: Smoke test clickable RTS unit selection cards
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-select-army --smoke-frames 80 --screenshot rts-group-hud.ppm
+      - name: Convert group HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-group-hud.ppm rts-group-hud.png
+      - name: Upload group HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-group-selection-hud-screenshot
+          path: rts-group-hud.png
+          if-no-files-found: error
+      - name: Smoke test contextual RTS production HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/production_showcase.rtsproject.json --smoke-select-producer --smoke-frames 80 --screenshot rts-production.ppm
+      - name: Convert production HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-production.ppm rts-production.png
+      - name: Upload contextual production HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-production-hud-screenshot
+          path: rts-production.png
+          if-no-files-found: error
+      - name: Smoke test Data Editor searchable catalog
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 80 --screenshot rts-data.ppm
+      - name: Convert Data Editor screenshot
+        run: python3 tools/ppm_to_png.py rts-data.ppm rts-data.png
+      - name: Upload Data Editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-data-editor-screenshot
+          path: rts-data.png
+          if-no-files-found: error
+      - name: Run interactive-editor OpenGL startup smoke
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-editor.ppm
+      - name: Convert editor screenshot
+        run: python3 tools/ppm_to_png.py rts-editor.ppm rts-editor.png
+      - name: Upload editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-terrain-editor-screenshot
+          path: rts-editor.png
+          if-no-files-found: error
+      - name: Run trigger-editor OpenGL smoke
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --project projects/effects_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-triggers.ppm
+      - name: Convert trigger-editor screenshot
+        run: python3 tools/ppm_to_png.py rts-triggers.ppm rts-triggers.png
+      - name: Upload trigger-editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-trigger-editor-screenshot
+          path: rts-triggers.png
+          if-no-files-found: error
+      - name: Run trigger execution monitor with an authored debug map
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-trigger-monitor --project projects/trigger_diagnostics_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-trigger-monitor.ppm
+      - name: Convert trace monitor screenshot
+        run: python3 tools/ppm_to_png.py rts-trigger-monitor.ppm rts-trigger-monitor.png
+      - name: Upload trace monitor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-trigger-trace-monitor-screenshot
+          path: rts-trigger-monitor.png
+          if-no-files-found: error
+      - name: Stress editor lifecycle across terrain, scene, triggers and data
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
+      - name: Smoke test object and region scene editor
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --scene-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-scene.ppm
+      - name: Convert scene screenshot
+        run: python3 tools/ppm_to_png.py rts-scene.ppm rts-scene.png
+      - name: Upload scene editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-scene-editor-screenshot
+          path: rts-scene.png
+          if-no-files-found: error
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DRTS_BUILD_DEMO=ON
+      - name: Compile
+        run: cmake --build build --config Debug
+      - name: Unit tests
+        run: ctest --test-dir build -C Debug --output-on-failure
