@@ -99,6 +99,8 @@ public:
     bool addTriggerVariable(RTSProject& project,const std::string& name,int initial=0);
     bool setTriggerVariable(RTSProject& project,const std::string& name,int value);
     bool removeTriggerVariable(RTSProject& project,const std::string& name);
+    bool renameTriggerVariable(RTSProject& project,const std::string& oldName,
+                               const std::string& newName);
     // First trigger authoring panel: raw JSON rule inspector/editor. A future
     // node-graph can use the same serialized ECA object model.
     std::size_t triggerCount(const RTSProject& project) const;
