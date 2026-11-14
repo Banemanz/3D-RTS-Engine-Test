@@ -149,3 +149,41 @@ CI builds `RTSCommandReplayTests` and `replay_cli`, and compares matching checkp
 The project `metadata` object supports two new validated keys: `"enemy_ai_enabled": false` disables automated enemy Attack orders without removing enemy units or simulation-driven spawns; `"enemy_ai_guard_radius": 16` makes enemy idle units prioritize attacking player units within 16 world units of their base before targeting the player's command center. The guard radius must be a number from 0 to 80; a zero radius disables local defense prioritization, **not** base aggression. Omitted fields use `true` and `14`.
 
 For an example, open `projects/ai_defense_showcase.rtsproject.json` (an original scenario with two frontier scouts advanced near enemy territory). The map's settings can also be edited through JSON or `RTSProjectTool --set-root <map> metadata <json-object>` and are validated at load/save time. AI uses the same source-labelled fixed-step execution as player commands. This is presently a minimal combat policy, not a full RTS build-order/economy editor.
+
+
+## Runtime Behavior state, stat derivation and deterministic lifecycle
+
+The shared DataCatalog defines a typed BehaviorDefinition with
+duration_ticks, max_stacks, armor_bonus, damage_bonus,
+speed_multiplier, refresh_duration and dispellable. A new
+EffectOperationKind ApplyBehavior or RemoveBehavior includes a
+typed Behavior catalog ID. compileEffect validates every linked
+Behavior and all nested Sequence edges before authoring save or
+gameplay. Effect graph bounds remain 16 levels/64 visits.
+
+RTSSkirmish owns a bounded map keyed by (target Unit ID, Behavior ID)
+with stack count and absolute expiry tick. Map key ordering is stable
+on Windows/Linux; 256 unique live instances is the hard limit.
+Pre-admission checks all new unique status keys before any immediate
+operations in that Effect invocation, so saturated status schedules
+cannot partially damage/modify a target. Existing timed-effect slot
+limits are independent. Reapply increments up to max_stacks and
+renews remaining time only if refresh_duration is true. RemoveBehavior
+respects dispellable. Expired and dead targets are cleaned at fixed
+tick boundaries, independent of render refresh, while reset clears
+all live status state.
+
+UnitData remains immutable. Unit instances have derived armor/damage
+and navigation speed modifiers. The authoritative combat path uses
+derived armor for damage mitigation and derived attack damage on
+recorded combat hits; NavigationAgent3D uses a scaled maxSpeed while
+active. Removing the final status restores baseline values exactly.
+Dense Behavior cleanup uses an ephemeral alive-Unit ID index to avoid
+256 repeated scans across large maps; sparse instances skip the
+index build. No UI or OS clock influences these decisions.
+
+Nonempty Behavior maps are included in stateDigest with target ID,
+Behavior ID, stacks and expiry tick. Legacy matches with no statuses
+preserve their older digest shape. Gameplay command tapes already
+capture Ability→Effect→Behavior execution through CastAbility,
+and Windows/MSVC vs Linux/GCC CI compares a new behavior fingerprint.

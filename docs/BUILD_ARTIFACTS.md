@@ -116,3 +116,20 @@ gate publishing. Separate Linux OpenGL artifacts show F7 Ability
 authoring, the selected Unit loadout and the F9 ability command grid.
 The executable ZIPs remain under the Download Windows EXE and Linux
 RTS Builds workflow, not the screenshot-only workflow.
+
+
+## Status Behavior editor/runtime bundle contract
+
+Both platform Release archives must include the original
+projects/behavior_workshop_showcase.rtsproject.json and validate it
+with the bundled native RTSProjectTool. Runtime --features must
+self-report RTS_FEATURE_STATUS_BEHAVIORS=1 and
+RTS_FEATURE_VISUAL_EFFECT_FLOW=1. The verifier checks these flags
+from RTSCameraTerrain[.exe] on Windows and Linux before accepting
+a bundle. Both Release CTest suites preserve asserts.
+
+The separate Tests + screenshots workflow captures live F7 Behavior
+editing, nested visual Effect flow and an F9 selected caster after
+a genuine fixed-tick self-status cast under Linux software OpenGL.
+These screenshots are not the executable binaries. All code and
+asset formats remain shared across Windows and Linux.

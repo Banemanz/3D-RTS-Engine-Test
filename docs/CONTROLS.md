@@ -152,3 +152,23 @@ HUD pagination beyond three skills is not yet implemented.
 ### Eight-skill command-card paging
 
 Unit loadouts can contain up to eight Ability IDs. For a single selected caster with more than three skills, the bottom-right command-grid button shows SKILLS page/count. Click it or press TAB to cycle the 3-slot Ability command pages (F/J/K remain the cast hotkeys on each page). This card page is UI-only state: it cannot change the fixed simulation or recorded replay hash. Producer training pages retain priority when a structure is selected.
+
+
+## Status gameplay and editor workflow
+
+In F7, select a Behavior to edit stack cap, armor/damage/speed
+bonuses, duration refresh and dispellability as one grouped action.
+Select an ApplyBehavior/RemoveBehavior Effect to choose its linked
+Behavior. Select a Sequence Effect for the visual node tree;
+click Edit on a node to inspect it, or use Up/Down/Remove/Append
+on ordered child references.
+
+In F9 with the Behavior Workshop map, select a Ranger.
+F casts the self-targeted Brace Stance (temporary armor stacking),
+J enters unit target mode for Tether Bolt (movement/attack debuff),
+K enters unit target mode for Break Tether (dispel).
+Left-click a valid visible target within range, right-click to
+cancel. View the selected Unit's effective attack/armor plus
+status count and remaining energy in the native HUD.
+F6 trigger monitor shows real active status instances when
+simulation is running; it does not replace F7 authoring.

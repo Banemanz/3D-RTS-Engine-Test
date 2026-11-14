@@ -220,3 +220,21 @@ fields during conversions; designers need not hand-edit effect JSON to
 change kind. F7 still lacks a node-based visual effect graph, a full
 behavior/buff stacking model and client-authorable unit abilities.
 See `projects/timed_effects_showcase.rtsproject.json`.
+
+
+## Reusable status Behaviors for F6 mission Events
+
+An F6 ApplyEffect action can now use a typed Effect graph that
+includes ApplyBehavior or RemoveBehavior leaves, as well as
+Damage, Heal and periodic effects. Their referenced Behavior
+catalog entries are authored from F7, with bounded stack rules
+and modifier lifetime. The F6 watch panel displays active status
+count and a read-only table containing Unit ID, Behavior ID,
+stacks and remaining ticks/60 seconds, so authors can inspect
+the real fixed-step state while playing a map.
+
+Renaming an active Behavior catalog object migrates typed
+Effect references; deleting one with inbound references is
+rejected. Status fields are not arbitrary script injection and
+do not provide custom Galaxy source compatibility. Use the
+Behavior Workshop example to test a caster-driven Effect chain.

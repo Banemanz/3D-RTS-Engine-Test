@@ -291,3 +291,33 @@ The HUD shows energy and unavailable/cooling abilities. Abilities use the
 recorded authoritative command stream and strict Windows/Linux replay
 parity. See projects/ability_workshop_showcase.rtsproject.json for an
 original playable demo; see docs/AUTHORING.md for creator instructions.
+
+
+## Original status behaviors, visual Effect flow and F7 authoring
+
+Unit Abilities can now apply **Behavior** catalog objects through
+Effect steps. Behaviors modify real armor, weapon damage and navigation
+speed, can stack up to an authored cap, expire on fixed simulation
+ticks, and optionally refresh duration or resist dispelling.
+New Effect kinds **ApplyBehavior** and **RemoveBehavior** compose with
+Damage, Heal, timed effects and nested Sequences. Nothing copies
+an existing RTS's unit identities or media.
+
+**F7 Data Editor:** New catalog object offers Behavior templates
+(Armor shield, Attack focus, Movement slow). The selected Behavior
+has a grouped modifier editor that commits all parameters as one
+validated undo transaction. Effect objects show typed Behavior
+references; a new navigable visual Effect-flow tree previews nested
+Sequence operations, and designers can append, reorder, remove and
+open their components without editing raw JSON. The F7 inspector
+has a wider responsive initial layout.
+
+**F6 monitor:** live status watch exposes Unit ID, Behavior, stacks and
+remaining simulation time. **F9:** a selected unit's dossier displays
+modified armor/damage and the number of active status instances.
+The status and cooldown state is deterministic and replay-verified.
+
+Start with projects/behavior_workshop_showcase.rtsproject.json for
+original Brace Stance, Tether Bolt and Break Tether mechanics.
+Windows/Linux builds, tests, map validation, replay fingerprints and
+native OpenGL screenshot checks share the same source.

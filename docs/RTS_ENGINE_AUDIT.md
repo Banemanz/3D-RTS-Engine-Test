@@ -100,3 +100,24 @@ targeting, data-driven weapons and actor events, robust ability
 requirements and cast states, command-card pagination and richer F7
 schema/property editors. AI still lacks a general authored production,
 economy and ability-usage policy. Preserve both OSes and all tests.
+
+
+## Status modifier implementation and next architectural focus
+
+Typed authored Behavior objects represent reusable per-target
+temporary modifiers (armor, attack damage and navigation speed).
+Effect operations apply/dispel them and Ability/trigger use the same
+compiler. Runtime keys are (Unit ID, Behavior ID), status instances
+are bounded and deterministically expired, and the original
+UnitData remains immutable. Fixed-step execution and exact
+Windows/Linux replay digests gate cross-platform changes. A
+sparse/dense status cleanup policy avoids unnecessary scans for
+large Unit populations.
+
+The new F7 grouped Behavior editor and visual Effect tree improve
+creator usability without embedding Dear ImGui in the simulation.
+Next major engine/editor slices should implement actor events,
+aura/area target queries, projectile execution state, deterministic
+local effects/visual cues, generic tech/upgrades and modular data
+schemas. A tree flow preview is not yet an editable node-wiring
+graph or Galaxy source/compiler parity. Keep the project original.

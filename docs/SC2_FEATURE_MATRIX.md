@@ -252,3 +252,29 @@ arbitrary advanced data schemas and localization. This progress is
 not StarCraft/Galaxy feature parity and does not reuse Blizzard assets.
 
 **UI pagination follow-up:** F9 now pages through the full eight-Ability loadout in three-slot pages using TAB or the SKILLS x/y button; the current page does not enter authoritative replay hashes. This closes the initial three-slot reachability gap, though custom card-layout authoring and per-Ability icon/smart hotkey binding remain future work.
+
+
+## November 14: authored Behavior/status rules and visual Effect flow
+
+**Implemented since previous Ability pass:** new Behavior catalog
+type, typed ApplyBehavior/RemoveBehavior Effect nodes, stack limits,
+fixed-tick status expiry and optional refresh, dispel immunity,
+armor/damage/movement modifiers with bounded combined totals,
+256-live-instance runtime cap, death cleanup and deterministic
+replay state. These integrate with the existing Ability targeting
+and periodic/Sequence Effects, not a separate cosmetic demo.
+
+**Editor/UI:** F7 Behavior presets, grouped validated and undoable
+parameter inspector, typed Effect→Behavior links, nested visual
+Effect-flow preview, Effect sequence reorder/navigate/append/remove
+and a wider initial data workspace. F6 live status watch and F9
+effective attack/armor/status count reflect actual runtime objects.
+Original Behavior Workshop project and CI screenshots cover F7/F9.
+
+**Further essentials:** Behavior categories/exclusivity, stacking
+rules that can be scripted, auras, status actor lifecycle and VFX,
+a scalable custom data schema UI, visual graph connections rather
+than nested tree, area/terrain targeting, projectile actors,
+native editor-owned full GUI, upgrades/tech trees, actual asset
+pipeline and complete script libraries. This is a foundation, not
+a StarCraft/Galaxy data editor or proprietary content port.

@@ -492,3 +492,52 @@ stacks; those are subsequent engine/editor tasks.
 ### Playtest all eight Ability slots
 
 The Ability loadout allows eight distinct skill references. If the selected Unit has more than three, the tactical HUD's SKILLS x/y button (or TAB) pages through the command grid in groups of three. F/J/K cast whichever three slots are currently visible. This is pure presentation/selection state; replay commands include the actual Ability catalog ID, not a page index.
+
+
+## Authoring dynamic status Behaviors from F7
+
+Create a **Behavior** via F7 → New catalog object → Behavior |
+Armor shield, Attack focus or Movement slow. These are editable
+templates, not hardcoded game abilities. A Behavior may be authored
+and renamed independently of its triggering Ability and Effect.
+
+The grouped editor lets you set:
+
+| Field | Semantics | Validated range |
+|---|---|---|
+| duration_ticks | Lifetime from application/refresh, at 60 Hz | integer 1–36000 |
+| max_stacks | Number of layers for the same Unit and Behavior ID | integer 1–8 |
+| armor_bonus | Armor gained per stack (may be negative) | -50..50 |
+| damage_bonus | Attack damage gained per stack | -100..100 |
+| speed_multiplier | Relative movement speed per stack (1=normal) | 0.1..3 |
+| refresh_duration | Reapplication renews timer if true | boolean |
+| dispellable | RemoveBehavior can remove it if true | boolean |
+
+Armor and damage bonuses sum by stack and are clamped to bounded
+derived totals. Relative speed modifiers add their departures from
+1, then the final factor is clamped to 0.1–3.0. Multiple Behavior
+IDs can affect the same Unit. A new application at maximum stacks
+does not exceed the cap; it may still renew the timer. Behavior
+expiration restores the immutable original UnitData values.
+
+Create an **Effect | Apply Behavior** (or **Remove Behavior**) and
+choose the linked Behavior in the typed Status reference dropdown.
+Alternatively convert an existing Effect to either kind via its
+Effect operation selector. A Sequence may mix Behavior nodes with
+damage, healing, timed pulses and other sequences. The inspector's
+Visual effect flow is a live traversable tree; click a node's Edit
+button to navigate to its Effect, or use the direct Sequence rows
+to reorder/appended/removed child references.
+
+Create/edit an **Ability** that references this Effect. Give that
+Ability to a Unit via its F7 Ability loadout, then F9 playtest.
+The included behavior_workshop_showcase.rtsproject.json has a
+self-targeted Brace Stance (armor stacking), enemy-targeted Tether
+Bolt (damage and movement slowing), and Break Tether (dispel).
+Effects and Abilities apply the same authored status rules as
+ECA-triggered ApplyEffect actions. No proprietary content is included.
+
+The F6 live trigger monitor shows an optional Active status watch
+of bounded Unit IDs, status names, stacks and time remaining.
+Status graphs are validated when saving; unrecognized extra catalog
+fields still round-trip, but invalid typed links cannot be committed.

@@ -75,3 +75,23 @@ serializer roundtrips, rejection, cooldown timing, energy/regeneration,
 target damage and tamper detection. The mandatory replay-parity job
 compares ability_cast_fingerprint.txt from Windows/MSVC and Linux/GCC.
 The replay file schema remains v2.
+
+
+## Ability-driven status modifier replay and exact tick semantics
+
+An Ability's Effect may emit ApplyBehavior/RemoveBehavior. The
+CastAbility command remains an authoritative source-0 next-tick
+input with stable caster and target IDs; its compiled Effect
+operations can now create, stack or remove typed Behavior instances.
+Their expiry deadlines use absolute simulation ticks and their
+ordering is based only on Unit/Behavior catalog IDs.
+
+Status state is hashed only when nonempty, preserving default
+legacy match fingerprints. RTSSimulation behavior runtime tests
+record a reproducible behavior_fingerprint.txt with casts, cooldown
+rejection, status application and expiration; the strict CI parity
+job byte-compares Windows/MSVC versus Linux/GCC fingerprints.
+Data validation also rejects corrupt/missing Behavior references,
+bounded-overflow fields and invalid status dependencies.
+The replay format remains v2; no UI cursor/page or render state is
+serialized as a gameplay command.

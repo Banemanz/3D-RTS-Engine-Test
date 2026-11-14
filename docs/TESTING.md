@@ -248,3 +248,40 @@ or proof of flawless interactive Windows runtime behavior.
 ### Visual smoke verification refinement
 
 In ability_workshop_showcase.rtsproject.json, command_center derives from ranger for legacy stat inheritance. Unit Ability assignment also inherits unless explicitly overridden. We added a zero-length abilities override to the base and tightened --smoke-select-ability-caster to pick a nonstructure, nonworker Unit, ensuring CI screenshots prove an actual playable Ability button grid rather than a selected producer. Real gameplay always respects the catalog's intentional inheritance rules; the smoke helper does not change them.
+
+
+## New Behavior engine/editor CI gates (November 14)
+
+Two active-assert CTest executables are included in Debug and Release:
+
+- RTSBehaviorRuntimeTests verifies two-layer and capped three-layer
+  application, effective armor/damage/speed, live watch results,
+  exact-tick expiration, refresh versus nonrefresh semantics,
+  dispellable versus immune status, reset, 256-instance bounds,
+  atomic rejection of an Effect Sequence containing immediate
+  damage when the status limit is full, catalog rename/deletion,
+  malformed field rejection, replay verification and tampering.
+  Its behavior_fingerprint.txt is mandatory in both CI platforms.
+- RTSBehaviorEditorTests exercises actual EditorSession transactions
+  for Fortify/Hinder/Sharpen templates, grouped modifier edit and
+  invalid-value rollback, Apply/RemoveBehavior Effect kinds,
+  nested/ordered Sequence editing, undo/redo, rename migration,
+  inbound-reference safety, cycle rejection and JSON roundtrip.
+
+Linux/GCC and Windows/MSVC Debug run identical tests. The CI replay
+job performs a byte-for-byte diff of behavior_fingerprint.txt after
+existing 7 parity artifacts. The optimized Release workflow builds
+both runtime packages and executes all CTests with assertions on,
+validates projects/behavior_workshop_showcase.rtsproject.json using
+the native bundled RTSProjectTool, and requires feature flags
+RTS_FEATURE_STATUS_BEHAVIORS=1 and
+RTS_FEATURE_VISUAL_EFFECT_FLOW=1 from actual native executables.
+
+Linux Mesa/Xvfb uses the real OpenGL renderer for three captures:
+rts-behavior-editor-screenshot (F7 grouped status parameters),
+rts-effect-flow-screenshot (F7 nested Sequence tree), and
+rts-active-behavior-hud-screenshot (F9 caster using a real Self
+CastAbility command followed by fixed simulation updates). The
+screenshot-only --smoke-cast-self-ability flag enqueues the same
+valid recorded command as a human input; it does NOT inject mock
+status state. Normal gameplay/editor behavior is unchanged.

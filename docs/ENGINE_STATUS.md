@@ -333,3 +333,32 @@ content, and two new CTests and cross-OS fingerprint verification
 exercise the entire loop. This is real functionality, but behavior
 stacks, area/projectile casts, actor events, tech requirements,
 channeling and editable command-card paging are not implemented.
+
+
+## Authored status Behaviors and live F7/F6 data workflows
+
+**Engine:** Behavior catalog objects are now linked by ApplyBehavior
+and RemoveBehavior Effect nodes, which compose with immediate,
+periodic, and Sequence operations. Active modifier instances apply
+real additive attack/armor and bounded movement speed changes to
+Units, stack independently per Behavior ID, and expire/dispel on
+fixed simulation ticks. A per-target/status ordered map is limited
+to 256 live keys; death and reset clean up state, and a dense-ID
+lookup avoids repeated full Unit-vector scans. State digests and
+recorded Ability casts verify status outcomes across OS builds.
+
+**Editor:** F7 gains original Behavior presets, a grouped typed
+modifier editor with one-step undo/redo, Behavior-linked Effect
+templates, type conversion and target selection, nested visual
+Effect flow with navigation and Sequence reorder/append/removal.
+F6 exposes the current status watch. The live F9 HUD displays
+effective attack/armor and status count for the selected Unit.
+The Data inspector initial layout is wider/taller and avoids
+clipped catalog browser controls.
+
+**Missing:** movement suppression flags, aura propagation, stacking
+categories/collisions, status-driven animations, target-area
+searches, AoE projectile actors, tech requirements, complete
+data schema visualization, editor-defined function libraries,
+interruptible/channelled Abilities, networking, real multiplayer,
+general asset import and Galaxy-language compatibility.

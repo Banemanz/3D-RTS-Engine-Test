@@ -134,3 +134,33 @@ For screenshot verification, CLI smoke flags --smoke-select-catalog-id
 and --smoke-select-ability-caster select actual authored entries rather
 than substituting a mock editor. Dedicated Linux Mesa CI artifacts
 capture the F7 Ability inspector, F7 Unit loadout and real F9 HUD.
+
+
+## F7 status modifier inspector and visual Effect DAG
+
+CreatorWorkbench's Behavior panel uses a temporary typed
+BehaviorDefinition draft and an Apply button. A new
+EditorSession::setBehaviorDefinition clones the project, writes
+all seven typed status properties, validates the entire catalog
+and trigger rules, then records one undo snapshot. Rejected changes
+leave the source map untouched. Templates create original
+Fortify/Sharpen/Hinder Behavior categories.
+
+Effect authoring gains ApplyBehavior/RemoveBehavior templates, kind
+conversion that fills a valid Behavior reference, typed Status
+reference navigation and dropdowns. DataCatalog::rename and the
+project's inbound dependency scanner recognize Behavior references
+from Effects, preventing silent dangling links. Existing Effect
+Sequence editing now supports Up/Down, append, remove and Open
+actions with validated transactions.
+
+CreatorEffectGraphWidgets.hpp is a presentation-only adapter that
+renders a bounded nested Effect sequence as an interactive tree
+with an Edit action on graph nodes. It calls the existing headless
+compiler for validity, never executes gameplay, and can be replaced
+without changing the document model. Initial F7 inspector width
+is responsive (roughly 40% screen width; constrained 400–540px);
+custom user docking/resizing remains respected. Browser creation
+controls no longer extend beyond the narrow browser panel.
+The F6 trigger monitor includes a read-only status watch listing
+actual live game state (Unit ID, status, stacks, seconds remaining).

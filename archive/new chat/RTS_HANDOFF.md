@@ -824,3 +824,131 @@ verified functional commit, so a new Actions run may be pending
 for documentation changes. Do not confuse the doc-only HEAD with
 the last code-tested parent. Future sessions should fetch this
 handoff and the current latest branch source before editing.
+
+
+## November 14 continuation — typed Behavior/status gameplay, F7 visual flow, F6 watch
+
+**Branch:** feat/rts-vertical-slice, same original Draft PR #1.
+Do not merge or open a second PR. Previous fully green original
+Ability milestone at 1947dae8 (both Debug/Release and replay parity).
+First integrated Behavior milestone at 827b0716 passed Windows and
+Linux Debug with replay parity, Linux Mesa F7/F9 captures; later
+Behavior live-watch and UI layout improvements were committed
+subsequently and require latest HEAD CI confirmation.
+
+### Shared engine and catalog work
+
+- DataCatalog.hpp/.cpp defines typed BehaviorDefinition with
+  durationTicks 1..36000, maxStacks 1..8, armorBonus -50..50,
+  damageBonus -100..100, speedMultiplier .1..3,
+  refreshDuration and dispellable. Validated standalone Behavior
+  entries may be inherited. Effect operation kinds ApplyBehavior
+  and RemoveBehavior include a validated Behavior catalog ID.
+  Nested Sequence Effect compilations accept these steps in
+  the same 16-depth/64-visit budget as other effects.
+- DataCatalog::rename migrates typed Behavior→Effect references;
+  RTSProject::catalogReferences detects inbound Effect.behavior
+  links and protects unsafe deletion. Creator modifications call
+  the existing project validator, which now compiles Behaviors.
+- Unit.hpp + unit_navigationagent3d_implementation.cpp: Unit
+  stores derived behaviorArmorBonus, behaviorDamageBonus and
+  behaviorSpeedFactor, initialized 0/0/1. Unit::takeDamage
+  considers effective armor; attack event damage uses effective
+  unit damage; NavigationAgent3D.maxSpeed is scaled by derived
+  speed factor. UnitData remains immutable and is restored
+  exactly after last Behavior expiry/removal.
+- RTSSkirmish.hpp/.cpp: ordered map keyed by (target Unit ID,
+  Behavior ID) tracks stack count and absolute expiresTick.
+  Repeated apply increments to cap, refreshes deadline only if
+  configured; RemoveBehavior ignores nondispellable effects.
+  Expiry/death cleanup happens on deterministic 60Hz ticks;
+  reset clears instances. Runtime caps at 256 unique status
+  keys and counts new distinct keys before any mixed Effect
+  operations execute, preserving atomic admission.
+  Derived totals clamp armor to ±100, damage to ±500 and
+  combined additive speed factor to 0.1..3.
+- Behavior instances are included in stateDigest only when
+  nonempty. New behavior_fingerprint.txt is byte-compared
+  on Windows/MSVC vs Linux/GCC. Dense (>32 statuses) cleanup
+  builds an ephemeral alive-ID set once instead of 256 separate
+  linear Unit scans; sparse active maps avoid unnecessary indexing.
+- RTSSkirmish exposes activeBehaviorCount, unitBehaviorStacks,
+  unitBehaviorCount, unitBehaviorTicksRemaining and bounded
+  behaviorWatch for read-only GUI diagnostics.
+
+### Editor and playable example
+
+- EditorSession::createCatalogObject now creates three original
+  Behavior templates (Fortify armor, Sharpen damage, Hinder slow)
+  and ApplyBehavior/RemoveBehavior Effect leaf presets. Effects
+  can convert among these and prior Damage/Heal/Periodic/Sequence
+  operations, filling required fields with valid typed references.
+- EditorSession::setBehaviorDefinition groups all seven status
+  fields into a single transactional candidate mutation; project
+  validation runs before commit, and one undo record covers it.
+- CreatorWorkbench.hpp: F7 typed Behavior inspector with Apply/
+  Revert, Effect Status reference combo, Object links navigation,
+  additional behavior kind entries. CreatorEffectGraphWidgets.hpp
+  renders a recursive ImGui-only bounded validated Effect-flow
+  tree; root and child Effect IDs can open for editing. The
+  Sequence child editor now supports Up/Down/Remove/Append.
+  On screenshot review, previous 360px F7 inspector clipped
+  rows; increased responsive default Data width to 40% of
+  viewport (400..540px) and more vertical space, plus moved
+  Derive selected browser button below creation chooser.
+  Existing user docking/resizing is preserved.
+- CreatorTriggerMonitor.hpp: F6 live status count and bounded
+  table of target ID, Behavior ID, stack count and remaining
+  seconds. F9 RTSHUD.hpp now shows effective DMG and ARM plus
+  per-selected-Unit STATUS count.
+- projects/behavior_workshop_showcase.rtsproject.json: original
+  Brace Field status buff, Tethered debuff, Apply/Remove Effect
+  nodes, a nested Brace combo Sequence, Brace Stance self Ability,
+  Tether Bolt Enemy status skill, Break Tether dispel skill;
+  Ranger energy regen and passive practice dummy; no copied
+  StarCraft character/asset names.
+
+### Tests and actual cross-OS validation
+
+- New tests/behavior_runtime_tests.cpp asserts stacking,
+  refresh/no-refresh, dispellability, actual combat/movement
+  modifiers, exact expiration, read-only behaviorWatch, reset,
+  replay tape/serialization/tamper rejection, typed catalog
+  rename/deletion, malformed data, 256-key cap and atomic
+  refusal of a Sequence combining Damage + ApplyBehavior at cap.
+- New tests/behavior_editor_tests.cpp exercises typed F7
+  presets, grouped validation rollback and undo/redo, Effect
+  conversion, Sequence reorder, reference rename/deletion,
+  cycle rejection and JSON roundtrip.
+- CMakeLists registers both suites with enabled Release asserts,
+  and validates Behavior Workshop map. .github/workflows/ci.yml
+  adds behavior_fingerprint.txt to Linux/Windows uploads and
+  mandatory replay-parity diff, plus three software OpenGL
+  F7/F9 screenshots. .github/workflows/build.yml validates the
+  packaged map from both Windows/Linux ZIPs. Binary --features
+  and tools/verify_build_bundle.py require
+  RTS_FEATURE_STATUS_BEHAVIORS=1 and
+  RTS_FEATURE_VISUAL_EFFECT_FLOW=1.
+- Screenshot-only --smoke-cast-self-ability requires and selects
+  a real authored self-targeted Ability, enqueues it through
+  RTSCommandStream, and allows normal fixed simulation to run
+  before a screenshot; no fake status injection.
+- Earlier screenshot artifacts at integrated Behavior commit
+  827b0716 were visually inspected: actual F7 Behavior/Effect
+  tree and F9 Status 1 with DMG/ARM increased, energy decreased.
+  The initial F7 panel at 360px clipped labels; the later UI
+  geometry fix should be revalidated with new screenshots.
+- At final update, inspect latest Actions for full Debug/Release
+  and fingerprint parity; do NOT claim a later commit green
+  based only on 827b0716.
+
+### Next meaningful editor/engine milestones
+
+An actual graph-node wiring UI for Effect/Behavior data and
+actor events (current display is a nested visual tree, not
+a general graph editor); status visual feedback and aura
+propagation/area filters; projectile and weapon simulation;
+target-ground/AoE abilities; data-driven tech and upgrades;
+more expressive trigger libraries/functions; asset pipeline
+and robust standalone creator GUI. Preserve original-IP
+content and Windows/Linux functional/build parity.
