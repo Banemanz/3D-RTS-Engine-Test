@@ -18,6 +18,7 @@ Every rule consists of an event, zero or more conditions, and at least one order
 | `OnUnitDeath` | A unit dies | Optional owner condition |
 | `OnRegionEnter` | Living mobile unit enters a named scene Region | Region selector; receives a subject unit |
 | `MineralsBelow` | Player minerals fall below a threshold | Amount |
+| `OnVariableChanged` | A named script global changed during the preceding fixed tick | Variable selector |
 
 To use **OnRegionEnter**, first create a Region in the **SCENE** editor and save it. Then choose the region by ID in the Trigger Editor.
 
