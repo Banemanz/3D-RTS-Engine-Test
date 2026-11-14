@@ -190,12 +190,29 @@ int main(int argc,char** argv){
     assert(editor.redo(project));
     assert(!editor.removeTriggerVariable(project,"counter")); // referenced
     assert(editor.removeTriggerVariable(project,"editorFlag"));
+    // Rename a referenced variable with one transaction, including all typed
+    // subscribed events, comparisons and Set/Add action dependencies.
+    assert(!editor.renameTriggerVariable(project,"counter","bad-name"));
+    assert(!editor.renameTriggerVariable(project,"counter","limit")); // collision
+    assert(editor.renameTriggerVariable(project,"counter","signal_counter"));
+    assert(!parseTriggerVariables(project).count("counter"));
+    assert(parseTriggerVariables(project).count("signal_counter")==1);
+    auto migrated=parseTriggerRules(project);
+    assert(migrated[4].variable=="signal_counter");
+    assert(migrated[0].actions[0].at("variable").get<std::string>()=="signal_counter");
+    assert(migrated[1].actions[0].at("variable").get<std::string>()=="signal_counter");
+    assert(migrated[2].conditions[0].at("variable").get<std::string>()=="signal_counter");
+    assert(editor.undo(project));
+    assert(parseTriggerVariables(project).count("counter")==1);
+    assert(parseTriggerRules(project)[4].variable=="counter");
+    assert(editor.redo(project));
+    assert(parseTriggerRules(project)[4].variable=="signal_counter");
     assert(editor.addTriggerNode(project,true,"VariableCompare"));
     assert(editor.addTriggerNode(project,false,"AddVariable"));
     assert(!editor.setTriggerNodeField(project,false,2,"variable",
                                       picojson::value("missingGlobal")));
     assert(editor.setTriggerNodeField(project,false,2,"variable",
-                                     picojson::value("limit")));
+                                     picojson::value("signal_counter")));
     assert(parseTriggerRules(project).size()==5);
     assert(editor.setTriggerEvent(project,"OnVariableChanged"));
     assert(editor.setTriggerEventField(project,"variable",picojson::value("limit")));
