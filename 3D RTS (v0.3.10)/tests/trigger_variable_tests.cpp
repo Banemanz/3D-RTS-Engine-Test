@@ -215,7 +215,7 @@ int main(int argc,char** argv){
                                      picojson::value("signal_counter")));
     assert(parseTriggerRules(project).size()==5);
     assert(editor.setTriggerEvent(project,"OnVariableChanged"));
-    assert(editor.setTriggerEventField(project,"variable",picojson::value("limit")));
+    assert(editor.setTriggerEventField(project,"variable",picojson::value("signal_counter")));
     assert(!editor.setTriggerEventField(project,"variable",
                                        picojson::value("missingGlobal")));
     if(argc>1) {
