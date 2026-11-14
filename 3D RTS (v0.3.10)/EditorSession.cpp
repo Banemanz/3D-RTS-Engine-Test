@@ -1,5 +1,6 @@
 #include "EditorSession.hpp"
 #include "TriggerDefinition.hpp"
+#include "TriggerTree.hpp"
 #include "RTSScriptExpression.hpp"
 #include <algorithm>
 #include <cmath>
@@ -813,90 +814,7 @@ bool EditorSession::setTriggerEventField(RTSProject& project,
     },"EVENT FIELD UPDATED");
 }
 bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std::string& type){
-    picojson::object node{{"type",picojson::value(type)}};
-    if(condition){
-        if(type=="PlayerMineralsAtLeast")node["amount"]=picojson::value(100.0);
-        else if(type=="UnitCountAtLeast"){
-            node["count"]=picojson::value(1.0);
-            node["owner"]=picojson::value(0.0);
-        }else if(type=="UnitTypeCountAtLeast"){
-            node["count"]=picojson::value(1.0);
-            node["owner"]=picojson::value(0.0);
-        }else if(type=="SubjectOwnerIs")node["owner"]=picojson::value(0.0);
-        else if(type=="VariableCompare"){
-            node["operator"]=picojson::value(">=");
-            node["value"]=picojson::value(1.0);
-        }else return false;
-    }else{
-        if(type=="ShowMessage")node["text"]=picojson::value("NEW MESSAGE");
-        else if(type=="GrantMinerals")node["amount"]=picojson::value(25.0);
-        else if(type=="SpawnUnit"){
-            node["owner"]=picojson::value(0.0);
-            node["x"]=picojson::value(double(project.terrain.minX()+
-                      .5f*(project.terrain.width()-1)*project.terrain.spacing()));
-            node["z"]=picojson::value(double(project.terrain.minZ()+
-                      .5f*(project.terrain.depth()-1)*project.terrain.spacing()));
-        }else if(type=="SetVariable" || type=="AddVariable"){
-            node["value"]=picojson::value(1.0);
-        }else if(type=="IfThenElse"){
-            node["conditions"]=picojson::value(picojson::array{
-                picojson::value(picojson::object{
-                    {"type",picojson::value("PlayerMineralsAtLeast")},
-                    {"amount",picojson::value(100.0)}
-                })
-            });
-            node["then"]=picojson::value(picojson::array{
-                picojson::value(picojson::object{
-                    {"type",picojson::value("ShowMessage")},
-                    {"text",picojson::value("CONDITION TRUE")}
-                })
-            });
-            node["else"]=picojson::value(picojson::array{
-                picojson::value(picojson::object{
-                    {"type",picojson::value("ShowMessage")},
-                    {"text",picojson::value("CONDITION FALSE")}
-                })
-            });
-        }else if(type=="Repeat"){
-            node["times"]=picojson::value(2.0);
-            node["actions"]=picojson::value(picojson::array{
-                picojson::value(picojson::object{
-                    {"type",picojson::value("ShowMessage")},
-                    {"text",picojson::value("REPEATED ACTION")}
-                })
-            });
-        }else if(type=="EndMatch")node["result"]=picojson::value("Victory");
-        else if(type=="ApplyEffect"){
-            auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
-                [](const CatalogEntry& item){return item.type=="Effect";});
-            if(it==project.catalog.entries().end()){
-                message="CREATE AN EFFECT CATALOG ENTRY FIRST";
-                return false;
-            }
-            node["effect"]=picojson::value(it->id);
-        }else return false;
-    }
-    if(type=="VariableCompare" || type=="SetVariable" || type=="AddVariable"){
-        auto it=project.extensions.find("trigger_variables");
-        if(it==project.extensions.end() || !it->second.is<picojson::object>() ||
-           it->second.get<picojson::object>().empty()){
-            message="CREATE A TRIGGER VARIABLE FIRST";
-            return false;
-        }
-        node["variable"]=picojson::value(it->second.get<picojson::object>().begin()->first);
-    }
-    if(type=="SpawnUnit" || type=="UnitTypeCountAtLeast"){
-        auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
-            [](const CatalogEntry& item){return item.type=="Unit";});
-        if(it==project.catalog.entries().end())return false;
-        node["catalog"]=picojson::value(it->id);
-    }
-    const std::string key=condition?"conditions":"actions";
-    return mutateTrigger(project,[&](picojson::object& rule){
-        if(!rule.count(key))rule[key]=picojson::value(picojson::array{});
-        auto& nodes=rule.at(key).get<picojson::array>();
-        nodes.emplace_back(node);
-    },condition?"CONDITION CREATED":"ACTION CREATED");
+    return addTriggerTreeNode(project,{},condition?"conditions":"actions",type);
 }
 bool EditorSession::removeTriggerNode(RTSProject& project,bool condition,std::size_t index){
     return mutateTrigger(project,[&](picojson::object& rule){
@@ -961,6 +879,119 @@ bool EditorSession::setTriggerNodeOperand(RTSProject& project,
             node[literal]=picojson::value(1.0);
         }
     },"SCRIPT OPERAND UPDATED");
+}
+bool EditorSession::addTriggerTreeNode(RTSProject& project,
+                                       const TriggerTreePath& parent,
+                                       const std::string& list,
+                                       const std::string& type){
+    const bool condition=list=="conditions";
+    try{
+        const auto node=TriggerTree::newNode(project,type,condition);
+        return mutateTrigger(project,[&](picojson::object& rule){
+            auto& nodes=TriggerTree::listAt(rule,parent,list);
+            nodes.emplace_back(node);
+        },condition?"NESTED CONDITION CREATED":"NESTED ACTION CREATED");
+    }catch(const std::exception& e){
+        message=std::string("TRIGGER REJECTED: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::removeTriggerTreeNode(RTSProject& project,
+                                          const TriggerTreePath& path){
+    if(path.empty())return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        TriggerTreePath parent(path.begin(),path.end()-1);
+        auto& nodes=TriggerTree::listAt(rule,parent,path.back().list);
+        if(path.back().index>=nodes.size())
+            throw std::invalid_argument("Tree remove index out of range");
+        nodes.erase(nodes.begin()+static_cast<std::ptrdiff_t>(path.back().index));
+    },"NESTED TRIGGER NODE REMOVED");
+}
+bool EditorSession::duplicateTriggerTreeNode(RTSProject& project,
+                                             const TriggerTreePath& path){
+    if(path.empty())return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        TriggerTreePath parent(path.begin(),path.end()-1);
+        auto& nodes=TriggerTree::listAt(rule,parent,path.back().list);
+        const std::size_t index=path.back().index;
+        if(index>=nodes.size())
+            throw std::invalid_argument("Duplicate node index out of range");
+        const picojson::value copy=nodes[index];
+        nodes.insert(nodes.begin()+static_cast<std::ptrdiff_t>(index+1),copy);
+    },"TRIGGER NODE DUPLICATED");
+}
+bool EditorSession::moveTriggerTreeNode(RTSProject& project,
+                                        const TriggerTreePath& path,int direction){
+    if(path.empty() || (direction!=-1 && direction!=1))return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        TriggerTreePath parent(path.begin(),path.end()-1);
+        auto& nodes=TriggerTree::listAt(rule,parent,path.back().list);
+        const auto to=static_cast<std::ptrdiff_t>(path.back().index)+direction;
+        if(path.back().index>=nodes.size() || to<0 ||
+           to>=static_cast<std::ptrdiff_t>(nodes.size()))
+            throw std::invalid_argument("Cannot reorder outside action list");
+        std::swap(nodes[path.back().index],nodes[static_cast<std::size_t>(to)]);
+    },"TRIGGER NODE REORDERED");
+}
+bool EditorSession::setTriggerTreeField(RTSProject& project,
+                                        const TriggerTreePath& path,
+                                        const std::string& field,
+                                        const picojson::value& value){
+    if(path.empty() || field=="type" || field=="op" || field=="id" ||
+       field=="conditions" || field=="actions" || field=="then" ||
+       field=="else" || field=="value_expr" || field=="amount_expr" ||
+       field=="times_expr")return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& node=TriggerTree::objectAt(rule,path);
+        auto existing=node.find(field);
+        if(existing==node.end() ||
+           (!existing->second.is<double>() && !existing->second.is<bool>() &&
+            !existing->second.is<std::string>()))
+            throw std::invalid_argument("Only existing scalar properties may be edited");
+        node[field]=value;
+    },"NESTED TRIGGER PROPERTY UPDATED");
+}
+bool EditorSession::setTriggerTreeOperand(RTSProject& project,
+                                          const TriggerTreePath& path,
+                                          bool expression,
+                                          const std::string& variableId){
+    if(path.empty())return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& node=TriggerTree::objectAt(rule,path);
+        const std::string& type=TriggerTree::typeOf(node);
+        const bool repeat=type=="Repeat";
+        if(!repeat && type!="VariableCompare" && type!="SetVariable" &&
+           type!="AddVariable" && type!="GrantMinerals")
+            throw std::invalid_argument("Unsupported expression property");
+        const char* scalar=repeat?"times":type=="GrantMinerals"?"amount":"value";
+        const char* expr=repeat?"times_expr":type=="GrantMinerals"?"amount_expr":"value_expr";
+        if(expression){
+            picojson::value tree=RTSScriptExpression::number(1);
+            if(!variableId.empty()){
+                const auto globals=parseTriggerVariables(project);
+                if(!globals.count(variableId))
+                    throw std::invalid_argument("Expression references missing map variable");
+                tree=RTSScriptExpression::variable(variableId);
+            }
+            node.erase(scalar);
+            node[expr]=std::move(tree);
+        }else{
+            node.erase(expr);
+            node[scalar]=picojson::value(1.0);
+        }
+    },"TRIGGER EXPRESSION MODE UPDATED");
+}
+bool EditorSession::setTriggerExpressionNode(RTSProject& project,
+                                             const TriggerTreePath& path,
+                                             const std::string& field,
+                                             const std::vector<std::string>& expressionPath,
+                                             const picojson::value& expression){
+    if(path.empty() || expressionPath.size()>8)return false;
+    return mutateTrigger(project,[&](picojson::object& rule){
+        auto& node=TriggerTree::objectAt(rule,path);
+        auto& destination=TriggerTree::expressionAt(node,field,expressionPath);
+        destination=expression;
+    },"EXPRESSION TREE UPDATED");
 }
 bool EditorSession::beginTriggerEdit(const RTSProject& project) {
     if(textEditing || triggerCount(project)==0)return false;

@@ -1,5 +1,6 @@
 #pragma once
 #include "RTSProject.hpp"
+#include "TriggerTree.hpp"
 #include <cstddef>
 #include <deque>
 #include <functional>
@@ -126,6 +127,21 @@ public:
     bool setTriggerNodeOperand(RTSProject& project,bool condition,
                                std::size_t index,bool useExpression,
                                const std::string& variableId="");
+    // All paths are rooted at the selected trigger; a path step names a typed
+    // ECA list and index, including recursive IfThenElse/Repeat children.
+    bool addTriggerTreeNode(RTSProject& project,const TriggerTreePath& parent,
+                            const std::string& list,const std::string& type);
+    bool removeTriggerTreeNode(RTSProject& project,const TriggerTreePath& path);
+    bool duplicateTriggerTreeNode(RTSProject& project,const TriggerTreePath& path);
+    bool moveTriggerTreeNode(RTSProject& project,const TriggerTreePath& path,int direction);
+    bool setTriggerTreeField(RTSProject& project,const TriggerTreePath& path,
+                             const std::string& field,const picojson::value& value);
+    bool setTriggerTreeOperand(RTSProject& project,const TriggerTreePath& path,
+                               bool expression,const std::string& variableId="");
+    bool setTriggerExpressionNode(RTSProject& project,const TriggerTreePath& path,
+                                  const std::string& field,
+                                  const std::vector<std::string>& expressionPath,
+                                  const picojson::value& expression);
     bool beginTriggerEdit(const RTSProject& project);
     bool finishTriggerEdit(RTSProject& project);
     std::string panelName() const;
