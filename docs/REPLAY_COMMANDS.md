@@ -18,7 +18,7 @@ Commands include `Move`, `AttackMove`, `Patrol`, `Gather`, `Attack`, `Stop`, `Ho
 
 ## Replay format
 
-`RTSReplayTape` uses `version: 1`, `tick_hz: 60`, `ticks`, `project`, `commands`, and `checkpoints`. Each command records `tick`, `sequence`, `source`, `kind`, `units`, `point` (XZ), `target`, `append`, `catalog`. Every checkpoint contains an integer `tick` and a **16-digit hex state digest**. The replay is limited to 32 MiB, at most 24 hours of simulated play and 32,768 recorded commands. These are recording limits, not a reason to stop or disable live gameplay after the recording horizon.
+`RTSReplayTape` now writes `version: 2` (and still reads legacy version 1), `tick_hz: 60`, `ticks`, `project`, `commands`, and `checkpoints`. Each command records `tick`, `sequence`, `source`, `kind`, `units`, `point` (XZ), `target`, `append`, `catalog`. Every checkpoint contains an integer `tick` and a **16-digit hex state digest**. The replay is limited to 32 MiB, at most 24 hours of simulated play and 32,768 recorded commands. These are recording limits, not a reason to stop or disable live gameplay after the recording horizon.
 
 Digests use explicit FNV-1a byte-order handling with quantized floating values (1/4096 resolution), stable unit-ID iteration, navigation state and occupancy, production, resources, queued orders, movement, health and fog-of-war samples. The hash is **not a cryptographic signature** and omits purely visual UI selection. It is intended for detecting reproducibility errors, not preventing malicious tampering.
 
@@ -35,7 +35,7 @@ Digests use explicit FNV-1a byte-order handling with quantized floating values (
 - This is a foundation for deterministic multiplayer; it is **not** a network protocol, rollback system, snapshot/restore, full lockstep transport, authoritative server, cryptographically secure anti-cheat or a guarantee of platform-identical results for every possible map and workload.
 - Real-time mouse/HUD input now schedules commands at the *next fixed tick*. Commands can fail gameplay checks at execution time (insufficient resources or blocked targets), rather than always resolving synchronously inside the input callback. A future UI pass should show detailed queued/executed/rejected command feedback.
 - The replay verifier runs in the headless project tool. Visual interactive playback and timeline scrubbing remain future creator features. Standard unit selection and camera movement remain presentation state, not simulation commands.
-- The next engineering work includes authoritative AI commands through the same queue, saved replays with incremental progress/debugging, replay state snapshots, movement classes, and deeper data-driven ability/actor authoring.
+- Opponent combat AI Attack orders now use the command queue. The next engineering work includes AI economy/production orders, replay recording diagnostics, replay state snapshots, movement classes, and deeper data-driven ability/actor authoring.
 
 
 ## Replay schema v2 — recorded AI input and v1 playback
