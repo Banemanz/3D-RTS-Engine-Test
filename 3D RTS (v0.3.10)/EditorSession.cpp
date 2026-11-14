@@ -422,7 +422,8 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                 {"mineral_cost",picojson::value(structure?150.0:worker?35.0:60.0)},
                 {"supply_cost",picojson::value(structure?0.0:1.0)},
                 {"is_structure",picojson::value(structure)},
-                {"is_worker",picojson::value(worker)}
+                {"is_worker",picojson::value(worker)},
+                {"abilities",picojson::value(picojson::array{})}
             };
             for(const auto& object:project.catalog.entries())
                 if(object.type=="Actor"){
@@ -450,6 +451,24 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     entry.fields["model"]=picojson::value(object.id);
                     break;
                 }
+        }else if(type=="Ability"){
+            if(preset!="Self" && preset!="Ally" &&
+               preset!="Enemy" && preset!="Any")return false;
+            entry.id="new_ability";
+            entry.fields={
+                {"name",picojson::value("New Ability")},
+                {"target",picojson::value(preset)},
+                {"cooldown_ticks",picojson::value(180.0)},
+                {"cast_range",picojson::value(preset=="Self"?0.0:9.0)},
+                {"mineral_cost",picojson::value(0.0)}
+            };
+            for(const auto& object:project.catalog.entries())
+                if(object.type=="Effect"){
+                    entry.fields["effect"]=picojson::value(object.id);
+                    break;
+                }
+            if(!entry.fields.count("effect"))
+                throw std::invalid_argument("Create an Effect before an Ability");
         }else if(type=="Effect"){
             const bool periodic=preset=="PeriodicDamage" || preset=="PeriodicHeal";
             if(preset!="Damage" && preset!="Heal" && !periodic &&

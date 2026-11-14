@@ -22,11 +22,13 @@ bool draw(App& app,const std::string& parentId,const std::string& field,
           const picojson::value& value){
     auto& ed=app.editor;
     auto& project=app.project;
-    const std::string category=field=="trainable_units"?"Unit":"Effect";
+    const std::string category=field=="trainable_units"?"Unit":
+                                field=="abilities"?"Ability":"Effect";
     if(!value.template is<picojson::array>())return false;
     const picojson::array items=value.template get<picojson::array>();
     const std::size_t limit=field=="trainable_units"?12:8;
-    ImGui::SeparatorText(category=="Unit"?"Trainable units":"Effect sequence children");
+    ImGui::SeparatorText(category=="Unit"?"Trainable units":
+                          category=="Ability"?"Assigned abilities":"Effect sequence children");
     ImGui::TextDisabled("%zu / %zu references | ordered",items.size(),limit);
     for(std::size_t index=0;index<items.size();++index){
         if(!items[index].template is<std::string>()){

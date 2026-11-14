@@ -154,6 +154,10 @@ void browser(App& app){
                 {"Unit","Combat","Unit | Combat"},
                 {"Unit","Worker","Unit | Worker"},
                 {"Unit","Structure","Unit | Structure"},
+                {"Ability","Self","Ability | Self"},
+                {"Ability","Ally","Ability | Ally target"},
+                {"Ability","Enemy","Ability | Enemy target"},
+                {"Ability","Any","Ability | Any unit target"},
                 {"Actor","Visual","Actor | Visual"},
                 {"Model","Procedural","Model | Procedural"},
                 {"Effect","Damage","Effect | Damage"},
@@ -307,7 +311,52 @@ void inspector(App& app){
                    navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
                     ImGui::End();return;
                 }
+                if(entry->type=="Ability"){
+                    const auto effectRef=resolved.find("effect");
+                    if(effectRef!=resolved.end() &&
+                       effectRef->second.template is<std::string>() &&
+                       navigateCatalog(app,"Effect",effectRef->second.template get<std::string>())){
+                        ImGui::End();return;
+                    }
+                    const auto target=resolved.find("target");
+                    const std::string current=target!=resolved.end() &&
+                       target->second.template is<std::string>()?
+                       target->second.template get<std::string>():"Self";
+                    if(ImGui::BeginCombo("Target policy",current.c_str())){
+                        for(const char* kind:{"Self","Ally","Enemy","Any"}){
+                            if(ImGui::Selectable(kind,kind==current) && kind!=current){
+                                refresh(app,ed.setCatalogField(project,"target",
+                                    picojson::value(std::string(kind))));
+                                ImGui::EndCombo();ImGui::End();return;
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+                    if(ImGui::BeginCombo("Applied effect","Choose Effect...")){
+                        for(const auto& option:project.catalog.entries())
+                            if(option.type=="Effect" &&
+                               ImGui::Selectable(option.id.c_str())){
+                                refresh(app,ed.setCatalogField(project,"effect",
+                                    picojson::value(option.id)));
+                                ImGui::EndCombo();ImGui::End();return;
+                            }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::TextDisabled("Cooldown: ticks at 60Hz | Cast range: world units");
+                }
                 if(entry->type=="Unit"){
+                    ImGui::SeparatorText("Ability loadout");
+                    const auto abilities=resolved.find("abilities");
+                    if(abilities==resolved.end()){
+                        if(ImGui::SmallButton("Enable ability slots")){
+                            refresh(app,ed.setCatalogField(project,"abilities",
+                                picojson::value(picojson::array{})));
+                            ImGui::End();return;
+                        }
+                    }else if(CreatorReferenceWidgets::draw(
+                        app,entry->id,"abilities",abilities->second)){
+                        ImGui::End();return;
+                    }
                     auto training=resolved.find("trainable_units");
                     if(training!=resolved.end() && training->second.template is<picojson::array>()){
                         for(const auto& value:training->second.template get<picojson::array>()){
@@ -447,6 +496,8 @@ void inspector(App& app){
                                     picojson::value(draftString)));
                                 draftString=project.catalog.resolvedFields(entry->id).at(field).template get<std::string>();
                             }
+                        }else if(entry->type=="Unit" && field=="abilities"){
+                            ImGui::TextDisabled("Use the Ability loadout editor above");
                         }else if(found->second.template is<picojson::array>() &&
                             ((entry->type=="Unit" && field=="trainable_units") ||
                              (entry->type=="Effect" && field=="children"))){
