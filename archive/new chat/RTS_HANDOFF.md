@@ -777,3 +777,7 @@ Next development pass should implement a real connected behavior
 and effect editor + runtime, with GUI, map and replay regression.
 Maintain Windows/Linux source/build equality. Do not copy SC2
 unit identities/assets; use Galaxy docs only for inspiration.
+
+### Ability screenshot review correction (November 14)
+
+The first real F9 ability-HUD screenshot selected the command_center rather than an Ability caster: in this starter catalog, command_center derives from ranger, so assigning Ranger Abilities also inherited them into base structures. The structure's production HUD intentionally takes priority and obscured the Ability command slots. Corrected the sample map with an explicit empty abilities override on command_center (and thus inherited by barracks), and required the CI --smoke-select-ability-caster helper to choose a nonstructure, nonworker playable Unit. Re-run Linux Mesa screenshots and visually verify the actual Field Mend/Arc Lance buttons with F/J hotkeys. This is a legitimate reminder that default catalog inheritance can propagate newly added fields to unexpected child classes; consider a future per-field inheritance/traits data schema.

@@ -947,8 +947,8 @@ int main(int argc, char** argv) {
         if(selectAbilityCasterSmoke && smokeFrames>0){
             bool found=false;
             for(auto& unit:app.game.units)
-                if(unit.isAlive() && unit.ownerId==0 &&
-                   !unit.catalogId.empty() &&
+                if(unit.isAlive() && unit.ownerId==0 && !unit.isStructure &&
+                   !unit.isWorker && !unit.catalogId.empty() &&
                    !unitAbilityIds(app.project.catalog,unit.catalogId).empty()){
                     for(auto& other:app.game.units)other.isSelected=false;
                     unit.isSelected=true;

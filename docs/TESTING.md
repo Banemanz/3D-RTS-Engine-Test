@@ -244,3 +244,7 @@ rts-unit-ability-loadout-screenshot (F7 Ranger's Ability references)
 and rts-ability-command-hud-screenshot (selected F9 caster).
 These are visual smoke tests, not automated user-click equivalence
 or proof of flawless interactive Windows runtime behavior.
+
+### Visual smoke verification refinement
+
+In ability_workshop_showcase.rtsproject.json, command_center derives from ranger for legacy stat inheritance. Unit Ability assignment also inherits unless explicitly overridden. We added a zero-length abilities override to the base and tightened --smoke-select-ability-caster to pick a nonstructure, nonworker Unit, ensuring CI screenshots prove an actual playable Ability button grid rather than a selected producer. Real gameplay always respects the catalog's intentional inheritance rules; the smoke helper does not change them.

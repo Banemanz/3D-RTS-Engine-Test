@@ -174,7 +174,8 @@
         "aggro_range": 0,
         "visual_scale": 2.8,
         "supply_cost": 0,
-        "is_structure": true
+        "is_structure": true,
+        "abilities": []
       }
     },
     {
