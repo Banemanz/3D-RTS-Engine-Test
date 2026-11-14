@@ -72,4 +72,7 @@ private:
     void record(const Rule& rule,double elapsed,int subjectId,
                 TraceStatus status,const std::string& detail);
     void run(Rule& rule,RTSSkirmish& game,int subjectId,double elapsed);
+    void executeActions(const std::vector<picojson::object>& actions,
+                        RTSSkirmish& game,int subjectId,
+                        std::string& summary,std::size_t& steps,int depth);
 };

@@ -103,6 +103,70 @@ void TriggerEngine::record(const Rule& rule,double elapsed,int subjectId,
     if(trace_.size()==TraceCapacity)trace_.pop_front();
     trace_.push_back({nextSequence_++,rule.id,rule.event,detail,elapsed,subjectId,status});
 }
+void TriggerEngine::executeActions(const std::vector<picojson::object>& actions,
+                                   RTSSkirmish& game,int subjectId,
+                                   std::string& summary,std::size_t& steps,int depth){
+    if(depth>4)throw std::runtime_error("Trigger action recursion limit exceeded");
+    const auto unpack=[](const picojson::array& values){
+        std::vector<picojson::object> result;
+        result.reserve(values.size());
+        for(const auto& value:values)result.push_back(value.get<picojson::object>());
+        return result;
+    };
+    for(const auto& action:actions){
+        if(++steps>512)throw std::runtime_error("Trigger action budget exceeded");
+        const std::string type=str(action,"type");
+        if(type=="IfThenElse"){
+            Rule branch;
+            for(const auto& cond:action.at("conditions").get<picojson::array>())
+                branch.conditions.push_back(cond.get<picojson::object>());
+            const bool selected=conditionsPass(branch,game,subjectId,nullptr);
+            const char* key=selected?"then":"else";
+            auto part=action.find(key);
+            if(part!=action.end())
+                executeActions(unpack(part->second.get<picojson::array>()),
+                               game,subjectId,summary,steps,depth+1);
+        }else if(type=="Repeat"){
+            const int count=action.count("times_expr")
+                ?RTSScriptExpression::evaluate(action.at("times_expr"),variables_)
+                :intField(action,"times",1,0,16);
+            const auto body=unpack(action.at("actions").get<picojson::array>());
+            for(int i=0;i<std::clamp(count,0,16);++i)
+                executeActions(body,game,subjectId,summary,steps,depth+1);
+        }else if(type=="GrantMinerals")
+            game.addMineralsForTrigger(scriptOperand(
+                action,"amount","amount_expr",0,variables_));
+        else if(type=="SpawnUnit")
+            game.spawnForTrigger(str(action,"catalog"),
+                intField(action,"owner",1,0,15),
+                Vec3(float(num(action,"x")),0.f,float(num(action,"z"))));
+        else if(type=="EndMatch")
+            game.endMatchForTrigger(str(action,"result","Victory")=="Victory");
+        else if(type=="ShowMessage")
+            game.showMessageForTrigger(str(action,"text"));
+        else if(type=="ApplyEffect")
+            game.applyEffectForTrigger(str(action,"effect"),subjectId);
+        else if(type=="SetVariable" || type=="AddVariable"){
+            const std::string name=str(action,"variable");
+            const int value=scriptOperand(action,"value","value_expr",0,variables_);
+            int& current=variables_.at(name);
+            const int prior=current;
+            const std::int64_t next=type=="SetVariable"?std::int64_t(value):
+                                    std::int64_t(current)+value;
+            current=static_cast<int>(std::clamp(next,std::int64_t(-100000000),
+                                                 std::int64_t(100000000)));
+            if(current!=prior){
+                auto [it,created]=pendingVariableChanges_.emplace(
+                    name,std::make_pair(prior,current));
+                if(!created)it->second.second=current;
+            }
+        }
+        if(tracingEnabled_){
+            if(!summary.empty())summary+=", ";
+            summary+=type;
+        }
+    }
+}
 void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapsed) {
     if(rule.once && rule.fired)return;
     ++rule.attempts;
@@ -110,55 +174,18 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapse
     if(!conditionsPass(rule,game,subjectId,&failedIndex)){
         ++rule.blocked;
         if(tracingEnabled_){
-            const std::string conditionType=str(rule.conditions[failedIndex],"type");
+            const auto conditionType=str(rule.conditions[failedIndex],"type");
             record(rule,elapsed,subjectId,TraceStatus::ConditionBlocked,
                    "Condition "+std::to_string(failedIndex+1)+" failed: "+conditionType);
         }
         return;
     }
     rule.fired=true;
-    // Capture actions *after* successful execution. In an invalid runtime
-    // state, keep a bounded error record before propagating to the host.
     std::string summary;
-    try {
-        for(const auto& action:rule.actions) {
-            const std::string type=str(action,"type");
-            if(type=="GrantMinerals")
-                game.addMineralsForTrigger(scriptOperand(action,"amount","amount_expr",0,variables_));
-            else if(type=="SpawnUnit")
-                game.spawnForTrigger(str(action,"catalog"),
-                                     intField(action,"owner",1,0,15),
-                                     Vec3(float(num(action,"x")),0,float(num(action,"z"))));
-            else if(type=="EndMatch") {
-                auto outcome=str(action,"result","Victory");
-                if(outcome!="Victory" && outcome!="Defeat")
-                    throw std::invalid_argument("EndMatch result must be Victory or Defeat");
-                game.endMatchForTrigger(outcome=="Victory");
-            }else if(type=="ShowMessage")
-                game.showMessageForTrigger(str(action,"text"));
-            else if(type=="ApplyEffect")
-                game.applyEffectForTrigger(str(action,"effect"),subjectId);
-            else if(type=="SetVariable" || type=="AddVariable"){
-                const std::string name=str(action,"variable");
-                const int value=scriptOperand(action,"value","value_expr",0,variables_);
-                int& current=variables_.at(name); // validated reference
-                const std::int64_t next=type=="SetVariable"
-                    ?std::int64_t(value):std::int64_t(current)+value;
-                const int previous=current;
-                current=static_cast<int>(std::clamp(next,
-                    std::int64_t(-100000000),std::int64_t(100000000)));
-                if(current!=previous){
-                    auto [it,inserted]=pendingVariableChanges_.emplace(
-                        name,std::make_pair(previous,current));
-                    if(!inserted)it->second.second=current;
-                }
-            }
-            if(tracingEnabled_){
-                if(!summary.empty())summary+=", ";
-                summary+=type;
-            }
-        }
-    }catch(const std::exception& e) {
+    std::size_t steps=0;
+    try{
+        executeActions(rule.actions,game,subjectId,summary,steps,0);
+    }catch(const std::exception& e){
         record(rule,elapsed,subjectId,TraceStatus::ActionError,e.what());
         throw;
     }
