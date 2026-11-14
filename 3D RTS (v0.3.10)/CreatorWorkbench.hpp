@@ -232,8 +232,8 @@ void inspector(App& app){
                 }
                 const auto linkedField=[&](const char* key,const char* label){
                     auto it=resolved.find(key);
-                    return it!=resolved.end() && it->second.is<std::string>() &&
-                           navigate(label,it->second.get<std::string>());
+                    return it!=resolved.end() && it->second.template is<std::string>() &&
+                           navigate(label,it->second.template get<std::string>());
                 };
                 if(entry->type=="Unit" && linkedField("actor","Actor")){
                     ImGui::End();return;
@@ -243,10 +243,10 @@ void inspector(App& app){
                 }
                 if(entry->type=="Unit"){
                     auto training=resolved.find("trainable_units");
-                    if(training!=resolved.end() && training->second.is<picojson::array>()){
-                        for(const auto& value:training->second.get<picojson::array>()){
-                            if(value.is<std::string>() &&
-                               navigate("Trains",value.get<std::string>())){
+                    if(training!=resolved.end() && training->second.template is<picojson::array>()){
+                        for(const auto& value:training->second.template get<picojson::array>()){
+                            if(value.template is<std::string>() &&
+                               navigate("Trains",value.template get<std::string>())){
                                 ImGui::End();return;
                             }
                         }
@@ -289,29 +289,29 @@ void inspector(App& app){
                         const std::string identity=entry->id+"."+field;
                         if(identity!=draftIdentity){
                             draftIdentity=identity;
-                            if(found->second.is<double>())
-                                draftNumber=found->second.get<double>();
-                            if(found->second.is<std::string>())
-                                draftString=found->second.get<std::string>();
+                            if(found->second.template is<double>())
+                                draftNumber=found->second.template get<double>();
+                            if(found->second.template is<std::string>())
+                                draftString=found->second.template get<std::string>();
                         }
-                        if(found->second.is<bool>()){
-                            bool enabled=found->second.get<bool>();
+                        if(found->second.template is<bool>()){
+                            bool enabled=found->second.template get<bool>();
                             if(ImGui::Checkbox("Value",&enabled))
                                 refresh(app,ed.setCatalogField(project,field,
                                     picojson::value(enabled)));
-                        }else if(found->second.is<double>()){
+                        }else if(found->second.template is<double>()){
                             ImGui::InputDouble("Value",&draftNumber,0.,0.,"%.3f");
                             if(ImGui::IsItemDeactivatedAfterEdit()){
                                 refresh(app,ed.setCatalogField(project,field,
                                     picojson::value(draftNumber)));
-                                draftNumber=project.catalog.resolvedFields(entry->id).at(field).get<double>();
+                                draftNumber=project.catalog.resolvedFields(entry->id).at(field).template get<double>();
                             }
-                        }else if(found->second.is<std::string>()){
+                        }else if(found->second.template is<std::string>()){
                             ImGui::InputText("Value",&draftString);
                             if(ImGui::IsItemDeactivatedAfterEdit()){
                                 refresh(app,ed.setCatalogField(project,field,
                                     picojson::value(draftString)));
-                                draftString=project.catalog.resolvedFields(entry->id).at(field).get<std::string>();
+                                draftString=project.catalog.resolvedFields(entry->id).at(field).template get<std::string>();
                             }
                         }else ImGui::TextDisabled("Array/object: edit as JSON");
                     }
