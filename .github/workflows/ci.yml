@@ -143,7 +143,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rts-replay-fingerprint-windows
-          path: build/command_replay_fingerprint.txt
+          path: |
+            build/command_replay_fingerprint.txt
+            build/ai_defense_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
