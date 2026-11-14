@@ -140,7 +140,8 @@ void Unit::holdPosition() {
 
 void Unit::takeDamage(float rawDamage, const std::string& attackerName) {
     if (!isAlive()) return;
-    float mitigated = std::max(1.0f, rawDamage - data.armor);
+    float mitigated = std::max(1.0f, rawDamage -
+                                  std::max(0.f,data.armor+behaviorArmorBonus));
     currentHp = std::max(0.0f, currentHp - mitigated);
 
     if (currentHp <= 0.0f) {
@@ -154,6 +155,7 @@ void Unit::takeDamage(float rawDamage, const std::string& attackerName) {
 void Unit::update(float deltaTime,std::vector<Unit>& allUnits,float mapBoundary,
                   const UnitSpatialIndex* spatial,std::vector<CombatHit>* pendingHits) {
     if (!isAlive() || isStructure) return;
+    navAgent.maxSpeed=data.move_speed*behaviorSpeedFactor;
 
     if (attackCooldownTimer > 0.0f) {
         attackCooldownTimer = std::max(0.0f, attackCooldownTimer - deltaTime);
@@ -401,8 +403,10 @@ void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
                 attackCooldownTimer = data.attack_cooldown;
                 attackFlashTimer = 0.14f;
                 lastAttackTargetPos = target->position + Vec3(0.0f, target->height * 0.55f, 0.0f);
-                if(pendingHits)pendingHits->push_back({id,target->id,data.damage,instanceName});
-                else target->takeDamage(data.damage, instanceName);
+                if(pendingHits)pendingHits->push_back({id,target->id,
+                    std::max(0.f,data.damage+behaviorDamageBonus),instanceName});
+                else target->takeDamage(std::max(0.f,data.damage+behaviorDamageBonus),
+                                            instanceName);
             }
             break;
         }

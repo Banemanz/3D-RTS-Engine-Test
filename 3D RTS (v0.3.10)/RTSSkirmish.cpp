@@ -111,6 +111,7 @@ void RTSSkirmish::reset() {
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
     periodicEffects_.clear();
+    behaviors_.clear();
     abilityReadyAt_.clear();
     nextId_=1;trainingPage_=0;abilityPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
@@ -714,6 +715,8 @@ void RTSSkirmish::update(float dt) {
     if(std::fabs(dt-1.f/60.f)>0.000001f)replayValid_=false;
     ++tick_;
     if(tick_>RTSReplayTape::MaxTicks)replayValid_=false;
+    // Expired modifiers cannot affect this tick's casts or combat.
+    updateBehaviors();
     const auto pending=commandStream_.take(tick_);
     for(const auto& command:pending){
         bool accepted=false;
@@ -770,6 +773,9 @@ void RTSSkirmish::update(float dt) {
                                         unit.currentEnergy+unit.data.energy_regen*dt);
     }
     updatePeriodicEffects();
+    // Eliminate behavior instances on dead targets without leaving a stale
+    // speed/armor bonus attached to the Unit snapshot.
+    updateBehaviors();
     // Dead structures are no longer static navigation blockers. Rebuild just
     // once on each newly destroyed structure, not in every simulation tick.
     bool staticChanged=false;
@@ -828,6 +834,65 @@ std::string RTSSkirmish::statusLine()const {
     return s.str();
 }
 
+int RTSSkirmish::unitBehaviorStacks(int id,const std::string& behavior)const{
+    const auto it=behaviors_.find({id,behavior});
+    return it==behaviors_.end()?0:it->second.stacks;
+}
+std::uint64_t RTSSkirmish::unitBehaviorTicksRemaining(
+    int id,const std::string& behavior)const{
+    const auto it=behaviors_.find({id,behavior});
+    return it==behaviors_.end() || it->second.expiresTick<=tick_?
+        0:it->second.expiresTick-tick_;
+}
+void RTSSkirmish::recalculateBehaviorStats(int targetId){
+    Unit* target=find(targetId);
+    if(!target)return;
+    double armor=0.,damage=0.,speed=1.;
+    auto it=behaviors_.lower_bound({targetId,std::string{}});
+    for(;it!=behaviors_.end() && it->first.first==targetId;++it){
+        const auto definition=compileBehavior(project_.catalog,it->first.second);
+        armor+=double(it->second.stacks)*definition.armorBonus;
+        damage+=double(it->second.stacks)*definition.damageBonus;
+        speed+=double(it->second.stacks)*(definition.speedMultiplier-1.f);
+    }
+    target->behaviorArmorBonus=static_cast<float>(std::clamp(armor,-100.,100.));
+    target->behaviorDamageBonus=static_cast<float>(std::clamp(damage,-500.,500.));
+    target->behaviorSpeedFactor=static_cast<float>(std::clamp(speed,.1,3.));
+    target->navAgent.maxSpeed=target->data.move_speed*target->behaviorSpeedFactor;
+}
+void RTSSkirmish::applyBehavior(int targetId,const BehaviorDefinition& b){
+    const auto key=std::make_pair(targetId,b.id);
+    auto it=behaviors_.find(key);
+    if(it==behaviors_.end())
+        behaviors_.emplace(key,ActiveBehavior{1,tick_+b.durationTicks});
+    else{
+        it->second.stacks=std::min(b.maxStacks,it->second.stacks+1);
+        if(b.refreshDuration)it->second.expiresTick=tick_+b.durationTicks;
+    }
+    recalculateBehaviorStats(targetId);
+}
+void RTSSkirmish::removeBehavior(int targetId,const std::string& id){
+    auto it=behaviors_.find({targetId,id});
+    if(it==behaviors_.end())return;
+    if(!compileBehavior(project_.catalog,id).dispellable)return;
+    behaviors_.erase(it);
+    recalculateBehaviorStats(targetId);
+}
+void RTSSkirmish::updateBehaviors(){
+    // std::map provides stable key order; recalc only changed target IDs.
+    std::vector<int> changed;
+    for(auto it=behaviors_.begin();it!=behaviors_.end();){
+        const Unit* target=find(it->first.first);
+        if(!target || !target->isAlive() || tick_>=it->second.expiresTick){
+            changed.push_back(it->first.first);
+            it=behaviors_.erase(it);
+        }else ++it;
+    }
+    std::sort(changed.begin(),changed.end());
+    changed.erase(std::unique(changed.begin(),changed.end()),changed.end());
+    for(const int id:changed)recalculateBehaviorStats(id);
+}
+
 void RTSSkirmish::updatePeriodicEffects(){
     for(auto it=periodicEffects_.begin();it!=periodicEffects_.end();){
         Unit* target=find(it->targetId);
@@ -859,6 +924,14 @@ bool RTSSkirmish::applyEffectForTrigger(const std::string& effectId,int subjectI
            operation.kind==EffectOperationKind::PeriodicHeal)++pending;
     if(pending>MaxPeriodicEffects-periodicEffects_.size())
         return false; // atomic scheduling admission, no partial effect graph
+    // Count new distinct status keys *before* applying anything. Multiple
+    // ApplyBehavior steps in a Sequence to one key only consume one slot.
+    std::set<std::string> incoming;
+    for(const auto& operation:operations)
+        if(operation.kind==EffectOperationKind::ApplyBehavior &&
+           behaviors_.count({subjectId,operation.behaviorId})==0)
+            incoming.insert(operation.behaviorId);
+    if(incoming.size()>MaxActiveBehaviors-behaviors_.size())return false;
     for(const auto& op:operations){
         if(!target->isAlive())break;
         if(op.kind==EffectOperationKind::Damage)
@@ -866,6 +939,10 @@ bool RTSSkirmish::applyEffectForTrigger(const std::string& effectId,int subjectI
         else if(op.kind==EffectOperationKind::Heal)
             target->currentHp=std::min(target->data.max_hp,
                                        target->currentHp+op.amount);
+        else if(op.kind==EffectOperationKind::ApplyBehavior)
+            applyBehavior(subjectId,compileBehavior(project_.catalog,op.behaviorId));
+        else if(op.kind==EffectOperationKind::RemoveBehavior)
+            removeBehavior(subjectId,op.behaviorId);
         else
             periodicEffects_.push_back({subjectId,op.kind,op.amount,
                 op.intervalTicks,tick_+op.intervalTicks,
@@ -1172,6 +1249,16 @@ std::string RTSSkirmish::stateDigest()const{
             hash.signedNumber(cooldown.first.first);
             hash.text(cooldown.first.second);
             hash.number(cooldown.second);
+        }
+    }
+    // No Behavior instances means historical command fingerprints are unchanged.
+    if(!behaviors_.empty()){
+        hash.number(behaviors_.size());
+        for(const auto& behavior:behaviors_){
+            hash.signedNumber(behavior.first.first);
+            hash.text(behavior.first.second);
+            hash.signedNumber(behavior.second.stacks);
+            hash.number(behavior.second.expiresTick);
         }
     }
     // Empty arrays preserve all pre-periodic-effect replay fingerprints.

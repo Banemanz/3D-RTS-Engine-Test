@@ -45,13 +45,28 @@ private:
 
 // Bounded simulation effects are stored in the same editable catalog graph.
 // Gameplay logic can compile them without knowing anything about OpenGL/UI.
-enum class EffectOperationKind { Damage, Heal, PeriodicDamage, PeriodicHeal };
+enum class EffectOperationKind { Damage, Heal, PeriodicDamage, PeriodicHeal,
+                                 ApplyBehavior, RemoveBehavior };
 struct EffectOperation {
     EffectOperationKind kind=EffectOperationKind::Damage;
     float amount=0.f;
+    std::string behaviorId;
     std::uint32_t intervalTicks=0;
     std::uint32_t durationTicks=0;
 };
+// Reusable status modifier, independent of the Unit and the source Ability.
+struct BehaviorDefinition {
+    std::string id;
+    std::uint32_t durationTicks=180;
+    int maxStacks=1;
+    float armorBonus=0.f;
+    float damageBonus=0.f;
+    float speedMultiplier=1.f;
+    bool refreshDuration=true;
+    bool dispellable=true;
+};
+BehaviorDefinition compileBehavior(const DataCatalog& catalog,
+                                   const std::string& id);
 std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
                                             const std::string& id);
 

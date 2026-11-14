@@ -73,6 +73,11 @@ public:
 
     float currentHp = 45.0f;
     float currentEnergy = 0.0f;
+    // Derived from authoritative active Behavior instances; original UnitData
+    // stays immutable, so expiration restores baseline stats exactly.
+    float behaviorArmorBonus = 0.f;
+    float behaviorDamageBonus = 0.f;
+    float behaviorSpeedFactor = 1.f;
     bool isSelected = false;
 
     UnitState state = UnitState::IDLE;

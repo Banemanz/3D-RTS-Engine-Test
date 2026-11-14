@@ -89,6 +89,12 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Behavior" && entry.type=="Effect"){
+            auto field=entry.fields.find("behavior");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
         if(type=="Effect" && entry.type=="Effect"){
             auto field=entry.fields.find("children");
             if(field!=entry.fields.end() && field->second.is<picojson::array>())
@@ -163,6 +169,44 @@ picojson::object DataCatalog::resolvedFields(const std::string& id)const {
     resolveInto(id,result,stack);
     return result;
 }
+BehaviorDefinition compileBehavior(const DataCatalog& catalog,
+                                   const std::string& id){
+    const auto* entry=catalog.find(id);
+    if(!entry || entry->type!="Behavior")
+        throw std::invalid_argument("Missing Behavior catalog reference: "+id);
+    const auto fields=catalog.resolvedFields(id);
+    auto integerField=[&](const char* name,double fallback,int low,int high){
+        const double n=numeric(fields,name,fallback);
+        if(std::floor(n)!=n || n<double(low) || n>double(high))
+            throw std::invalid_argument("Invalid Behavior "+std::string(name)+": "+id);
+        return static_cast<int>(n);
+    };
+    auto finiteField=[&](const char* name,double fallback,double low,double high){
+        const double n=numeric(fields,name,fallback);
+        if(n<low || n>high)
+            throw std::invalid_argument("Invalid Behavior "+std::string(name)+": "+id);
+        return static_cast<float>(n);
+    };
+    auto boolProperty=[&](const char* name,bool fallback){
+        const auto it=fields.find(name);
+        if(it==fields.end())return fallback;
+        if(!it->second.is<bool>())
+            throw std::invalid_argument("Behavior "+std::string(name)+" must be boolean: "+id);
+        return it->second.get<bool>();
+    };
+    BehaviorDefinition out;
+    out.id=id;
+    out.durationTicks=static_cast<std::uint32_t>(
+        integerField("duration_ticks",180,1,36000));
+    out.maxStacks=integerField("max_stacks",1,1,8);
+    out.armorBonus=finiteField("armor_bonus",0.,-50.,50.);
+    out.damageBonus=finiteField("damage_bonus",0.,-100.,100.);
+    out.speedMultiplier=finiteField("speed_multiplier",1.,.1,3.);
+    out.refreshDuration=boolProperty("refresh_duration",true);
+    out.dispellable=boolProperty("dispellable",true);
+    return out;
+}
+
 namespace {
 // Bound both graph traversal and terminal effect steps. Cycles and maliciously
 // large graphs are rejected before a project can be saved or executed.
@@ -194,6 +238,17 @@ void collectEffect(const DataCatalog& catalog,const std::string& id,
                 throw std::invalid_argument("Effect child must be an ID: "+id);
             collectEffect(catalog,ref.get<std::string>(),stack,output,visits);
         }
+    }else if(op=="ApplyBehavior" || op=="RemoveBehavior"){
+        const auto behavior=fields.find("behavior");
+        if(behavior==fields.end() || !behavior->second.is<std::string>())
+            throw std::invalid_argument("Effect requires Behavior ID: "+id);
+        const std::string target=behavior->second.get<std::string>();
+        (void)compileBehavior(catalog,target);
+        EffectOperation terminal;
+        terminal.kind=op=="ApplyBehavior"?
+            EffectOperationKind::ApplyBehavior:EffectOperationKind::RemoveBehavior;
+        terminal.behaviorId=target;
+        output.push_back(std::move(terminal));
     }else if(op=="Damage" || op=="Heal" ||
              op=="PeriodicDamage" || op=="PeriodicHeal"){
         const auto amount=fields.find("amount");
@@ -318,6 +373,7 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Behavior")(void)compileBehavior(*this,e.id);
         if(e.type=="Effect")(void)compileEffect(*this,e.id);
         if(e.type=="Ability")(void)compileAbility(*this,e.id);
         if(e.type=="Unit")(void)unitAbilityIds(*this,e.id);

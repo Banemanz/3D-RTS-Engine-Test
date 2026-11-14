@@ -100,6 +100,10 @@ public:
     int completedBarracksCount() const;
     int playerBaseId() const { return friendlyBaseId_; }
     std::size_t activePeriodicEffectCount()const{return periodicEffects_.size();}
+    std::size_t activeBehaviorCount()const{return behaviors_.size();}
+    int unitBehaviorStacks(int unitId,const std::string& behaviorId)const;
+    std::uint64_t unitBehaviorTicksRemaining(int unitId,
+                                             const std::string& behaviorId)const;
     std::string selectedAbilityId(int slot) const;
     int abilityPage()const{return abilityPage_;}
     int abilityPageCount()const;
@@ -141,6 +145,16 @@ private:
     static constexpr std::size_t MaxPeriodicEffects=256;
     std::vector<PeriodicEffect> periodicEffects_;
     void updatePeriodicEffects();
+    struct ActiveBehavior {
+        int stacks=1;
+        std::uint64_t expiresTick=0;
+    };
+    static constexpr std::size_t MaxActiveBehaviors=256;
+    std::map<std::pair<int,std::string>,ActiveBehavior> behaviors_;
+    void updateBehaviors();
+    void recalculateBehaviorStats(int targetId);
+    void applyBehavior(int targetId,const BehaviorDefinition& definition);
+    void removeBehavior(int targetId,const std::string& id);
     std::map<std::pair<int,std::string>,std::uint64_t> abilityReadyAt_;
     bool castAbility(int casterId,const std::string& abilityId,int targetId);
     RTSCommandStream commandStream_;
