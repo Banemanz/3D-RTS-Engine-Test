@@ -1,5 +1,6 @@
 #include "TriggerDefinition.hpp"
 #include "RTSProject.hpp"
+#include "RTSScriptExpression.hpp"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -152,7 +153,12 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                     requireVariable(ob);
                     const std::string comparison=str(ob,"operator");
                     requireType(comparison,{"==","!=","<","<=",">",">="});
-                    (void)intField(ob,"value",0,-100000000,100000000);
+                    const auto expr=ob.find("value_expr");
+                    if(expr!=ob.end()){
+                        if(ob.count("value"))
+                            throw std::invalid_argument("VariableCompare cannot specify both value and value_expr");
+                        RTSScriptExpression::validate(expr->second,variables);
+                    }else (void)intField(ob,"value",0,-100000000,100000000);
                 }
                 rule.conditions.push_back(ob);
             }
@@ -187,11 +193,22 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                     throw std::invalid_argument("ApplyEffect references missing Effect: "+effect);
                 (void)compileEffect(project.catalog,effect);
             }
-            if(type=="GrantMinerals")
-                (void)intField(ob,"amount",0,-100000000,100000000);
+            if(type=="GrantMinerals"){
+                const auto expr=ob.find("amount_expr");
+                if(expr!=ob.end()){
+                    if(ob.count("amount"))
+                        throw std::invalid_argument("GrantMinerals cannot specify both amount and amount_expr");
+                    RTSScriptExpression::validate(expr->second,variables);
+                }else (void)intField(ob,"amount",0,-100000000,100000000);
+            }
             if(type=="SetVariable" || type=="AddVariable") {
                 requireVariable(ob);
-                (void)intField(ob,"value",0,-100000000,100000000);
+                const auto expr=ob.find("value_expr");
+                if(expr!=ob.end()){
+                    if(ob.count("value"))
+                        throw std::invalid_argument("Variable action cannot specify both value and value_expr");
+                    RTSScriptExpression::validate(expr->second,variables);
+                }else (void)intField(ob,"value",0,-100000000,100000000);
             }
             if(type=="EndMatch") {
                 const auto result=str(ob,"result","Victory");
