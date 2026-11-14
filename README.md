@@ -213,3 +213,8 @@ The engine now exposes the beginning of an original **data-driven effect graph**
 ## Visual Event–Condition–Action editor (November 14, 2026)
 
 The F6 Trigger Editor now has a functional ECA form/tree: choose event types, configure intervals, regions and once/repeat; add conditions and ordered actions; edit typed numeric/text/catalog fields; reorder/remove nodes; and open advanced JSON when needed. Invalid rule modifications are rejected before changing the project, using **one shared parser with the runtime**, with undo/redo for each committed change. The authored Effect catalog can be selected for region-entering unit effects. No extra GUI dependency was introduced. Read [docs/TRIGGER_EDITOR.md](docs/TRIGGER_EDITOR.md) for the complete workflow and supported event/action list.
+
+
+## Mouse-editable catalog reference lists (November 14)
+
+F7 Data Editor now provides a visual list editor for **trainable units** on Unit catalogs and **Effect sequence children** on Effect catalogs. Select the corresponding field in the Inspector to open, add, remove, and reorder referenced objects without writing JSON. The `Open` action follows an object link into the same Data Editor. All mutations call `EditorSession::setCatalogField`, so the shared validators reject invalid, duplicate, cyclic, or out-of-range changes atomically and one undo covers each successful edit. No new GUI dependency was introduced.

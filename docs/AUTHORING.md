@@ -384,3 +384,8 @@ Run `RTSCameraTerrain --project projects/effects_showcase.rtsproject.json` (Wind
 Open F6 and select or create a rule in the left Browser. The right Inspector now has the editable **Event / Conditions / Actions** tree, supports typed fields and catalog/region references, and manages order, insertion, deletion and repeat-once behavior. The old raw JSON editor remains under the expandable Advanced panel. Invalid changes (including raw JSON) are rejected **before** they alter or save the project. All UI edits pass through the same undoable, headless C++ authoring API and same ECA validation parser as the runtime.
 
 See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for action types, creation steps, Effect graph examples and limitations.
+
+
+## Editing linked Unit production and Effect sequences
+
+Select **F7 Data Editor**, choose a Unit or Effect catalog entry, then select its `trainable_units` or `children` field in the resolved-property inspector. The panel now shows each target reference with **Open**, **Up**, **Down**, and **Remove** controls. **Add reference** lists compatible Unit/Effect entries from the map's own catalog. A trainable Unit list is limited to twelve eligible units and may not contain duplicate IDs or structures. Sequence children may contain up to eight Effect IDs and must not form reference cycles or an empty Sequence. Editing a reference list creates a single validated undo action; Ctrl+Z restores the previous ordering/contents. The original JSON editor remains available for custom fields. This UI uses the existing temporary ImGui presentation adapter, while the project/schema code stays headless and portable.

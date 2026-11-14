@@ -167,3 +167,8 @@ The example unit definitions have distinct IDs and presentation names; SC2-speci
 ## GUI trigger workflows and effect references
 
 The F6 Trigger Editor now exposes the ECA tree as typed controls (event, repeat, conditions, actions, inspector properties and ordering), not only raw text. Effect references are taken from authored Effect catalog objects and currently require an `OnRegionEnter` subject. Both visual changes and raw JSON use the same headless parser and validation gate, with undo/redo and tests. This is a useful subset of Galaxy's authoring workflow, **not** its complete trigger language, variable library, debugger or UI system. See `docs/TRIGGER_EDITOR.md`.
+
+
+## Reference-array inspector improvement
+
+The creator workbench now adds a typed list editor for `Unit.trainable_units` and `Effect.children`, including a catalog-link opener and reordering controls. This builds on the current generalized catalog storage and uses `EditorSession` transactions for correctness. It is a useful Galaxy-inspired authoring workflow but does not imply the engine implements Galaxy Editor's full catalog variety or behavior graph UI.

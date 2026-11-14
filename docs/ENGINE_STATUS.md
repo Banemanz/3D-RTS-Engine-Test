@@ -227,3 +227,8 @@ Effects are now named typed catalog entries: damage/heal leaves and ordered chil
 ## Mouse-operable ECA composer and shared schema (November 14)
 
 The trigger authoring surface is no longer only raw JSON. The F6 inspector displays a real event/condition/action tree with selectable event types and typed property inputs; map creators can add, remove and reorder actions/conditions, select region/unit/effect references and control one-shot triggers. Complex mod extensions retain the advanced JSON escape hatch. `TriggerDefinition` is a shared, headless rule parser used by both editor and simulation, closing a previous validator mismatch that could leave invalid edits in the model. Each edit is atomic and undoable. The shipped native UI remains planned; these tools temporarily use the existing ImGui adapter while the custom UI toolkit is expanded. `docs/TRIGGER_EDITOR.md` is the detailed reference.
+
+
+## Visual catalog reference editing
+
+Production lists (`trainable_units`) and Effect `Sequence.children` lists no longer require manually typing arrays. A specialized in-editor reference widget supports Add/Open/Reorder/Remove, resolves only compatible catalog types, and commits through headless `EditorSession::setCatalogField`. Duplicate, missing, invalid, cyclic, or oversized references are rejected by the existing project/effect compilers without mutating the project. Native GUI migration remains a separate future stage.

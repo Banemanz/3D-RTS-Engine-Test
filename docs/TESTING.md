@@ -119,3 +119,8 @@ Headless tests now exercise all-new starter IDs and a previously serialized map'
 ## Typed ECA authoring and real GUI smoke
 
 `RTSTriggerAuthoringTests` runs on **Windows and Linux** under CTest Debug and Release. Tests cover action/condition lists, event types and timing, catalog/effect references, index boundaries, no-op edits, invalid values, project save/load, raw JSON rollback and chronological undo/redo. `CreatorTriggerWidgets.hpp` renders the actual F6 inspector in the Linux Mesa/Xvfb screenshot test using `projects/effects_showcase.rtsproject.json`. The installed Windows and Linux `RTSCameraTerrain` executables advertise `RTS_FEATURE_VISUAL_ECA_EDITOR=1`, checked directly by the release bundle verifier. Windows desktop/GPU UI testing remains necessary independently of CI.
+
+
+## Trainable and Effect reference-list regressions
+
+`RTSReferenceAuthoringTests` checks that adding/reordering production and Effect sequence references uses the same validated, undoable project transaction. Tests cover duplicate training IDs, illegal structure training targets, effect graph cycles, empty sequences, undo/redo and JSON round trips. It is built and run through CTest in both Windows/Linux Debug and Release configurations. The visual reference list itself is rendered by `CreatorReferenceWidgets.hpp` in the regular Linux GUI smoke, with manual Windows GUI verification still required.
