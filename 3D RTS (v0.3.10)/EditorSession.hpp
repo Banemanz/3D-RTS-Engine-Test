@@ -95,6 +95,11 @@ public:
     bool createCatalogObject(RTSProject& project,const std::string& type,
                              const std::string& preset);
     bool convertEffectKind(RTSProject& project,const std::string& kind);
+    // Ground targeting and the grouped AoE inspector use full transactional
+    // mutations, keeping the map valid through Self<->Ground conversion.
+    bool setAbilityTargetPolicy(RTSProject& project,const std::string& target);
+    bool setGroundAbilitySettings(RTSProject& project,float radius,
+                                  const std::string& team,int delayTicks);
     // Commit a grouped Behavior inspector as one validated undo record.
     bool setBehaviorDefinition(RTSProject& project,const BehaviorDefinition& values);
     bool duplicateCatalogObject(RTSProject& project);

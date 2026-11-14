@@ -1178,7 +1178,8 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
                             int targetId,const Vec3& ground){
     const auto ability=compileAbility(project_.catalog,abilityId);
     if(ability.target==AbilityTarget::Ground){
-        if(!canCastAbilityAt(casterId,abilityId,ground))return false;
+        if(targetId!=-1 || !canCastAbilityAt(casterId,abilityId,ground))
+            return false;
         if(ability.impactDelayTicks>0 &&
            pendingAreas_.size()>=MaxPendingAreaImpacts)return false;
         const Unit* caster=find(casterId);

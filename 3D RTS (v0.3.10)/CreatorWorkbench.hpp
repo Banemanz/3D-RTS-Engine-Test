@@ -162,6 +162,7 @@ void browser(App& app){
                 {"Ability","Ally","Ability | Ally target"},
                 {"Ability","Enemy","Ability | Enemy target"},
                 {"Ability","Any","Ability | Any unit target"},
+                {"Ability","Ground","Ability | Ground area impact"},
                 {"Actor","Visual","Actor | Visual"},
                 {"Model","Procedural","Model | Procedural"},
                 {"Effect","Damage","Effect | Damage"},
@@ -362,10 +363,9 @@ void inspector(App& app){
                        target->second.template is<std::string>()?
                        target->second.template get<std::string>():"Self";
                     if(ImGui::BeginCombo("Target policy",current.c_str())){
-                        for(const char* kind:{"Self","Ally","Enemy","Any"}){
+                        for(const char* kind:{"Self","Ally","Enemy","Any","Ground"}){
                             if(ImGui::Selectable(kind,kind==current) && kind!=current){
-                                refresh(app,ed.setCatalogField(project,"target",
-                                    picojson::value(std::string(kind))));
+                                refresh(app,ed.setAbilityTargetPolicy(project,kind));
                                 ImGui::EndCombo();ImGui::End();return;
                             }
                         }
@@ -380,6 +380,42 @@ void inspector(App& app){
                                 ImGui::EndCombo();ImGui::End();return;
                             }
                         ImGui::EndCombo();
+                    }
+                    if(current=="Ground"){
+                        static std::string editingAbility;
+                        static float radius=4.f;
+                        static int delay=60;
+                        static int team=0;
+                        if(editingAbility!=entry->id){
+                            const auto ground=compileAbility(project.catalog,entry->id);
+                            radius=ground.areaRadius;delay=int(ground.impactDelayTicks);
+                            team=ground.areaTeam==AbilityAreaTeam::Enemy?0:
+                                 ground.areaTeam==AbilityAreaTeam::Ally?1:2;
+                            editingAbility=entry->id;
+                        }
+                        ImGui::SeparatorText("Ground area & impact");
+                        ImGui::InputFloat("Area radius",&radius,.25f,1.f,"%.2f");
+                        ImGui::InputInt("Impact delay (ticks)",&delay,15,60);
+                        const char* teams[]={"Enemy","Ally","Any"};
+                        ImGui::Combo("Affected team",&team,teams,3);
+                        if(ImGui::Button("Apply ground settings")){
+                            if(ed.setGroundAbilitySettings(project,radius,
+                                    teams[std::clamp(team,0,2)],delay)){
+                                refresh(app,true);
+                                editingAbility.clear();
+                                ImGui::End();return;
+                            }
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::SmallButton("Revert area changes")){
+                            const auto defined=compileAbility(project.catalog,entry->id);
+                            radius=defined.areaRadius;
+                            delay=int(defined.impactDelayTicks);
+                            team=defined.areaTeam==AbilityAreaTeam::Enemy?0:
+                                 defined.areaTeam==AbilityAreaTeam::Ally?1:2;
+                        }
+                        ImGui::TextDisabled("Radius 0.5..24 | Impact 0..300 ticks | Max 64 units");
+                        ImGui::TextWrapped("The ground point must be visible. Delayed impacts hit units at arrival, not when cast.");
                     }
                     ImGui::TextDisabled("Cooldown: ticks at 60Hz | Cast range: world units");
                 }

@@ -210,7 +210,9 @@ struct AppState {
                 }else{
                     pendingAbilityId=abilityId;
                     mode=Mode::CastAbility;
-                    inform("CAST "+abilityId+" - LEFT CLICK UNIT TARGET");
+                    inform("CAST "+abilityId+
+                        (ability.target==AbilityTarget::Ground?
+                         " - LEFT CLICK VISIBLE GROUND":" - LEFT CLICK UNIT TARGET"));
                 }
                 break;
             }
@@ -459,22 +461,41 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         }
         if(state->mode==AppState::Mode::CastAbility &&
            button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
-            Unit* target=state->selectionManager.raycastUnit(mouseX,mouseY,
-                state->camera,state->windowWidth,state->windowHeight,
-                state->game.units,&state->game.vision);
+            const auto ability=compileAbility(state->project.catalog,
+                                             state->pendingAbilityId);
             int casterId=-1;
             for(const auto& unit:state->game.units)
                 if(unit.isSelected && unit.ownerId==0 && unit.isAlive()){
                     casterId=unit.id;break;
                 }
-            if(target && casterId>0 && state->game.canCastAbility(
-                    casterId,state->pendingAbilityId,target->id) &&
-               state->game.queuePlayerCommand(RTSCommandKind::CastAbility,
-                    Vec3{},target->id,false,state->pendingAbilityId)){
+            bool queued=false;
+            if(ability.target==AbilityTarget::Ground){
+                Vec3 hit;
+                if(state->camera.screenToGroundRaycast(mouseX,mouseY,
+                     state->windowWidth,state->windowHeight,hit) &&
+                   casterId>0 &&
+                   state->game.canCastAbilityAt(casterId,
+                                               state->pendingAbilityId,hit))
+                    queued=state->game.queuePlayerCommand(
+                        RTSCommandKind::CastAbility,hit,-1,false,
+                        state->pendingAbilityId);
+            }else{
+                Unit* target=state->selectionManager.raycastUnit(mouseX,mouseY,
+                    state->camera,state->windowWidth,state->windowHeight,
+                    state->game.units,&state->game.vision);
+                if(target && casterId>0 && state->game.canCastAbility(
+                        casterId,state->pendingAbilityId,target->id))
+                    queued=state->game.queuePlayerCommand(
+                        RTSCommandKind::CastAbility,Vec3{},target->id,false,
+                        state->pendingAbilityId);
+            }
+            if(queued){
                 state->inform("CAST "+state->pendingAbilityId);
                 state->pendingAbilityId.clear();
                 state->mode=AppState::Mode::Normal;
-            }else state->inform("SELECT A VISIBLE TARGET WITHIN CAST RANGE");
+            }else state->inform(ability.target==AbilityTarget::Ground?
+                "AIM AT VISIBLE GROUND INSIDE CAST RANGE":
+                "SELECT A VISIBLE TARGET WITHIN CAST RANGE");
             return;
         }
         if(state->mode==AppState::Mode::CastAbility &&
@@ -896,6 +917,7 @@ int main(int argc, char** argv) {
     bool selectProducerForSmoke=false;
     bool selectAbilityCasterSmoke=false;
     bool castSelfAbilityForSmoke=false;
+    bool castGroundAbilityForSmoke=false;
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
@@ -917,6 +939,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
         else if(arg == "--smoke-select-ability-caster")selectAbilityCasterSmoke=true;
         else if(arg == "--smoke-cast-self-ability")castSelfAbilityForSmoke=true;
+        else if(arg == "--smoke-cast-ground-ability")castGroundAbilityForSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
@@ -979,6 +1002,39 @@ int main(int argc, char** argv) {
                !app.game.queuePlayerCommand(RTSCommandKind::CastAbility,
                                             Vec3{},-1,false,abilityId))
                 throw std::invalid_argument("Smoke cannot cast first authored Self Ability");
+        }
+        if(castGroundAbilityForSmoke && smokeFrames>0){
+            if(!selectAbilityCasterSmoke)
+                throw std::invalid_argument("Ground smoke needs an ability caster");
+            int casterId=-1;
+            for(const auto& u:app.game.units)
+                if(u.isSelected && u.isAlive() && u.ownerId==0){casterId=u.id;break;}
+            if(casterId<=0)throw std::invalid_argument("No selected caster");
+            std::string skill;
+            for(const auto& candidate:unitAbilityIds(
+                    app.project.catalog,app.game.units.front().catalogId)){
+                if(compileAbility(app.project.catalog,candidate).target==
+                   AbilityTarget::Ground){skill=candidate;break;}
+            }
+            if(skill.empty()){
+                const auto* caster=std::find_if(app.game.units.begin(),
+                    app.game.units.end(),[&](const Unit& u){return u.id==casterId;});
+                if(caster==app.game.units.end())throw std::invalid_argument("Caster missing");
+                for(const auto& candidate:unitAbilityIds(
+                        app.project.catalog,caster->catalogId))
+                    if(compileAbility(app.project.catalog,candidate).target==
+                       AbilityTarget::Ground){skill=candidate;break;}
+            }
+            if(skill.empty())throw std::invalid_argument("No authored Ground Ability");
+            Vec3 point=app.game.units.front().position;
+            for(const auto& u:app.game.units)if(u.ownerId!=0 && u.isAlive() &&
+                  app.game.canCastAbilityAt(casterId,skill,u.position)){
+                point=u.position;break;
+            }
+            if(!app.game.canCastAbilityAt(casterId,skill,point) ||
+               !app.game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                                             point,-1,false,skill))
+                throw std::invalid_argument("Unable to smoke-cast Ground Ability");
         }
         if(selectProducerForSmoke && smokeFrames>0) {
             for(auto& unit:app.game.units)if(unit.isAlive() && unit.ownerId==0 &&

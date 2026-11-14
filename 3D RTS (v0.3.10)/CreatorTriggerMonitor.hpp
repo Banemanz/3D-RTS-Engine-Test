@@ -34,6 +34,16 @@ void draw(App& app){
                 app.game.activePeriodicEffectCount());
     ImGui::Text("Active status behaviors: %zu",
                 app.game.activeBehaviorCount());
+    ImGui::Text("Pending area impacts: %zu",
+                app.game.pendingAreaImpactCount());
+    if(app.game.pendingAreaImpactCount()>0 &&
+       ImGui::TreeNode("##pendingAreas","Ground impact watch")){
+        for(const auto& a:app.game.areaImpactWatch(32))
+            ImGui::BulletText("%s  (%.1f, %.1f)  r %.1f  %.1fs",
+                a.abilityId.c_str(),a.center.x,a.center.z,a.radius,
+                double(a.remainingTicks)/60.);
+        ImGui::TreePop();
+    }
     if(app.game.activeBehaviorCount()>0 &&
        ImGui::CollapsingHeader("Active status watch",ImGuiTreeNodeFlags_DefaultOpen)){
         const auto status=app.game.behaviorWatch(48);

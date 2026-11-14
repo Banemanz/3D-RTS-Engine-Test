@@ -471,16 +471,22 @@ bool EditorSession::createCatalogObject(RTSProject& project,
             };
         }else if(type=="Ability"){
             if(preset!="Self" && preset!="Ally" &&
-               preset!="Enemy" && preset!="Any")return false;
+               preset!="Enemy" && preset!="Any" && preset!="Ground")return false;
             entry.id="new_ability";
             entry.fields={
                 {"name",picojson::value("New Ability")},
                 {"target",picojson::value(preset)},
                 {"cooldown_ticks",picojson::value(180.0)},
-                {"cast_range",picojson::value(preset=="Self"?0.0:9.0)},
+                {"cast_range",picojson::value(preset=="Self"?0.0:
+                                            preset=="Ground"?12.0:9.0)},
                 {"mineral_cost",picojson::value(0.0)},
                 {"energy_cost",picojson::value(0.0)}
             };
+            if(preset=="Ground"){
+                entry.fields["area_radius"]=picojson::value(4.0);
+                entry.fields["area_team"]=picojson::value(std::string("Enemy"));
+                entry.fields["impact_delay_ticks"]=picojson::value(60.0);
+            }
             for(const auto& object:project.catalog.entries())
                 if(object.type=="Effect"){
                     entry.fields["effect"]=picojson::value(object.id);
@@ -542,6 +548,63 @@ bool EditorSession::createCatalogObject(RTSProject& project,
         return true;
     }catch(const std::exception& e){
         message=std::string("CATALOG OBJECT REJECTED: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::setAbilityTargetPolicy(
+    RTSProject& project,const std::string& target){
+    if(textEditing)return false;
+    if(target!="Self" && target!="Ally" && target!="Enemy" &&
+       target!="Any" && target!="Ground")return false;
+    const auto* selectedAbility=selected(project);
+    if(!selectedAbility || selectedAbility->type!="Ability")return false;
+    try{
+        RTSProject candidate=project;
+        auto* ability=candidate.catalog.find(selectedAbility->id);
+        const auto fields=candidate.catalog.resolvedFields(ability->id);
+        const auto it=fields.find("target");
+        if(it!=fields.end() && it->second.is<std::string>() &&
+           it->second.get<std::string>()==target)return false;
+        ability->fields["target"]=picojson::value(target);
+        const auto priorRange=fields.find("cast_range");
+        const double range=priorRange!=fields.end() &&
+            priorRange->second.is<double>()?priorRange->second.get<double>():0.;
+        if(target=="Ground"){
+            if(range<.5)ability->fields["cast_range"]=picojson::value(12.0);
+            ability->fields["area_radius"]=picojson::value(4.0);
+            ability->fields["area_team"]=picojson::value(std::string("Enemy"));
+            ability->fields["impact_delay_ticks"]=picojson::value(60.0);
+        }else if(target!="Self" && range<.5)
+            ability->fields["cast_range"]=picojson::value(9.0);
+        candidate.validate();(void)parseTriggerRules(candidate);
+        remember(project);project=std::move(candidate);
+        modified=true;message="ABILITY TARGET: "+target;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("ABILITY TARGET REJECTED: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::setGroundAbilitySettings(
+    RTSProject& project,float radius,const std::string& team,int delayTicks){
+    if(textEditing)return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Ability" ||
+       compileAbility(project.catalog,current->id).target!=AbilityTarget::Ground)
+        return false;
+    try{
+        RTSProject candidate=project;
+        auto* ability=candidate.catalog.find(current->id);
+        ability->fields["area_radius"]=picojson::value(double(radius));
+        ability->fields["area_team"]=picojson::value(team);
+        ability->fields["impact_delay_ticks"]=picojson::value(double(delayTicks));
+        candidate.validate();(void)parseTriggerRules(candidate);
+        if(candidate.toJson().serialize()==project.toJson().serialize())return false;
+        remember(project);project=std::move(candidate);
+        modified=true;message="GROUND ABILITY SETTINGS SAVED";
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("GROUND ABILITY REJECTED: ")+e.what();
         return false;
     }
 }
