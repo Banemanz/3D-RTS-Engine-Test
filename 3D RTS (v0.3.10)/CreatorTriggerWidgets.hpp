@@ -26,12 +26,19 @@ void field(App& app,const std::string& ruleId,bool event,bool condition,
     const std::string identity=ruleId+(event?".event.":condition?".condition.":".action.")+
                                std::to_string(nodeIndex)+"."+name;
     ImGui::PushID(identity.c_str());
-    if(name=="catalog" || name=="region" || name=="result" || name=="effect"){
+    if(name=="catalog" || name=="region" || name=="result" || name=="effect" ||
+       name=="variable" || name=="operator"){
         if(value.template is<std::string>()){
             const std::string current=value.template get<std::string>();
             std::vector<std::string> options;
             if(name=="result")options={"Victory","Defeat"};
-            else if(name=="region"){
+            else if(name=="operator")options={"==","!=","<","<=",">",">="};
+            else if(name=="variable"){
+                const auto it=project.extensions.find("trigger_variables");
+                if(it!=project.extensions.end() && it->second.template is<picojson::object>())
+                    for(const auto& entry:it->second.template get<picojson::object>())
+                        options.push_back(entry.first);
+            }else if(name=="region"){
                 for(const auto& placement:project.placements)
                     if(placement.kind=="Region")options.push_back(placement.id);
             }else{
@@ -132,9 +139,9 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
     }
     const std::vector<std::string> options=condition
         ?std::vector<std::string>{"PlayerMineralsAtLeast","UnitCountAtLeast",
-                                  "UnitTypeCountAtLeast","SubjectOwnerIs"}
+                                  "UnitTypeCountAtLeast","SubjectOwnerIs","VariableCompare"}
         :std::vector<std::string>{"ShowMessage","GrantMinerals","SpawnUnit",
-                                  "ApplyEffect","EndMatch"};
+                                  "ApplyEffect","EndMatch","SetVariable","AddVariable"};
     std::string eventKind;
     auto event=rule.find("event");
     if(event!=rule.end() && event->second.template is<picojson::object>()){
@@ -148,12 +155,22 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
         for(const auto& type:options){
             const bool effectUnavailable=!condition && type=="ApplyEffect" &&
                                           eventKind!="OnRegionEnter";
-            if(effectUnavailable)ImGui::BeginDisabled();
-            if(ImGui::Selectable(type.c_str()) && !effectUnavailable)
+            const bool needsVariable=type=="VariableCompare" ||
+                                     type=="SetVariable" || type=="AddVariable";
+            const auto globals=project.extensions.find("trigger_variables");
+            const bool variableUnavailable=needsVariable &&
+                (globals==project.extensions.end() ||
+                 !globals->second.template is<picojson::object>() ||
+                 globals->second.template get<picojson::object>().empty());
+            const bool disabled=effectUnavailable || variableUnavailable;
+            if(disabled)ImGui::BeginDisabled();
+            if(ImGui::Selectable(type.c_str()) && !disabled)
                 chosen=type;
-            if(effectUnavailable){
+            if(disabled){
                 if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                    ImGui::SetTooltip("Requires a region-entering unit. Set event to OnRegionEnter first.");
+                    ImGui::SetTooltip("%s",effectUnavailable
+                        ?"Requires OnRegionEnter subject"
+                        :"Create a Map variable before adding this node");
                 ImGui::EndDisabled();
             }
         }
@@ -162,11 +179,56 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
     }
 }
 template<class App>
+void globals(App& app){
+    auto& ed=app.editor;
+    auto& project=app.project;
+    if(!ImGui::CollapsingHeader("Map variables (shared trigger state)",
+                              ImGuiTreeNodeFlags_DefaultOpen))return;
+    ImGui::TextDisabled("Signed integers, -100000000 to +100000000; reset each match.");
+    const auto it=project.extensions.find("trigger_variables");
+    if(it!=project.extensions.end() && it->second.template is<picojson::object>()){
+        // Copy: app reload can replace the source project during UI callbacks.
+        const auto variables=it->second.template get<picojson::object>();
+        static std::unordered_map<std::string,int> drafts;
+        for(const auto& entry:variables){
+            const std::string& name=entry.first;
+            const int current=static_cast<int>(entry.second.template get<double>());
+            ImGui::PushID(name.c_str());
+            ImGui::TextUnformatted(name.c_str());
+            ImGui::SameLine();
+            int& value=drafts.emplace(name,current).first->second;
+            ImGui::SetNextItemWidth(135.f);
+            ImGui::InputInt("Initial", &value);
+            const bool committed=ImGui::IsItemDeactivatedAfterEdit();
+            const bool active=ImGui::IsItemActive();
+            if(committed){
+                refresh(app,ed.setTriggerVariable(project,name,value));
+                value=current;
+            }else if(!active)value=current;
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Remove")){
+                refresh(app,ed.removeTriggerVariable(project,name));
+            }
+            ImGui::PopID();
+        }
+    }
+    static std::string newName;
+    ImGui::InputText("New variable ID", &newName);
+    ImGui::SameLine();
+    if(ImGui::SmallButton("Add variable")){
+        if(ed.addTriggerVariable(project,newName,0)){
+            newName.clear();
+            refresh(app,true);
+        }
+    }
+}
+template<class App>
 void draw(App& app){
     auto& ed=app.editor;
     auto& project=app.project;
     const auto count=ed.triggerCount(project);
     ImGui::Text("%zu map rules",count);
+    globals(app);
     if(!count){ImGui::TextDisabled("Use New trigger in the Browser to begin.");return;}
     const auto rule=ed.triggerObject(project,ed.selectedTrigger%count);
     const auto idIt=rule.find("id");
