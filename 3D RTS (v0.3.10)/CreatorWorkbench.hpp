@@ -92,7 +92,7 @@ void browser(App& app){
     const auto& p=app.project;
     const auto w=ImGui::GetIO().DisplaySize;
     ImGui::SetNextWindowPos(ImVec2(12.f,50.f),ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300.f,std::max(330.f,w.y-112.f)),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300.f,std::max(330.f,w.y-76.f)),ImGuiCond_FirstUseEver);
     if(!ImGui::Begin("Creator | Browser")){ImGui::End();return;}
     if(ed.panel==EditorSession::Panel::Terrain){
         ImGui::SeparatorText("Terrain brush");
@@ -178,7 +178,6 @@ void browser(App& app){
             ImGui::EndCombo();
         }
 
-        ImGui::SameLine();
         if(ImGui::SmallButton("Derive selected"))
             refresh(app,ed.duplicateCatalogObject(app.project));
         ImGui::BeginChild("##catalogTree",ImVec2(0,-5),true);
@@ -258,14 +257,18 @@ void inspector(App& app){
     auto& ed=app.editor;
     auto& project=app.project;
     const auto w=ImGui::GetIO().DisplaySize;
-    // Nested ECA expressions need more than the narrow generic inspector.
-    // This is only the initial width: user-resized/docked windows are retained.
-    const float inspectorWidth=ed.panel==EditorSession::Panel::Triggers?490.f:360.f;
+    // The F7 catalog contains grouped status controls and nested Effect
+    // graph nodes. Give it a real work area rather than clipping labels at
+    // 360px. Default geometry alone changes; user-resized/docked windows
+    // remain authoritative on every OS.
+    const float inspectorWidth=ed.panel==EditorSession::Panel::Triggers?490.f:
+        ed.panel==EditorSession::Panel::Data?
+            std::clamp(w.x*.40f,400.f,540.f):360.f;
     ImGui::SetNextWindowPos(
         ImVec2(std::max(320.f,w.x-inspectorWidth-15.f),50.f),
         ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(
-        ImVec2(inspectorWidth,std::max(330.f,w.y-112.f)),
+        ImVec2(inspectorWidth,std::max(330.f,w.y-76.f)),
         ImGuiCond_FirstUseEver);
     if(!ImGui::Begin("Creator | Inspector")){ImGui::End();return;}
     ImGui::TextDisabled("PROJECT  %s",project.name.c_str());
