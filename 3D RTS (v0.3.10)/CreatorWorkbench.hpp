@@ -55,6 +55,10 @@ void toolbar(App& app) {
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("View")){
+            if(ImGui::MenuItem("Export playtest replay", "Ctrl+Shift+L",
+                  false,app.editor.panel==EditorSession::Panel::Play))
+                app.saveReplay();
+            ImGui::Separator();
             ImGui::MenuItem("Playtest trigger monitor",nullptr,&app.triggerTraceVisible);
             ImGui::Separator();
             ImGui::TextDisabled("Creator GUI: docking enabled");

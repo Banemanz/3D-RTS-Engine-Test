@@ -1,5 +1,6 @@
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
+#include "RTSCommandStream.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -19,12 +20,22 @@ static void usage() {
       << "RTSProjectTool --rename path old-id new-id\n"
       << "RTSProjectTool --remove path object-id\n"
       << "RTSProjectTool --place path kind catalog-id x z owner\n"
-      << "RTSProjectTool --placements path\n";
+      << "RTSProjectTool --placements path\\n"
+      << "RTSProjectTool --verify-replay path.rtsreplay.json\\n";
 }
 int main(int argc,char** argv) {
     try {
         if(argc<3){usage();return 2;}
         const std::string action=argv[1],path=argv[2];
+        if(action=="--verify-replay"){
+            if(argc!=3){usage();return 2;}
+            const auto tape=RTSReplayTape::loadFile(path);
+            std::string diagnostic;
+            if(!verifyRTSReplay(tape,&diagnostic))
+                throw std::runtime_error("Replay verification FAILED: "+diagnostic);
+            std::cout<<diagnostic<<"\\n";
+            return 0;
+        }
         if(action=="--create") {
             if(argc!=3){usage();return 2;}
             RTSProject::defaults().saveFile(path);

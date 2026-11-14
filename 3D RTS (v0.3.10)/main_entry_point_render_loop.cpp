@@ -114,6 +114,22 @@ struct AppState {
         }
         catch(const std::exception& e){editor.message=std::string("SAVE ERROR: ")+e.what();}
     }
+    void saveReplay(){
+        if(editor.panel!=EditorSession::Panel::Play){
+            inform("REPLAY EXPORT REQUIRES PLAYTEST MODE");
+            return;
+        }
+        try{
+            const std::string filename=projectPath+".rtsreplay.json";
+            const auto tape=game.replayTape();
+            tape.saveFile(filename);
+            inform("REPLAY SAVED: "+filename);
+            editor.message="REPLAY SAVED: "+filename;
+        }catch(const std::exception& e){
+            editor.message=std::string("REPLAY EXPORT ERROR: ")+e.what();
+            inform(editor.message);
+        }
+    }
     enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
     bool keyX = false, keyR = false, keyM=false, keyP=false, keyV=false,
@@ -588,6 +604,9 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     }
     if(action==GLFW_REPEAT && key!=GLFW_KEY_LEFT_BRACKET && key!=GLFW_KEY_RIGHT_BRACKET)
         return;
+    if(ctrl && (mods & GLFW_MOD_SHIFT) && key==GLFW_KEY_L){
+        s->saveReplay();return;
+    }
     if(ctrl && key==GLFW_KEY_S) {s->saveProject();return;}
     if(key==GLFW_KEY_F5) {
         edit.panel=edit.panel==EditorSession::Panel::Terrain?
