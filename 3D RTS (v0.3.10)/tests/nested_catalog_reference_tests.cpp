@@ -104,6 +104,7 @@ int main(){
         std::cerr<<"nested rename failed: "<<e.what()<<"\n";
         throw;
     }
+    std::cerr<<"STAGE: parse renamed project\n";
     const auto rules=parseTriggerRules(p);
     assert(rules.size()==2);
     const auto& branch=rules[0].actions[0];
@@ -123,8 +124,11 @@ int main(){
     assert(effect.at("effect").get<std::string>()=="kinetic_variant");
     assert(!p.catalogReferences("kinetic_variant").empty());
     assert(!p.catalogReferences("archer_variant").empty());
+    std::cerr<<"STAGE: JSON roundtrip\n";
     const auto roundtrip=RTSProject::fromJson(p.toJson());
+    std::cerr<<"STAGE: parse roundtrip\n";
     assert(parseTriggerRules(roundtrip).size()==2);
+    std::cerr<<"STAGE: removing script references\n";
     p.extensions.erase("triggers");
     assert(p.removeCatalogObject("archer_variant",&error));
     assert(p.removeCatalogObject("kinetic_variant",&error));
