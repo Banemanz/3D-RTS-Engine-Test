@@ -1,6 +1,7 @@
 #include "TriggerEngine.hpp"
 #include "TriggerDefinition.hpp"
 #include "RTSSkirmish.hpp"
+#include "RTSScriptExpression.hpp"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -28,6 +29,15 @@ int intField(const picojson::object& o,const char* key,int fallback,int low,int 
     if(!std::isfinite(v) || std::floor(v)!=v || v<double(low) || v>double(high))
         throw std::invalid_argument(std::string("Trigger integer out of range: ")+key);
     return static_cast<int>(v);
+}
+int scriptOperand(const picojson::object& action,const char* literalKey,
+                  const char* expressionKey,int fallback,
+                  const std::map<std::string,int>& variables){
+    const auto expression=action.find(expressionKey);
+    if(expression!=action.end())
+        return RTSScriptExpression::evaluate(expression->second,variables);
+    return intField(action,literalKey,fallback,
+                    -RTSScriptExpression::MaxValue,RTSScriptExpression::MaxValue);
 }
 bool flag(const picojson::object& o,const char* key,bool def=false) {
     auto i=o.find(key);if(i==o.end())return def;
@@ -71,7 +81,7 @@ bool TriggerEngine::conditionsPass(const Rule& rule,const RTSSkirmish& game,
                    game.ownerForTrigger(subjectId)!=intField(condition,"owner",0,0,15);
         else if(type=="VariableCompare"){
             const int current=variables_.at(str(condition,"variable"));
-            const int reference=intField(condition,"value",0,-100000000,100000000);
+            const int reference=scriptOperand(condition,"value","value_expr",0,variables_);
             const auto comparison=str(condition,"operator");
             if(comparison=="==")failed=current!=reference;
             else if(comparison=="!=")failed=current==reference;
@@ -114,7 +124,7 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapse
         for(const auto& action:rule.actions) {
             const std::string type=str(action,"type");
             if(type=="GrantMinerals")
-                game.addMineralsForTrigger(intField(action,"amount",0,-100000000,100000000));
+                game.addMineralsForTrigger(scriptOperand(action,"amount","amount_expr",0,variables_));
             else if(type=="SpawnUnit")
                 game.spawnForTrigger(str(action,"catalog"),
                                      intField(action,"owner",1,0,15),
@@ -130,7 +140,7 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapse
                 game.applyEffectForTrigger(str(action,"effect"),subjectId);
             else if(type=="SetVariable" || type=="AddVariable"){
                 const std::string name=str(action,"variable");
-                const int value=intField(action,"value",0,-100000000,100000000);
+                const int value=scriptOperand(action,"value","value_expr",0,variables_);
                 int& current=variables_.at(name); // validated reference
                 const std::int64_t next=type=="SetVariable"
                     ?std::int64_t(value):std::int64_t(current)+value;
