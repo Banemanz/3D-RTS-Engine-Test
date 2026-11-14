@@ -217,21 +217,109 @@ void inspector(App& app){
                     refresh(app,ed.deleteCatalogObject(project));
                     ImGui::End();return; // deleted catalog entry invalidates pointers
                 }
+                // SC2-style object explorer: links are typed, inherited,
+                // actionable, and resolved through the headless project data.
+                const auto resolved=project.catalog.resolvedFields(entry->id);
+                ImGui::SeparatorText("Object links");
+                const auto navigate=[&](const char* role,const std::string& id){
+                    if(id.empty() || !project.catalog.find(id))return false;
+                    const std::string label=std::string(role)+": "+id;
+                    return ImGui::SmallButton(label.c_str()) &&
+                           ed.selectCatalogId(project,id);
+                };
+                if(!entry->parent.empty() && navigate("Parent",entry->parent)){
+                    ImGui::End();return;
+                }
+                const auto linkedField=[&](const char* key,const char* label){
+                    auto it=resolved.find(key);
+                    return it!=resolved.end() && it->second.is<std::string>() &&
+                           navigate(label,it->second.get<std::string>());
+                };
+                if(entry->type=="Unit" && linkedField("actor","Actor")){
+                    ImGui::End();return;
+                }
+                if(entry->type=="Actor" && linkedField("model","Model")){
+                    ImGui::End();return;
+                }
+                if(entry->type=="Unit"){
+                    auto training=resolved.find("trainable_units");
+                    if(training!=resolved.end() && training->second.is<picojson::array>()){
+                        for(const auto& value:training->second.get<picojson::array>()){
+                            if(value.is<std::string>() &&
+                               navigate("Trains",value.get<std::string>())){
+                                ImGui::End();return;
+                            }
+                        }
+                    }
+                }
+                const auto incoming=project.catalogReferences(entry->id);
+                if(!incoming.empty()){
+                    if(ImGui::TreeNode("Used by (%zu)",incoming.size())){
+                        for(std::size_t i=0;i<std::min<std::size_t>(incoming.size(),24);++i)
+                            ImGui::TextWrapped("%s",incoming[i].c_str());
+                        if(incoming.size()>24)
+                            ImGui::TextDisabled("... %zu more",incoming.size()-24);
+                        ImGui::TreePop();
+                    }
+                }
                 ImGui::SeparatorText("Resolved properties");
                 const auto fields=ed.fields(project);
-                const auto resolved=project.catalog.resolvedFields(entry->id);
-                ImGui::BeginChild("##fields",ImVec2(0,250.f),true);
+                ImGui::BeginChild("##fields",ImVec2(0,210.f),true);
                 for(std::size_t i=0;i<fields.size();++i){
                     const auto& name=fields[i];
-                    const std::string display=name+" = "+resolved.at(name).serialize();
-                    if(ImGui::Selectable(display.c_str(),ed.selectedField==i))
+                    const std::string display=(entry->fields.count(name)?"[LOCAL] ":"[INHERITED] ")+
+                                              name+" = "+resolved.at(name).serialize();
+                    if(ImGui::Selectable(display.c_str(),ed.selectedField==i)){
                         ed.selectedField=i;
+                        if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                            ed.beginValueEdit(project);
+                    }
                 }
                 ImGui::EndChild();
-                if(ImGui::Button("Edit property"))ed.beginValueEdit(project);
+                if(!ed.textEditing && !fields.empty()){
+                    const std::string field=ed.selectedFieldName(project);
+                    auto found=resolved.find(field);
+                    if(found!=resolved.end()){
+                        ImGui::TextWrapped("Selected: %s",field.c_str());
+                        // Widgets edit actual catalog data through one
+                        // validated/undoable C++ mutation, never raw pointers.
+                        static std::string draftIdentity;
+                        static double draftNumber=0.;
+                        static std::string draftString;
+                        const std::string identity=entry->id+"."+field;
+                        if(identity!=draftIdentity){
+                            draftIdentity=identity;
+                            if(found->second.is<double>())
+                                draftNumber=found->second.get<double>();
+                            if(found->second.is<std::string>())
+                                draftString=found->second.get<std::string>();
+                        }
+                        if(found->second.is<bool>()){
+                            bool enabled=found->second.get<bool>();
+                            if(ImGui::Checkbox("Value",&enabled))
+                                refresh(app,ed.setCatalogField(project,field,
+                                    picojson::value(enabled)));
+                        }else if(found->second.is<double>()){
+                            ImGui::InputDouble("Value",&draftNumber,0.,0.,"%.3f");
+                            if(ImGui::IsItemDeactivatedAfterEdit()){
+                                refresh(app,ed.setCatalogField(project,field,
+                                    picojson::value(draftNumber)));
+                                draftNumber=project.catalog.resolvedFields(entry->id).at(field).get<double>();
+                            }
+                        }else if(found->second.is<std::string>()){
+                            ImGui::InputText("Value",&draftString);
+                            if(ImGui::IsItemDeactivatedAfterEdit()){
+                                refresh(app,ed.setCatalogField(project,field,
+                                    picojson::value(draftString)));
+                                draftString=project.catalog.resolvedFields(entry->id).at(field).get<std::string>();
+                            }
+                        }else ImGui::TextDisabled("Array/object: edit as JSON");
+                    }
+                }
+                if(ImGui::Button("Edit property JSON"))ed.beginValueEdit(project);
                 ImGui::SameLine();
                 if(ImGui::Button("Add property"))ed.beginNewField();
-                if(ImGui::Button("Remove local override"))
+                if(ImGui::Button("Reset to inherited"))
                     refresh(app,ed.removeLocalOverride(project));
             }
         }
@@ -244,6 +332,12 @@ void inspector(App& app){
             ImGui::Text("ID: %s",copy.id.c_str());
             ImGui::Text("Kind: %s",copy.kind.c_str());
             ImGui::TextWrapped("Catalog: %s",copy.catalogId.c_str());
+            if(!copy.catalogId.empty() && project.catalog.find(copy.catalogId) &&
+               ImGui::SmallButton("Open linked catalog entry")){
+                ed.panel=EditorSession::Panel::Data;
+                ed.selectCatalogId(project,copy.catalogId);
+                ImGui::End();return;
+            }
             ImGui::Text("Owner: %d",copy.owner);
             if(ImGui::Button("Switch owner")){
                 refresh(app,ed.toggleSelectedOwner(project));

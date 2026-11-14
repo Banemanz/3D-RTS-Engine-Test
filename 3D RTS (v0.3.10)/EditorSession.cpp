@@ -224,6 +224,55 @@ void EditorSession::clearCatalogSearch(const RTSProject& project){
     if(selectedObject>=project.catalog.entries().size())selectedObject=0;
     message="CATALOG FILTER CLEARED";
 }
+
+bool EditorSession::selectCatalogId(const RTSProject& project,const std::string& id) {
+    if(textEditing)return false;
+    const auto& entries=project.catalog.entries();
+    for(std::size_t i=0;i<entries.size();++i){
+        if(entries[i].id!=id)continue;
+        // A link may target an object hidden by the current search.
+        if(!catalogMatches(entries[i]))catalogFilter.clear();
+        selectedObject=i;
+        selectedField=0;
+        message="OPENED "+id;
+        return true;
+    }
+    return false;
+}
+bool EditorSession::setCatalogField(RTSProject& project,const std::string& key,
+                                    const picojson::value& value) {
+    if(textEditing)return false;
+    const auto* selectedEntry=selected(project);
+    if(!selectedEntry || key.empty())return false;
+    const std::string id=selectedEntry->id;
+    auto* entry=project.catalog.find(id);
+    if(!entry)return false;
+    const auto it=entry->fields.find(key);
+    const bool had=it!=entry->fields.end();
+    const picojson::value previous=had?it->second:picojson::value();
+    if(had && previous.serialize()==value.serialize())return false;
+    const RTSProject before=project;
+    if(!project.catalog.setField(id,key,value)){
+        message="INVALID PROPERTY KEY";return false;
+    }
+    try{project.validate();}
+    catch(const std::exception& e){
+        // Restore precisely the old local field: inherited values must not
+        // become accidental overrides on validation failure.
+        if(had)entry->fields[key]=previous;
+        else entry->fields.erase(key);
+        message=std::string("INVALID EDIT: ")+e.what();
+        return false;
+    }
+    remember(before);
+    modified=true;
+    message="FIELD SAVED: "+key;
+    const auto keys=fields(project);
+    const auto found=std::find(keys.begin(),keys.end(),key);
+    if(found!=keys.end())
+        selectedField=static_cast<std::size_t>(found-keys.begin());
+    return true;
+}
 void EditorSession::cycleObject(const RTSProject& project,int delta) {
     if(textEditing || project.catalog.entries().empty())return;
     const auto& entries=project.catalog.entries();

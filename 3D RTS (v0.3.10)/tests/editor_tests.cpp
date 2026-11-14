@@ -57,6 +57,31 @@ int main() {
     assert(editor.finishCatalogSearch(p));
     assert(editor.selected(p)->type=="Unit");
     editor.clearCatalogSearch(p);
+    // Galaxy-style inspector navigation follows stable IDs even when a
+    // search filter would otherwise hide the linked actor/model.
+    assert(editor.selectCatalogId(p,"worker"));
+    editor.catalogFilter="only_something_else";
+    assert(editor.selectCatalogId(p,"marine_actor"));
+    assert(editor.catalogFilter.empty());
+    assert(editor.selectCatalogId(p,"procedural_soldier"));
+    assert(editor.selected(p)->type=="Model");
+    assert(!editor.selectCatalogId(p,"does_not_exist"));
+    assert(editor.selected(p)->id=="procedural_soldier");
+    assert(editor.selectCatalogId(p,"worker"));
+    // Typed widgets commit exactly one validated undo snapshot.
+    assert(!p.catalog.find("worker")->fields.count("damage"));
+    assert(editor.setCatalogField(p,"damage",picojson::value(17.0)));
+    assert(unitFromCatalog(p.catalog,"worker").damage==17.f);
+    assert(editor.undo(p));
+    assert(!p.catalog.find("worker")->fields.count("damage"));
+    assert(editor.redo(p));
+    assert(unitFromCatalog(p.catalog,"worker").damage==17.f);
+    assert(!editor.setCatalogField(p,"actor",picojson::value("missing_actor")));
+    assert(p.catalog.resolvedFields("worker").at("actor").get<std::string>()=="worker_actor");
+    assert(editor.setCatalogField(p,"is_worker",picojson::value(false)));
+    assert(!unitFromCatalog(p.catalog,"worker").isWorker);
+    assert(editor.undo(p));
+    assert(unitFromCatalog(p.catalog,"worker").isWorker);
     editor.beginNewField();
     editor.editText="custom_mod_value";assert(editor.finishEdit(p));
     editor.editText="{\"foo\":true}";assert(editor.finishEdit(p));

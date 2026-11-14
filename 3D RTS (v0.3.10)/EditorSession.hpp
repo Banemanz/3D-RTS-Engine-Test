@@ -64,6 +64,11 @@ public:
     bool finishSceneOverrideEdit(RTSProject& project);
 
     void cycleObject(const RTSProject& project,int delta);
+    // Stable-ID navigation survives catalog filters and derives; no GPU/UI dependency.
+    bool selectCatalogId(const RTSProject& project,const std::string& id);
+    // Validated, atomic, undoable typed field editing for property widgets.
+    bool setCatalogField(RTSProject& project,const std::string& key,
+                         const picojson::value& value);
     void beginCatalogSearch();
     void clearCatalogSearch(const RTSProject& project);
     bool finishCatalogSearch(const RTSProject& project);
