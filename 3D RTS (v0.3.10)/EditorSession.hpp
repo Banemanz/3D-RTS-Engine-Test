@@ -94,6 +94,11 @@ public:
     bool finishCatalogRename(RTSProject& project);
     bool deleteCatalogObject(RTSProject& project);
 
+    // Named global integers shared by every trigger in one map. Changes are
+    // validated, undoable transactions and refuse dangling rule references.
+    bool addTriggerVariable(RTSProject& project,const std::string& name,int initial=0);
+    bool setTriggerVariable(RTSProject& project,const std::string& name,int value);
+    bool removeTriggerVariable(RTSProject& project,const std::string& name);
     // First trigger authoring panel: raw JSON rule inspector/editor. A future
     // node-graph can use the same serialized ECA object model.
     std::size_t triggerCount(const RTSProject& project) const;
@@ -128,6 +133,9 @@ private:
     std::deque<RTSProject> undo_,redo_;
     std::string pendingNewField_;
     std::size_t maxHistory_=32;
+    bool mutateTriggerVariables(RTSProject& project,
+        const std::function<void(picojson::object&)>& change,
+        const std::string& status);
     bool mutateTrigger(RTSProject& project,
                        const std::function<void(picojson::object&)>& change,
                        const std::string& status);
