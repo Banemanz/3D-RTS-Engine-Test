@@ -879,7 +879,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_RECURSIVE_ECA_UI=1\n"
                  <<"RTS_FEATURE_TIMED_EFFECTS=1\n"
                  <<"RTS_FEATURE_UNIT_ABILITIES=1\n"
-                 <<"RTS_FEATURE_ABILITY_EDITOR=1\n";
+                 <<"RTS_FEATURE_ABILITY_EDITOR=1\n"
+                 <<"RTS_FEATURE_STATUS_BEHAVIORS=1\n"
+                 <<"RTS_FEATURE_VISUAL_EFFECT_FLOW=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -893,6 +895,7 @@ int main(int argc, char** argv) {
     bool selectArmyForSmoke=false;
     bool selectProducerForSmoke=false;
     bool selectAbilityCasterSmoke=false;
+    bool castSelfAbilityForSmoke=false;
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
@@ -913,6 +916,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
         else if(arg == "--smoke-select-ability-caster")selectAbilityCasterSmoke=true;
+        else if(arg == "--smoke-cast-self-ability")castSelfAbilityForSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
@@ -963,6 +967,18 @@ int main(int argc, char** argv) {
                     break;
                 }
             if(!found)throw std::invalid_argument("No playable ability caster in map");
+        }
+        // Screenshot-only scripting of a *real command*, never a synthetic
+        // modifier. If authoring is broken the smoke must fail visibly.
+        if(castSelfAbilityForSmoke && smokeFrames>0){
+            if(!selectAbilityCasterSmoke)
+                throw std::invalid_argument("Self-cast smoke needs an ability caster");
+            const std::string abilityId=app.game.selectedAbilityId(0);
+            const auto definition=compileAbility(app.project.catalog,abilityId);
+            if(definition.target!=AbilityTarget::Self ||
+               !app.game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                                            Vec3{},-1,false,abilityId))
+                throw std::invalid_argument("Smoke cannot cast first authored Self Ability");
         }
         if(selectProducerForSmoke && smokeFrames>0) {
             for(auto& unit:app.game.units)if(unit.isAlive() && unit.ownerId==0 &&

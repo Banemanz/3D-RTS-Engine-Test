@@ -173,8 +173,8 @@ public:
                              first->data.damage+first->behaviorDamageBonus)))+
                          "  ARM "+std::to_string(int(std::max(0.f,
                              first->data.armor+first->behaviorArmorBonus)))+
-                         (game.activeBehaviorCount()>0?
-                             "  STATUS "+std::to_string(game.activeBehaviorCount()):"")+
+                         (game.unitBehaviorCount(first->id)>0?
+                             "  STATUS "+std::to_string(game.unitBehaviorCount(first->id)):"")+
                          (first->holdPositionEnabled?"  HOLD":""),.61f,.8f,.87f);
                 }
             }

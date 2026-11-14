@@ -29,6 +29,7 @@ jobs:
             build/script_flow_fingerprint.txt
             build/timed_effect_fingerprint.txt
             build/ability_cast_fingerprint.txt
+            build/behavior_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -182,6 +183,36 @@ jobs:
           name: rts-unit-ability-loadout-screenshot
           path: rts-ability-loadout.png
           if-no-files-found: error
+      - name: Capture F7 authored Behavior modifier inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/behavior_workshop_showcase.rtsproject.json --smoke-select-catalog-id brace_field --smoke-frames 90 --screenshot rts-behavior-editor.ppm
+      - name: Convert Behavior inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-behavior-editor.ppm rts-behavior-editor.png
+      - name: Upload Behavior modifier inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-behavior-editor-screenshot
+          path: rts-behavior-editor.png
+          if-no-files-found: error
+      - name: Capture F7 validated Effect Sequence flow with Behavior node
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/behavior_workshop_showcase.rtsproject.json --smoke-select-catalog-id brace_combo --smoke-frames 90 --screenshot rts-effect-flow.ppm
+      - name: Convert visual Effect flow screenshot
+        run: python3 tools/ppm_to_png.py rts-effect-flow.ppm rts-effect-flow.png
+      - name: Upload visual Effect flow
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-effect-flow-screenshot
+          path: rts-effect-flow.png
+          if-no-files-found: error
+      - name: Capture active Behavior in real F9 gameplay HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/behavior_workshop_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-self-ability --smoke-frames 90 --screenshot rts-active-status.ppm
+      - name: Convert active gameplay status screenshot
+        run: python3 tools/ppm_to_png.py rts-active-status.ppm rts-active-status.png
+      - name: Upload active Behavior gameplay screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-active-behavior-hud-screenshot
+          path: rts-active-status.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor
@@ -216,6 +247,7 @@ jobs:
             build/script_flow_fingerprint.txt
             build/timed_effect_fingerprint.txt
             build/ability_cast_fingerprint.txt
+            build/behavior_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -241,3 +273,4 @@ jobs:
           diff -u fingerprints/linux/script_flow_fingerprint.txt fingerprints/windows/script_flow_fingerprint.txt
           diff -u fingerprints/linux/timed_effect_fingerprint.txt fingerprints/windows/timed_effect_fingerprint.txt
           diff -u fingerprints/linux/ability_cast_fingerprint.txt fingerprints/windows/ability_cast_fingerprint.txt
+          diff -u fingerprints/linux/behavior_fingerprint.txt fingerprints/windows/behavior_fingerprint.txt

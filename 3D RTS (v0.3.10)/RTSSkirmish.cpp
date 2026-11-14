@@ -835,6 +835,12 @@ std::string RTSSkirmish::statusLine()const {
     return s.str();
 }
 
+int RTSSkirmish::unitBehaviorCount(int id)const{
+    int count=0;
+    auto it=behaviors_.lower_bound({id,std::string{}});
+    for(;it!=behaviors_.end() && it->first.first==id;++it)++count;
+    return count;
+}
 int RTSSkirmish::unitBehaviorStacks(int id,const std::string& behavior)const{
     const auto it=behaviors_.find({id,behavior});
     return it==behaviors_.end()?0:it->second.stacks;

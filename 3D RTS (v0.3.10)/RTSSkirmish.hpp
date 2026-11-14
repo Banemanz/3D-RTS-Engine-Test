@@ -102,6 +102,7 @@ public:
     std::size_t activePeriodicEffectCount()const{return periodicEffects_.size();}
     std::size_t activeBehaviorCount()const{return behaviors_.size();}
     int unitBehaviorStacks(int unitId,const std::string& behaviorId)const;
+    int unitBehaviorCount(int unitId)const;
     std::uint64_t unitBehaviorTicksRemaining(int unitId,
                                              const std::string& behaviorId)const;
     std::string selectedAbilityId(int slot) const;
