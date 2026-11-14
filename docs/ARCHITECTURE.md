@@ -187,3 +187,28 @@ Behavior ID, stacks and expiry tick. Legacy matches with no statuses
 preserve their older digest shape. Gameplay command tapes already
 capture Ability→Effect→Behavior execution through CastAbility,
 and Windows/MSVC vs Linux/GCC CI compares a new behavior fingerprint.
+
+
+## Ground-target runtime and deterministic area impact lifecycle
+
+DataCatalog AbilityDefinition now has Ground as a distinct
+AbilityTarget; AbilityAreaTeam filters Enemy/Ally/Any. Ground
+properties area_radius, area_team and impact_delay_ticks have
+typed validation, while legacy single-Unit Abilities keep their
+original fields. The source-0 CastAbility command retains the same
+replay format: it carries stable caster Unit IDs, the Ability ID,
+point (world XZ) and targetId=-1. In-world, visible ground center,
+cast range, energy, minerals and cooldown are verified by
+RTSSkirmish::canCastAbilityAt.
+
+Ground casts either execute instant area Effects or create a
+PendingAreaImpact (center, radius, owner, team, Effect/Ability IDs,
+absolute impact tick), capped at 128. Pending work is processed
+after fixed-step movement/combat so a Unit may enter or leave the
+circle between cast and impact. Victims are sorted by Unit ID.
+An impact accepts at most 64 Units. Atomic area-wide checks
+preflight periodic-effect slots and newly created Behavior keys
+before applying any damage or scheduling. Delayed arrivals may
+fizzle without refund if later state is over capacity.
+Nonempty pending impact queues are hashed in stateDigest; reset
+clears them. Rendering only reads a bounded areaImpactWatch.

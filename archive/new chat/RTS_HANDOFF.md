@@ -952,3 +952,116 @@ target-ground/AoE abilities; data-driven tech and upgrades;
 more expressive trigger libraries/functions; asset pipeline
 and robust standalone creator GUI. Preserve original-IP
 content and Windows/Linux functional/build parity.
+
+
+## November 14 evening — Ground Ability authoring and deterministic impact slice
+
+**Repo:** https://github.com/Banemanz/3D-RTS-Engine-Test
+**Branch:** feat/rts-vertical-slice
+**PR:** Existing open/unmerged Draft PR #1; keep same PR.
+**Functional SHA:** 3b35b0ac1188f85a7edba69fe93468653f66b84e
+**Verified on functional SHA:** Both Windows and Linux Debug CTests,
+strict cross-platform replay parity and Mesa OpenGL screenshots passed:
+https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43652184518
+Both Release Windows-x64 and Linux-x86_64 native packages passed,
+including Release CTests, bundled project validation and executable
+feature verification:
+https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43652184600
+Later docs-only commit should be checked separately before final claim.
+
+### Subsystems built this pass
+
+- DataCatalog.hpp/.cpp: AbilityTarget::Ground and
+  AbilityAreaTeam::{Enemy,Ally,Any} with typed areaRadius,
+  areaTeam and impactDelayTicks in AbilityDefinition.
+  Ground values: radius 0.5..24; delay integral 0..300;
+  team one of Enemy/Ally/Any; cast_range 0.5..128.
+  Existing Self/Ally/Enemy/Any abilities remain unchanged.
+- RTSSkirmish.hpp/.cpp: canCastAbilityAt verifies living
+  friendly caster, Unit ability loadout, resources/cooldown,
+  finite in-world center, current ground visibility and
+  XZ range. Existing canCastAbility excludes Ground.
+  CastAbility carries point XZ, targetId=-1, sorted caster
+  Unit IDs; no new command kind or replay version.
+- For delay=0, applyAreaEffect resolves immediately. For
+  nonzero delay, a PendingAreaImpact with center, radius,
+  caster owner, area filter, Ability ID, Effect ID and
+  absolute impact tick is scheduled in a vector cap128.
+  updateAreaImpacts runs after fixed-tick movement/2-phase
+  combat and before regeneration/periodic pulses, selecting
+  living current-position XZ victims (Enemy,Ally,Any)
+  and processing in ascending stable Unit ID order.
+  Victim count cap64. Entire Area Effect is pre-admitted
+  against available periodic slots and unique new
+  (Unit ID, Behavior ID) status keys before any mutation.
+  Over-cap immediate casts fail without charging; delayed
+  arrivals may fizzle without refunds. Empty casts pay cost.
+  Pending impacts hash into stateDigest when nonempty,
+  and reset clears them. UI consumes areaImpactWatch().
+- EditorSession.hpp/.cpp: create Ground Ability preset;
+  setAbilityTargetPolicy atomically converts Self/Ally/
+  Enemy/Any/Ground, supplying valid nonzero Ground cast
+  range when converting from Self. setGroundAbilitySettings
+  clones and validates grouped radius/team/delay fields
+  with one undo transaction. CreatorWorkbench.hpp adds
+  typed target combo, radius/delay inputs and team dropdown.
+- main_entry_point_render_loop.cpp: CastAbility target
+  mode raycasts ground when AbilityTarget Ground; LMB
+  queues a real world-point CastAbility, RMB cancels.
+  Teal valid/red invalid cursor radius and orange delayed
+  impact rings use preexisting OpenGL ringShader/ringVAO;
+  they never control gameplay. CLI-only
+  --smoke-cast-ground-ability enqueues a real authored cast
+  for screenshot tests. CreatorTriggerMonitor.hpp shows
+  bounded pending Area watch with center and remaining time.
+- Original playable map:
+  projects/ground_impact_showcase.rtsproject.json.
+  Ember Arc = delayed enemy Damage+ApplyBehavior slow
+  Sequence; Repair Circle = instant Ally heal; includes
+  preceding self and direct-target abilities and Tab paging.
+  No third-party named Unit/asset copying.
+
+### Test/CI changes
+
+- tests/ground_area_tests.cpp covers exact delayed arrival
+  and movement dodge, caster budget/cooldown, enemy vs ally,
+  replay/tamper, visibility/range, invalid explicit Unit
+  target, periodic-cap atomic refusal, 64-target cap, reset,
+  and malformed typed fields. ground_area_fingerprint.txt
+  is byte-diffed by Linux/Windows replay-parity job.
+- tests/ground_area_editor_tests.cpp tests real
+  EditorSession F7 authoring, grouped transaction,
+  invalid rollback, target-policy conversion, undo/redo,
+  Unit loadout reference renaming and roundtrip.
+- CMake adds both Release-assert-enabled test executables,
+  ground_impact_showcase validation. GitHub workflows
+  enforce ground replay fingerprint, screenshot artifact
+  rts-ground-ability-editor-screenshot and
+  rts-delayed-area-impact-screenshot, and native bundled
+  map validation. Native --features and build verifier
+  require RTS_FEATURE_GROUND_AREA_ABILITIES and
+  RTS_FEATURE_DELAYED_AREA_IMPACTS.
+- Screenshots were visually inspected: F7 shows Ground
+  target, radius3.50, delay240, team Enemy and Effect
+  link; F9 shows a selected Ranger, orange circular
+  pending impact around an enemy Unit and reduced energy.
+  Actual PNG paths in that turn:
+  /mnt/data/rts_ground_latest/rts-ground-editor.png
+  /mnt/data/rts_ground_latest/rts-ground-impact.png
+  Re-verify sandbox paths before linking in later turns.
+
+### Next priorities
+
+1. Real authored projectile/actor runtime with trajectory
+   and hit reaction visuals, retaining the replayable
+   fixed-tick area-impact target selection and cast inputs.
+2. Splash falloff, cone/line shapes, auto-cast and AI
+   ability planners, area selection alliance rules.
+3. Optimize area broadphase via UnitSpatialIndex::nearby,
+   taking care of spatial index freshness before the first
+   update tick and after trigger-spawned Units.
+4. Advanced editable node graph, more flexible tech and
+   upgrades, actors/animations/events, asset pipeline and
+   creator function libraries.
+5. Always maintain Windows/Linux native parity, one Draft
+   PR, original IP content, and updated docs/handoff.

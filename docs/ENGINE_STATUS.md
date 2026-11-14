@@ -362,3 +362,21 @@ searches, AoE projectile actors, tech requirements, complete
 data schema visualization, editor-defined function libraries,
 interruptible/channelled Abilities, networking, real multiplayer,
 general asset import and Galaxy-language compatibility.
+
+
+## Ground area impact implementation
+
+Implemented in the native engine and creator: typed ground-target
+Ability, circular AoE radius, Enemy/Ally/Any filters, 0..300 tick
+delay, fixed-step impact-time victim detection, 64-target cap,
+128 pending-impact cap, atomic multi-victim Effect admission,
+authored Effect/Behavior Sequence compatibility, source-0 replay
+commands, pending-impact digest hashing, F7 area editor and
+undoable targeting conversion, F9 area cursor telegraph and
+orange delayed ring, F6 pending impact monitor. A playable
+original map and Windows/Linux CI coverage are included.
+
+Still missing: true projectile actor trajectories, collision,
+hit reactions, visual/sound impact events, splash falloff, line/
+cone-shaped areas, network synchronization, more advanced AI
+Ability casting and data-driven actor/weapon construction.

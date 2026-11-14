@@ -278,3 +278,20 @@ than nested tree, area/terrain targeting, projectile actors,
 native editor-owned full GUI, upgrades/tech trees, actual asset
 pipeline and complete script libraries. This is a foundation, not
 a StarCraft/Galaxy data editor or proprietary content port.
+
+
+## Ground targeting / AoE progress, November 14
+
+Implemented as generic original engine capabilities: Ground
+targeting, Enemy/Ally/Any filters, circle radius, terrain/vision
+gating, authored Impact delay, moving-target dodge at arrival,
+bounded 64-target and 128-pending scheduler, atomic area-wide
+effect admission, mixed Damage/Heal/Behavior graph operations,
+F7 grouped creator editing, F9 ground rings and F6 impact watch.
+Windows/Linux binaries use one shared implementation.
+
+Further work: actor/projectile models and paths, impact VFX,
+splash falloff, cone/line shapes, aura propagation, custom tech
+trees, graph wiring, general scripting libraries, asset import,
+terrain deformation and multiplayer. This is not a proprietary
+game content port or comprehensive proprietary editor clone.

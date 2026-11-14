@@ -121,3 +121,24 @@ aura/area target queries, projectile execution state, deterministic
 local effects/visual cues, generic tech/upgrades and modular data
 schemas. A tree flow preview is not yet an editable node-wiring
 graph or Galaxy source/compiler parity. Keep the project original.
+
+
+## Ground ability design review and next performance focus
+
+Ground AoE uses existing replayable CastAbility input, typed
+catalog data and Effect graph rather than a second order system.
+The delayed queue stores immutable cast center, radius, owner,
+team, Effect/Ability IDs and arrival tick. Impact-time Unit
+position sampling supports dodging. A maximum of 64 Units are
+hit per Area, and 128 pending areas are supported. A single
+admission check reserves all required periodic and status
+capacity before any victim changes, preserving nonpartial casts.
+
+Current targeting scans the bounded <=4000 Unit vector and
+sorts hit Unit IDs. A future spatial-broadphase optimization
+can use UnitSpatialIndex::nearby, but beware reset currently
+rebuilds the navigation index, not the spatial index; an
+immediate tick-1 cast or new trigger-spawned Unit must still
+be targetable. The orange in-world marker is a deterministic
+impact telegraph, not physical projectile collision or a
+render-side authority for gameplay.

@@ -321,3 +321,26 @@ Start with projects/behavior_workshop_showcase.rtsproject.json for
 original Brace Stance, Tether Bolt and Break Tether mechanics.
 Windows/Linux builds, tests, map validation, replay fingerprints and
 native OpenGL screenshot checks share the same source.
+
+
+## Native ground-targeted area abilities and delayed impacts
+
+The creator now supports Ability.target = Ground alongside Self/Ally/Enemy/Any.
+F7 creates Ground Ability presets and edits radius, Enemy/Ally/Any filter,
+and impact delay as one undoable transaction. F9 uses the existing Ability
+command card and left-click terrain aiming, with a teal/red range/radius
+preview and orange persistent ring for delayed impacts. These are real
+fixed-tick simulator events, not fabricated graphics. The original
+projects/ground_impact_showcase.rtsproject.json illustrates Ember Arc
+(delayed Damage+ApplyBehavior Sequence) and Repair Circle (allied Heal).
+
+Ground centers must be visible and within the authored cast range.
+Victims are determined at impact from current living Unit positions,
+so moving out of the zone dodges a delayed cast. Affects are limited
+to 64 Units per impact; at most 128 impacts may be scheduled.
+Area effect/Behavior scheduler admission is checked across all
+victims before mutation. A delayed impact that hits no targets or
+overruns capacity fizzles; resources were spent at cast time.
+Native Windows/Linux CTests, replay parity and renderer screenshots
+validate this shared code. A delayed area telegraph is NOT yet a
+physical projectile mesh, collision model or actor animation.

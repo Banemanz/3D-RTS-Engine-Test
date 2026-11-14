@@ -164,3 +164,23 @@ custom user docking/resizing remains respected. Browser creation
 controls no longer extend beyond the narrow browser panel.
 The F6 trigger monitor includes a read-only status watch listing
 actual live game state (Unit ID, status, stacks, seconds remaining).
+
+
+## Ground Ability inspector, input and read-only rendering
+
+EditorSession::createCatalogObject("Ability","Ground") supplies an
+original valid preset. EditorSession::setAbilityTargetPolicy changes
+between Ground and Self/Ally/Enemy/Any, adding valid nonzero range
+and area defaults atomically. EditorSession::setGroundAbilitySettings
+clones, validates, and saves grouped radius/team/delay properties
+as one undo record; rejected edits leave the project unchanged.
+CreatorWorkbench draws a typed F7 Ground inspector and team menu.
+
+AppState::CastAbility mouse input differentiates Ground from Unit
+targeting. Ground selection raycasts terrain, validates visibility
+and range through RTSSkirmish, and enqueues a standard replayable
+CastAbility command with the world point. The native shared
+OpenGL renderer reuses its existing ringShader/VAO for cursor
+radius (valid/invalid colors) and delayed impact rings. The
+F6 diagnostics monitor displays pending impact count, Ability,
+center, radius and remaining seconds using read-only watch data.

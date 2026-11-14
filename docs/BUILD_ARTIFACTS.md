@@ -133,3 +133,16 @@ editing, nested visual Effect flow and an F9 selected caster after
 a genuine fixed-tick self-status cast under Linux software OpenGL.
 These screenshots are not the executable binaries. All code and
 asset formats remain shared across Windows and Linux.
+
+
+## Ground area binary/package contract
+
+Both native Release archives must contain
+projects/ground_impact_showcase.rtsproject.json and run the
+bundled RTSProjectTool --validate on it. Native --features must
+report RTS_FEATURE_GROUND_AREA_ABILITIES=1 and
+RTS_FEATURE_DELAYED_AREA_IMPACTS=1 on Windows and Linux.
+The project verifier requires the map and these true binary
+features. Debug CI generates Windows/Linux ground replay
+fingerprints, plus authentic F7 and F9 Mesa OpenGL screenshots.
+Screenshots are not Windows executable download artifacts.

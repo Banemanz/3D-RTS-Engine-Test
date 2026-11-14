@@ -95,3 +95,21 @@ Data validation also rejects corrupt/missing Behavior references,
 bounded-overflow fields and invalid status dependencies.
 The replay format remains v2; no UI cursor/page or render state is
 serialized as a gameplay command.
+
+
+## Ground CastAbility replay semantics
+
+The existing CastAbility command uses its point XZ field for
+Ground targets and targetId=-1; no new command enum or tape
+version. Ground target validation happens at the command tick.
+Delayed AreaImpact instances store a stable center, caster owner,
+area filter, Ability and Effect IDs and absolute impact tick.
+The impact examines living Unit positions at arrival, independent
+of the game's frame rate or mouse cursor after casting.
+
+Pending impacts are included in the state digest while present,
+and their sorted application deterministically updates health,
+status and periodic-effect queues. Windows and Linux CI upload
+and byte-compare ground_area_fingerprint.txt. CTests verify
+successful and rejected commands, JSON tape roundtrip,
+and rejection of tampered area center coordinates.

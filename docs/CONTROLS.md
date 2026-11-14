@@ -172,3 +172,23 @@ cancel. View the selected Unit's effective attack/armor plus
 status count and remaining energy in the native HUD.
 F6 trigger monitor shows real active status instances when
 simulation is running; it does not replace F7 authoring.
+
+
+## Ground-targeted Abilities in F7 and F9
+
+F7: New catalog object > Ability | Ground area impact.
+Select a Ground Ability and edit Area radius, Affected team,
+and Impact delay (ticks) as one Apply ground settings action.
+Changing target policy from Self to Ground sets a valid
+nonzero range and default Ground parameters automatically.
+Assign the Ability in a Unit loadout and save the project.
+
+F9: select exactly one friendly caster and activate its Ground
+skill with F/J/K or the command card. Hover over visible terrain:
+teal ring = valid center/range; red ring = invalid. Left-click
+submits a Ground CastAbility command; right-click cancels.
+The orange radius circle remains while its authored impact
+delay counts down. Units entering/leaving the area before
+impact are affected/avoided accordingly. TAB pages to more
+skills. Try Ember Arc (F) or allied Repair Circle (J)
+in ground_impact_showcase.rtsproject.json.

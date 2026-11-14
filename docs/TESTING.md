@@ -285,3 +285,27 @@ CastAbility command followed by fixed simulation updates). The
 screenshot-only --smoke-cast-self-ability flag enqueues the same
 valid recorded command as a human input; it does NOT inject mock
 status state. Normal gameplay/editor behavior is unchanged.
+
+
+## Ground AoE/impact regression and release parity
+
+RTSGroundAreaTests covers Ground catalog validation, range/vision,
+invalid Unit-target rejection, enemy and allied team filters,
+fixed-tick delayed impacts, moving out of the zone before arrival,
+resource/cooldown accounting, replay tamper, pending queue reset,
+atomic periodic saturation refusal, the 64-Unit cap, and malformed
+radius/team/delay fields. It writes ground_area_fingerprint.txt.
+RTSGroundAreaEditorTests exercises F7 Ground preset, grouped
+radius/team/delay editing, invalid transactional rollback,
+Self/Ally/Ground target conversion, undo/redo, typed Unit
+references/rename guards and project JSON roundtrip.
+
+Both Debug and Release CTests run on Windows and Linux with
+assertions enabled. CI uploads the new fingerprint from both
+systems, byte-compares it, and uses real Mesa OpenGL to capture
+rts-ground-ability-editor-screenshot and
+rts-delayed-area-impact-screenshot. The screenshot-only
+--smoke-cast-ground-ability flag enqueues a genuine game command.
+The Release workflow packages and validates the original
+ground_impact_showcase map on both OSes, checking actual
+native executable feature flags rather than metadata only.

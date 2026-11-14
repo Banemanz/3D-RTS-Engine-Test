@@ -238,3 +238,18 @@ Effect references; deleting one with inbound references is
 rejected. Status fields are not arbitrary script injection and
 do not provide custom Galaxy source compatibility. Use the
 Behavior Workshop example to test a caster-driven Effect chain.
+
+
+## Ground Ability and trigger action distinction
+
+F6 ApplyEffect still means execute a chosen compiled Effect
+on the trigger subject Unit. Ground-targeted cast and area
+team/radius/impact scheduling are Ability features, not
+implicitly new F6 Event/Condition/Action node types.
+The same authored Damage/Heal/Behavior Effect graph may
+be used by a Ground Ability or a subject-based trigger.
+
+The F6 live monitor now shows bounded pending Ground impacts:
+Ability ID, center XZ, radius and seconds until arrival,
+alongside existing variable/timed-effect/status diagnostics.
+The watch is read-only and never schedules gameplay itself.

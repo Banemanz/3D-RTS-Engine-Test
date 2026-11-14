@@ -541,3 +541,27 @@ The F6 live trigger monitor shows an optional Active status watch
 of bounded Unit IDs, status names, stacks and time remaining.
 Status graphs are validated when saving; unrecognized extra catalog
 fields still round-trip, but invalid typed links cannot be committed.
+
+
+## Ground Ability creation and editing (F7)
+
+Select New catalog object > Ability | Ground area impact or switch a
+selected Ability's Target policy to Ground. The conversion uses a
+validated, undoable project transaction, including valid cast range,
+radius and impact defaults even when converting a zero-range Self
+Ability. Configure area_radius (0.5..24 world units), area_team
+(Enemy, Ally or Any relative to caster), and impact_delay_ticks
+(an integer 0..300 ticks at 60Hz) in the grouped inspector. The
+Apply ground settings button commits all three as one undo snapshot.
+The existing cast_range (0.5..128), cooldown_ticks, energy_cost,
+mineral_cost and typed Effect reference continue to apply.
+
+Ground effects may contain any compiled Effect Sequence, including
+Damage/Heal and ApplyBehavior/RemoveBehavior. In the original
+ground_impact_showcase.rtsproject.json, Ember Arc damages and
+slows enemies inside a delayed radius, whereas Repair Circle
+heals allied Units immediately. F9: select one Ranger, press F
+for Ember Arc or J for Repair Circle, then left-click visible
+terrain inside range. Right-click cancels. Teal/green radius
+means valid aim; red indicates invalid; orange denotes a pending
+area impact. Unit positions are checked on impact, not cast.
