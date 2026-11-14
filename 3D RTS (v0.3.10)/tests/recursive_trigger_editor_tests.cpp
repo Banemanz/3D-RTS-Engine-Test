@@ -57,6 +57,12 @@ int main(){
     assert(!editor.setTriggerExpressionNode(
         p,nested,"value_expr",{"right","bogus"},RTSScriptExpression::number(7)));
     assert(editor.duplicateTriggerTreeNode(p,nested));
+    // Identical nodes have no distinguishable document order and should not
+    // waste an undo slot. Change the duplicate to make reordering observable.
+    assert(!editor.moveTriggerTreeNode(p,nested,1));
+    const TriggerTreePath twin{{"actions",1},{"then",1},{"actions",2}};
+    assert(editor.setTriggerExpressionNode(
+        p,twin,"value_expr",{"right"},RTSScriptExpression::number(9)));
     assert(editor.moveTriggerTreeNode(p,nested,1));
     assert(editor.removeTriggerTreeNode(p,nested));
     assert(editor.setTriggerTreeOperand(p,loop,true,"bonus"));
