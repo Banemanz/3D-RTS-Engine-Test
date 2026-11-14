@@ -20,8 +20,8 @@ static void usage() {
       << "RTSProjectTool --rename path old-id new-id\n"
       << "RTSProjectTool --remove path object-id\n"
       << "RTSProjectTool --place path kind catalog-id x z owner\n"
-      << "RTSProjectTool --placements path\\n"
-      << "RTSProjectTool --verify-replay path.rtsreplay.json\\n";
+      << "RTSProjectTool --placements path\n"
+      << "RTSProjectTool --verify-replay path.rtsreplay.json\n";
 }
 int main(int argc,char** argv) {
     try {
@@ -33,7 +33,7 @@ int main(int argc,char** argv) {
             std::string diagnostic;
             if(!verifyRTSReplay(tape,&diagnostic))
                 throw std::runtime_error("Replay verification FAILED: "+diagnostic);
-            std::cout<<diagnostic<<"\\n";
+            std::cout<<diagnostic<<"\n";
             return 0;
         }
         if(action=="--create") {
