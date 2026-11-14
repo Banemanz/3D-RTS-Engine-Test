@@ -73,3 +73,7 @@ detect stale/copied binaries. The release packaging script now does this on
 both operating systems and rejects missing fog, HUD, creator GUI or editor
 workspaces. Bundle format version 2 also includes a native feature manifest.
 This does not substitute for a manual Windows OpenGL graphics-driver test.
+
+
+## Native gameplay menu in shipped builds
+Open the game and press **Esc** outside an active order to reach the engine-native pause menu. It is present in the Windows and Linux executable without any additional UI dependencies; `--features` reports `RTS_FEATURE_NATIVE_PAUSE_MENU=1`. The creator/editor still includes the pinned ImGui backend until an in-house dockable replacement is complete. Documentation for migration: `docs/CREATOR_ARCHITECTURE.md`.

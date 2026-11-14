@@ -206,3 +206,9 @@ on its host platform and compares flags/commit to the artifact identity.
 Editor GUIs, fog, and HUD must all be compiled into both release outputs.
 The Windows GUI still requires real local GPU/driver testing beyond headless
 native verification.
+
+
+## November 14: native UI substrate and live data relationships
+The custom RTS HUD now has a native pause-menu companion with renderer-independent hit testing and GL presentation. Esc pauses the match and suppresses camera/world commands, with Resume/Restart/Editor/Exit actions. The executable advertises `RTS_FEATURE_NATIVE_PAUSE_MENU=1` on both targets.
+
+Editor F7 now follows stable IDs for inherited links and production objects, shows reverse references and field provenance, and writes validated, undoable bool/numeric/string values. The editor *still uses Dear ImGui*, intentionally retained until native editor widgets reach feature parity. The full migration and missing gameplay systems are tracked in `docs/CREATOR_ARCHITECTURE.md`.

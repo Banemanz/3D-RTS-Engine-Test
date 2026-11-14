@@ -105,3 +105,7 @@ the most recent queued production on the selected structure, refunding its
 reserved minerals and supply. Right-click sets its rally point.
 When no producer is selected, the older B build / T marine / C worker shortcuts
 continue to work.
+
+
+## Engine-native pause menu
+During a match, press **Esc** with no active command to pause. Esc again resumes. Click **Resume Match**, **Restart Match**, **Open World Editor**, or **Exit Game**. Simulation, tactical orders, and camera input are suspended while paused. An active move/build/attack command is cancelled by Esc first. In editor mode, Esc returns to play without closing the process.

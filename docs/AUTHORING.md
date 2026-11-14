@@ -352,3 +352,9 @@ It reports `RTS_BUILD_COMMIT` and `RTS_FEATURE_*` entries, including
 `build-info.json`. The build workflow now executes the **bundled native
 executable** and refuses to upload when commit or required features do not
 match; simply producing a successful compiler exit no longer suffices.
+
+
+## Scene/catalog links and typed fields
+In **F7 Data Editor**, the inspector follows Parent, Unit Actor, Actor Model and trainable-unit references by clicking their links. The incoming-reference section lists recognized references to the selected ID. Inherited fields are shown separately from local overrides. Boolean, number and string fields have direct controls; each accepted change is validated and recorded as one undo transaction. Complex JSON types still use the advanced text editor. In **F8 Scene Editor**, the selected placement's linked catalog ID opens the corresponding F7 entry. Raw extension fields are round-tripped, not silently dropped.
+
+During play, **Esc** opens the engine's custom pause menu. No additional UI dependency is needed for its layout or rendering. The editor itself still uses ImGui pending the native replacement described in `docs/CREATOR_ARCHITECTURE.md`.

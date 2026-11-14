@@ -148,3 +148,7 @@ formation destinations with a map-configurable footprint spacing multiplier.
 This covers initial formation *destination slotting*, not WC3/SC2 squad
 movement fidelity, adaptive rows, formation persistence or tactical
 multi-unit flow fields.
+
+
+## November 14: catalog-object explorer and native UI foundation
+Current editor object navigation supports Parent, Unit/Actor/Model links, production references and incoming uses, plus typed primitive property editing with validation/undo. Engine-owned pause-menu geometry and GL UI have been implemented separately from the existing ImGui workbench. This is **not** a complete Galaxy Editor data module, full editor UI or a gameplay abilities/effects system. Track planned data/actor/ability/trigger/terrain/UI modules in `docs/CREATOR_ARCHITECTURE.md`.
