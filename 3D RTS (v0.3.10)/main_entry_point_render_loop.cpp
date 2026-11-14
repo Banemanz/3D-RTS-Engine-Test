@@ -785,7 +785,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_DATA_EDITOR=1\n"
                  <<"RTS_FEATURE_TRIGGER_EDITOR=1\n"
                  <<"RTS_FEATURE_VISUAL_ECA_EDITOR=1\n"
-                 <<"RTS_FEATURE_TRIGGER_TRACE_MONITOR=1\n";
+                 <<"RTS_FEATURE_TRIGGER_TRACE_MONITOR=1\n"
+                 <<"RTS_FEATURE_DYNAMIC_NAV_REPLAN=1\n"
+                 <<"RTS_FEATURE_STABLE_SIM_ORDER=1\n";
         return 0;
     }
     RTSCrashReporter::install();

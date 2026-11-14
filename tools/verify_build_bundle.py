@@ -36,6 +36,7 @@ def main() -> int:
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
         "docs/TRIGGER_EDITOR.md",
+        "docs/RTS_ENGINE_AUDIT.md",
         "docs/SC2_FEATURE_MATRIX.md",
         "licenses/PICOJSON_LICENSE",
         "licenses/IMGUI_LICENSE",
@@ -96,6 +97,8 @@ def main() -> int:
         "RTS_FEATURE_TRIGGER_EDITOR",
         "RTS_FEATURE_VISUAL_ECA_EDITOR",
         "RTS_FEATURE_TRIGGER_TRACE_MONITOR",
+        "RTS_FEATURE_DYNAMIC_NAV_REPLAN",
+        "RTS_FEATURE_STABLE_SIM_ORDER",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:
