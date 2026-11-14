@@ -28,6 +28,7 @@ jobs:
             build/script_expression_fingerprint.txt
             build/script_flow_fingerprint.txt
             build/timed_effect_fingerprint.txt
+            build/ability_cast_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -151,6 +152,16 @@ jobs:
           name: rts-timed-effects-screenshot
           path: rts-timed-effects.png
           if-no-files-found: error
+      - name: Smoke test playable authored Unit Ability command HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ability_workshop_showcase.rtsproject.json --smoke-select-ability-caster --smoke-frames 90 --screenshot rts-abilities.ppm
+      - name: Convert Unit Ability HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-abilities.ppm rts-abilities.png
+      - name: Upload real authored Ability HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ability-command-hud-screenshot
+          path: rts-abilities.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor
@@ -184,6 +195,7 @@ jobs:
             build/script_expression_fingerprint.txt
             build/script_flow_fingerprint.txt
             build/timed_effect_fingerprint.txt
+            build/ability_cast_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -208,3 +220,4 @@ jobs:
           diff -u fingerprints/linux/script_expression_fingerprint.txt fingerprints/windows/script_expression_fingerprint.txt
           diff -u fingerprints/linux/script_flow_fingerprint.txt fingerprints/windows/script_flow_fingerprint.txt
           diff -u fingerprints/linux/timed_effect_fingerprint.txt fingerprints/windows/timed_effect_fingerprint.txt
+          diff -u fingerprints/linux/ability_cast_fingerprint.txt fingerprints/windows/ability_cast_fingerprint.txt

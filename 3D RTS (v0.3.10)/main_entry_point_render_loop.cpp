@@ -872,7 +872,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_SCRIPT_EXPRESSIONS=1\n"
                  <<"RTS_FEATURE_SCRIPT_CONTROL_FLOW=1\n"
                  <<"RTS_FEATURE_RECURSIVE_ECA_UI=1\n"
-                 <<"RTS_FEATURE_TIMED_EFFECTS=1\n";
+                 <<"RTS_FEATURE_TIMED_EFFECTS=1\n"
+                 <<"RTS_FEATURE_UNIT_ABILITIES=1\n"
+                 <<"RTS_FEATURE_ABILITY_EDITOR=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -885,6 +887,7 @@ int main(int argc, char** argv) {
     bool startDataEditor=false;
     bool selectArmyForSmoke=false;
     bool selectProducerForSmoke=false;
+    bool selectAbilityCasterSmoke=false;
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
@@ -903,6 +906,7 @@ int main(int argc, char** argv) {
         else if(arg == "--data-editor")startDataEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
+        else if(arg == "--smoke-select-ability-caster")selectAbilityCasterSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
@@ -937,6 +941,21 @@ int main(int argc, char** argv) {
             app.triggerTraceVisible=true;
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
+        if(selectAbilityCasterSmoke && smokeFrames>0){
+            bool found=false;
+            for(auto& unit:app.game.units)
+                if(unit.isAlive() && unit.ownerId==0 &&
+                   !unit.catalogId.empty() &&
+                   !unitAbilityIds(app.project.catalog,unit.catalogId).empty()){
+                    for(auto& other:app.game.units)other.isSelected=false;
+                    unit.isSelected=true;
+                    app.camera.focalPoint=unit.position;
+                    app.camera.targetFocalPoint=unit.position;
+                    found=true;
+                    break;
+                }
+            if(!found)throw std::invalid_argument("No playable ability caster in map");
+        }
         if(selectProducerForSmoke && smokeFrames>0) {
             for(auto& unit:app.game.units)if(unit.isAlive() && unit.ownerId==0 &&
                 unit.isStructure && app.game.trainableUnits(unit.id).size()>3) {
