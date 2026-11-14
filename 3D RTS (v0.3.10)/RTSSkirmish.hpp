@@ -185,6 +185,7 @@ private:
     void updateProduction(float dt);
     bool findProductionSpawn(const Unit& producer,const UnitData& type,Vec3& out) const;
     void updateEnemy(float dt);
+    void planAIOrders();
     bool canQueueAt(int buildingId,const std::string& unitId) const;
     bool queueAt(int buildingId,const std::string& unitId);
     int countOwnerUnits(int owner) const;

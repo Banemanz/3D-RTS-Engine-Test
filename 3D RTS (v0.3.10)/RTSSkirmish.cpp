@@ -684,16 +684,16 @@ void RTSSkirmish::updateEnemy(float dt) {
             spawn(enemy,spawnPos,1,enemy.resourceName+" "+
                   std::to_string(nextId_),false,false,enemyId_);
     }
-    // All new enemy decisions enter the very same tick-indexed command
-    // queue as player input. Legacy tapes alone use direct historical AI.
-    if(aiInputMode_==AIInputMode::ReplayRecorded)return;
-    if(aiInputMode_==AIInputMode::LegacyDirect){
-        // Keep the exact historical policy for version-1 recordings.
+    // Version-1 playback must retain its historical post-unit-update
+    // direct AI order. New live planning happens *before* unit movement,
+    // and v2 replays consume only commands from their recorded tape.
+    if(aiInputMode_==AIInputMode::LegacyDirect)
         for(auto& u:units)if(u.ownerId==1 && u.isAlive() &&
             !u.isStructure && u.state==UnitState::IDLE)
             u.attackTarget(friendlyBaseId_);
-        return;
-    }
+}
+void RTSSkirmish::planAIOrders(){
+    if(aiInputMode_!=AIInputMode::Live)return;
     const auto aiEnabled=project_.metadata.find("enemy_ai_enabled");
     if(aiEnabled!=project_.metadata.end() && aiEnabled->second.is<bool>() &&
        !aiEnabled->second.get<bool>())return;
@@ -702,8 +702,8 @@ void RTSSkirmish::updateEnemy(float dt) {
     const auto decisions=planRTSEnemyAttackOrders(
         units,1,enemyBaseId_,friendlyBaseId_,tick_+1,policy);
     for(const auto& decision:decisions)
-        // On queue saturation, a unit retries next tick. Never fall back
-        // to a direct, unrecorded mutation when capacity is exhausted.
+        // On queue saturation, a unit retries next tick; do not bypass
+        // the replay log by modifying the unit directly.
         (void)queueCommand(decision);
 }
 void RTSSkirmish::update(float dt) {
@@ -728,6 +728,9 @@ void RTSSkirmish::update(float dt) {
             else replayValid_=false; // bounded tape, never silently truncated
         }
     }
+    // Plan from the pre-movement snapshot: a nearby player unit may trigger
+    // automatic tactical acquisition during Unit::update later this tick.
+    planAIOrders();
     spatial_.rebuild(units);
     // Two-phase combat: every actor gets its chance to fire before damage
     // is applied, making mutually lethal hits independent of update order.
