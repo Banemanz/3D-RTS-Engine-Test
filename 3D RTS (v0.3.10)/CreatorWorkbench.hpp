@@ -154,6 +154,9 @@ void browser(App& app){
                 {"Unit","Combat","Unit | Combat"},
                 {"Unit","Worker","Unit | Worker"},
                 {"Unit","Structure","Unit | Structure"},
+                {"Behavior","Fortify","Behavior | Armor shield"},
+                {"Behavior","Sharpen","Behavior | Attack focus"},
+                {"Behavior","Hinder","Behavior | Movement slow"},
                 {"Ability","Self","Ability | Self"},
                 {"Ability","Ally","Ability | Ally target"},
                 {"Ability","Enemy","Ability | Enemy target"},
@@ -164,6 +167,8 @@ void browser(App& app){
                 {"Effect","Heal","Effect | Heal"},
                 {"Effect","PeriodicDamage","Effect | Periodic Damage"},
                 {"Effect","PeriodicHeal","Effect | Periodic Heal"},
+                {"Effect","ApplyBehavior","Effect | Apply Behavior"},
+                {"Effect","RemoveBehavior","Effect | Remove Behavior"},
                 {"Effect","Sequence","Effect | Sequence"}
             };
             for(const auto& item:presets)
@@ -311,6 +316,36 @@ void inspector(App& app){
                    navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
                     ImGui::End();return;
                 }
+                if(entry->type=="Behavior"){
+                    ImGui::SeparatorText("Status behavior | Live modifiers");
+                    static BehaviorDefinition draft;
+                    static std::string draftObject;
+                    if(draftObject!=entry->id){
+                        draft=compileBehavior(project.catalog,entry->id);
+                        draftObject=entry->id;
+                    }
+                    int duration=int(draft.durationTicks);
+                    ImGui::InputInt("Duration (ticks)",&duration,15,60);
+                    draft.durationTicks=static_cast<std::uint32_t>(std::max(0,duration));
+                    ImGui::InputInt("Max stacks",&draft.maxStacks);
+                    ImGui::InputFloat("Armor per stack",&draft.armorBonus,.5f,1.f,"%.2f");
+                    ImGui::InputFloat("Damage per stack",&draft.damageBonus,1.f,5.f,"%.2f");
+                    ImGui::InputFloat("Speed multiplier",&draft.speedMultiplier,.05f,.1f,"%.2f");
+                    ImGui::Checkbox("Refresh duration on reapply",&draft.refreshDuration);
+                    ImGui::Checkbox("Can be dispelled",&draft.dispellable);
+                    if(ImGui::Button("Apply behavior modifiers")){
+                        if(ed.setBehaviorDefinition(project,draft)){
+                            refresh(app,true);
+                            draftObject.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Revert pending changes")){
+                        draft=compileBehavior(project.catalog,entry->id);
+                    }
+                    ImGui::TextDisabled("Duration 1..36000 | Stacks 1..8 | Modifier cap is validated");
+                }
                 if(entry->type=="Ability"){
                     const auto effectRef=resolved.find("effect");
                     if(effectRef!=resolved.end() &&
@@ -374,7 +409,8 @@ void inspector(App& app){
                         kindIt->second.template get<std::string>():"(unset)";
                     if(ImGui::BeginCombo("Effect operation",currentKind.c_str())){
                         for(const char* kind:{"Damage","Heal","PeriodicDamage",
-                                             "PeriodicHeal","Sequence"}){
+                                             "PeriodicHeal","ApplyBehavior",
+                                             "RemoveBehavior","Sequence"}){
                             if(ImGui::Selectable(kind,kind==currentKind) &&
                                kind!=currentKind){
                                 refresh(app,ed.convertEffectKind(project,kind));
@@ -382,6 +418,29 @@ void inspector(App& app){
                             }
                         }
                         ImGui::EndCombo();
+                    }
+                    if(currentKind=="ApplyBehavior" || currentKind=="RemoveBehavior"){
+                        const auto linked=resolved.find("behavior");
+                        const std::string selected=linked!=resolved.end() &&
+                            linked->second.template is<std::string>()?
+                            linked->second.template get<std::string>():"(unlinked)";
+                        if(navigateCatalog(app,"Status Behavior",selected)){
+                            ImGui::End();return;
+                        }
+                        if(ImGui::BeginCombo("Status reference",selected.c_str())){
+                            for(const auto& candidate:project.catalog.entries())
+                                if(candidate.type=="Behavior" &&
+                                   ImGui::Selectable(candidate.id.c_str(),
+                                                      candidate.id==selected)){
+                                    refresh(app,ed.setCatalogField(project,"behavior",
+                                        picojson::value(candidate.id)));
+                                    ImGui::EndCombo();ImGui::End();return;
+                                }
+                            ImGui::EndCombo();
+                        }
+                        ImGui::TextWrapped("%s reuses a typed Behavior; "
+                                          "apply stacks or dispel according to its rules.",
+                                          currentKind.c_str());
                     }
                     if(currentKind=="PeriodicDamage" || currentKind=="PeriodicHeal"){
                         ImGui::TextDisabled("Ticks at 60 Hz | interval 1..600, duration 1..3600");

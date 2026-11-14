@@ -95,6 +95,8 @@ public:
     bool createCatalogObject(RTSProject& project,const std::string& type,
                              const std::string& preset);
     bool convertEffectKind(RTSProject& project,const std::string& kind);
+    // Commit a grouped Behavior inspector as one validated undo record.
+    bool setBehaviorDefinition(RTSProject& project,const BehaviorDefinition& values);
     bool duplicateCatalogObject(RTSProject& project);
     bool beginCatalogRename(const RTSProject& project);
     bool finishCatalogRename(RTSProject& project);

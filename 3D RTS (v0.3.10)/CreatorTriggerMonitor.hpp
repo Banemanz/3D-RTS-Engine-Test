@@ -32,6 +32,8 @@ void draw(App& app){
     ImGui::TextWrapped("Run F9 to play, then F6 to inspect. Editing map data restarts the preview.");
     ImGui::Text("Active timed gameplay effects: %zu",
                 app.game.activePeriodicEffectCount());
+    ImGui::Text("Active status behaviors: %zu",
+                app.game.activeBehaviorCount());
     static ImGuiTextFilter search;
     search.Draw("Search rules / event details");
     // The monitor reads the headless interpreter state. It never changes it:

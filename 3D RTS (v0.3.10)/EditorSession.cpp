@@ -453,6 +453,22 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     entry.fields["model"]=picojson::value(object.id);
                     break;
                 }
+        }else if(type=="Behavior"){
+            if(preset!="Fortify" && preset!="Sharpen" && preset!="Hinder")
+                return false;
+            entry.id="new_behavior";
+            entry.fields={
+                {"name",picojson::value(preset=="Fortify"?"Protective Field":
+                                         preset=="Sharpen"?"Battle Focus":"Tether Field")},
+                {"duration_ticks",picojson::value(180.0)},
+                {"max_stacks",picojson::value(preset=="Fortify"?3.0:
+                                             preset=="Sharpen"?2.0:1.0)},
+                {"armor_bonus",picojson::value(preset=="Fortify"?2.0:0.0)},
+                {"damage_bonus",picojson::value(preset=="Sharpen"?4.0:0.0)},
+                {"speed_multiplier",picojson::value(preset=="Hinder"?0.65:1.0)},
+                {"refresh_duration",picojson::value(true)},
+                {"dispellable",picojson::value(true)}
+            };
         }else if(type=="Ability"){
             if(preset!="Self" && preset!="Ally" &&
                preset!="Enemy" && preset!="Any")return false;
@@ -474,11 +490,21 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                 throw std::invalid_argument("Create an Effect before an Ability");
         }else if(type=="Effect"){
             const bool periodic=preset=="PeriodicDamage" || preset=="PeriodicHeal";
+            const bool behavior=preset=="ApplyBehavior" ||
+                                preset=="RemoveBehavior";
             if(preset!="Damage" && preset!="Heal" && !periodic &&
-               preset!="Sequence")return false;
+               preset!="Sequence" && !behavior)return false;
             entry.id="new_effect";
             entry.fields["kind"]=picojson::value(preset);
-            if(preset=="Sequence"){
+            if(behavior){
+                for(const auto& object:project.catalog.entries())
+                    if(object.type=="Behavior"){
+                        entry.fields["behavior"]=picojson::value(object.id);
+                        break;
+                    }
+                if(!entry.fields.count("behavior"))
+                    throw std::invalid_argument("Create a Behavior before a behavior Effect");
+            }else if(preset=="Sequence"){
                 for(const auto& object:project.catalog.entries())
                     if(object.type=="Effect"){
                         entry.fields["children"]=picojson::value(
@@ -519,11 +545,43 @@ bool EditorSession::createCatalogObject(RTSProject& project,
         return false;
     }
 }
+bool EditorSession::setBehaviorDefinition(
+    RTSProject& project,const BehaviorDefinition& values){
+    if(textEditing)return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Behavior" || values.id!=current->id)
+        return false;
+    try{
+        RTSProject candidate=project;
+        auto* behavior=candidate.catalog.find(values.id);
+        if(!behavior)throw std::invalid_argument("Missing edited Behavior");
+        auto& fields=behavior->fields;
+        fields["duration_ticks"]=picojson::value(double(values.durationTicks));
+        fields["max_stacks"]=picojson::value(double(values.maxStacks));
+        fields["armor_bonus"]=picojson::value(double(values.armorBonus));
+        fields["damage_bonus"]=picojson::value(double(values.damageBonus));
+        fields["speed_multiplier"]=picojson::value(double(values.speedMultiplier));
+        fields["refresh_duration"]=picojson::value(values.refreshDuration);
+        fields["dispellable"]=picojson::value(values.dispellable);
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        if(candidate.toJson().serialize()==project.toJson().serialize())return false;
+        remember(project);
+        project=std::move(candidate);
+        modified=true;
+        message="BEHAVIOR PARAMETERS SAVED: "+values.id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("BEHAVIOR REJECTED: ")+e.what();
+        return false;
+    }
+}
 bool EditorSession::convertEffectKind(RTSProject& project,
                                       const std::string& kind){
     if(textEditing)return false;
     if(kind!="Damage" && kind!="Heal" && kind!="PeriodicDamage" &&
-       kind!="PeriodicHeal" && kind!="Sequence")return false;
+       kind!="PeriodicHeal" && kind!="Sequence" &&
+       kind!="ApplyBehavior" && kind!="RemoveBehavior")return false;
     const auto* current=selected(project);
     if(!current || current->type!="Effect")return false;
     RTSProject candidate=project;
@@ -536,7 +594,21 @@ bool EditorSession::convertEffectKind(RTSProject& project,
         if(found!=resolved.end() && found->second.is<std::string>() &&
            found->second.get<std::string>()==kind)return false;
         fields["kind"]=picojson::value(kind);
-        if(kind=="Sequence"){
+        if(kind=="ApplyBehavior" || kind=="RemoveBehavior"){
+            const auto ref=resolved.find("behavior");
+            const std::string existing=ref!=resolved.end() &&
+                ref->second.is<std::string>()?ref->second.get<std::string>():"";
+            const auto* linked=candidate.catalog.find(existing);
+            if(!linked || linked->type!="Behavior"){
+                bool found=false;
+                for(const auto& object:candidate.catalog.entries())
+                    if(object.type=="Behavior"){
+                        fields["behavior"]=picojson::value(object.id);
+                        found=true;break;
+                    }
+                if(!found)throw std::invalid_argument("Create a Behavior first");
+            }
+        }else if(kind=="Sequence"){
             const auto refs=resolved.find("children");
             if(refs==resolved.end() || !refs->second.is<picojson::array>() ||
                refs->second.get<picojson::array>().empty()){

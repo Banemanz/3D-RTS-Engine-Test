@@ -6,6 +6,7 @@
 #include "RTSAIPlanner.hpp"
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <utility>

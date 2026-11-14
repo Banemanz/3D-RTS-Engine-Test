@@ -169,8 +169,12 @@ public:
                              .43f,.72f,.98f);
                     text(s.x+12,s.y+130,1.8f,
                          std::string(first->isWorker?"WORKER  ":"COMBAT  ")+
-                         "DMG "+std::to_string(int(first->data.damage))+
-                         "  ARM "+std::to_string(int(first->data.armor))+
+                         "DMG "+std::to_string(int(std::max(0.f,
+                             first->data.damage+first->behaviorDamageBonus)))+
+                         "  ARM "+std::to_string(int(std::max(0.f,
+                             first->data.armor+first->behaviorArmorBonus)))+
+                         (game.activeBehaviorCount()>0?
+                             "  STATUS "+std::to_string(game.activeBehaviorCount()):"")+
                          (first->holdPositionEnabled?"  HOLD":""),.61f,.8f,.87f);
                 }
             }
