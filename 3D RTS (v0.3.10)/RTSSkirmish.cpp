@@ -761,10 +761,14 @@ void RTSSkirmish::update(float dt) {
         if(Unit* target=find(hit.targetId))target->takeDamage(hit.rawDamage,hit.attackerName);
     // Unit catalog passive regeneration is evaluated in the authoritative
     // fixed step, independently of rendering and active navigation.
-    for(auto& unit:units)
-        if(unit.isAlive() && unit.data.hp_regen>0.f)
+    for(auto& unit:units)if(unit.isAlive()){
+        if(unit.data.hp_regen>0.f)
             unit.currentHp=std::min(unit.data.max_hp,
                                     unit.currentHp+unit.data.hp_regen*dt);
+        if(unit.data.energy_regen>0.f && unit.data.max_energy>0.f)
+            unit.currentEnergy=std::min(unit.data.max_energy,
+                                        unit.currentEnergy+unit.data.energy_regen*dt);
+    }
     updatePeriodicEffects();
     // Dead structures are no longer static navigation blockers. Rebuild just
     // once on each newly destroyed structure, not in every simulation tick.
@@ -940,7 +944,8 @@ bool RTSSkirmish::canPrepareAbility(int casterId,
     if(std::find(options.begin(),options.end(),abilityId)==options.end())return false;
     const auto ability=compileAbility(project_.catalog,abilityId);
     return abilityCooldownRemaining(casterId,abilityId)==0 &&
-           playerMinerals>=ability.mineralCost;
+           playerMinerals>=ability.mineralCost &&
+           caster->currentEnergy>=float(ability.energyCost);
 }
 bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
                                 int targetId)const{
@@ -965,6 +970,9 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,int targ
     const int appliedTarget=ability.target==AbilityTarget::Self?casterId:targetId;
     if(!applyEffectForTrigger(ability.effect,appliedTarget))return false;
     playerMinerals-=ability.mineralCost;
+    if(Unit* caster=find(casterId))
+        caster->currentEnergy=std::max(0.f,
+            caster->currentEnergy-float(ability.energyCost));
     abilityReadyAt_[{casterId,abilityId}]=tick_+ability.cooldownTicks;
     if(Unit* caster=find(casterId))
         caster->attackFlashTimer=std::max(caster->attackFlashTimer,.35f);
@@ -1129,6 +1137,7 @@ std::string RTSSkirmish::stateDigest()const{
         hash.signedNumber(u->id);hash.signedNumber(u->ownerId);
         hash.text(u->catalogId);hash.boolean(u->isStructure);
         hash.boolean(u->isWorker);hash.scalar(u->currentHp);
+        if(u->data.max_energy>0.f)hash.scalar(u->currentEnergy);
         hash.point(u->position);hash.scalar(u->facingYawRad);
         hash.signedNumber(static_cast<int>(u->state));
         hash.signedNumber(u->targetUnitId);

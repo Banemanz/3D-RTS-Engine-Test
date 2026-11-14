@@ -83,6 +83,8 @@ UnitData UnitData::fromTresString(const std::string& tresContent) {
         }
         else if (key == "max_hp")         data.max_hp          = numericFloat(val,key);
         else if (key == "hp_regen")       data.hp_regen        = numericFloat(val,key);
+        else if (key == "max_energy")     data.max_energy      = numericFloat(val,key);
+        else if (key == "energy_regen")   data.energy_regen    = numericFloat(val,key);
         else if (key == "armor")          data.armor           = numericFloat(val,key);
         else if (key == "damage")         data.damage          = numericFloat(val,key);
         else if (key == "attack_range")   data.attack_range    = numericFloat(val,key);
@@ -96,7 +98,10 @@ UnitData UnitData::fromTresString(const std::string& tresContent) {
         else if (key == "visual_scale")   data.visual_scale    = numericFloat(val,key);
     }
 
-    if(data.resourceName.empty() || data.max_hp<=0 || data.hp_regen<0 ||
+    if(data.resourceName.empty() || data.max_hp<=0 ||
+       data.max_energy<0 || data.max_energy>10000 ||
+       data.energy_regen<0 || data.energy_regen>1000 ||
+       data.hp_regen<0 ||
        data.hp_regen>1000 || data.armor<0 ||
        data.damage<0 || data.attack_range<0 || data.attack_cooldown<=0 ||
        data.aggro_range<0 || data.sight_range<0 || data.sight_range>128 ||
@@ -121,6 +126,8 @@ std::string UnitData::toTresString() const {
         << "faction = \"" << factionToString(faction) << "\"\n"
         << "max_hp = " << max_hp << "\n"
         << "hp_regen = " << hp_regen << "\n"
+        << "max_energy = " << max_energy << "\n"
+        << "energy_regen = " << energy_regen << "\n"
         << "armor = " << armor << "\n"
         << "damage = " << damage << "\n"
         << "attack_range = " << attack_range << "\n"

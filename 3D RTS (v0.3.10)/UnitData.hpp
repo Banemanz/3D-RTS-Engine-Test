@@ -18,6 +18,8 @@ public:
     Faction faction          = Faction::Humanity;
     float max_hp             = 45.0f;
     float hp_regen           = 0.0f; // hp/second; optional Unit catalog stat
+    float max_energy         = 0.0f;
+    float energy_regen       = 0.0f; // energy/second; fixed simulation tick
     float armor              = 0.0f;
     float damage             = 6.0f;
     float attack_range       = 6.0f;

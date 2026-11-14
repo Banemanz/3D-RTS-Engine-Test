@@ -72,6 +72,7 @@ public:
     std::string actorMesh = "procedural.unit";
 
     float currentHp = 45.0f;
+    float currentEnergy = 0.0f;
     bool isSelected = false;
 
     UnitState state = UnitState::IDLE;

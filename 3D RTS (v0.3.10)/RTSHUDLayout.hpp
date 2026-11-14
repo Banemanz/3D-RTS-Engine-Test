@@ -167,6 +167,9 @@ public:
                 HUDButton& button=result[static_cast<std::size_t>(i+3)];
                 button.command=i==0?HUDCommand::CastAbility0:
                                i==1?HUDCommand::CastAbility1:HUDCommand::CastAbility2;
+                const auto ready=game.abilityCooldownRemaining(casterId,id);
+                if(ready>0)
+                    upper=upper.substr(0,8)+" "+std::to_string((ready+59)/60)+"S";
                 button.title=upper;
                 button.hotkey=i==0?"F":i==1?"J":"K";
                 button.enabled=live && game.canPrepareAbility(casterId,id);

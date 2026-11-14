@@ -65,6 +65,7 @@ struct AbilityDefinition {
     std::uint32_t cooldownTicks=60;
     float castRange=0.f;
     int mineralCost=0;
+    int energyCost=0;
 };
 AbilityDefinition compileAbility(const DataCatalog& catalog,
                                  const std::string& id);

@@ -259,13 +259,16 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
     const double cooldown=numeric(fields,"cooldown_ticks",60.);
     const double range=numeric(fields,"cast_range",ability.target==AbilityTarget::Self?0.:8.);
     const double minerals=numeric(fields,"mineral_cost",0.);
+    const double energy=numeric(fields,"energy_cost",0.);
     if(std::floor(cooldown)!=cooldown || cooldown<0 || cooldown>36000 ||
        range<0 || range>128 ||
-       std::floor(minerals)!=minerals || minerals<0 || minerals>100000)
+       std::floor(minerals)!=minerals || minerals<0 || minerals>100000 ||
+       std::floor(energy)!=energy || energy<0 || energy>10000)
         throw std::invalid_argument("Invalid Ability cost/range/cooldown: "+id);
     ability.cooldownTicks=static_cast<std::uint32_t>(cooldown);
     ability.castRange=static_cast<float>(range);
     ability.mineralCost=static_cast<int>(minerals);
+    ability.energyCost=static_cast<int>(energy);
     return ability;
 }
 std::vector<std::string> unitAbilityIds(const DataCatalog& catalog,
@@ -469,6 +472,8 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     else throw std::invalid_argument("Unsupported faction: "+faction);
     d.max_hp=float(numeric(f,"max_hp",d.max_hp));
     d.hp_regen=float(numeric(f,"hp_regen",d.hp_regen));
+    d.max_energy=float(numeric(f,"max_energy",d.max_energy));
+    d.energy_regen=float(numeric(f,"energy_regen",d.energy_regen));
     d.armor=float(numeric(f,"armor",d.armor));
     d.damage=float(numeric(f,"damage",d.damage));
     d.attack_range=float(numeric(f,"attack_range",d.attack_range));
@@ -481,6 +486,8 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     d.build_time=float(numeric(f,"build_time",d.build_time));
     d.visual_scale=float(numeric(f,"visual_scale",d.visual_scale));
     if(d.max_hp<=0 || d.hp_regen<0 || d.hp_regen>1000 ||
+       d.max_energy<0 || d.max_energy>10000 ||
+       d.energy_regen<0 || d.energy_regen>1000 ||
        d.armor<0 || d.damage<0 || d.attack_range<0 ||
        d.attack_cooldown<=0 || d.aggro_range<0 ||
        d.sight_range<0 || d.sight_range>128 || d.move_speed<0 ||

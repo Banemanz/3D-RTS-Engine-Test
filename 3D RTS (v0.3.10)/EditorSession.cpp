@@ -415,6 +415,8 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                 {"name",picojson::value(worker?"New Worker":structure?"New Structure":"New Unit")},
                 {"max_hp",picojson::value(structure?300.0:worker?35.0:65.0)},
                 {"hp_regen",picojson::value(0.0)},
+                {"max_energy",picojson::value(worker?0.0:100.0)},
+                {"energy_regen",picojson::value(worker?0.0:1.5)},
                 {"damage",picojson::value(structure?0.0:worker?1.0:8.0)},
                 {"armor",picojson::value(0.0)},
                 {"attack_range",picojson::value(structure?0.0:5.0)},
@@ -460,7 +462,8 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                 {"target",picojson::value(preset)},
                 {"cooldown_ticks",picojson::value(180.0)},
                 {"cast_range",picojson::value(preset=="Self"?0.0:9.0)},
-                {"mineral_cost",picojson::value(0.0)}
+                {"mineral_cost",picojson::value(0.0)},
+                {"energy_cost",picojson::value(0.0)}
             };
             for(const auto& object:project.catalog.entries())
                 if(object.type=="Effect"){

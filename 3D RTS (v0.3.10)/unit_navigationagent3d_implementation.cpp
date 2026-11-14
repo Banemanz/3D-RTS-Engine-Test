@@ -88,6 +88,7 @@ Vec3 NavigationAgent3D::computeSteeringVelocity(const Unit& self,
 Unit::Unit(int id, const std::string& name, const UnitData& unitData, const Vec3& startPos)
     : id(id), instanceName(name), data(unitData), position(startPos) {
     currentHp = data.max_hp;
+    currentEnergy = data.max_energy;
     radius = 0.62f * data.visual_scale;
     height = 1.55f * data.visual_scale;
     navAgent.maxSpeed = data.move_speed;

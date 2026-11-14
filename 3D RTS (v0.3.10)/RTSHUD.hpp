@@ -162,6 +162,11 @@ public:
                              .32f,.77f,.91f);
                     }
                 } else {
+                    if(first->data.max_energy>0.f)
+                        text(s.x+12,s.y+std::min(146.f,s.h-15.f),1.45f,
+                             "ENERGY "+std::to_string(int(first->currentEnergy))+
+                             "/"+std::to_string(int(first->data.max_energy)),
+                             .43f,.72f,.98f);
                     text(s.x+12,s.y+130,1.8f,
                          std::string(first->isWorker?"WORKER  ":"COMBAT  ")+
                          "DMG "+std::to_string(int(first->data.damage))+
