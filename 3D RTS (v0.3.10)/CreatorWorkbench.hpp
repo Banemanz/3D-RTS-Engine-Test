@@ -451,6 +451,7 @@ void inspector(App& app){
 }
 template<class App>
 void draw(App& app){
+    if(app.pauseMenu)return; // Native pause UI owns the entire overlay/input.
     toolbar(app);
     if(app.editor.panel==EditorSession::Panel::Play)return;
     // The center is a pass-through 3D viewport. Panels can dock around it

@@ -298,6 +298,7 @@ void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
     try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
+        if(state->pauseMenu)return;
         if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)return;
         if(state->editor.panel==EditorSession::Panel::Terrain &&
            glfwGetKey(window,GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS) {
@@ -316,6 +317,7 @@ void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
+        if(state->pauseMenu)return;
         if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)return;
         if(state->editor.panel!=EditorSession::Panel::Play) {
             Vec3 hit;
