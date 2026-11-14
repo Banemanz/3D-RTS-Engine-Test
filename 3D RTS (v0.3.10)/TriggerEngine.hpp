@@ -2,6 +2,7 @@
 #include "third_party/picojson.h"
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -43,6 +44,7 @@ public:
     void start(RTSSkirmish& game);
     void tick(RTSSkirmish& game,double elapsed,const std::vector<int>& killed);
     const std::vector<Rule>& rules()const { return rules_; }
+    const std::map<std::string,int>& variables()const{return variables_;}
     void enableTracing(bool value){tracingEnabled_=value;}
     bool tracingEnabled()const{return tracingEnabled_;}
     const std::deque<Trace>& trace()const{return trace_;}
@@ -51,6 +53,7 @@ public:
     static void validate(const RTSProject& project);
 private:
     std::vector<Rule> rules_;
+    std::map<std::string,int> variables_; // sorted for stable replay/inspectors
     bool tracingEnabled_=false;
     std::deque<Trace> trace_;
     std::uint64_t nextSequence_=1;
