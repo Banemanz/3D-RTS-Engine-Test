@@ -8,7 +8,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <utility>
-#include <cstdint>
 
 namespace {
 float distanceXZ(const Vec3& a,const Vec3& b) {
@@ -959,7 +958,7 @@ std::string RTSSkirmish::stateDigest()const{
         hash.boolean(u->attackMoveEnabled);hash.boolean(u->holdPositionEnabled);
         hash.scalar(u->attackCooldownTimer);hash.scalar(u->attackFlashTimer);
         hash.point(u->navAgent.targetPosition);hash.boolean(u->navAgent.hasDestination);
-        hash.point(u->currentVelocity);
+        hash.point(u->velocity());
     }
     hash.number(routes_.size());
     for(const auto& item:routes_){
