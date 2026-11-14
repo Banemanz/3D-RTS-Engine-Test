@@ -3,6 +3,7 @@
 #include "RTSHUDLayout.hpp"
 #include "CreatorTriggerWidgets.hpp"
 #include "CreatorReferenceWidgets.hpp"
+#include "CreatorEffectGraphWidgets.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
@@ -448,6 +449,13 @@ void inspector(App& app){
                     }
                 }
                 if(entry->type=="Effect"){
+                    ImGui::SeparatorText("Visual effect flow");
+                    const std::string clicked=CreatorEffectGraphWidgets::draw(
+                        project.catalog,entry->id);
+                    if(!clicked.empty() && clicked!=entry->id &&
+                       ed.selectCatalogId(project,clicked)){
+                        ImGui::End();return;
+                    }
                     const auto kind=resolved.find("kind");
                     if(kind!=resolved.end() &&
                        kind->second.template is<std::string>() &&
@@ -464,6 +472,26 @@ void inspector(App& app){
                                 const std::string refId=children[i].template get<std::string>();
                                 if(navigateCatalog(app,"Open effect",refId)){
                                     ImGui::PopID();ImGui::End();return;
+                                }
+                                if(i>0){
+                                    ImGui::SameLine();
+                                    if(ImGui::SmallButton("Up")){
+                                        auto changed=children;
+                                        std::swap(changed[i],changed[i-1]);
+                                        refresh(app,ed.setCatalogField(project,"children",
+                                            picojson::value(changed)));
+                                        ImGui::PopID();ImGui::End();return;
+                                    }
+                                }
+                                if(i+1<children.size()){
+                                    ImGui::SameLine();
+                                    if(ImGui::SmallButton("Down")){
+                                        auto changed=children;
+                                        std::swap(changed[i],changed[i+1]);
+                                        refresh(app,ed.setCatalogField(project,"children",
+                                            picojson::value(changed)));
+                                        ImGui::PopID();ImGui::End();return;
+                                    }
                                 }
                                 if(children.size()>1){
                                     ImGui::SameLine();
