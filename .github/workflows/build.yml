@@ -90,6 +90,7 @@ jobs:
           ./RTSProjectTool --validate projects/timed_effects_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/ability_workshop_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/behavior_workshop_showcase.rtsproject.json
+          ./RTSProjectTool --validate projects/ground_impact_showcase.rtsproject.json
 
       - name: Validate bundled maps with bundled project utility (Windows)
         if: runner.os == 'Windows'
@@ -104,6 +105,7 @@ jobs:
           .\RTSProjectTool.exe --validate projects/timed_effects_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/ability_workshop_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/behavior_workshop_showcase.rtsproject.json
+          .\RTSProjectTool.exe --validate projects/ground_impact_showcase.rtsproject.json
 
       - name: Smoke test the packaged Linux editor with software OpenGL
         if: runner.os == 'Linux'

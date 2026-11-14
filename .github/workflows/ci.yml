@@ -30,6 +30,7 @@ jobs:
             build/timed_effect_fingerprint.txt
             build/ability_cast_fingerprint.txt
             build/behavior_fingerprint.txt
+            build/ground_area_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -213,6 +214,26 @@ jobs:
           name: rts-active-behavior-hud-screenshot
           path: rts-active-status.png
           if-no-files-found: error
+      - name: Capture F7 Ground Ability radius/team/delay inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ground_impact_showcase.rtsproject.json --smoke-select-catalog-id ember_arc --smoke-frames 90 --screenshot rts-ground-editor.ppm
+      - name: Convert Ground Ability inspector
+        run: python3 tools/ppm_to_png.py rts-ground-editor.ppm rts-ground-editor.png
+      - name: Upload ground AoE creator inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ground-ability-editor-screenshot
+          path: rts-ground-editor.png
+          if-no-files-found: error
+      - name: Capture native delayed impact telegraph from a real queued ground cast
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ground_impact_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-ground-ability --smoke-frames 90 --screenshot rts-ground-impact.ppm
+      - name: Convert delayed area impact screenshot
+        run: python3 tools/ppm_to_png.py rts-ground-impact.ppm rts-ground-impact.png
+      - name: Upload live impact telegraph
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-delayed-area-impact-screenshot
+          path: rts-ground-impact.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor
@@ -248,6 +269,7 @@ jobs:
             build/timed_effect_fingerprint.txt
             build/ability_cast_fingerprint.txt
             build/behavior_fingerprint.txt
+            build/ground_area_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -274,3 +296,4 @@ jobs:
           diff -u fingerprints/linux/timed_effect_fingerprint.txt fingerprints/windows/timed_effect_fingerprint.txt
           diff -u fingerprints/linux/ability_cast_fingerprint.txt fingerprints/windows/ability_cast_fingerprint.txt
           diff -u fingerprints/linux/behavior_fingerprint.txt fingerprints/windows/behavior_fingerprint.txt
+          diff -u fingerprints/linux/ground_area_fingerprint.txt fingerprints/windows/ground_area_fingerprint.txt

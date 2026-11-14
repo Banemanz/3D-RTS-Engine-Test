@@ -902,7 +902,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_UNIT_ABILITIES=1\n"
                  <<"RTS_FEATURE_ABILITY_EDITOR=1\n"
                  <<"RTS_FEATURE_STATUS_BEHAVIORS=1\n"
-                 <<"RTS_FEATURE_VISUAL_EFFECT_FLOW=1\n";
+                 <<"RTS_FEATURE_VISUAL_EFFECT_FLOW=1\n"
+                 <<"RTS_FEATURE_GROUND_AREA_ABILITIES=1\n"
+                 <<"RTS_FEATURE_DELAYED_AREA_IMPACTS=1\n";
         return 0;
     }
     RTSCrashReporter::install();
