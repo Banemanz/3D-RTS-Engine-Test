@@ -34,7 +34,7 @@ public:
         box(m,p,.036f,.059f,.083f,.99f);
         box(m,{p.x,p.y,p.w,4.f},.22f,.71f,.78f,1.f);
         text(m,p.x+24.f,p.y+23.f,3.f,"MATCH PAUSED",.92f,.96f,.97f);
-        text(m,p.x+24.f,p.y+58.f,1.7f,"UP/DOWN SELECT | ENTER CONFIRM | ESC RESUME",.63f,.79f,.86f);
+        text(m,p.x+24.f,p.y+58.f,1.7f,"ARROWS MOVE | ENTER SELECT | ESC CLOSE",.63f,.79f,.86f);
         for(const auto& b:m.buttons()){
             const bool hover=hoveredIndex>=0
                 ?hoveredIndex==static_cast<int>(buttonIndex)

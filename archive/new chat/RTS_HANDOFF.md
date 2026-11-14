@@ -439,3 +439,22 @@ The new `Effect` catalog class supports Damage, Heal and Sequence with bounded e
 ## November 14 continuation: visual reference-array inspector
 
 **Same Draft PR #1 / `feat/rts-vertical-slice`, no merge.** After the mouse-driven ECA editor, F7 now supports `trainable_units` and Effect `children` as reference lists instead of JSON-only. `CreatorReferenceWidgets.hpp` presents compatible Add/Open/Up/Down/Remove controls; it delegates all model changes to headless `EditorSession::setCatalogField`, so undo/redo, save/load, inherited override rules and reference/cycle validators stay in the engine layer. New `RTSReferenceAuthoringTests` covers producer list growth, illegal duplicates/structures, effect order, empty/cyclic sequences, persistence and undo. A Linux compiler issue with dependent `picojson` template methods was caught by CI and corrected. This is still the existing editor UI adapter, not the final native widget tree. **Next:** verify the latest current SHA's Windows/Linux Debug CTest, Release build/packaging and Mesa/Xvfb full editor smoke (do not rely on earlier green runs). Proceed with native UI hierarchy/virtualization, text atlas, scene gizmos, richer ability/actor/effect authoring and map scripting debugger. Keep source/data/features parity on both platforms and retain original starter roster names/legacy map loaders.
+
+
+## November 14 continuation — trigger runtime diagnostics and keyboard-focus bootstrap
+
+**Continue the same Draft PR #1** on `feat/rts-vertical-slice`; no merge and no parallel PR. Windows 10 spot-testing of earlier builds was encouraging but is not a complete Windows GPU validation. This continuation intentionally builds original RTS engine/editor functionality, not a Blizzard clone.
+
+### Implemented
+
+- `TriggerEngine.hpp/.cpp`: a bounded **192-event** trace ring, opt-in capture, per-rule attempted/fired/condition-blocked counters. Records deterministic simulation timestamps, rule/event IDs, subject ID, action names, failing condition index/type and error outcomes. Logging is not serialized, does not alter gameplay outcomes, and its buffer is reset on project reload/restart.
+- `RTSSkirmish.hpp` exposes trace access for editor presentation; `AppState::reloadFromProject` activates tracing before map initialization so OnMapStart activity is captured. In game View menu / F6 inspector the new `CreatorTriggerMonitor.hpp` window displays a searchable log, live counters, clear/capture controls, and navigation to the selected authored rule.
+- `projects/trigger_diagnostics_showcase.rtsproject.json`: original sample with successful OnMapStart action, deliberately blocked mineral condition and region Effect event. Added validation test and real Linux Mesa/Xvfb OpenGL screenshot smoke, plus CLI `--smoke-trigger-monitor`. `RTS_FEATURE_TRIGGER_TRACE_MONITOR=1` is required in both packaged Windows/Linux executable `--features` outputs.
+- `tests/trigger_trace_tests.cpp`: covers trace order, timestamps, failed conditions, no gameplay/resource divergence when tracing off, opt-in recording, bounded 192-entry ring and reset semantics.
+- `NativeFocus.hpp` is new reusable pure-C++ focus navigation; `NativePauseMenu.hpp` maps focused actions. The engine-native pause menu now supports arrows/W/S, Enter/Space and Esc. Mouse and keyboard dispatch the same pause actions; `NativePauseMenuGL.hpp` highlights focus and hover. Headless `native_menu` CTest expands focus/wrapping/hit testing on both compilers.
+
+### Validation and follow-up
+
+The underlying trace + monitor functionality passed Windows/Linux Debug and Release packaging at commit `8209c6b6`. Native focus and menu keys passed Debug tests/graphics smoke at `b907741d`; check the newer documentation HEAD's own CI before claiming the entire branch verified. Review failed job logs, do not rely on earlier green runs.
+
+The authoring layer still uses pinned ImGui as an interim adapter. **Not implemented yet:** full in-house retained widget tree, editor docking, rich Unicode font/text pipeline, terrain transform gizmos, trigger breakpoints/stepping, variable-watch debugger, advanced ability/behavior/actor graphs, full asset importer and networking. Keep existing Windows/Linux feature parity and expand in tested increments. This handoff and all Markdown documentation were inspected and updated in the PR. Follow original demo names (Frontier Ranger/Rift Raider/Rift Bastion), preserve older maps using compatibility fallbacks, and never copy SC2 assets or source.

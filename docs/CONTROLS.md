@@ -114,3 +114,12 @@ During a match, press **Esc** with no active command to pause. Esc again resumes
 ## Visual ECA shortcuts and workflow
 
 Press **F6** in the game to open Trigger Editor. Use **New trigger** in the Browser; select a trigger and the Inspector shows its event, conditions and ordered actions. Mouse menus can add event types, conditions and actions, assign their typed fields or references, and move/remove individual nodes. **Ctrl+Z** undoes the last committed authoring action and **Ctrl+Y** redoes it. Save with **Ctrl+S**, and use **F9** to playtest. Raw JSON is available under Advanced. `docs/TRIGGER_EDITOR.md` describes the supported operations and restrictions.
+
+
+## Native pause-menu keyboard controls
+
+During play, **Esc** opens the engine-rendered pause menu (after cancelling a pending tactical command). **Up/Down** or **W/S** move the highlighted choice, **Enter** or **Space** activate it, and **Esc** resumes. Mouse clicks use the same action dispatcher. Both operating systems use `NativeFocus.hpp` for focus navigation; no additional GUI dependency is involved.
+
+## Inspecting live triggers
+
+In F6 use **Open playtest monitor**, or select **View → Playtest trigger monitor**. F9 begins a playtest; inspect rule attempt/fired/blocked counters and search recent recorded events. **Open rule** returns to the corresponding definition. The monitor continues to display live events in Play mode when left open. Reopening/reloading the project resets history. See `docs/TRIGGER_EDITOR.md` for constraints and the debugging example.

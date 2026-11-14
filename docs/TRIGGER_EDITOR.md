@@ -63,3 +63,14 @@ The engine's behavior is driven by the actual saved project and its catalog; the
 - [Recoil synced simulation vs unsynced UI architecture](https://recoilengine.org/docs/guides/getting-started/widgets-and-gadgets/)
 
 These are UX and architecture references only; no proprietary implementation or content is included.
+
+
+## Live playtest trigger monitor (November 14)
+
+Select **View → Playtest trigger monitor**, or **Open playtest monitor** in the F6 rule inspector. You can leave the window visible during F9 playtesting and then return to F6. The monitor reads actual fixed-step `TriggerEngine` executions, not a simulation of their JSON. It provides a search field, per-rule **Tried / Fired / Blocked** counters, and time-stamped rows showing event type, rule ID, subject-unit ID (where present), action names or the first failing condition. Click **Open rule** to navigate to that ECA definition.
+
+**Capture trigger events** toggles collection, not script execution. **Clear event log** discards recent rows without resetting rule counters. Project edits, reload and match restart reset all counters and history. The bounded ring retains the most recent **192 events**, lives only in memory and is never written into map files. A zero attempt count means no matching event occurred; a blocked count means conditions were checked and failed.
+
+The original `projects/trigger_diagnostics_showcase.rtsproject.json` demonstrates one successful OnMapStart initialization, one blocked high-mineral condition and one region-triggered Effect. Run `RTSCameraTerrain --project projects/trigger_diagnostics_showcase.rtsproject.json` and open the monitor. CI also captures the real OpenGL window with `--trigger-editor --smoke-trigger-monitor --project projects/trigger_diagnostics_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-trigger-monitor.ppm`.
+
+This is **execution logging, not yet breakpoints, single-stepping, a watch debugger or a full scripting profiler**. The monitor is currently rendered by the existing temporary editor GUI adapter; its trigger parsing and logging are headless C++ shared between Windows and Linux. The design draws on documented Galaxy editor functionality, but includes no proprietary implementation or assets.
