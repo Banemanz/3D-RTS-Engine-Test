@@ -87,3 +87,8 @@ Both Windows/Linux Release executables self-report `RTS_FEATURE_TRIGGER_TRACE_MO
 ## November 14 engine foundation flags
 
 Windows/Linux installed executables both must self-report `RTS_FEATURE_DYNAMIC_NAV_REPLAN=1` and `RTS_FEATURE_STABLE_SIM_ORDER=1`. The bundle verifier checks the flags and installs `docs/RTS_ENGINE_AUDIT.md`, alongside existing authoring/creator docs. All new headless CTest targets are built identically on both operating systems. This audit is not itself a new executable; it documents the source branch and outstanding engine work.
+
+
+## Portable replay verification in the ZIP
+
+Windows and Linux packages include `RTSProjectTool[.exe]` and `docs/REPLAY_COMMANDS.md`. Both native `RTSCameraTerrain --features` outputs are verified to include `RTS_FEATURE_COMMAND_STREAM=1` and `RTS_FEATURE_REPLAY_VERIFY=1`; the bundle verifier checks the exact installed executable rather than a loose manifest. The command project schema and replay verification tool are the same on Windows/Linux. Each release also runs the command/replay CTest suite with assertions enabled.

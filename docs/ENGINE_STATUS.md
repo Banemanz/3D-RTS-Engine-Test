@@ -249,3 +249,10 @@ Tests include new moving-order reroutes and sealed/queued fallback, a large-map 
 ## Sample-independent runtime naming
 
 Runtime production no longer injects fixed `Ranger`, `Worker`, `Barracks` or `Hybrid` prefixes. Names for created units and buildings resolve from the catalog's `name` property; AI reinforcements use the same path. Catalog-driven Field Medic production is verified headlessly. This matters for mod projects and does not require Blizzard-style unit types.
+
+
+## Command stream and replay validation milestone
+
+All core player mouse/HUD orders now flow through a bounded, tick-indexed command stream with captured unit IDs and stable order. The headless replay tape contains a snapshot of the authored map plus the commands and periodic canonical digests. A dedicated verifier can replay matches from disk without OpenGL, with explicit errors for invalid command data, inconsistent state or unsupported replay versions. A result channel reports rejected gameplay commands asynchronously to the editor/HUD adapter. Edited terrain or legacy immediate C++ order mutations intentionally invalidate export.
+
+Windows and Linux compare each other's checkpoint fingerprints for the same replay scenario in CI. This is a substantive improvement over testing each OS in isolation, but deterministic network transport, snapshots/rollback, full actor/ability systems and native dockable editor widgets are still incomplete.

@@ -237,3 +237,10 @@ Movement and gathering updates now run in stable numeric unit-ID order, an impor
 ## Authored unit names in the runtime (November 14)
 
 Production-spawned units, AI reinforcements and newly built structures now use the `name` field resolved from their catalog definition. This removes remaining hardcoded starter-spawn labels from the simulation, allowing custom maps to train named units without exposing a baked-in faction identity. The fallback text data also uses the original Frontier Ranger example. The data-driven production regression suite asserts a custom **Field Medic** actually spawns with that name.
+
+
+## Fixed-tick commands and first replay tooling (November 14)
+
+User-issued RTS commands now enter a shared `RTSCommandStream`, keyed by a simulation tick and captured unit IDs, instead of directly mutating gameplay from mouse/HUD callbacks. During Play mode use **Ctrl+Shift+L** or **View → Export playtest replay** to save a self-contained `.rtsreplay.json` file next to the loaded project. Run `RTSProjectTool --verify-replay path.rtsreplay.json` on Windows or Linux to rerun and verify all saved state checkpoints. The simulation also reports rejected queued orders asynchronously to the gameplay notification layer.
+
+A new CI gate compares replay state fingerprints **between Windows and Linux**, not just within each OS. This is an early deterministic foundation; it does not yet provide a networked or rollback multiplayer session or visual replay scrubbing. See [Replay and command guide](docs/REPLAY_COMMANDS.md).

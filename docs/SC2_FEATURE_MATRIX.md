@@ -184,3 +184,10 @@ Implemented: a searchable trigger trace monitor and per-rule execution statistic
 As part of an engine-centric pass, navigation grids now track meaningful topological changes; active paths are repaired only when their remaining corridor becomes invalid. Empty/unreachable paths no longer indefinitely pin move orders when a queued command can be executed. Structure stamping is local to the obstacle footprint, and construction cannot trap mobile units inside newly blocked cells.
 
 Worker jobs and route progression are iterated in unit-ID order to eliminate hash-order dependence for shared mineral contention. This is one required building block for deterministic simulation, **not** full lockstep or rollback support. Priority gaps now include passability classes, air movement, command recording, ability/actor schemas, scenario AI and a native dockable editor. See `RTS_ENGINE_AUDIT.md`.
+
+
+## Reproducible input and replay foundation
+
+Completed: one tick-indexed, versioned game-command schema covering player move, attack, patrol, rally, gather, production, hold/stop and building orders. The creator no longer dispatches these directly from mouse/HUD callbacks. Replay JSON contains the self-contained project, input timeline and periodic state fingerprints; it can be verified headlessly. CI compares a scripted scenario's Windows/Linux digests and checks malformed/reordered/tampered replays. Failed orders receive asynchronous notifications.
+
+Still missing: replay timeline viewer, arbitrary snapshot/restore, deterministic multiplayer transport, scripting debugger, gameplay AI commanding through the same public queue, richer actor/ability/mover definitions and the completed engine-native editor.

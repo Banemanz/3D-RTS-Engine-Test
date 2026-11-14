@@ -408,3 +408,10 @@ No movement-class, hover/air navigation or hierarchical flow-field solver has be
 ## Spawning from the creator's catalog
 
 The unit display name in a Unit catalog's inherited/resolved `name` field now controls **production-spawned units, AI reinforcements and structures built in gameplay**, not only placed scene instances. For example, deriving a Unit named `Field Medic` and adding it to a producer's `trainable_units` list creates `Field Medic <id>` units. This avoids special cases for the demo's Ranger/Worker/Raider roles and makes custom maps less tied to any example roster. Legacy project IDs and catalog data are preserved.
+
+
+## Replaying authored RTS commands
+
+In Play (F9), issue gameplay orders as normal. They are queued for the next fixed simulation tick. Press **Ctrl+Shift+L** or choose **View → Export playtest replay** to write a `<project-path>.rtsreplay.json` containing the project snapshot, scheduled game commands and 60-tick digests. Open the file with a text editor or verify it headlessly using `RTSProjectTool --verify-replay yourfile.rtsreplay.json`. If terrain editing or external direct order calls occurred during this recording, export is rejected instead of producing a misleading log. Commands rejected for gameplay reasons still appear in the stream and generate a gameplay notification.
+
+This is verification and data portability, **not yet** a cinematic replay viewer or integrated scrub timeline. See [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).

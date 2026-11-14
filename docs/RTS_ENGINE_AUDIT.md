@@ -62,3 +62,12 @@ This pass does **not** create a flow-field solver, hierarchical pathfinder, aeri
 ## Data-driven display names
 
 The game runtime now resolves spawned entity names from `UnitData::resourceName` (inherited Unit catalog `name`) for production, construction and AI reinforcement paths. Previous hardcoded example roles are no longer responsible for spawned display labels. The `RTSProductionCatalogTests` fixture verifies that a custom `Field Medic` produces an appropriately named live unit. Scene placements continue honoring explicit per-instance names. These changes are original and retain compatibility with existing project/catalog identities.
+
+
+## Implemented: recorded simulation commands
+
+The previous roadmap item for *typed, tick-indexed command streams* is now a functional first stage, not purely planned. `RTSCommandStream` accepts bounded commands targeting a future 60 Hz simulation tick with explicit unit IDs, typed kind, point/target/catalog and insertion sequence. The engine executes them at the beginning of the authoritative fixed step and reports accepted/denied results separately from gameplay logic. All player mouse/HUD action dispatches were migrated to this queue; UI-only camera/selection/page controls remain presentation state.
+
+`RTSReplayTape` records a versioned map snapshot, successful **and failed** scheduled commands and **per 60 simulation ticks** canonical state digests. `verifyRTSReplay` and `RTSProjectTool --verify-replay` reconstruct and check the run. Windows/Linux CI compares every checkpoint of a scripted scenario via the dedicated `replay-parity` job. Recording is bounded (24 hours, 32 MiB, 32,768 commands), while live gameplay input continues beyond those limits. The new `REPLAY_COMMANDS.md` is included in both packaged executables. No new runtime GUI dependency or third-party networking library was introduced.
+
+Next work on the command system: AI-originated and network-originated authorized commands, richer failure reasons, snapshot/restore and timeline scrubbing. Replay tools do **not** yet constitute live multiplayer or cryptographic anti-cheat.

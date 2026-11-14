@@ -133,3 +133,12 @@ API remains an outstanding creator-suite feature.
 - The route and worker-job stores are ordered by numeric unit ID to make path/harvesting updates independent of hash/insertion order. **This does not yet guarantee bitwise float determinism across Windows/Linux.** Full command-stream/replay determinism remains the priority.
 
 Technical research and missing systems are tracked in [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md).
+
+
+## Authoritative command ingress and replay consistency
+
+`RTSCommandStream.hpp/.cpp` defines a bounded, versioned command schema with explicit selected unit IDs, target tick, input sequence, source, order kind, target point or entity ID, append semantics, and optional catalog ID. The world applies commands at the **start of each 60 Hz fixed-step update**. Game commands may be deferred a tick; selection changes later cannot retarget them. The existing direct-order methods remain for integration/testing, but calling them outside the command dispatcher invalidates replay export instead of silently recording incomplete input.
+
+The self-contained `RTSReplayTape` stores the starting `RTSProject`, processed input commands and periodic state digests. `verifyRTSReplay` reloads the authored project headlessly, schedules the stored inputs at their recorded ticks and compares canonical 64-bit FNV-1a digests of quantized simulation state (units, resources, production, pathing, visibility and triggers). `RTSSkirmish::takeCommandOutcomes` exposes bounded accepted/rejected results for GUI feedback without perturbing replay state.
+
+CI builds `RTSCommandReplayTests` and `replay_cli`, and compares matching checkpoint files **across Windows and Linux** with a dedicated `replay-parity` job. It detects divergence for the tested scenario; it is not a proof that all maps/platform math behave bit-identically. [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).

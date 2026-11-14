@@ -77,3 +77,10 @@ The Trigger Editor now has a true event/condition/action inspector. Edit event k
 The native gameplay HUD/pause interface now has a reusable `FocusList` controller, keyboard arrows/W/S navigation, Enter/Space activation and Esc handling. Geometry, input selection and CTest remain independent of any GUI library; actual rendering still uses the engine's OpenGL resources.
 
 The headless ECA runtime publishes a bounded execution history. The current editor adapter exposes a searchable playtest monitor and direct links back to ECA rules. This is **not** full native editor docking, rich text input, a variable-watch debugger or breakpoint stepping. The migration remains: native widget hierarchy/text/scroll/input → editor browser/inspector/terrain/trigger parity → remove the temporary ImGui adapter.
+
+
+## Command capture and replay support
+
+The headless simulation now includes `RTSCommandStream`, an immutable fixed-tick player-command queue and versioned map-embedded replay tape. `RTSSkirmish` captures commands from the mouse/HUD on submission with stable selected-unit IDs, consumes them in tick order, tracks accepted/rejected results and keeps an optional exportable digest timeline. A saved `.rtsreplay.json` can be validated without graphics via `RTSProjectTool --verify-replay`.
+
+This is a step toward separating simulation from GUI for future network, editor scrubbing and AI systems. The current trigger interpreter still has its own data-driven event system and the editor remains on the existing ImGui presentation adapter. No borrowed RTS engine source is used; this implementation is original C++17. Full deterministic multiplayer/replay viewer and custom native UI remain open.

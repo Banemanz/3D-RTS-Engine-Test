@@ -123,3 +123,13 @@ During play, **Esc** opens the engine-rendered pause menu (after cancelling a pe
 ## Inspecting live triggers
 
 In F6 use **Open playtest monitor**, or select **View → Playtest trigger monitor**. F9 begins a playtest; inspect rule attempt/fired/blocked counters and search recent recorded events. **Open rule** returns to the corresponding definition. The monitor continues to display live events in Play mode when left open. Reopening/reloading the project resets history. See `docs/TRIGGER_EDITOR.md` for constraints and the debugging example.
+
+
+## Creator replay controls
+
+- **F9:** start a new Play session and its recording baseline
+- **Ctrl+Shift+L:** export the in-memory Play mode command tape and state checkpoints to `<project-path>.rtsreplay.json`
+- **View → Export playtest replay:** same function via the editor menu, enabled only in Play
+- **RTSProjectTool --verify-replay PATH:** headless 60 Hz replay verification, on both Windows and Linux; returns a nonzero error with the first mismatching tick if simulation diverges
+
+Selection, camera and editor layout are not recorded game commands. The former immediate mouse/HUD gameplay orders run at the next fixed simulation tick, and a rejected order now produces a deferred gameplay message. Detailed command debugging and interactive replay playback remain forthcoming.
