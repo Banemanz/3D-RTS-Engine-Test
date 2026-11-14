@@ -2,6 +2,7 @@
 #include "EditorSession.hpp"
 #include "RTSHUDLayout.hpp"
 #include "CreatorTriggerWidgets.hpp"
+#include "CreatorReferenceWidgets.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include <algorithm>
@@ -392,6 +393,12 @@ void inspector(App& app){
                                 refresh(app,ed.setCatalogField(project,field,
                                     picojson::value(draftString)));
                                 draftString=project.catalog.resolvedFields(entry->id).at(field).template get<std::string>();
+                            }
+                        }else if(found->second.template is<picojson::array>() &&
+                            ((entry->type=="Unit" && field=="trainable_units") ||
+                             (entry->type=="Effect" && field=="children"))){
+                            if(CreatorReferenceWidgets::draw(app,entry->id,field,found->second)){
+                                ImGui::End();return;
                             }
                         }else ImGui::TextDisabled("Array/object: edit as JSON");
                     }
