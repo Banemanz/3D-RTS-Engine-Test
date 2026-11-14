@@ -537,3 +537,8 @@ Review CI **on the latest PR head**, not earlier successful commits. Keep the sa
 The new `ai_defense_behavior` CTest exposed that nearby player scouts can trigger `Unit::update` automatic tactical acquisition *before* a planner called at the end of the tick sees an idle enemy. The early pass compiled, but failed `assert(choseDefense)` on the real sample. The fix in `e7842596` splits read-only AI command planning from the existing reinforcement system and runs `planAIOrders()` **after consuming commands, before moving/updating units**. A planned order executes next tick and appears in replay v2; legacy v1 AI still runs its historical direct post-update code. This is meaningful functional/regression work, not a test being relaxed.
 
 Check final commit CI and both executable ZIP artifacts. Retain same Draft PR #1 and do not merge. If the local-defense fingerprint differs between MSVC and GCC, investigate numerical divergence rather than dropping the new parity gate.
+
+
+### AI parity artifact wiring correction
+
+The AI sandbox test itself passed on Windows and Linux after moving planning before unit movement. The first `replay-parity` job nevertheless failed because the Windows upload step included only `command_replay_fingerprint.txt`; Linux correctly uploaded that and `ai_defense_fingerprint.txt`. Commit `7b891868` fixes the Windows artifact manifest, so the mandatory parity job can compare the two genuine fingerprint pairs. The comparison remains strict; it was not disabled. Verify the **latest** branch commit and both Release ZIPs before reporting green.

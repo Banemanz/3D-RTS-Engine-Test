@@ -164,3 +164,8 @@ Linux Mesa/Xvfb additionally launches the actual game on the AI defense map for 
 ### First-tick AI guard regression
 
 The `ai_defense_behavior` fixture intentionally begins with player scouts close enough to trigger normal tactical auto-targeting. Its first two fixed frames must nevertheless contain explicit source-1 recorded defensive attacks. This guards against moving the planner behind `Unit::update` and silently bypassing the command log. It also runs 180 ticks, verifies the complete replay, exports cross-platform fingerprints and feeds the mandatory parity comparator.
+
+
+### Windows upload contract for dual-scenario parity
+
+Both `linux` and `windows` jobs must upload **both** `build/command_replay_fingerprint.txt` and `build/ai_defense_fingerprint.txt`. The `replay-parity` job downloads those artifacts and fails on a missing file or differing digest. The initial AI-sandbox CI pass exposed a Windows upload step that still listed only the original file, even though `ai_defense_behavior` itself passed. The artifact step was corrected without relaxing or removing the comparison.
