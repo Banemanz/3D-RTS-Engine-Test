@@ -113,6 +113,7 @@ void RTSSkirmish::reset() {
     releasedSupply_.clear();production_.clear();construction_.clear();
     periodicEffects_.clear();
     behaviors_.clear();
+    pendingAreas_.clear();
     abilityReadyAt_.clear();
     nextId_=1;trainingPage_=0;abilityPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
@@ -763,6 +764,9 @@ void RTSSkirmish::update(float dt) {
         });
     for(const auto& hit:pendingHits)
         if(Unit* target=find(hit.targetId))target->takeDamage(hit.rawDamage,hit.attackerName);
+    // Delayed ground impact runs after movement/combat so moving out of the
+    // radius matters, but before health/energy regeneration and periodic ticks.
+    updateAreaImpacts();
     // Unit catalog passive regeneration is evaluated in the authoritative
     // fixed step, independently of rendering and active navigation.
     for(auto& unit:units)if(unit.isAlive()){
@@ -1074,6 +1078,29 @@ bool RTSSkirmish::canPrepareAbility(int casterId,
            playerMinerals>=ability.mineralCost &&
            caster->currentEnergy>=float(ability.energyCost);
 }
+std::vector<RTSSkirmish::AreaImpactWatch> RTSSkirmish::areaImpactWatch(
+    std::size_t limit)const{
+    std::vector<AreaImpactWatch> watch;
+    watch.reserve(std::min({limit,pendingAreas_.size(),std::size_t(128)}));
+    for(const auto& a:pendingAreas_){
+        if(watch.size()>=limit)break;
+        watch.push_back({a.center,a.radius,
+                         a.impactTick>tick_?a.impactTick-tick_:0,a.abilityId});
+    }
+    return watch;
+}
+bool RTSSkirmish::canCastAbilityAt(int casterId,
+                                    const std::string& abilityId,
+                                    const Vec3& ground)const{
+    if(!canPrepareAbility(casterId,abilityId))return false;
+    const auto ability=compileAbility(project_.catalog,abilityId);
+    if(ability.target!=AbilityTarget::Ground)return false;
+    const Unit* caster=find(casterId);
+    if(!caster || !std::isfinite(ground.x) || !std::isfinite(ground.z) ||
+       !project_.terrain.insideWorld(ground.x,ground.z) ||
+       !vision.visible(ground))return false;
+    return (ground-caster->position).lengthXZ()<=ability.castRange;
+}
 bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
                                 int targetId)const{
     if(!canPrepareAbility(casterId,abilityId))return false;
@@ -1081,6 +1108,7 @@ bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
     const auto ability=compileAbility(project_.catalog,abilityId);
     if(ability.target==AbilityTarget::Self)
         return targetId==-1 || targetId==casterId;
+    if(ability.target==AbilityTarget::Ground)return false;
     const Unit* target=find(targetId);
     if(!target || !target->isAlive())return false;
     if(ability.target==AbilityTarget::Ally && target->ownerId!=caster->ownerId)
@@ -1091,11 +1119,85 @@ bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
         return false;
     return (target->position-caster->position).lengthXZ()<=ability.castRange;
 }
-bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,int targetId){
-    if(!canCastAbility(casterId,abilityId,targetId))return false;
+bool RTSSkirmish::applyAreaEffect(const PendingAreaImpact& area){
+    // The target set is based on unit positions at the *impact* tick.
+    // Stable ascending Unit IDs make Effect application and behavior
+    // admission identical after Windows/Linux entity vector reorders.
+    std::vector<int> targets;
+    targets.reserve(64);
+    const double radius2=double(area.radius)*double(area.radius);
+    for(const Unit& unit:units){
+        if(!unit.isAlive())continue;
+        if(area.team==AbilityAreaTeam::Enemy && unit.ownerId==area.owner)continue;
+        if(area.team==AbilityAreaTeam::Ally && unit.ownerId!=area.owner)continue;
+        const double dx=double(unit.position.x)-double(area.center.x);
+        const double dz=double(unit.position.z)-double(area.center.z);
+        if(dx*dx+dz*dz<=radius2)
+            targets.push_back(unit.id);
+    }
+    std::sort(targets.begin(),targets.end());
+    // Reject an oversized area *before* applying damage, status or healing.
+    // Target cap protects mass-selection and effect-graph CPU/allocations.
+    static constexpr std::size_t MaxAreaTargets=64;
+    if(targets.size()>MaxAreaTargets)return false;
+    if(targets.empty())return true; // cast into empty ground still costs energy
+    const auto operations=compileEffect(project_.catalog,area.effectId);
+    std::size_t periodicPerTarget=0;
+    std::set<std::string> granted;
+    for(const auto& op:operations){
+        if(op.kind==EffectOperationKind::PeriodicDamage ||
+           op.kind==EffectOperationKind::PeriodicHeal)++periodicPerTarget;
+        if(op.kind==EffectOperationKind::ApplyBehavior)
+            granted.insert(op.behaviorId);
+    }
+    const auto remainingPeriodic=MaxPeriodicEffects-periodicEffects_.size();
+    if(periodicPerTarget>0 &&
+       targets.size()>remainingPeriodic/periodicPerTarget)return false;
+    std::size_t freshStatuses=0;
+    for(int id:targets)for(const auto& status:granted)
+        if(!behaviors_.count({id,status}))++freshStatuses;
+    if(freshStatuses>MaxActiveBehaviors-behaviors_.size())return false;
+    for(const int id:targets){
+        // Bounded, preadmitted operations should never fail here. If earlier
+        // targets kill others, applyEffectForTrigger safely ignores dead IDs.
+        const Unit* unit=find(id);
+        if(unit && unit->isAlive())
+            if(!applyEffectForTrigger(area.effectId,id))return false;
+    }
+    return true;
+}
+void RTSSkirmish::updateAreaImpacts(){
+    // Preserve the recorded cast order when several impacts share a tick.
+    for(auto it=pendingAreas_.begin();it!=pendingAreas_.end();){
+        if(it->impactTick>tick_){++it;continue;}
+        (void)applyAreaEffect(*it); // an over-cap arrival fizzles, no partial effects
+        it=pendingAreas_.erase(it);
+    }
+}
+bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
+                            int targetId,const Vec3& ground){
     const auto ability=compileAbility(project_.catalog,abilityId);
-    const int appliedTarget=ability.target==AbilityTarget::Self?casterId:targetId;
-    if(!applyEffectForTrigger(ability.effect,appliedTarget))return false;
+    if(ability.target==AbilityTarget::Ground){
+        if(!canCastAbilityAt(casterId,abilityId,ground))return false;
+        if(ability.impactDelayTicks>0 &&
+           pendingAreas_.size()>=MaxPendingAreaImpacts)return false;
+        const Unit* caster=find(casterId);
+        PendingAreaImpact area;
+        area.center={ground.x,0.f,ground.z};
+        area.radius=ability.areaRadius;
+        area.team=ability.areaTeam;
+        area.owner=caster->ownerId;
+        area.abilityId=abilityId;
+        area.effectId=ability.effect;
+        area.impactTick=tick_+ability.impactDelayTicks;
+        if(ability.impactDelayTicks==0){
+            if(!applyAreaEffect(area))return false;
+        }else pendingAreas_.push_back(std::move(area));
+    }else{
+        if(!canCastAbility(casterId,abilityId,targetId))return false;
+        const int appliedTarget=ability.target==AbilityTarget::Self?casterId:targetId;
+        if(!applyEffectForTrigger(ability.effect,appliedTarget))return false;
+    }
     playerMinerals-=ability.mineralCost;
     if(Unit* caster=find(casterId))
         caster->currentEnergy=std::max(0.f,
@@ -1193,7 +1295,7 @@ bool RTSSkirmish::applyCommand(const RTSCommand& command){
             result=cancelSelectedProduction();break;
         case RTSCommandKind::CastAbility:
             for(const int casterId:command.units)
-                if(castAbility(casterId,command.catalog,command.targetId))
+                if(castAbility(casterId,command.catalog,command.targetId,command.point))
                     result=true;
             break;
         case RTSCommandKind::Context:
@@ -1291,6 +1393,18 @@ std::string RTSSkirmish::stateDigest()const{
             hash.text(behavior.first.second);
             hash.signedNumber(behavior.second.stacks);
             hash.number(behavior.second.expiresTick);
+        }
+    }
+    // Future area impacts affect eventual simulation and must be hashed.
+    if(!pendingAreas_.empty()){
+        hash.text("pending_area_impacts");
+        hash.number(pendingAreas_.size());
+        for(const auto& area:pendingAreas_){
+            hash.point(area.center);hash.scalar(area.radius);
+            hash.signedNumber(area.owner);
+            hash.signedNumber(static_cast<int>(area.team));
+            hash.text(area.abilityId);hash.text(area.effectId);
+            hash.number(area.impactTick);
         }
     }
     // Empty arrays preserve all pre-periodic-effect replay fingerprints.

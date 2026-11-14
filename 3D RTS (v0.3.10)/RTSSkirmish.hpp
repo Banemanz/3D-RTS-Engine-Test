@@ -118,6 +118,17 @@ public:
     bool nextAbilityPage();
     bool canPrepareAbility(int casterId,const std::string& abilityId) const;
     bool canCastAbility(int casterId,const std::string& abilityId,int targetId) const;
+    bool canCastAbilityAt(int casterId,const std::string& abilityId,
+                          const Vec3& ground) const;
+    // Pure read-only render/monitor projection of pending simulation impacts.
+    struct AreaImpactWatch {
+        Vec3 center{};
+        float radius=0.f;
+        std::uint64_t remainingTicks=0;
+        std::string abilityId;
+    };
+    std::vector<AreaImpactWatch> areaImpactWatch(std::size_t limit=32)const;
+    std::size_t pendingAreaImpactCount()const{return pendingAreas_.size();}
     std::uint64_t abilityCooldownRemaining(int casterId,const std::string& abilityId) const;
 
     // Script actions expose only explicit, bounded game-state mutations.
@@ -164,7 +175,21 @@ private:
     void applyBehavior(int targetId,const BehaviorDefinition& definition);
     void removeBehavior(int targetId,const std::string& id);
     std::map<std::pair<int,std::string>,std::uint64_t> abilityReadyAt_;
-    bool castAbility(int casterId,const std::string& abilityId,int targetId);
+    struct PendingAreaImpact {
+        Vec3 center{};
+        float radius=0.f;
+        int owner=0;
+        AbilityAreaTeam team=AbilityAreaTeam::Enemy;
+        std::string abilityId;
+        std::string effectId;
+        std::uint64_t impactTick=0;
+    };
+    static constexpr std::size_t MaxPendingAreaImpacts=128;
+    std::vector<PendingAreaImpact> pendingAreas_;
+    bool castAbility(int casterId,const std::string& abilityId,
+                     int targetId,const Vec3& ground);
+    bool applyAreaEffect(const PendingAreaImpact& area);
+    void updateAreaImpacts();
     RTSCommandStream commandStream_;
     std::uint64_t tick_=0;
     bool replayValid_=true;

@@ -72,7 +72,10 @@ std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
 
 // Abilities bind an authored Effect graph to a Unit command. Only the
 // data objects are stored in the map; cooldown clocks live in simulation.
-enum class AbilityTarget { Self, Ally, Enemy, Any };
+enum class AbilityTarget { Self, Ally, Enemy, Any, Ground };
+// Ground-targeted area Effects use a separate team filter. Target selection is
+// resolved on the simulation tick, never from renderer selection pointers.
+enum class AbilityAreaTeam { Enemy, Ally, Any };
 struct AbilityDefinition {
     std::string id;
     std::string effect;
@@ -81,6 +84,9 @@ struct AbilityDefinition {
     float castRange=0.f;
     int mineralCost=0;
     int energyCost=0;
+    float areaRadius=0.f; // Ground only: 0.5..24 world units
+    AbilityAreaTeam areaTeam=AbilityAreaTeam::Enemy;
+    std::uint32_t impactDelayTicks=0; // Ground only: 0..300 ticks at 60Hz
 };
 AbilityDefinition compileAbility(const DataCatalog& catalog,
                                  const std::string& id);

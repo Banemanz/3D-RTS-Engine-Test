@@ -310,6 +310,7 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
     else if(target=="Ally")ability.target=AbilityTarget::Ally;
     else if(target=="Enemy")ability.target=AbilityTarget::Enemy;
     else if(target=="Any")ability.target=AbilityTarget::Any;
+    else if(target=="Ground")ability.target=AbilityTarget::Ground;
     else throw std::invalid_argument("Invalid Ability target type: "+id);
     const double cooldown=numeric(fields,"cooldown_ticks",60.);
     const double range=numeric(fields,"cast_range",ability.target==AbilityTarget::Self?0.:8.);
@@ -324,6 +325,22 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
     ability.castRange=static_cast<float>(range);
     ability.mineralCost=static_cast<int>(minerals);
     ability.energyCost=static_cast<int>(energy);
+    if(ability.target==AbilityTarget::Ground){
+        const double radius=numeric(fields,"area_radius",3.);
+        const double delay=numeric(fields,"impact_delay_ticks",0.);
+        const std::string team=stringField(fields,"area_team","Enemy");
+        if(radius<.5 || radius>24. ||
+           std::floor(delay)!=delay || delay<0 || delay>300)
+            throw std::invalid_argument("Invalid Ground area radius/impact delay: "+id);
+        ability.areaRadius=static_cast<float>(radius);
+        ability.impactDelayTicks=static_cast<std::uint32_t>(delay);
+        if(team=="Enemy")ability.areaTeam=AbilityAreaTeam::Enemy;
+        else if(team=="Ally")ability.areaTeam=AbilityAreaTeam::Ally;
+        else if(team=="Any")ability.areaTeam=AbilityAreaTeam::Any;
+        else throw std::invalid_argument("Invalid Ground area team filter: "+id);
+        if(ability.castRange<.5f)
+            throw std::invalid_argument("Ground Ability requires a nonzero cast_range: "+id);
+    }
     return ability;
 }
 std::vector<std::string> unitAbilityIds(const DataCatalog& catalog,
