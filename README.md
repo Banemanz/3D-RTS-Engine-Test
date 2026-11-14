@@ -90,7 +90,7 @@ systems have actual gameplay/presentation effects*.
 - `tests/`: CTest executable suites (no GPU required).
 - `.github/workflows/ci.yml`: full Linux/Windows builds and logic tests;
   Linux Mesa/Xvfb checks both game and terrain editor, uploads screenshots.
-- `arcrift_bastion/new chat/RTS_HANDOFF.md`: cross-chat handoff.
+- `archive/new chat/RTS_HANDOFF.md`: cross-chat handoff.
 
 MIT licensed. Vendored PicoJSON has its own BSD-style license at
 `3D RTS (v0.3.10)/third_party/PICOJSON_LICENSE`.

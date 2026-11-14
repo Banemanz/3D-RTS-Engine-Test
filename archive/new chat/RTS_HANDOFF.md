@@ -77,7 +77,7 @@ Additional tool: F6 is a JSON trigger inspector (create/clone/delete/inline edit
 `.github/workflows/build.yml` builds optimized Windows x64 and Linux x86_64
 binaries, runs assertions-enabled CTest suites, stages a portable project layout
 with CMake install rules, verifies maps and bundled files, smokes the packaged
-Linux editor, and uploads platform arcrift_bastions as build artifacts.
+Linux editor, and uploads platform archives as build artifacts.
 Artifacts are not published as GitHub Releases or merged into main; see
 `docs/BUILD_ARTIFACTS.md`. Existing Debug CI still runs and captures
 OpenGL screenshots for gameplay, terrain editor and trigger editor.

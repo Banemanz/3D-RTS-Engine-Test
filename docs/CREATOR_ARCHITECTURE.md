@@ -57,7 +57,7 @@ The Data Editor now has parent/Unit/Actor/Model/trainable-object navigation, rec
 - Both run the same headless CTest suite (simulation, terrain, authoring, UI hit-testing) in Debug and Release; keep assertions enabled in Release test targets.
 - Linux runs Mesa/Xvfb real OpenGL startup, production HUD, native pause-menu screenshot, scene/data/terrain/trigger workspaces and editor lifecycle stress against the packaged executable.
 - Windows compiles/runs identical code and tests. GitHub Windows CI does not prove interactive Windows GPU stability. Manual driver testing is required before marking the creator suite stable.
-- Keep the work in PR #1, keep it a draft and update `arcrift_bastion/new chat/RTS_HANDOFF.md` whenever a major implementation stage changes.
+- Keep the work in PR #1, keep it a draft and update `archive/new chat/RTS_HANDOFF.md` whenever a major implementation stage changes.
 
 This project is **not** currently a clone of StarCraft II's editor. The priority is a robust and extensible engine/authoring architecture so those features can be implemented incrementally without separate platform forks.
 
