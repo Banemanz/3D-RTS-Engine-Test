@@ -46,6 +46,19 @@ int main(){
     assert(project.catalog.entries().size()==start+11);
     const auto copy=RTSProject::fromJson(project.toJson());
     assert(copy.catalog.entries().size()==project.catalog.entries().size());
+    assert(ed.convertEffectKind(project,"Heal"));
+    assert(compileEffect(project.catalog,ed.selected(project)->id)[0].kind==
+           EffectOperationKind::Heal);
+    assert(ed.convertEffectKind(project,"PeriodicHeal"));
+    assert(compileEffect(project.catalog,ed.selected(project)->id)[0].kind==
+           EffectOperationKind::PeriodicHeal);
+    assert(ed.convertEffectKind(project,"Sequence"));
+    assert(!compileEffect(project.catalog,ed.selected(project)->id).empty());
+    assert(ed.convertEffectKind(project,"Damage"));
+    assert(!ed.convertEffectKind(project,"BadOperation"));
+    assert(!ed.convertEffectKind(project,"Damage"));
+    assert(ed.undo(project));
+    assert(ed.redo(project));
     // New objects remain valid after save/load, can be edited and are allowed
     // to be removed while they have no references.
     assert(ed.setCatalogField(project,"amount",picojson::value(12.0)));
