@@ -118,6 +118,16 @@ jobs:
           name: rts-trigger-trace-monitor-screenshot
           path: rts-trigger-monitor.png
           if-no-files-found: error
+      - name: Capture original scripted relay scenario and live variable watch
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-trigger-monitor --project projects/script_relay_showcase.rtsproject.json --smoke-frames 250 --screenshot rts-script-relay.ppm
+      - name: Convert scripted relay screenshot
+        run: python3 tools/ppm_to_png.py rts-script-relay.ppm rts-script-relay.png
+      - name: Upload live script-global debugger screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-scripted-relay-screenshot
+          path: rts-script-relay.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor
