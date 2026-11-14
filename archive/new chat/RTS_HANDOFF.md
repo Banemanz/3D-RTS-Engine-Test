@@ -591,3 +591,77 @@ On the **same Draft PR #1**: `TriggerDefinition.cpp` now recursively validates t
 All current feature work remains in the C++17 shared simulation/editor model; the Linux software OpenGL captures are authentic executable screenshots and the Windows build was compiled and tested by CI. Real interactive Windows 10/11 driver stability **still needs manual testing**. The latest commit that edits this handoff is documentation-only; verify its own CI if needed, and don't confuse it with the exact functional commit validated above.
 
 **Next creator/engine priorities:** F6 full recursive property widgets, user-defined script actions/functions and scoped variables, richer gameplay/actor/ability/weapon semantics, native editor toolkit replacing temporary ImGui without losing features, independent audio/model import and animation, movement/collision classes, AI economy/production policy, and eventually replay playback, mod packages and multiplayer. Do not copy any SC2 proprietary code/content and do not merge the draft PR prematurely.
+
+
+## November 14 larger pass — recursive F6, F7 object presets, timed Effects
+
+**Continue on draft PR #1, branch \`feat/rts-vertical-slice\`; do not
+merge.** Verified baseline before this pass was \`85bbe5f7\` with
+Windows/Linux Debug, Release and replay-parity green. Current feature
+pass must be judged on its most recent HEAD Actions runs, not historical
+ones; check the latest run results and fix failures.
+
+**F6 recursive authoring:** new \`TriggerTree.hpp\` contains bounded
+typed \`TriggerTreePath\` nodes (a sequence of list/index steps) and a
+shared default-node factory. \`EditorSession\` now supports path-based
+insert, remove, duplicate, reorder, scalar edits, literal/expression
+switch and nested expression subtree replacement, all via the same
+validating \`mutateTrigger\` and existing one-step undo/redo. A separate
+\`CreatorTriggerTreeWidgets.hpp\` renders recursive ImGui lists for root
+actions/conditions, IfThenElse condition/then/else and Repeat actions;
+supports editing typed scalar/categorical fields, expressions, operators
+and operands. \`CreatorTriggerWidgets.hpp\` now delegates to the new
+recursive visual implementation. Advanced JSON remains for arbitrary
+custom extension fields, not required for supported ECA authoring.
+Note: identical-node swaps are correctly no-ops; the initial
+\`RTSRecursiveTriggerEditorTests\` attempted one and failed Linux CI.
+Fixed fixture in \`5d577250\`: change duplicate's operand first to
+make the reorder meaningful. Never weaken the state change contract.
+
+**F7 catalog creator:** \`EditorSession::createCatalogObject\` creates
+original (non-derived) valid Unit/Actor/Model/Effect objects with
+combat/worker/structure and five Effect operation presets; assigns
+collision-free IDs and selects the new entry. \`convertEffectKind\`
+transitions immediate/periodic/sequence Effects with required default
+fields while preserving object identity and validation, with undo/redo.
+F7 browser has New catalog object... choices and the Effect inspector
+has a typed operation dropdown. \`RTSCatalogCreationTests\` exercises
+all presets and conversions.
+
+**Engine:** \`EffectOperation\` has PeriodicDamage and PeriodicHeal,
+\`interval_ticks\` 1..600 and \`duration_ticks\` 1..3600, with amount
+>0..100000 and bounded graph validation. \`RTSSkirmish\` schedules up to
+256 fixed-step target-specific timed effects, executes each pulse on
+its deterministic tick, removes completed/dead-target effects, clears
+on reset and hashes active pulse/deadline records (leaving legacy
+no-effect digests unchanged). Compound Sequence scheduling rejects
+over-capacity effects as a whole before applying immediate operations.
+\`UnitData.hp_regen\` 0..1000 HP/s (default zero) is authored in F7
+catalog and evaluated each fixed tick; both Windows/Linux use same
+source. \`CreatorTriggerMonitor\` displays active timed-effect count.
+New original \`projects/timed_effects_showcase.rtsproject.json\`
+demonstrates a medic Unit, OnRegionEnter and composed timed pulses.
+
+**Validation contract:** \`RTSRecursiveTriggerEditorTests\`,
+\`RTSCatalogCreationTests\`, and \`RTSTimedEffectTests\` are added to
+Windows/Linux Debug and assertion-enabled Release CTest. The timed
+fixture verifies precise pulses, regeneration, 256-slot admission,
+invalid data, save/load, reset and recorded replay; it writes
+\`timed_effect_fingerprint.txt\`. CI uploads/diffs that fingerprint
+strictly on both OSes, validates the sample in both Release ZIPs and
+requires new self-reported flags
+\`RTS_FEATURE_RECURSIVE_ECA_UI=1\` and
+\`RTS_FEATURE_TIMED_EFFECTS=1\`. Two new Linux Mesa/Xvfb screenshots
+show the real F6 recursive editor and timed-effects monitor. Need
+check current HEAD CI and screenshot artifact availability. Linux
+container here cannot resolve github.com for a local git clone,
+so authoritative build/runtime testing uses real GitHub CI; no false
+claim of a local desktop execution.
+
+**Caveats:** this is a substantial editor usability increment but
+remains far short of Galaxy Editor: actor/event graphs, ability
+catalogs, behavior stacking/dispels, weapon targeting/projectiles,
+data schemas/localization, full GUI replacing ImGui, script
+functions/local scopes, advanced terrain layers and robust import
+pipelines remain missing. Continue adding actual vertical slices
+rather than dummy checkboxes; preserve Win/Linux parity.

@@ -210,3 +210,23 @@ The trigger runtime now evaluates a bounded integer AST in VariableCompare, SetV
 ## Nested ECA control flow (November 14 continuation)
 
 `IfThenElse` and `Repeat` authorable action nodes now run in the fixed-step trigger interpreter. Top-level and nested conditions share the same validator, and nested actions use a recursive budgeted executor. Branches consume one of two ordered action lists; repeated bodies support a static count or a validated integer expression. Static complexity checking rejects graphs that could exceed a 512-step worst-case invocation budget; recursion depth is capped. The F6 GUI offers templates and branch summaries while full recursive node editing still needs a dedicated UI pass. The new `RTSScriptFlowTests` produces a mandatory Windows/Linux replay fingerprint. Full Galaxy control flow/custom functions/local scopes remain pending.
+
+
+## November 14 large editor/engine pass: progress, not parity
+
+**F6:** nested ECA tree operations and formulas are now visual and
+undoable down through supported IfThenElse/Repeat branches; backed by
+safe path-based headless mutations and strict validation.
+
+**F7:** new original Unit/Actor/Model/Effect object templates and
+undoable operation conversion; periodic damage/healing sequence graphs
+now execute at fixed simulation ticks, together with optional Unit
+passive regeneration.
+
+**Not implemented:** full Galaxy text language, reusable function/
+library graphs, scoped/array variables, switch/coroutine waits,
+trigger debugging breakpoints, full visual data schema editor, actor
+events, behaviors/buffs with stacking and dispels, castable unit
+abilities, weapon/missile actors, tech/upgrade trees, robust pathing
+layers and broad asset import. Keep these explicit milestones in
+future design passes instead of equating checkboxes with parity.

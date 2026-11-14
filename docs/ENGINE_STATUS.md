@@ -281,3 +281,32 @@ Added headless validated map-global integer state (`trigger_variables`, up to 64
 ## Conditional script execution and reference integrity (November 14)
 
 Real fixed-step `IfThenElse` and `Repeat` ECA actions support validated conditional branches and bounded iteration with optional dynamic integer-expression counts. The authoring parser rejects worst-case paths exceeding 512 action steps per invocation and nested depth above four. The F6 adapter exposes templates, branch summaries and validated Advanced JSON; full recursive GUI editing is still pending. Catalog Unit/Effect rename and safe deletion now traverse nested actions and conditions. Dedicated script-flow, expression, variable and nested-reference CTests run in both platform builds; dual-OS replay fingerprints and feature flags enforce parity. Full Galaxy source compiling and broader game systems remain future work.
+
+
+## Data-driven timed combat effects and editable ECA (November 14 continuation)
+
+**Engine:** Effect graphs can now emit \`PeriodicDamage\` and
+\`PeriodicHeal\` operations, with integer tick interval/duration and a
+bounded target-specific schedule. The shared 60 Hz simulation evaluates
+pulses after combat and passive HP regeneration, removes expired/dead
+targets, resets the queue at match reset, includes active effects in
+deterministic replay digests and admits graph scheduling atomically up
+to 256 active instances. \`UnitData.hp_regen\` can be authored in the
+Unit catalog; default zero preserves existing combat behavior.
+The actual playtest monitor exposes the number of active timed effects.
+
+**Editor:** The F6 visual ECA inspector recursively edits nested
+branches/repeat actions and typed arithmetic expression subtrees.
+The F7 catalog browser can now create standalone combat units,
+workers, structures, actors, models and multiple Effect kinds from
+valid presets, then change Effect kind without authoring invalid
+intermediate JSON. These are real validated/undoable document mutations,
+not decorative mockups.
+
+**Still missing for Galaxy-editor-class scope:** reusable scripting
+functions, lexical locals, trigger libraries, variable arrays/structs,
+behavior stacking, caster-resource management and abilities, weapon
+target filters and projectile simulations, actor event graphs, importable
+mesh/animation/audio pipelines, custom localization, complete terrain/
+doodad layers and standalone editor toolkit parity. Avoid claiming
+SC2/Galaxy feature parity from these foundational increments.

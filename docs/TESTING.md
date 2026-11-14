@@ -187,3 +187,29 @@ Both `linux` and `windows` jobs must upload **both** `build/command_replay_finge
 Functional commit `b9e84cf3` passed Release Windows/Linux jobs in [workflow run 43634965257](https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43634965257), with all 44 CTests, portable packaging and the required binary self-report feature flags. Debug push/PR runs [43634965221](https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43634965221) and [43634970215](https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43634970215) passed Linux/Windows tests, Mesa/Xvfb GUI editor smoke and strict five-file cross-compiler replay parity.
 
 **Regression root causes corrected:** Four newly added assertion-driven test executables had not been listed in the Release `-UNDEBUG`/`/UNDEBUG` target list, causing whole `assert(...)` calls to be optimized away in Release. This produced misleading false passes and a `nested_catalog_references` fixture abort. The target list now includes all new tests, CTest's `trigger_trace` command is restored, and each new test source includes a compile-time `#error` when `NDEBUG` is defined. The initial Debug replay-parity failure was a Windows artifact upload omission (new `script_expression_fingerprint.txt` and `script_flow_fingerprint.txt` files). Both are now uploaded for Windows and Linux. Parity comparisons remain strict, not disabled or skipped.
+
+
+## Recursive authoring, new catalog creators and timed effects (November 14)
+
+\`RTSRecursiveTriggerEditorTests\` tests nested Add/Duplicate/Move/
+Delete, typed property edits, formulas and nested arithmetic replacement,
+branch constraints, invalid paths, rollback and global rename migration.
+
+\`RTSCatalogCreationTests\` creates each standalone F7 type/preset,
+tests Effect operation conversions, validates all catalogs, serialized
+roundtrips and undo/redo. \`RTSTimedEffectTests\` applies a composed
+periodic damage/healing sequence from a real OnRegionEnter event, checks
+regeneration and pulse deadlines at individual ticks, enforces the
+256-slot scheduler limit, rejects malformed intervals, verifies reset
+and full authoritative replay, and emits \`timed_effect_fingerprint.txt\`.
+
+All tests run in both Debug and Release with \`NDEBUG\` disabled and a
+compile-time assertion guard. Both Windows and Linux upload the timed
+effect fingerprint; the mandatory replay-parity job requires an exact
+byte-for-byte match in addition to existing fingerprints. Release bundles
+must validate \`timed_effects_showcase.rtsproject.json\` and self-report
+\`RTS_FEATURE_RECURSIVE_ECA_UI=1\` and
+\`RTS_FEATURE_TIMED_EFFECTS=1\`.
+Linux Mesa/Xvfb separately captures \`rts-recursive-trigger-editor-screenshot\`
+and \`rts-timed-effects-screenshot\` from the real OpenGL executable.
+Actual Windows 10/11 interactive use remains a manual smoke requirement.

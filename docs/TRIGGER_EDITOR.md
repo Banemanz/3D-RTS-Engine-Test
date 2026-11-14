@@ -156,3 +156,67 @@ reward. Run `RTSScriptFlowTests` to exercise real execution, validation,
 serialization, undo/redo, variable-reference migration and replay parity.
 
 **Reference integrity:** F7 catalog rename and safe deletion now inspect typed Unit/Effect references inside nested IfThenElse/Repeat branches, not only top-level ECA lists. They migrate or reject referenced catalog objects without changing custom text or extension fields. The shared `RTSNestedCatalogReferenceTests` exercises nested Unit/Effect links and serialized projects on Windows and Linux.
+
+
+## Recursive visual ECA authoring (November 14 continuation)
+
+F6 now uses a **recursive native editor adapter** over the *real* headless
+\`EditorSession\` trigger tree, not a nonfunctional or raw-JSON-only preview.
+The top-level condition/action lists, \`IfThenElse\` condition/then/else
+branches, and \`Repeat.actions\` lists all provide:
+
+- Add an action/condition using validated type templates
+- Expand properties, edit numeric, string, bool and typed catalog/variable refs
+- Duplicate and delete nodes, move them up/down in their own list
+- Switch operands between fixed values and authored expressions
+- Recursively edit expression operation, literal, named variable and every
+  child operand for Add/Subtract/Multiply/Divide/Modulo/Min/Max, Negate,
+  Absolute and Clamp
+
+Every node is addressed by a list/index *path* from the selected trigger
+(\`TriggerTreePath\`). The UI never retains a pointer across a document reload.
+Edits are transactional: the candidate project and script rules validate
+headlessly before the edit becomes one undoable history entry. Unknown or
+stale paths, illegal action nesting, missing references, invalid expressions,
+oversized loop graphs and attempts to remove mandatory branches are rejected.
+Swapping identical nodes does not create a pointless undo entry.
+
+The old Advanced JSON edit still exists for custom extension data and bulk
+editing. It is no longer required for the supported recursive ECA structure.
+This is not a full Galaxy-language parser or user-defined function editor.
+
+The separate Debug/Release \`RTSRecursiveTriggerEditorTests\` checks the
+recursive API, nested property and formula editing, copying, reorder and
+deletion, failed transactions, dependency-aware global rename, undo/redo and
+project serialization. Linux software OpenGL captures the actual editor
+in the \`rts-recursive-trigger-editor-screenshot\` CI artifact.
+
+## Periodic gameplay effects in authored triggers
+
+F7 Effect catalog entries now support \`PeriodicDamage\` and \`PeriodicHeal\`
+alongside the existing \`Damage\`, \`Heal\`, and \`Sequence\` graph operations.
+
+Example Effect fields:
+
+\`\`\`json
+{"kind":"PeriodicDamage","amount":5,
+ "interval_ticks":45,"duration_ticks":270}
+\`\`\`
+
+\`amount\` is HP per pulse, \`interval_ticks\` is 1–600 simulation ticks,
+and \`duration_ticks\` is 1–3600 ticks (60 ticks/second). All values are
+validated before saving. Pulses happen at the specified tick boundaries,
+no sooner than the first interval after application. Effects are capped at
+256 concurrent scheduled operations per match. Target deaths clean up their
+effects; the active-effect queue resets with the map and is included in
+authoritative replay hashes. Sequence effects can combine immediate and
+periodic actions. A new optional Unit catalog stat, \`hp_regen\` (0–1000
+HP/second), is applied to living units at fixed simulation ticks.
+
+F7 has native object-creation templates for original Units (combat, worker,
+structure), Models, Actors and immediate/periodic/sequence Effects. It also
+offers an undoable Effect-operation selector which inserts required default
+fields during conversions; designers need not hand-edit effect JSON to
+change kind. F7 still lacks a node-based visual effect graph, a full
+behavior/buff stacking model and client-authorable unit abilities.
+See \`projects/timed_effects_showcase.rtsproject.json\`.

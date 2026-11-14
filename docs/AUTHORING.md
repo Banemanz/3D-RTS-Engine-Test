@@ -429,3 +429,27 @@ This is deterministic rule-based opponent combat, **not** a complete economic/st
 ## AI defense sample map
 
 Open `projects/ai_defense_showcase.rtsproject.json`. Two original Frontier scouts are placed closer to the enemy base to exercise the local guard policy. Its `metadata` sets `enemy_ai_enabled=true`, `enemy_ai_guard_radius=16` and a long reinforcement interval to focus on combat behavior. The map is included in Windows and Linux ZIPs, validated with `RTSProjectTool --validate` through CTest, exercised for 180 fixed steps in `ai_defense_behavior` and rendered under Linux software OpenGL for a real screenshot artifact. The simulator retains historical v1 replay support alongside AI-input format v2.
+
+
+## New F7 object creation and effect timelines (November 14)
+
+F7 Data Editor's **New catalog object...** dropdown creates valid
+standalone Units (Combat, Worker, Structure), Actors, Models, and Effects
+(Damage, Heal, PeriodicDamage, PeriodicHeal, Sequence). This is distinct
+from *Derive selected*: the new objects have no parent and can later be
+renamed or used as inheritance roots. IDs are unique and stable.
+A transactional **Effect operation** selector preserves the chosen ID
+while converting operation kind and filling required fields.
+
+Unit catalog fields may include \`hp_regen\` (default 0, up to 1000 HP/sec).
+Effects may use \`kind: PeriodicDamage\` or \`PeriodicHeal\`, with
+\`amount\` (health per pulse), \`interval_ticks\` (1–600) and
+\`duration_ticks\` (1–3600). Fixed 60 Hz simulation makes effect timing
+independent of rendering refresh rates. The number of concurrently scheduled
+effect steps is limited to 256. Applications beyond that limit are rejected
+atomically before any immediate Sequence steps execute.
+
+The example \`projects/timed_effects_showcase.rtsproject.json\` combines
+a field medic with passive regeneration, an OnRegionEnter event and a
+Sequence of timed damage/healing Effects. Its source assets and IDs are
+original to this project. No external RTS unit art or names are needed.

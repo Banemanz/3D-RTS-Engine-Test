@@ -88,3 +88,27 @@ This is a step toward separating simulation from GUI for future network, editor 
 ## Current script-event milestone (November 14)
 
 Authorable integer globals and simple compare/set/add actions now execute headlessly and render through F6. `OnVariableChanged` observes a coalesced first/last value difference from the previous fixed tick, avoiding synchronous recursion and unbounded callback fan-out. The pending event map participates in deterministic replay digests. The live monitor shows current versus initial global values. This is a deliberately limited scripting foundation, not a full parser, lexical scope, typed AST, functions, yielded execution or Galaxy runtime. Progress toward custom actions, native GUI and actor/ability systems remains necessary.
+
+
+## Recursive document tree and catalog commands (November 14)
+
+\`TriggerTree.hpp\` defines a stable path made of \`(listName,index)\`
+steps and validates transitions among a rule's root lists,
+\`IfThenElse.{conditions,then,else}\` and \`Repeat.actions\`. These
+paths are resolved against a fresh copy in \`EditorSession\` during
+mutations, not held as pointers across GUI refreshes. Insertion,
+deletion, duplicate, reorder, typed scalar property updates, expression
+subtree replacement and literal/expression conversion all use
+\`mutateTrigger\`, which runs the same project and trigger-rule validators
+as headless tools. Undo/redo remains one shared snapshot history.
+
+\`CreatorTriggerTreeWidgets.hpp\` is a replaceable ImGui presentation
+adapter rendering recursive lists and arithmetic AST controls. It contains
+no simulation logic. \`CreatorTriggerWidgets.hpp\` retains event/global
+configuration while delegating ECA lists to the recursive adapter.
+
+\`EditorSession::createCatalogObject\` and \`convertEffectKind\` similarly
+create fully validated transactional F7 catalog objects and effect-kind
+conversions, rather than injecting UI-only state or changing catalog
+entries directly. On a rejected candidate both project and undo history
+remain unchanged. Linux and Windows execute identical C++ source.

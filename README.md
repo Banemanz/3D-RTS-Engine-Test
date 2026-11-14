@@ -259,3 +259,18 @@ The F6 Trigger Editor now exposes bounded shared integer map variables with type
 ## Script control-flow and expressions (November 14 continuation)
 
 Creator-authored triggers support bounded signed integer formulas, variable comparisons, `IfThenElse` branches, and static/dynamic-count `Repeat` actions in the headless fixed-step simulation. This is original, sandboxed logic, with strict validation and replay parity on Windows/Linux. F6 can create initial branch/loop nodes, display nested summaries and edit complex expressions/branches in Advanced JSON. Safe script-global and Unit/Effect catalog renames traverse known nested references without touching custom text. The `script_relay_showcase` map now uses a branch, repeated body and variable-derived mineral reward. See `docs/TRIGGER_EDITOR.md`. This is not Galaxy-language source compatibility or a finished UI/actor/ability system.
+
+
+### Recursive map scripting and catalog effects (November 14)
+
+F6 now has recursive visual editing for conditional branches, repeat
+actions, validated ECA node properties and arithmetic expression trees;
+nested edits can be undone/redone without switching to raw JSON. F7
+adds standalone Unit/Actor/Model/Effect templates and an Effect type
+selector. The shared gameplay engine executes authored periodic damage
+and healing Effect graphs, plus optional per-Unit HP regeneration on
+fixed ticks. Open \`projects/timed_effects_showcase.rtsproject.json\`
+for an original playable example. The same code is built on Windows
+and Linux with strict replay-parity and CTest gates. See
+\`docs/TRIGGER_EDITOR.md\` and \`docs/SC2_FEATURE_MATRIX.md\`
+for remaining Galaxy-class editor gaps.
