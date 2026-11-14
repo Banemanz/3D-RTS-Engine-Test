@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <deque>
 #include <map>
+#include <utility>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -27,6 +28,7 @@ public:
         std::string id;
         std::string event;
         std::string region;
+        std::string variable; // OnVariableChanged event subscription
         double interval=0;
         double threshold=0;
         double startTime=0;
@@ -45,6 +47,11 @@ public:
     void tick(RTSSkirmish& game,double elapsed,const std::vector<int>& killed);
     const std::vector<Rule>& rules()const { return rules_; }
     const std::map<std::string,int>& variables()const{return variables_;}
+    // First and last value within one tick; a variable fires at most once on
+    // the next tick. Included in replay digests because it affects future work.
+    const std::map<std::string,std::pair<int,int>>& pendingVariableChanges()const{
+        return pendingVariableChanges_;
+    }
     void enableTracing(bool value){tracingEnabled_=value;}
     bool tracingEnabled()const{return tracingEnabled_;}
     const std::deque<Trace>& trace()const{return trace_;}
@@ -54,6 +61,7 @@ public:
 private:
     std::vector<Rule> rules_;
     std::map<std::string,int> variables_; // sorted for stable replay/inspectors
+    std::map<std::string,std::pair<int,int>> pendingVariableChanges_;
     bool tracingEnabled_=false;
     std::deque<Trace> trace_;
     std::uint64_t nextSequence_=1;
