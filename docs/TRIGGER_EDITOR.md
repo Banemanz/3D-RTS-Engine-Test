@@ -37,6 +37,19 @@ To use **OnRegionEnter**, first create a Region in the **SCENE** editor and save
 
 **ApplyEffect** only works with `OnRegionEnter` because it requires a subject unit; the visual menu disables it for other events. Create or derive an `Effect` catalog entry using F7. Current Effect operations are Damage, Heal, and Sequence; validation bounds depth, execution length, and child references. The `effects_showcase.rtsproject.json` map demonstrates this.
 
+### Map variables (shared trigger state)
+
+F6 now has **Map variables (shared trigger state)** above the ECA inspector. Add a variable by ID, edit its initial integer, or remove it using the mouse. IDs use ASCII letters/digits/underscores and must begin with a letter or underscore. Project JSON stores these in the optional `extensions.trigger_variables` object (for example `{"wave":0,"score":0}`).
+
+All triggers in one map share the values; restarting the match restores the authored initial values. Map variables are signed **integers limited to -100000000..100000000**, with a maximum of 64 per map. Addition saturates at the bounds. References are validated during authoring/loading: deleting a variable still used by a rule is rejected, preserving history and project data.
+
+- **VariableCompare** condition: a named variable, one of `==`, `!=`, `<`, `<=`, `>` or `>=`, and a literal integer.
+- **SetVariable** action: assign an integer literal.
+- **AddVariable** action: increment or decrement by an integer, clamped to the permitted range.
+
+Example: OnMapStart → SetVariable `wave` to 1; Every 15 seconds → AddVariable `wave` by 1; a second rule with VariableCompare `wave >= 4` → SpawnUnit using an original map Unit catalog. These are bounded sandboxed nodes, **not** a Galaxy-language compiler, local scopes, branching, loops or coroutines.
+
+Replay state digests include nonempty trigger globals; maps without globals retain the older digest behavior for v1/v2 compatibility. `RTSTriggerVariableTests` produces `trigger_globals_fingerprint.txt` and CI compares Windows and Linux digests.
 ### Example: announce a map objective after a delay
 
 1. Create a trigger; give it a name in Advanced JSON if needed.
