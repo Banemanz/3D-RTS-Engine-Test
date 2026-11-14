@@ -47,6 +47,7 @@ void TriggerEngine::configure(const RTSProject& p){
     auto initialVariables=parseTriggerVariables(p);
     rules_=std::move(next);
     variables_=std::move(initialVariables);
+    pendingVariableChanges_.clear();
     trace_.clear();
     nextSequence_=1;
     lastSimulationSeconds_=0.;
@@ -133,8 +134,14 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapse
                 int& current=variables_.at(name); // validated reference
                 const std::int64_t next=type=="SetVariable"
                     ?std::int64_t(value):std::int64_t(current)+value;
+                const int previous=current;
                 current=static_cast<int>(std::clamp(next,
                     std::int64_t(-100000000),std::int64_t(100000000)));
+                if(current!=previous){
+                    auto [it,inserted]=pendingVariableChanges_.emplace(
+                        name,std::make_pair(previous,current));
+                    if(!inserted)it->second.second=current;
+                }
             }
             if(tracingEnabled_){
                 if(!summary.empty())summary+=", ";
@@ -155,9 +162,18 @@ void TriggerEngine::start(RTSSkirmish& game) {
 void TriggerEngine::tick(RTSSkirmish& game,double elapsed,
                          const std::vector<int>& killed) {
     lastSimulationSeconds_=elapsed;
+    // Deliver a snapshot of the prior tick's changes; callbacks cannot
+    // reenter this batch. Coalesce each variable's first/last values to
+    // guarantee bounded work (at most 64 globals, 256 authored rules).
+    auto changes=std::move(pendingVariableChanges_);
+    pendingVariableChanges_.clear();
     for(auto& r:rules_) {
         if(r.once && r.fired)continue;
-        if(r.event=="After" && elapsed>=r.interval)run(r,game,-1,elapsed);
+        if(r.event=="OnVariableChanged"){
+            const auto changed=changes.find(r.variable);
+            if(changed!=changes.end() && changed->second.first!=changed->second.second)
+                run(r,game,-1,elapsed);
+        }else if(r.event=="After" && elapsed>=r.interval)run(r,game,-1,elapsed);
         else if(r.event=="Every" && elapsed>=r.startTime+r.interval) {
             r.startTime=elapsed;
             run(r,game,-1,elapsed);
