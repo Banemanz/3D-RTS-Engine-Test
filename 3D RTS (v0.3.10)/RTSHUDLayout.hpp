@@ -17,7 +17,7 @@ struct HUDRect {
 enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Ranger,
                         Worker, SelectArmy, SelectWorkers, FocusBase, Patrol, Hold, CancelQueue, Cancel,
                         TrainSlot0, TrainSlot1, TrainSlot2, TrainingPage,
-                        CastAbility0, CastAbility1, CastAbility2 };
+                        CastAbility0, CastAbility1, CastAbility2, AbilityPage };
 struct HUDButton {
     HUDCommand command=HUDCommand::None;
     std::string title;
@@ -87,6 +87,7 @@ public:
         const bool supply=game.supplyUsed<game.supplyCap;
         const bool producer=game.selectedProducerId()>=0 && game.trainingPageCount()>0;
         const bool paged=producer && game.trainingPageCount()>1;
+        const bool abilityPaged=!producer && selected==1 && game.abilityPageCount()>1;
         const std::array<HUDCommand,12> types={
           HUDCommand::Move,HUDCommand::AttackMove,HUDCommand::Stop,
           producer?HUDCommand::TrainSlot0:HUDCommand::Build,
@@ -95,16 +96,18 @@ public:
           HUDCommand::SelectArmy,HUDCommand::FocusBase,
           selectedBuilding && !combat?HUDCommand::CancelQueue:HUDCommand::Patrol,
           HUDCommand::Hold,HUDCommand::SelectWorkers,
-          paged?HUDCommand::TrainingPage:HUDCommand::Cancel
+          paged?HUDCommand::TrainingPage:
+          abilityPaged?HUDCommand::AbilityPage:HUDCommand::Cancel
         };
         const std::array<const char*,12> labels={
           "MOVE","ATK MOVE","STOP","BUILD","RANGER","WORKER",
           "ALL ARMY","HOME BASE",selectedBuilding && !combat?"CANCEL Q":"PATROL",
-          "HOLD","WORKERS",paged?"MORE":"CANCEL"
+          "HOLD","WORKERS",paged||abilityPaged?"MORE":"CANCEL"
         };
         const std::array<const char*,12> keys={
           "M","A","X","B","T","C","F2","H",
-          selectedBuilding && !combat?"V":"P","G","F3",paged?"TAB":"ESC"
+          selectedBuilding && !combat?"V":"P","G","F3",
+          paged||abilityPaged?"TAB":"ESC"
         };
         std::array<HUDButton,12> result{};
         const float gap=6;
@@ -144,6 +147,11 @@ public:
         result[11].enabled=true;
         if(paged)result[11].title="PAGE "+std::to_string(game.trainingPage()+1)+"/"+
                                           std::to_string(game.trainingPageCount());
+        else if(abilityPaged){
+            const int page=game.abilityPage()%game.abilityPageCount();
+            result[11].title="SKILLS "+std::to_string(page+1)+"/"+
+                             std::to_string(game.abilityPageCount());
+        }
         // Single-selection Ability bar reuses the otherwise disabled
         // Build/Train slots when no producer is open. Training remains
         // accessible on production structures, and core orders stay put.

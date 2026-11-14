@@ -112,7 +112,7 @@ void RTSSkirmish::reset() {
     releasedSupply_.clear();production_.clear();construction_.clear();
     periodicEffects_.clear();
     abilityReadyAt_.clear();
-    nextId_=1;trainingPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
+    nextId_=1;trainingPage_=0;abilityPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     visionIntervalTimer_=0.f;
     vision.reset(project_.terrain);
@@ -917,8 +917,24 @@ const ProjectPlacement* RTSSkirmish::regionForTrigger(const std::string& id)cons
     return nullptr;
 }
 
+int RTSSkirmish::abilityPageCount()const{
+    const Unit* caster=nullptr;
+    for(const auto& u:units)if(u.isSelected && u.isAlive() && u.ownerId==0){
+        if(caster)return 0;
+        caster=&u;
+    }
+    if(!caster || caster->catalogId.empty())return 0;
+    const auto abilities=unitAbilityIds(project_.catalog,caster->catalogId);
+    return static_cast<int>((abilities.size()+2)/3);
+}
+bool RTSSkirmish::nextAbilityPage(){
+    const int count=abilityPageCount();
+    if(count<=1)return false;
+    abilityPage_=(abilityPage_+1)%count;
+    return true;
+}
 std::string RTSSkirmish::selectedAbilityId(int slot) const {
-    if(slot<0 || slot>=8)return "";
+    if(slot<0 || slot>=3)return "";
     const Unit* caster=nullptr;
     for(const auto& u:units)if(u.isSelected && u.isAlive() && u.ownerId==0){
         if(caster)return ""; // ambiguity: HUD abilities require one caster
@@ -926,7 +942,9 @@ std::string RTSSkirmish::selectedAbilityId(int slot) const {
     }
     if(!caster || caster->catalogId.empty())return "";
     const auto abilities=unitAbilityIds(project_.catalog,caster->catalogId);
-    return static_cast<std::size_t>(slot)<abilities.size()?abilities[slot]:"";
+    const int page=abilityPage_%std::max(1,static_cast<int>((abilities.size()+2)/3));
+    const std::size_t index=static_cast<std::size_t>(page*3+slot);
+    return index<abilities.size()?abilities[index]:"";
 }
 std::uint64_t RTSSkirmish::abilityCooldownRemaining(
     int casterId,const std::string& abilityId)const{

@@ -101,6 +101,9 @@ public:
     int playerBaseId() const { return friendlyBaseId_; }
     std::size_t activePeriodicEffectCount()const{return periodicEffects_.size();}
     std::string selectedAbilityId(int slot) const;
+    int abilityPage()const{return abilityPage_;}
+    int abilityPageCount()const;
+    bool nextAbilityPage();
     bool canPrepareAbility(int casterId,const std::string& abilityId) const;
     bool canCastAbility(int casterId,const std::string& abilityId,int targetId) const;
     std::uint64_t abilityCooldownRemaining(int casterId,const std::string& abilityId) const;
@@ -184,6 +187,8 @@ private:
     int nextId_ = 1;
     bool occupancyDirty_ = false;
     int trainingPage_ = 0;
+    // UI-only command-card page. Not included in simulation digests.
+    int abilityPage_ = 0;
     float enemySpawnTimer_ = 12.0f;
     float visionIntervalTimer_=0.0f;
     std::unordered_set<int> releasedSupply_;

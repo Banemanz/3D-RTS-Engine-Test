@@ -214,6 +214,11 @@ struct AppState {
                 }
                 break;
             }
+            case HUDCommand::AbilityPage:
+                if(game.nextAbilityPage())
+                    inform("ABILITY PAGE "+std::to_string(game.abilityPage()+1)+
+                           "/"+std::to_string(game.abilityPageCount()));
+                break;
             case HUDCommand::TrainingPage:
                 if(game.nextTrainingPage())
                     inform("PRODUCTION PAGE "+std::to_string(game.trainingPage()+1)+"/"+
@@ -1208,8 +1213,11 @@ int main(int argc, char** argv) {
                 app.command(producerSelected?HUDCommand::TrainSlot1:HUDCommand::Ranger);
             if (justPressed(GLFW_KEY_C, app.keyC))
                 app.command(producerSelected?HUDCommand::TrainSlot2:HUDCommand::Worker);
-            if (justPressed(GLFW_KEY_TAB, app.keyTab) && producerSelected)
-                app.command(HUDCommand::TrainingPage);
+            if (justPressed(GLFW_KEY_TAB, app.keyTab)){
+                if(producerSelected)app.command(HUDCommand::TrainingPage);
+                else if(app.game.abilityPageCount()>1)
+                    app.command(HUDCommand::AbilityPage);
+            }
             if (justPressed(GLFW_KEY_X, app.keyX)) app.command(HUDCommand::Stop);
             if (justPressed(GLFW_KEY_F2, app.keyF2)) app.command(HUDCommand::SelectArmy);
             if (justPressed(GLFW_KEY_F3, app.keyF3)) app.command(HUDCommand::SelectWorkers);
