@@ -28,6 +28,8 @@ void draw(App& app){
                          engine.lastSimulationSeconds(),engine.trace().size(),
                          TriggerEngine::TraceCapacity);
     ImGui::TextWrapped("Run F9 to play, then F6 to inspect. Editing map data restarts the preview.");
+    static ImGuiTextFilter search;
+    search.Draw("Search rules / event details");
     ImGui::SeparatorText("Rule execution counters");
     const auto& rules=engine.rules();
     if(ImGui::BeginTable("##triggerStats",4,
@@ -40,11 +42,14 @@ void draw(App& app){
         ImGui::TableHeadersRow();
         for(std::size_t i=0;i<rules.size();++i){
             const auto& rule=rules[i];
+            if(!search.PassFilter(rule.id.c_str()))continue;
             ImGui::PushID(static_cast<int>(i));
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             if(ImGui::Selectable(rule.id.c_str(),false,
                                  ImGuiSelectableFlags_SpanAllColumns)){
+                app.editor.finishStroke(app.project);
+                if(app.editor.textEditing)app.editor.cancelEdit();
                 app.editor.selectedTrigger=i;
                 app.editor.panel=EditorSession::Panel::Triggers;
             }
@@ -64,6 +69,8 @@ void draw(App& app){
         if(events.empty())ImGui::TextDisabled("No captured events. Play a map with authored triggers.");
         for(auto it=events.rbegin();it!=events.rend();++it){
             const auto& entry=*it;
+            const std::string searchable=entry.ruleId+" "+entry.event+" "+entry.detail;
+            if(!search.PassFilter(searchable.c_str()))continue;
             ImGui::PushID(static_cast<int>(entry.sequence));
             const char* state=entry.status==TriggerEngine::TraceStatus::Executed?"FIRED":
                 entry.status==TriggerEngine::TraceStatus::ConditionBlocked?"BLOCKED":"ERROR";
@@ -80,6 +87,8 @@ void draw(App& app){
             if(ImGui::SmallButton("Open rule")){
                 for(std::size_t i=0;i<rules.size();++i)
                     if(rules[i].id==entry.ruleId){
+                        app.editor.finishStroke(app.project);
+                        if(app.editor.textEditing)app.editor.cancelEdit();
                         app.editor.selectedTrigger=i;
                         app.editor.panel=EditorSession::Panel::Triggers;
                         break;

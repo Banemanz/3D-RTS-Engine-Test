@@ -95,6 +95,7 @@ def main() -> int:
         "RTS_FEATURE_DATA_EDITOR",
         "RTS_FEATURE_TRIGGER_EDITOR",
         "RTS_FEATURE_VISUAL_ECA_EDITOR",
+        "RTS_FEATURE_TRIGGER_TRACE_MONITOR",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:
