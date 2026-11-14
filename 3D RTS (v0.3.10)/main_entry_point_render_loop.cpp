@@ -12,6 +12,8 @@
 #include "BitmapHUD.hpp"
 #include "RTSHUDLayout.hpp"
 #include "RTSHUD.hpp"
+#include "NativePauseMenu.hpp"
+#include "NativePauseMenuGL.hpp"
 #include "CrashReporter.hpp"
 #include "RTSProject.hpp"
 #include "InstanceOverrides.hpp"
@@ -44,6 +46,7 @@ struct AppState {
     float noticeSeconds=0;
     std::string projectPath="projects/working.rtsproject.json";
     bool mouseStroke=false;
+    bool pauseMenu=false;
     bool hoveredTerrain=false;
     Vec3 hoveredWorld{};
     float terrainSlopeLimit()const {
@@ -335,6 +338,26 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (!state) return;
+    if(state->pauseMenu && state->editor.panel==EditorSession::Panel::Play){
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+            double mx=0.,my=0.;
+            glfwGetCursorPos(window,&mx,&my);
+            NativeUI::PauseMenu menu(state->windowWidth,state->windowHeight);
+            switch(menu.hit(mx,my)){
+            case NativeUI::Action::Resume:state->pauseMenu=false;break;
+            case NativeUI::Action::Restart:
+                state->game.reset();state->controlGroups={};
+                state->mode=AppState::Mode::Normal;state->hasMoveMarker=false;
+                state->pauseMenu=false;break;
+            case NativeUI::Action::Editor:
+                state->editor.panel=EditorSession::Panel::Terrain;
+                state->reloadFromProject();state->pauseMenu=false;break;
+            case NativeUI::Action::Exit:glfwSetWindowShouldClose(window,true);break;
+            default:break;
+            }
+        }
+        return;
+    }
     // Dear ImGui handles its own widgets. A click on a docked panel must not
     // also trigger world selection, terrain sculpting, or combat orders.
     if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse){
@@ -491,6 +514,10 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if(!s)return;
     const bool ctrl=(mods & GLFW_MOD_CONTROL)!=0;
+    if(s->pauseMenu && s->editor.panel==EditorSession::Panel::Play){
+        if(key==GLFW_KEY_ESCAPE && action==GLFW_PRESS)s->pauseMenu=false;
+        return;
+    }
     if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard &&
        !(ctrl && key==GLFW_KEY_S) &&
        !(key>=GLFW_KEY_F5 && key<=GLFW_KEY_F9))
@@ -572,7 +599,10 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
         }else if(s->mode!=AppState::Mode::Normal) {
             s->mode=AppState::Mode::Normal;
             s->inform("COMMAND CANCELLED");
-        }else glfwSetWindowShouldClose(window,true);
+        }else {
+            s->pauseMenu=true;
+            s->selectionManager.isDragging=false;
+        }
         return;
     }
     if(edit.panel==EditorSession::Panel::Play)return;
@@ -725,6 +755,7 @@ int main(int argc, char** argv) {
         std::cout<<"RTS_BUILD_COMMIT="<<RTS_SOURCE_COMMIT<<"\n"
                  <<"RTS_FEATURE_FOG_OF_WAR=1\n"
                  <<"RTS_FEATURE_GAMEPLAY_HUD=1\n"
+                  <<"RTS_FEATURE_NATIVE_PAUSE_MENU=1\n"
                  <<"RTS_FEATURE_CREATOR_GUI=1\n"
                  <<"RTS_FEATURE_TERRAIN_EDITOR=1\n"
                  <<"RTS_FEATURE_SCENE_EDITOR=1\n"
@@ -743,6 +774,7 @@ int main(int argc, char** argv) {
     bool selectArmyForSmoke=false;
     bool selectProducerForSmoke=false;
     bool stressEditor=false;
+    bool pauseMenuSmoke=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -757,6 +789,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
+        else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
     }
     int renderedFrames = 0;
     try {
@@ -815,6 +848,8 @@ int main(int argc, char** argv) {
                 app.camera.targetZoomDistance=app.camera.currentZoomDistance;
             }
         }
+        if(pauseMenuSmoke && smokeFrames>0 &&
+           app.editor.panel==EditorSession::Panel::Play)app.pauseMenu=true;
         GLFWwindow* window = glfwCreateWindow(
             app.windowWidth, app.windowHeight,
             "RTS Creator - Game & World Editor",
@@ -961,7 +996,7 @@ int main(int argc, char** argv) {
 
         std::cout << "RTS Skirmish: LMB select, RMB move/attack/gather, A then RMB attack-move,\n"
                   << "B then RMB place Barracks (worker needed), T train Marine, C train Worker,\n"
-                  << "X stop, Q/E rotate, arrows/W/S/D camera, R restart, Esc quit.\n";
+                  << "X stop, Q/E rotate, arrows/W/S/D camera, R restart, Esc pause.\n";
         float accumulator = 0.0f;
         const float fixedStep = 1.0f / 60.0f;
         double lastTitleUpdate = 0.0;
@@ -992,7 +1027,7 @@ int main(int argc, char** argv) {
                 previous = down;
                 return fired;
             };
-            if(app.editor.panel==EditorSession::Panel::Play) {
+            if(app.editor.panel==EditorSession::Panel::Play && !app.pauseMenu) {
             if (justPressed(GLFW_KEY_M, app.keyM)) app.command(HUDCommand::Move);
             if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
             if (justPressed(GLFW_KEY_V, app.keyV)) app.command(HUDCommand::CancelQueue);
@@ -1037,14 +1072,14 @@ int main(int argc, char** argv) {
                 }
             }
             }
-            if(!app.editor.textEditing) {
+            if(!app.editor.textEditing && !app.pauseMenu) {
                 if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
                 if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
             }
 
-            if(!app.editor.textEditing)
+            if(!app.editor.textEditing && !app.pauseMenu)
                 app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
-            if(app.editor.panel==EditorSession::Panel::Play) {
+            if(app.editor.panel==EditorSession::Panel::Play && !app.pauseMenu) {
                 accumulator += deltaTime;
                 int steps = 0;
                 while (accumulator >= fixedStep && steps < 8) {
@@ -1390,6 +1425,15 @@ int main(int argc, char** argv) {
             CreatorWorkbench::draw(app);
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            if(app.pauseMenu && app.editor.panel==EditorSession::Panel::Play){
+                double mx=-1.,my=-1.;
+                glfwGetCursorPos(window,&mx,&my);
+                glDisable(GL_DEPTH_TEST);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+                NativeUI::PauseMenuGL native(hudBoxShader,hudVAO,hudVBO);
+                native.draw(NativeUI::PauseMenu(app.windowWidth,app.windowHeight),mx,my);
+            }
             glEnable(GL_DEPTH_TEST);
 
             if (smokeFrames > 0 && ++renderedFrames >= smokeFrames) {

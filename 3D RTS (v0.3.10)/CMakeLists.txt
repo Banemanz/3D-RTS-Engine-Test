@@ -33,6 +33,8 @@ target_include_directories(RTSSimulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(RTSSimulation PUBLIC RTSNavigation RTSAuthoring)
 
 if(BUILD_TESTING)
+    add_executable(RTSNativeMenuTests tests/native_menu_tests.cpp)
+    add_test(NAME native_menu COMMAND RTSNativeMenuTests)
     add_executable(RTSNavigationTests tests/navigation_tests.cpp)
     target_link_libraries(RTSNavigationTests PRIVATE RTSNavigation)
     add_test(NAME navigation COMMAND RTSNavigationTests)
@@ -115,7 +117,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNavigationTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
+    foreach(test_target IN ITEMS RTSNativeMenuTests RTSNavigationTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
@@ -171,7 +173,7 @@ if(RTS_BUILD_DEMO)
     target_compile_definitions(RTSCameraTerrain PRIVATE
         RTS_SOURCE_COMMIT="${RTS_SOURCE_COMMIT}"
         RTS_FEATURE_CREATOR_GUI=1 RTS_FEATURE_FOG_OF_WAR=1
-        RTS_FEATURE_GAMEPLAY_HUD=1)
+        RTS_FEATURE_GAMEPLAY_HUD=1 RTS_FEATURE_NATIVE_PAUSE_MENU=1)
     if(WIN32)
         target_link_libraries(RTSCameraTerrain PRIVATE dbghelp)
     endif()

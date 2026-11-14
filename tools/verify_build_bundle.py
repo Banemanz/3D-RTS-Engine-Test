@@ -85,6 +85,7 @@ def main() -> int:
     required = (
         "RTS_FEATURE_FOG_OF_WAR",
         "RTS_FEATURE_GAMEPLAY_HUD",
+        "RTS_FEATURE_NATIVE_PAUSE_MENU",
         "RTS_FEATURE_CREATOR_GUI",
         "RTS_FEATURE_TERRAIN_EDITOR",
         "RTS_FEATURE_SCENE_EDITOR",
