@@ -254,7 +254,7 @@ void inspector(App& app){
                 }
                 const auto incoming=project.catalogReferences(entry->id);
                 if(!incoming.empty()){
-                    if(ImGui::TreeNode("Used by (%zu)",incoming.size())){
+                    if(ImGui::TreeNode("##uses","Used by (%zu)",incoming.size())){
                         for(std::size_t i=0;i<std::min<std::size_t>(incoming.size(),24);++i)
                             ImGui::TextWrapped("%s",incoming[i].c_str());
                         if(incoming.size()>24)

@@ -79,9 +79,9 @@ int main() {
     assert(!editor.setCatalogField(p,"actor",picojson::value("missing_actor")));
     assert(p.catalog.resolvedFields("worker").at("actor").get<std::string>()=="worker_actor");
     assert(editor.setCatalogField(p,"is_worker",picojson::value(false)));
-    assert(!unitFromCatalog(p.catalog,"worker").isWorker);
+    assert(!p.catalog.resolvedFields("worker").at("is_worker").get<bool>());
     assert(editor.undo(p));
-    assert(unitFromCatalog(p.catalog,"worker").isWorker);
+    assert(p.catalog.resolvedFields("worker").at("is_worker").get<bool>());
     editor.beginNewField();
     editor.editText="custom_mod_value";assert(editor.finishEdit(p));
     editor.editText="{\"foo\":true}";assert(editor.finishEdit(p));
