@@ -65,3 +65,8 @@ This project is **not** currently a clone of StarCraft II's editor. The priority
 ## First graph execution milestone (implemented after native UI)
 
 Authoring now recognizes `Effect` object catalogs with typed operations: Damage, Heal, Sequence. Graph validation enforces cycle detection and bounded complexity; editor links, incoming references, rename/delete migration and region trigger execution are integrated. This is a **headless C++ interpreter**, not copied from Galaxy or Recoil. Next design work: unit ability catalogs, target filters and effect contexts, scheduled behaviors, actor events and gameplay/perception-specific UI widgets.
+
+
+## First visual ECA authoring milestone
+
+The Trigger Editor now has a true event/condition/action inspector. Edit event kind and parameters, one-shot state, add or reorder typed conditions/actions, edit Unit/Region/Effect references with dropdowns, and use advanced JSON for more complex/extension data. `TriggerDefinition` supplies a single compiled rule validation authority for both authoring and simulation. Invalid edits are transactional and do not corrupt the open project. It is still rendered by the existing workbench adapter while the engine-native widget tree/docking system is developed. Implementation and next-stage constraints: `TRIGGER_EDITOR.md`.

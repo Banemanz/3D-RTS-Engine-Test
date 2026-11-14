@@ -109,3 +109,8 @@ continue to work.
 
 ## Engine-native pause menu
 During a match, press **Esc** with no active command to pause. Esc again resumes. Click **Resume Match**, **Restart Match**, **Open World Editor**, or **Exit Game**. Simulation, tactical orders, and camera input are suspended while paused. An active move/build/attack command is cancelled by Esc first. In editor mode, Esc returns to play without closing the process.
+
+
+## Visual ECA shortcuts and workflow
+
+Press **F6** in the game to open Trigger Editor. Use **New trigger** in the Browser; select a trigger and the Inspector shows its event, conditions and ordered actions. Mouse menus can add event types, conditions and actions, assign their typed fields or references, and move/remove individual nodes. **Ctrl+Z** undoes the last committed authoring action and **Ctrl+Y** redoes it. Save with **Ctrl+S**, and use **F9** to playtest. Raw JSON is available under Advanced. `docs/TRIGGER_EDITOR.md` describes the supported operations and restrictions.

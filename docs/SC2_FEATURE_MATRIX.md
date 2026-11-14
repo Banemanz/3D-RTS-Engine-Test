@@ -162,3 +162,8 @@ The example unit definitions have distinct IDs and presentation names; SC2-speci
 ## Small typed effect graph and region trigger (November 14)
 
 `Effect` is a new mod-authored catalog family using `Damage`, `Heal` and bounded `Sequence` nodes. References participate in rename/delete dependency tracking. The trigger runtime can invoke an Effect on a region-entering subject through `ApplyEffect`. `projects/effects_showcase.rtsproject.json` demonstrates a sequence while retaining the same pure-C++ simulation on Windows and Linux. This is an early prerequisite for later abilities/behaviors/validators, not the SC2 effect system.
+
+
+## GUI trigger workflows and effect references
+
+The F6 Trigger Editor now exposes the ECA tree as typed controls (event, repeat, conditions, actions, inspector properties and ordering), not only raw text. Effect references are taken from authored Effect catalog objects and currently require an `OnRegionEnter` subject. Both visual changes and raw JSON use the same headless parser and validation gate, with undo/redo and tests. This is a useful subset of Galaxy's authoring workflow, **not** its complete trigger language, variable library, debugger or UI system. See `docs/TRIGGER_EDITOR.md`.

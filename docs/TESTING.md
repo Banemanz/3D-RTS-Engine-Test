@@ -114,3 +114,8 @@ context for feature/identity parity but still needs a real GPU UI test.
 ## Legacy starter-content and catalog family regression
 
 Headless tests now exercise all-new starter IDs and a previously serialized map's original catalog names. The Data Editor test covers family switching, nonexistent categories and link-based navigation across type filters; the Linux OpenGL UI smoke exercises the real browser. Windows/Linux feature flags, binary packaging and CTests stay aligned.
+
+
+## Typed ECA authoring and real GUI smoke
+
+`RTSTriggerAuthoringTests` runs on **Windows and Linux** under CTest Debug and Release. Tests cover action/condition lists, event types and timing, catalog/effect references, index boundaries, no-op edits, invalid values, project save/load, raw JSON rollback and chronological undo/redo. `CreatorTriggerWidgets.hpp` renders the actual F6 inspector in the Linux Mesa/Xvfb screenshot test using `projects/effects_showcase.rtsproject.json`. The installed Windows and Linux `RTSCameraTerrain` executables advertise `RTS_FEATURE_VISUAL_ECA_EDITOR=1`, checked directly by the release bundle verifier. Windows desktop/GPU UI testing remains necessary independently of CI.

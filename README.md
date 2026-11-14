@@ -208,3 +208,8 @@ The included starter data now uses **Frontier Ranger** (`ranger`), **Rift Raider
 ## New authored effect demo
 
 The engine now exposes the beginning of an original **data-driven effect graph**: `Effect` catalog nodes with Damage, Heal and Sequence, validated for cycles and complexity, and a bounded `ApplyEffect` ECA action for the unit entering a map Region. Use `--project projects/effects_showcase.rtsproject.json` to play the included map, or open it in the editor with `--editor --project ...` and inspect the Effect catalog, region and trigger. There is no SC2 content dependency. This is not yet a complete ability/weapon/behavior graph.
+
+
+## Visual Event–Condition–Action editor (November 14, 2026)
+
+The F6 Trigger Editor now has a functional ECA form/tree: choose event types, configure intervals, regions and once/repeat; add conditions and ordered actions; edit typed numeric/text/catalog fields; reorder/remove nodes; and open advanced JSON when needed. Invalid rule modifications are rejected before changing the project, using **one shared parser with the runtime**, with undo/redo for each committed change. The authored Effect catalog can be selected for region-entering unit effects. No extra GUI dependency was introduced. Read [docs/TRIGGER_EDITOR.md](docs/TRIGGER_EDITOR.md) for the complete workflow and supported event/action list.

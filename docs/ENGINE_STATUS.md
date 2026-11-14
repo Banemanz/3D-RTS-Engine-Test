@@ -222,3 +222,8 @@ Default and shipped map catalogs have original Ranger/Rift Raider/Rift Bastion e
 ## Bounded effect runtime — first authored graph
 
 Effects are now named typed catalog entries: damage/heal leaves and ordered child sequences, bounded by traversal budget/depth, with cycle detection. `ApplyEffect` on `OnRegionEnter` applies the compiled graph to the actual entering unit in fixed-step simulation. Effect IDs are migrated and dependency-checked on rename/delete, including trigger references. Default starter catalogs include `kinetic_pulse` and `restorative_pulse`. The `effects_showcase` project contains an authored sequence and target region. The engine still lacks arbitrary weapon/ability activations, projectiles, area queries, behaviors and VFX actor dispatch.
+
+
+## Mouse-operable ECA composer and shared schema (November 14)
+
+The trigger authoring surface is no longer only raw JSON. The F6 inspector displays a real event/condition/action tree with selectable event types and typed property inputs; map creators can add, remove and reorder actions/conditions, select region/unit/effect references and control one-shot triggers. Complex mod extensions retain the advanced JSON escape hatch. `TriggerDefinition` is a shared, headless rule parser used by both editor and simulation, closing a previous validator mismatch that could leave invalid edits in the model. Each edit is atomic and undoable. The shipped native UI remains planned; these tools temporarily use the existing ImGui adapter while the custom UI toolkit is expanded. `docs/TRIGGER_EDITOR.md` is the detailed reference.

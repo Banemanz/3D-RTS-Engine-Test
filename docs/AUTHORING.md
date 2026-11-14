@@ -377,3 +377,10 @@ All effect nodes are validated before map load/save: maximum 16 stack depth, at 
 Trigger ECA gains `ApplyEffect` for **OnRegionEnter** events, operating on the entering subject unit and optionally filtered with `SubjectOwnerIs`. For example, an action can be `{"type":"ApplyEffect","effect":"kinetic_pulse"}`. This is the first concrete data-driven effect executor, not yet a general targeting/ability/weapons system.
 
 Run `RTSCameraTerrain --project projects/effects_showcase.rtsproject.json` (Windows: `RTSCameraTerrain.exe`) to load the included playable example, or `--editor --project projects/effects_showcase.rtsproject.json` to inspect the region, event rule and linked Effect objects through F7/F6/F8. Its region applies a short damage/heal sequence to an entering friendly unit once. Existing custom maps do not require adding these entries.
+
+
+## Visual Trigger Editor (no manual JSON required for standard rules)
+
+Open F6 and select or create a rule in the left Browser. The right Inspector now has the editable **Event / Conditions / Actions** tree, supports typed fields and catalog/region references, and manages order, insertion, deletion and repeat-once behavior. The old raw JSON editor remains under the expandable Advanced panel. Invalid changes (including raw JSON) are rejected **before** they alter or save the project. All UI edits pass through the same undoable, headless C++ authoring API and same ECA validation parser as the runtime.
+
+See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for action types, creation steps, Effect graph examples and limitations.
