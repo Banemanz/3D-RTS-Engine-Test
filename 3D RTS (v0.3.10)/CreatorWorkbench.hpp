@@ -296,9 +296,9 @@ void inspector(App& app){
                             ImGui::SeparatorText("Effect graph | Sequence");
                             ImGui::TextDisabled("%zu ordered effects (maximum 8)",children.size());
                             for(std::size_t i=0;i<children.size();++i){
-                                if(!children[i].is<std::string>())continue;
+                                if(!children[i].template is<std::string>())continue;
                                 ImGui::PushID(static_cast<int>(i));
-                                const std::string refId=children[i].get<std::string>();
+                                const std::string refId=children[i].template get<std::string>();
                                 if(navigateCatalog(app,"Open effect",refId)){
                                     ImGui::PopID();ImGui::End();return;
                                 }
