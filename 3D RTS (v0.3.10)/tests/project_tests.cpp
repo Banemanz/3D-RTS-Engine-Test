@@ -8,8 +8,8 @@
 int main() {
     RTSProject p=RTSProject::defaults();
     assert(p.placements.size()==13);
-    assert(p.catalog.find("marine") && p.catalog.find("marine_actor"));
-    assert(p.catalog.setField("marine","damage",picojson::value(31.0)));
+    assert(p.catalog.find("ranger") && p.catalog.find("ranger_actor"));
+    assert(p.catalog.setField("ranger","damage",picojson::value(31.0)));
     p.terrain.beginStroke();
     assert(p.terrain.applyBrush({0,0,0},TerrainMap::Brush::Raise,5,4));
     assert(p.terrain.applyBrush({0,0,0},TerrainMap::Brush::Paint,5,1,2));
@@ -24,7 +24,7 @@ int main() {
     assert(loaded.terrain.cell(24,24).height>3.9f);
     assert(loaded.terrain.cell(24,24).material==2);
     assert(loaded.terrain.cell(24,24).blocked);
-    assert(unitFromCatalog(loaded.catalog,"marine").damage==31.0f);
+    assert(unitFromCatalog(loaded.catalog,"ranger").damage==31.0f);
     assert(loaded.extensions.count("external_tool_metadata")==1);
     std::filesystem::remove(path);
     picojson::value json=p.toJson();

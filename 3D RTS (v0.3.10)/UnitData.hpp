@@ -34,5 +34,5 @@ public:
     std::string toTresString() const;
 };
 
-extern const char* HUMAN_MARINE_TRES;
-extern const char* HYBRID_ZEALOT_TRES;
+extern const char* HUMAN_RANGER_TRES;
+extern const char* HYBRID_RAIDER_TRES;

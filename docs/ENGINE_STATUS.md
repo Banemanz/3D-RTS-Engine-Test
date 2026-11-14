@@ -16,9 +16,9 @@ distinct from manual gameplay verification.
 | Shift-queued ground orders and control groups | Implemented (basic) | No attack-target/gather queuing yet |
 | Contextual mineral harvesting | Implemented | 10 minerals per trip, 1.6-second extraction |
 | Command Center and Barracks | Implemented | Placeholder meshes, 9-second Barracks construction |
-| Marine/Worker training, economy/supply | Implemented | Per-building queues, paid minerals, reserved supply |
+| Ranger/Worker training, economy/supply | Implemented | Per-building queues, paid minerals, reserved supply |
 | Enemy skirmish behavior | Minimal | Scripted reinforcements; simple unit target selection |
-| Victory/defeat and restart | Implemented | Destroy Command Center or Hive |
+| Victory/defeat and restart | Implemented | Destroy Command Center or Bastion |
 | In-game HUD | Implemented | Built-in bitmap font, resources/actions/selection |
 | UnitData validation | Implemented | Embedded data only; strictly parsed numeric fields |
 | Tests and CI | Implemented | Linux full build, Windows headless build, Mesa screenshot |
@@ -212,3 +212,8 @@ native verification.
 The custom RTS HUD now has a native pause-menu companion with renderer-independent hit testing and GL presentation. Esc pauses the match and suppresses camera/world commands, with Resume/Restart/Editor/Exit actions. The executable advertises `RTS_FEATURE_NATIVE_PAUSE_MENU=1` on both targets.
 
 Editor F7 now follows stable IDs for inherited links and production objects, shows reverse references and field provenance, and writes validated, undoable bool/numeric/string values. The editor *still uses Dear ImGui*, intentionally retained until native editor widgets reach feature parity. The full migration and missing gameplay systems are tracked in `docs/CREATOR_ARCHITECTURE.md`.
+
+
+## Creator workflow improvements and sample-content identity
+
+Default and shipped map catalogs have original Ranger/Rift Raider/Rift Bastion examples. Existing maps using the previous embedded catalog IDs are still loadable without replacing their data. The browser now filters by data type/family and virtualizes visible list rows; switching via catalog links selects the target family even when another filter is active. This improves the existing workbench without adding UI dependencies. The editor is still not a complete Galaxy Editor and the game mode remains a prototype.

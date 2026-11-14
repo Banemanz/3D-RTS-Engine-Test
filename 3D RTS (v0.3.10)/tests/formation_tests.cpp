@@ -49,7 +49,7 @@ int main(){
     // reinforcements for this focused movement regression.
     custom.placements.erase(std::remove_if(custom.placements.begin(),
         custom.placements.end(),[](const ProjectPlacement& p) {
-            return p.owner==1 && p.catalogId=="zealot";
+            return p.owner==1 && p.catalogId=="rift_raider";
         }),custom.placements.end());
     custom.metadata["enemy_spawn_interval"]=picojson::value(999.0);
     RTSSkirmish game;

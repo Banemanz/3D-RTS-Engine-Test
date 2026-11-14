@@ -152,3 +152,8 @@ multi-unit flow fields.
 
 ## November 14: catalog-object explorer and native UI foundation
 Current editor object navigation supports Parent, Unit/Actor/Model links, production references and incoming uses, plus typed primitive property editing with validation/undo. Engine-owned pause-menu geometry and GL UI have been implemented separately from the existing ImGui workbench. This is **not** a complete Galaxy Editor data module, full editor UI or a gameplay abilities/effects system. Track planned data/actor/ability/trigger/terrain/UI modules in `docs/CREATOR_ARCHITECTURE.md`.
+
+
+## Independent example content and Data Editor module workflow
+
+The example unit definitions have distinct IDs and presentation names; SC2-specific unit names are not shipped wholesale as game content. This engine can load author-created catalogs and is not intended to emulate SC2's copyrighted art, code, story or audio. The F7 catalog list now exposes every present category through a dynamic type selector, works with the inherited/searchable object inspector, and only submits visible list rows to ImGui each frame. Architectural references: [Galaxy Data Editor](https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/058_Data_Editor_Introduction/), [Recoil](https://recoilengine.org/), and [0 A.D.](https://play0ad.com/).

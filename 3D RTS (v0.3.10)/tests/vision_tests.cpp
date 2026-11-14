@@ -48,12 +48,12 @@ int main(){
     for(const auto& u:game.units)if(u.ownerId==1 && u.isStructure){enemy=&u;break;}
     assert(enemy!=nullptr);
     assert(!game.vision.visible(enemy->position));
-    const auto* marine=game.project().catalog.find("marine");
-    assert(marine!=nullptr);
-    assert(unitFromCatalog(game.project().catalog,"marine").sight_range==14.f);
+    const auto* ranger=game.project().catalog.find("ranger");
+    assert(ranger!=nullptr);
+    assert(unitFromCatalog(game.project().catalog,"ranger").sight_range==14.f);
     RTSProject custom=RTSProject::defaults();
-    assert(custom.catalog.setField("marine","sight_range",picojson::value(3.0)));
+    assert(custom.catalog.setField("ranger","sight_range",picojson::value(3.0)));
     game.loadProject(custom);
-    assert(unitFromCatalog(game.project().catalog,"marine").sight_range==3.f);
+    assert(unitFromCatalog(game.project().catalog,"ranger").sight_range==3.f);
     std::cout<<"vision: exploration, terrain LOS, fog texture, catalog sight range passed\n";
 }

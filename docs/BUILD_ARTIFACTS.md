@@ -61,7 +61,7 @@ Neither minidumps nor error logs are uploaded automatically.
 
 The packaged Windows executable is runtime-only: third-party GLFW headers,
 CMake package files and static libraries are excluded from the installer
-layout. CI treats inclusion of a development SDK in the end-user archive
+layout. CI treats inclusion of a development SDK in the end-user arcrift_bastion
 as a packaging regression. The engine's own debug PDB remains in `symbols/`.
 
 ## Runtime verification

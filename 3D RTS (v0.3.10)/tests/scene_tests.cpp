@@ -10,7 +10,7 @@ int main() {
     editor.panel=EditorSession::Panel::Scene;
     assert(!editor.selectedPlacement(p));
     assert(editor.selectNearestPlacement(p,{-13,0,-4.5f}));
-    assert(editor.selectedPlacement(p)->id=="marine_1");
+    assert(editor.selectedPlacement(p)->id=="ranger_1");
     const std::string id=editor.selectedPlacementId;
     const Vec3 old=editor.selectedPlacement(p)->position;
     assert(editor.moveSelectedPlacement(p,{-9,0,8}));
@@ -38,7 +38,7 @@ int main() {
     assert(modified!=nullptr && modified->id==id);
     auto resolved=resolvePlacedUnit(p,*modified);
     assert(resolved.unit.max_hp==135 && resolved.unit.damage==22);
-    assert(unitFromCatalog(p.catalog,"marine").damage==7);
+    assert(unitFromCatalog(p.catalog,"ranger").damage==7);
     assert(editor.undo(p));
     assert(resolvePlacedUnit(p,*editor.selectedPlacement(p)).unit.damage==7);
     assert(editor.redo(p));

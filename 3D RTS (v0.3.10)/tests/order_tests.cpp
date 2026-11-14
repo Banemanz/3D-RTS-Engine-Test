@@ -4,8 +4,8 @@
 #include <iostream>
 
 namespace {
-Unit* marine(RTSSkirmish& g) {
-    for(auto& u:g.units)if(u.ownerId==0 && u.catalogId=="marine")return &u;
+Unit* ranger(RTSSkirmish& g) {
+    for(auto& u:g.units)if(u.ownerId==0 && u.catalogId=="ranger")return &u;
     return nullptr;
 }
 const Unit* dummy(const RTSSkirmish& g) {
@@ -29,7 +29,7 @@ RTSProject withDummy(const Vec3& pos) {
 void testHold() {
     RTSSkirmish game;
     game.loadProject(withDummy({-8.f,0.f,-4.5f}));
-    auto* soldier=marine(game);
+    auto* soldier=ranger(game);
     assert(soldier);
     soldier->isSelected=true;
     const int soldierId=soldier->id;
@@ -38,7 +38,7 @@ void testHold() {
     assert(soldier->holdPositionEnabled);
     assert(soldier->state==UnitState::IDLE);
     for(int i=0;i<180;++i)game.update(1.f/60.f);
-    soldier=marine(game);
+    soldier=ranger(game);
     assert(soldier && soldier->id==soldierId && soldier->isAlive());
     assert(soldier->position.x==start.x);
     assert(soldier->position.z==start.z);
@@ -56,7 +56,7 @@ void testAttackMoveContinuesAfterCombat() {
     // finishing combat equivalent to reaching that waypoint, discarding it.
     RTSSkirmish game;
     game.loadProject(withDummy({-13.f,0.f,-9.5f}));
-    Unit* soldier=marine(game);
+    Unit* soldier=ranger(game);
     assert(soldier);
     soldier->isSelected=true;
     const Vec3 goal{-11.f,0.f,-4.5f};
@@ -64,7 +64,7 @@ void testAttackMoveContinuesAfterCombat() {
     bool engaged=false,retookRoute=false;
     for(int i=0;i<360;++i) {
         game.update(1.f/60.f);
-        soldier=marine(game);
+        soldier=ranger(game);
         assert(soldier && soldier->isAlive());
         if(soldier->state==UnitState::CHASING ||
            soldier->state==UnitState::ATTACKING)engaged=true;

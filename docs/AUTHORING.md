@@ -77,15 +77,15 @@ there is no requirement to open a GUI.
 ./build/RTSProjectTool --create projects/new.rtsproject.json
 ./build/RTSProjectTool --validate projects/new.rtsproject.json
 ./build/RTSProjectTool --list projects/new.rtsproject.json Unit
-./build/RTSProjectTool --get projects/new.rtsproject.json marine damage
-./build/RTSProjectTool --set projects/new.rtsproject.json marine damage 17
-./build/RTSProjectTool --derive projects/new.rtsproject.json marine super_marine
-./build/RTSProjectTool --rename projects/new.rtsproject.json super_marine ranger
-./build/RTSProjectTool --set projects/new.rtsproject.json super_marine max_hp 300
+./build/RTSProjectTool --get projects/new.rtsproject.json ranger damage
+./build/RTSProjectTool --set projects/new.rtsproject.json ranger damage 17
+./build/RTSProjectTool --derive projects/new.rtsproject.json ranger super_ranger
+./build/RTSProjectTool --rename projects/new.rtsproject.json super_ranger ranger
+./build/RTSProjectTool --set projects/new.rtsproject.json super_ranger max_hp 300
 ./build/RTSProjectTool --paint-cell projects/new.rtsproject.json 24 24 4.5 2 1
-./build/RTSProjectTool --place projects/new.rtsproject.json Unit super_marine -6 4 0
+./build/RTSProjectTool --place projects/new.rtsproject.json Unit super_ranger -6 4 0
 ./build/RTSProjectTool --placements projects/new.rtsproject.json
-./build/RTSProjectTool --set-instance projects/new.rtsproject.json marine_1 scale '[1.5,1,1.5]'
+./build/RTSProjectTool --set-instance projects/new.rtsproject.json ranger_1 scale '[1.5,1,1.5]'
 ```
 
 `--set-root` accepts a JSON literal and can replace root-level `triggers`
@@ -115,8 +115,8 @@ presentation fields and `model` for linked model fields. Example:
 
 ```json
 {
-  "id": "custom_elite", "kind": "Unit", "catalog": "marine",
-  "owner": 0, "name": "Unique elite Marine",
+  "id": "custom_elite", "kind": "Unit", "catalog": "ranger",
+  "owner": 0, "name": "Unique elite Ranger",
   "position": [-8, 0, 7], "rotation": [0, 35, 0], "scale": [1.2, 1, 1],
   "amount": 0,
   "overrides": {
@@ -128,7 +128,7 @@ presentation fields and `model` for linked model fields. Example:
 ```
 
 This actually changes the unique instance's simulation stats, procedural color,
-transparency and scale. Other Marines are unaffected. The `mesh` asset
+transparency and scale. Other Rangers are unaffected. The `mesh` asset
 string also resolves independently but still draws a procedural placeholder
 until the model importer is implemented.
 
@@ -164,7 +164,7 @@ list of `actions` and optional `once`. Example:
         {"type": "UnitCountAtLeast", "owner": 1, "count": 1}
       ],
       "actions": [
-        {"type": "SpawnUnit", "catalog": "zealot", "owner": 1, "x": 20, "z": -10}
+        {"type": "SpawnUnit", "catalog": "rift_raider", "owner": 1, "x": 20, "z": -10}
       ]
     }
   ]
@@ -245,7 +245,7 @@ precedence, so dump generation is best-effort.
 
 A Unit catalog's `sight_range` controls how many world units it reveals
 around a living player-owned unit or building. Bounds: **0–128**, default
-14 for the marine. In the Data Editor (F7), select a Unit and edit its
+14 for the ranger. In the Data Editor (F7), select a Unit and edit its
 `sight_range` numeric property. Individual placed instances can override
 it in F8 Scene Editor using `{"unit":{"sight_range":24}}`.
 Heightfield crests interrupt line of sight; explored but not currently
@@ -293,16 +293,16 @@ worker role are resolved from the trained unit's own catalog definition.
 Modify this property in F7 Data Editor as a JSON array, for example:
 
 ```json
-"trainable_units": ["marine", "worker", "field_medic", "raider"]
+"trainable_units": ["ranger", "worker", "field_medic", "raider"]
 ```
 
 In play mode, select exactly one friendly producer. The B/T/C command cells
 become its three contextual training slots. **Tab** cycles sets of three when
 there are more units. The selected building owns its individual queue
 (maximum five reserved jobs), rally point, resource costs and cancellation.
-Without a producer selected, legacy B/T/C build/marine/worker commands
+Without a producer selected, legacy B/T/C build/ranger/worker commands
 continue to work. Old project files lacking `trainable_units` retain the
-built-in base/worker and barracks/marine training roles.
+built-in base/worker and barracks/ranger training roles.
 
 The validator checks every typed reference (existing Unit, no duplicates,
 no structures), maximum 12 slots, and JSON array shape. Catalog renaming
@@ -358,3 +358,8 @@ match; simply producing a successful compiler exit no longer suffices.
 In **F7 Data Editor**, the inspector follows Parent, Unit Actor, Actor Model and trainable-unit references by clicking their links. The incoming-reference section lists recognized references to the selected ID. Inherited fields are shown separately from local overrides. Boolean, number and string fields have direct controls; each accepted change is validated and recorded as one undo transaction. Complex JSON types still use the advanced text editor. In **F8 Scene Editor**, the selected placement's linked catalog ID opens the corresponding F7 entry. Raw extension fields are round-tripped, not silently dropped.
 
 During play, **Esc** opens the engine's custom pause menu. No additional UI dependency is needed for its layout or rendering. The editor itself still uses ImGui pending the native replacement described in `docs/CREATOR_ARCHITECTURE.md`.
+
+
+## Original starter content, legacy projects, and type filtering
+
+The built-in demo is a self-contained original sandbox, **not a StarCraft II map or asset pack**. New project templates use `ranger`, `rift_raider` and `rift_bastion` with authored display names and actor IDs. Prior project JSON files that embed their own older catalog names remain supported through legacy role lookups. The `player_ranger` metadata role is optional for new projects; `player_marine` is accepted only as a compatibility fallback. The Data Editor's type selector lists types from the active catalog, not a hardcoded list, so creators can add new object categories. Object browsing uses clipped visible rows for scalability. References to SC2 Galaxy Editor describe architecture and UX only, never imported content.

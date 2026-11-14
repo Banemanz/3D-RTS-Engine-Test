@@ -56,7 +56,7 @@ public:
     void orderStop();
     void orderHold();
     bool buildBarracks(const Vec3& at);
-    bool queueMarine();
+    bool queueRanger();
     bool queueWorker();
     // Per-building, inherited Unit catalog trainable_units lists, 0..12 entries.
     std::vector<std::string> trainableUnits(int buildingId) const;
@@ -84,8 +84,8 @@ public:
 private:
     RTSProject project_;
     UnitSpatialIndex spatial_; // incrementally updated every fixed simulation tick
-    std::string marineId_="marine",workerId_="worker",enemyId_="zealot",barracksId_="barracks";
-    std::string playerBaseCatalog_="command_center",enemyBaseCatalog_="hive";
+    std::string rangerId_="ranger",workerId_="worker",enemyId_="rift_raider",barracksId_="barracks";
+    std::string playerBaseCatalog_="command_center",enemyBaseCatalog_="rift_bastion";
     float enemyInterval_=16.0f;
     double elapsedSeconds_=0.0;
     std::unordered_set<int> observedDead_;

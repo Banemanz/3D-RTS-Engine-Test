@@ -9,16 +9,16 @@ int main() {
     // intersect the wall; the CHASING state must route around it before attacking.
     NavigationGrid grid(13,13,1.0f,0.0f,0.0f);
     for(int z=0;z<12;++z)grid.setBlocked(6,z,true);
-    UnitData marine=UnitData::fromTresString(HUMAN_MARINE_TRES);
-    UnitData target=UnitData::fromTresString(HYBRID_ZEALOT_TRES);
-    marine.attack_range=1.1f;
-    marine.move_speed=7.0f;
-    marine.aggro_range=0.0f;
+    UnitData ranger=UnitData::fromTresString(HUMAN_RANGER_TRES);
+    UnitData target=UnitData::fromTresString(HYBRID_RAIDER_TRES);
+    ranger.attack_range=1.1f;
+    ranger.move_speed=7.0f;
+    ranger.aggro_range=0.0f;
     target.aggro_range=0.0f;
 
     std::vector<Unit> army;
     army.reserve(2);
-    army.emplace_back(1,"Pursuer",marine,Vec3(2.5f,0,2.5f));
+    army.emplace_back(1,"Pursuer",ranger,Vec3(2.5f,0,2.5f));
     army.emplace_back(2,"Target",target,Vec3(10.5f,0,2.5f));
     army[0].navGrid=&grid;
     army[1].ownerId=1; // ownership, not visual faction, determines hostility

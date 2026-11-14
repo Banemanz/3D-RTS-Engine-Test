@@ -14,7 +14,7 @@ struct HUDRect {
         return px>=x && py>=y && px<x+w && py<y+h;
     }
 };
-enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Marine,
+enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Ranger,
                         Worker, SelectArmy, SelectWorkers, FocusBase, Patrol, Hold, CancelQueue, Cancel,
                         TrainSlot0, TrainSlot1, TrainSlot2, TrainingPage };
 struct HUDButton {
@@ -89,7 +89,7 @@ public:
         const std::array<HUDCommand,12> types={
           HUDCommand::Move,HUDCommand::AttackMove,HUDCommand::Stop,
           producer?HUDCommand::TrainSlot0:HUDCommand::Build,
-          producer?HUDCommand::TrainSlot1:HUDCommand::Marine,
+          producer?HUDCommand::TrainSlot1:HUDCommand::Ranger,
           producer?HUDCommand::TrainSlot2:HUDCommand::Worker,
           HUDCommand::SelectArmy,HUDCommand::FocusBase,
           selectedBuilding && !combat?HUDCommand::CancelQueue:HUDCommand::Patrol,
@@ -97,7 +97,7 @@ public:
           paged?HUDCommand::TrainingPage:HUDCommand::Cancel
         };
         const std::array<const char*,12> labels={
-          "MOVE","ATK MOVE","STOP","BUILD","MARINE","WORKER",
+          "MOVE","ATK MOVE","STOP","BUILD","RANGER","WORKER",
           "ALL ARMY","HOME BASE",selectedBuilding && !combat?"CANCEL Q":"PATROL",
           "HOLD","WORKERS",paged?"MORE":"CANCEL"
         };

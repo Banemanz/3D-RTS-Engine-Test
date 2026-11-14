@@ -177,6 +177,7 @@ std::string EditorSession::selectedFieldName(const RTSProject& project)const {
     return keys[selectedField%keys.size()];
 }
 bool EditorSession::catalogMatches(const CatalogEntry& entry) const {
+    if(!catalogTypeFilter.empty() && entry.type!=catalogTypeFilter)return false;
     if(catalogFilter.empty())return true;
     auto lower=[](std::string text){
         for(auto& c:text)c=char(std::tolower(static_cast<unsigned char>(c)));
@@ -225,12 +226,33 @@ void EditorSession::clearCatalogSearch(const RTSProject& project){
     message="CATALOG FILTER CLEARED";
 }
 
+bool EditorSession::setCatalogTypeFilter(const RTSProject& project,const std::string& type) {
+    if(textEditing)return false;
+    const auto& entries=project.catalog.entries();
+    if(!type.empty() && std::none_of(entries.begin(),entries.end(),
+       [&](const CatalogEntry& e){return e.type==type;}))return false;
+    catalogTypeFilter=type;
+    // Switching tabs should never strand users in a blank filtered tree.
+    if(matchingCatalogCount(project)==0)catalogFilter.clear();
+    for(std::size_t i=0;i<entries.size();++i){
+        if(catalogMatches(entries[i])){
+            if(selectedObject>=entries.size() || !catalogMatches(entries[selectedObject])){
+                selectedObject=i;selectedField=0;
+            }
+            return true;
+        }
+    }
+    selectedObject=0;selectedField=0;
+    return true;
+}
 bool EditorSession::selectCatalogId(const RTSProject& project,const std::string& id) {
     if(textEditing)return false;
     const auto& entries=project.catalog.entries();
     for(std::size_t i=0;i<entries.size();++i){
         if(entries[i].id!=id)continue;
-        // A link may target an object hidden by the current search.
+        // Linked navigation can cross catalog families and search filters.
+        if(!catalogTypeFilter.empty() && catalogTypeFilter!=entries[i].type)
+            catalogTypeFilter=entries[i].type;
         if(!catalogMatches(entries[i]))catalogFilter.clear();
         selectedObject=i;
         selectedField=0;
@@ -445,7 +467,10 @@ bool EditorSession::deleteCatalogObject(RTSProject& project) {
         selectedObject=std::min(selectedObject,project.catalog.entries().size()-1);
     else selectedObject=0;
     selectedField=0;
-    if(matchingCatalogCount(project)==0)catalogFilter.clear();
+    if(matchingCatalogCount(project)==0){
+        catalogFilter.clear();
+        if(matchingCatalogCount(project)==0)catalogTypeFilter.clear();
+    }
     modified=true;message="DELETED "+id;
     return true;
 }

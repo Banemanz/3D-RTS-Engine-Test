@@ -5,23 +5,23 @@
 #include <utility>
 int main(){
     auto c=DataCatalog::defaults();
-    const auto original=unitFromCatalog(c,"marine");
+    const auto original=unitFromCatalog(c,"ranger");
     assert(original.damage==7.f);
-    assert(c.cloneDerived("marine","super_marine"));
-    assert(c.setField("super_marine","damage",picojson::value(23.0)));
-    assert(unitFromCatalog(c,"super_marine").damage==23.f);
-    assert(unitFromCatalog(c,"marine").damage==7.f);
-    assert(c.cloneDerived("marine_actor","stealth_actor"));
+    assert(c.cloneDerived("ranger","super_ranger"));
+    assert(c.setField("super_ranger","damage",picojson::value(23.0)));
+    assert(unitFromCatalog(c,"super_ranger").damage==23.f);
+    assert(unitFromCatalog(c,"ranger").damage==7.f);
+    assert(c.cloneDerived("ranger_actor","stealth_actor"));
     assert(c.setField("stealth_actor","opacity",picojson::value(0.35)));
     assert(actorFromCatalog(c,"stealth_actor").opacity==.35f);
     c.validate();
     auto loaded=DataCatalog::deserialize(c.serialize());
-    assert(unitFromCatalog(loaded,"super_marine").damage==23.f);
-    assert(loaded.resolvedFields("super_marine").count("actor")==1);
-    assert(loaded.setField("marine","arbitrary_custom_field",picojson::value("preserved")));
-    assert(loaded.resolvedFields("marine").at("arbitrary_custom_field").get<std::string>()=="preserved");
+    assert(unitFromCatalog(loaded,"super_ranger").damage==23.f);
+    assert(loaded.resolvedFields("super_ranger").count("actor")==1);
+    assert(loaded.setField("ranger","arbitrary_custom_field",picojson::value("preserved")));
+    assert(loaded.resolvedFields("ranger").at("arbitrary_custom_field").get<std::string>()=="preserved");
     assert(!loaded.cloneDerived("missing","invalid"));
-    assert(loaded.cloneDerived("marine","cycle_a"));
+    assert(loaded.cloneDerived("ranger","cycle_a"));
     assert(loaded.cloneDerived("cycle_a","cycle_b"));
     loaded.find("cycle_a")->parent="cycle_b";
     bool cycle=false;
@@ -31,7 +31,7 @@ int main(){
     // copy/move, serialization and inherited-field edits at creator scale.
     DataCatalog large=DataCatalog::defaults();
     for(int i=0;i<2400;++i)
-        assert(large.cloneDerived("marine","variant_"+std::to_string(i)));
+        assert(large.cloneDerived("ranger","variant_"+std::to_string(i)));
     for(int i=0;i<2400;++i) {
         const auto id="variant_"+std::to_string(i);
         assert(large.find(id) && large.find(id)->id==id);

@@ -67,7 +67,7 @@ proper texture/icon/theme and localization pipeline.
   minerals to gather.
 - **A** then right-click attack-moves; **Shift+right-click** queues more orders.
 - **B** then right-click places Barracks with a selected Worker nearby;
-  **T** queues Marines, **C** queues Workers.
+  **T** queues Rangers, **C** queues Workers.
 - **X** stops units; **P** then right-click orders repeating patrol routes.
 - **F2** selects combat army; **H** selects/focuses the command center.
 - **Ctrl+1–9** creates control groups; **1–9** recalls.
@@ -90,7 +90,7 @@ systems have actual gameplay/presentation effects*.
 - `tests/`: CTest executable suites (no GPU required).
 - `.github/workflows/ci.yml`: full Linux/Windows builds and logic tests;
   Linux Mesa/Xvfb checks both game and terrain editor, uploads screenshots.
-- `archive/new chat/RTS_HANDOFF.md`: cross-chat handoff.
+- `arcrift_bastion/new chat/RTS_HANDOFF.md`: cross-chat handoff.
 
 MIT licensed. Vendored PicoJSON has its own BSD-style license at
 `3D RTS (v0.3.10)/third_party/PICOJSON_LICENSE`.
@@ -198,3 +198,8 @@ use the same creator GUI, gameplay HUD, fog, terrain and editor source.
 In play, **Esc** opens a custom engine-rendered pause screen with Resume, Restart, Open World Editor and Exit. Gameplay simulation and world commands stop while this modal is open. The native layout and button hit-testing have no GLFW/ImGui dependency, and the OpenGL UI adapter reuses the game's own HUD resources. The existing creator workbench continues using pinned ImGui **temporarily**; the full retained-mode replacement roadmap and Galaxy Editor architecture are documented in [docs/CREATOR_ARCHITECTURE.md](docs/CREATOR_ARCHITECTURE.md).
 
 The F7 Data Editor also supports clickable Parent / Unit / Actor / Model / trainable references, incoming-reference inspection, inherited/local property indicators and transactional boolean, numeric and text editing. Both Windows and Linux feature manifests include `RTS_FEATURE_NATIVE_PAUSE_MENU=1`.
+
+
+## Original starter roster and scalable Data Editor (2026-11-14)
+
+The included starter data now uses **Frontier Ranger** (`ranger`), **Rift Raider** (`rift_raider`) and **Rift Bastion** (`rift_bastion`) as original example units/structures. These are starter templates, not mandated engine types. Existing serialized projects with older IDs remain loadable; the engine resolves role fallbacks from the embedded catalog. The F7 Data Editor now has a dynamic type/family selector (including custom mod-defined families) and clipped object-list rendering to keep large catalogs navigable. See `docs/AUTHORING.md` and the `archive/new chat` handoff.

@@ -10,11 +10,11 @@ static bool invalid(const std::string& data) {
     return false;
 }
 int main() {
-    const auto marine=UnitData::fromTresString(HUMAN_MARINE_TRES);
-    const auto zealot=UnitData::fromTresString(HYBRID_ZEALOT_TRES);
-    assert(marine.max_hp==45 && marine.faction==Faction::Humanity);
-    assert(zealot.max_hp==160 && zealot.faction==Faction::Hybrid);
-    assert(marine.toTresString().find("resource_name = ")!=std::string::npos);
+    const auto ranger=UnitData::fromTresString(HUMAN_RANGER_TRES);
+    const auto rift_raider=UnitData::fromTresString(HYBRID_RAIDER_TRES);
+    assert(ranger.max_hp==45 && ranger.faction==Faction::Humanity);
+    assert(rift_raider.max_hp==160 && rift_raider.faction==Faction::Hybrid);
+    assert(ranger.toTresString().find("resource_name = ")!=std::string::npos);
     assert(invalid("[resource]\nmax_hp = 0\n"));
     assert(invalid("[resource]\nattack_cooldown = -1\n"));
     assert(invalid("[resource]\nmax_hp = not_a_number\n"));

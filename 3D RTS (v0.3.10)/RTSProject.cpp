@@ -70,19 +70,20 @@ RTSProject RTSProject::defaults() {
     p.description="Starting skirmish and editable sandbox project";
     p.catalog=DataCatalog::defaults();
     p.placements.push_back(makePlacement("human_base","Unit","command_center","Command Center",0,-22,0));
-    p.placements.push_back(makePlacement("enemy_base","Unit","hive","Hybrid Hive",1,22,0));
+    p.placements.push_back(makePlacement("enemy_base","Unit","rift_bastion","Hybrid Bastion",1,22,0));
     for(int i=0;i<4;++i)
-        p.placements.push_back(makePlacement("marine_"+std::to_string(i+1),"Unit","marine",
-                           "Marine "+std::to_string(i+1),0,-13,-4.5f+i*3.0f));
+        p.placements.push_back(makePlacement("ranger_"+std::to_string(i+1),"Unit","ranger",
+                           "Ranger "+std::to_string(i+1),0,-13,-4.5f+i*3.0f));
     for(int i=0;i<2;++i)
         p.placements.push_back(makePlacement("worker_"+std::to_string(i+1),"Unit","worker",
                            "Worker "+std::to_string(i+1),0,-18,-5.5f+i*11.f));
     for(int i=0;i<2;++i)
-        p.placements.push_back(makePlacement("zealot_"+std::to_string(i+1),"Unit","zealot",
-                           "Zealot "+std::to_string(i+1),1,13,-3.5f+i*7.f));
+        p.placements.push_back(makePlacement("rift_raider_"+std::to_string(i+1),"Unit","rift_raider",
+                           "Raider "+std::to_string(i+1),1,13,-3.5f+i*7.f));
     p.placements.push_back(makePlacement("mineral_north","Mineral","","Minerals North",-1,-3,-12,750));
     p.placements.push_back(makePlacement("mineral_south","Mineral","","Minerals South",-1,-3,12,750));
     p.placements.push_back(makePlacement("mineral_center","Mineral","","Minerals Center",-1,0,0,1000));
+    p.metadata["player_ranger"]=picojson::value("ranger");
     p.metadata["player_starting_minerals"]=picojson::value(220.0);
     p.metadata["player_supply_cap"]=picojson::value(18.0);
     p.metadata["enemy_spawn_interval"]=picojson::value(16.0);
@@ -278,9 +279,11 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
         // The built-in skirmish has six metadata-configurable unit roles.
         // Supply explicit mappings when an implicit fallback is renamed.
         const std::pair<const char*,const char*> roles[]={
-            {"player_marine","marine"},{"player_worker","worker"},
+            {"player_ranger","ranger"},{"player_marine","marine"},
+            {"player_worker","worker"},{"enemy_soldier","rift_raider"},
             {"enemy_soldier","zealot"},{"player_barracks","barracks"},
-            {"player_base","command_center"},{"enemy_base","hive"}};
+            {"player_base","command_center"},{"enemy_base","rift_bastion"},
+            {"enemy_base","hive"}};
         for(const auto& role:roles) {
             auto field=next.metadata.find(role.first);
             if(field==next.metadata.end()) {
@@ -361,9 +364,11 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
     }
     if(original->type=="Unit") {
         const std::pair<const char*,const char*> roles[]={
-            {"player_marine","marine"},{"player_worker","worker"},
+            {"player_ranger","ranger"},{"player_marine","marine"},
+            {"player_worker","worker"},{"enemy_soldier","rift_raider"},
             {"enemy_soldier","zealot"},{"player_barracks","barracks"},
-            {"player_base","command_center"},{"enemy_base","hive"}};
+            {"player_base","command_center"},{"enemy_base","rift_bastion"},
+            {"enemy_base","hive"}};
         for(const auto& role:roles) {
             auto it=metadata.find(role.first);
             if((it==metadata.end() && id==role.second) ||

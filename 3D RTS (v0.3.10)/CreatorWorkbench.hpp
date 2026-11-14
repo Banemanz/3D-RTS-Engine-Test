@@ -5,6 +5,7 @@
 #include "imgui_stdlib.h"
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <string>
 
 // Dear ImGui is strictly a presentation/controller layer. The engine,
@@ -118,6 +119,21 @@ void browser(App& app){
         ImGui::TextWrapped("Left-click the terrain to paint or place objects. Right-click removes nearby placements.");
     }else if(ed.panel==EditorSession::Panel::Data){
         ImGui::SeparatorText("Data catalog");
+        // Data-family selection is independent of the search string, so
+        // custom mod-defined catalog classes work without hardcoded UI tabs.
+        const std::string category=ed.catalogTypeFilter.empty()?
+            "All object types":ed.catalogTypeFilter;
+        ImGui::SetNextItemWidth(-1.f);
+        if(ImGui::BeginCombo("##type",category.c_str())){
+            if(ImGui::Selectable("All object types",ed.catalogTypeFilter.empty()))
+                ed.setCatalogTypeFilter(p,"");
+            std::set<std::string> types;
+            for(const auto& entry:p.catalog.entries())types.insert(entry.type);
+            for(const auto& type:types)
+                if(ImGui::Selectable(type.c_str(),ed.catalogTypeFilter==type))
+                    ed.setCatalogTypeFilter(p,type);
+            ImGui::EndCombo();
+        }
         ImGui::SetNextItemWidth(-1.f);
         ImGui::InputTextWithHint("##find","Search IDs, types or names",&ed.catalogFilter);
         ImGui::TextDisabled("%zu of %zu objects",
@@ -128,8 +144,16 @@ void browser(App& app){
             refresh(app,ed.duplicateCatalogObject(app.project));
         ImGui::BeginChild("##catalogTree",ImVec2(0,-5),true);
         const auto& entries=p.catalog.entries();
-        for(std::size_t i=0;i<entries.size();++i){
-            if(!ed.catalogMatches(entries[i]))continue;
+        std::vector<std::size_t> visible;
+        visible.reserve(ed.matchingCatalogCount(p));
+        for(std::size_t i=0;i<entries.size();++i)
+            if(ed.catalogMatches(entries[i]))visible.push_back(i);
+        // UI work is proportional to rows on screen, not all 10k entries.
+        // Filtering and indexing stay in headless C++.
+        ImGuiListClipper clip;
+        clip.Begin(static_cast<int>(visible.size()));
+        while(clip.Step())for(int row=clip.DisplayStart;row<clip.DisplayEnd;++row){
+            const std::size_t i=visible[static_cast<std::size_t>(row)];
             ImGui::PushID(static_cast<int>(i));
             const bool chosen=i==ed.selectedObject;
             const std::string label=entries[i].type+" / "+entries[i].id;
@@ -149,8 +173,12 @@ void browser(App& app){
             refresh(app,ed.placeSceneMarker(app.project,app.camera.focalPoint,true));
         }
         ImGui::Separator();
+        ImGui::TextDisabled("%zu scene instances",p.placements.size());
         ImGui::BeginChild("##sceneTree",ImVec2(0,0),true);
-        for(const auto& item:p.placements){
+        ImGuiListClipper sceneClip;
+        sceneClip.Begin(static_cast<int>(p.placements.size()));
+        while(sceneClip.Step())for(int i=sceneClip.DisplayStart;i<sceneClip.DisplayEnd;++i){
+            const auto& item=p.placements[static_cast<std::size_t>(i)];
             const std::string name=item.kind+" | "+item.id;
             if(ImGui::Selectable(name.c_str(),ed.selectedPlacementId==item.id))
                 ed.selectedPlacementId=item.id;

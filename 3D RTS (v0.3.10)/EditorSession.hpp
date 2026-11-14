@@ -19,12 +19,14 @@ public:
     float brushStrength=0.8f;
     int materialId=1;
     int placementOwner=0;
-    std::string placementArchetype="marine";
-    std::string placementDoodad="marine_actor";
+    std::string placementArchetype="ranger";
+    std::string placementDoodad="ranger_actor";
     std::string message;
 
     std::size_t selectedObject=0;
     std::string catalogFilter;
+    // Filter by catalog family (empty means all). Not tied to a particular UI.
+    std::string catalogTypeFilter;
     bool filterEditing=false;
     bool renamingCatalog=false;
     std::size_t selectedField=0;
@@ -64,6 +66,7 @@ public:
     bool finishSceneOverrideEdit(RTSProject& project);
 
     void cycleObject(const RTSProject& project,int delta);
+    bool setCatalogTypeFilter(const RTSProject& project,const std::string& type);
     // Stable-ID navigation survives catalog filters and derives; no GPU/UI dependency.
     bool selectCatalogId(const RTSProject& project,const std::string& id);
     // Validated, atomic, undoable typed field editing for property widgets.

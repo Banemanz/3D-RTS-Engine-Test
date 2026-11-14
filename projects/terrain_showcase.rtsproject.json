@@ -8083,7 +8083,7 @@
     },
     {
       "type": "Actor",
-      "id": "marine_actor",
+      "id": "ranger_actor",
       "fields": {
         "model": "procedural_soldier",
         "tint": [
@@ -8097,7 +8097,7 @@
     {
       "type": "Actor",
       "id": "worker_actor",
-      "parent": "marine_actor",
+      "parent": "ranger_actor",
       "fields": {
         "tint": [
           0.2,
@@ -8108,7 +8108,7 @@
     },
     {
       "type": "Actor",
-      "id": "zealot_actor",
+      "id": "rift_raider_actor",
       "fields": {
         "model": "procedural_soldier",
         "tint": [
@@ -8144,10 +8144,10 @@
     },
     {
       "type": "Unit",
-      "id": "marine",
+      "id": "ranger",
       "fields": {
-        "name": "Human Marine",
-        "actor": "marine_actor",
+        "name": "Frontier Ranger",
+        "actor": "ranger_actor",
         "faction": "Humanity",
         "max_hp": 45,
         "armor": 0,
@@ -8165,7 +8165,7 @@
     {
       "type": "Unit",
       "id": "worker",
-      "parent": "marine",
+      "parent": "ranger",
       "fields": {
         "name": "Human Worker",
         "actor": "worker_actor",
@@ -8182,10 +8182,10 @@
     },
     {
       "type": "Unit",
-      "id": "zealot",
+      "id": "rift_raider",
       "fields": {
-        "name": "Hybrid Zealot",
-        "actor": "zealot_actor",
+        "name": "Rift Raider",
+        "actor": "rift_raider_actor",
         "faction": "Hybrid",
         "max_hp": 160,
         "armor": 3,
@@ -8202,7 +8202,7 @@
     {
       "type": "Unit",
       "id": "command_center",
-      "parent": "marine",
+      "parent": "ranger",
       "fields": {
         "name": "Command Center",
         "actor": "human_building_actor",
@@ -8218,10 +8218,10 @@
     },
     {
       "type": "Unit",
-      "id": "hive",
+      "id": "rift_bastion",
       "parent": "command_center",
       "fields": {
-        "name": "Hybrid Hive",
+        "name": "Rift Bastion",
         "actor": "hybrid_building_actor",
         "faction": "Hybrid"
       }
@@ -8267,8 +8267,8 @@
     {
       "id": "enemy_base",
       "kind": "Unit",
-      "catalog": "hive",
-      "name": "Hybrid Hive",
+      "catalog": "rift_bastion",
+      "name": "Rift Bastion",
       "owner": 1,
       "position": [
         22,
@@ -8289,10 +8289,10 @@
       "overrides": {}
     },
     {
-      "id": "marine_1",
+      "id": "ranger_1",
       "kind": "Unit",
-      "catalog": "marine",
-      "name": "Custom Amber Marine",
+      "catalog": "ranger",
+      "name": "Custom Amber Ranger",
       "owner": 0,
       "position": [
         -13,
@@ -8333,10 +8333,10 @@
       }
     },
     {
-      "id": "marine_2",
+      "id": "ranger_2",
       "kind": "Unit",
-      "catalog": "marine",
-      "name": "Marine 2",
+      "catalog": "ranger",
+      "name": "Ranger 2",
       "owner": 0,
       "position": [
         -13,
@@ -8357,10 +8357,10 @@
       "overrides": {}
     },
     {
-      "id": "marine_3",
+      "id": "ranger_3",
       "kind": "Unit",
-      "catalog": "marine",
-      "name": "Marine 3",
+      "catalog": "ranger",
+      "name": "Ranger 3",
       "owner": 0,
       "position": [
         -13,
@@ -8381,10 +8381,10 @@
       "overrides": {}
     },
     {
-      "id": "marine_4",
+      "id": "ranger_4",
       "kind": "Unit",
-      "catalog": "marine",
-      "name": "Marine 4",
+      "catalog": "ranger",
+      "name": "Ranger 4",
       "owner": 0,
       "position": [
         -13,
@@ -8453,10 +8453,10 @@
       "overrides": {}
     },
     {
-      "id": "zealot_1",
+      "id": "rift_raider_1",
       "kind": "Unit",
-      "catalog": "zealot",
-      "name": "Zealot 1",
+      "catalog": "rift_raider",
+      "name": "Raider 1",
       "owner": 1,
       "position": [
         13,
@@ -8477,10 +8477,10 @@
       "overrides": {}
     },
     {
-      "id": "zealot_2",
+      "id": "rift_raider_2",
       "kind": "Unit",
-      "catalog": "zealot",
-      "name": "Zealot 2",
+      "catalog": "rift_raider",
+      "name": "Raider 2",
       "owner": 1,
       "position": [
         13,
@@ -8575,7 +8575,7 @@
     {
       "id": "sculpture_1",
       "kind": "Doodad",
-      "catalog": "zealot_actor",
+      "catalog": "rift_raider_actor",
       "name": "Ridge Monument",
       "owner": -1,
       "position": [
@@ -8661,7 +8661,8 @@
       "yaw": 0,
       "zoom": 42
     },
-    "editor_notes": "Terrain authoring demo with declarative triggers; no unrestricted script engine yet."
+    "editor_notes": "Terrain authoring demo with declarative triggers; no unrestricted script engine yet.",
+    "player_ranger": "ranger"
   },
   "triggers": [
     {
@@ -8698,7 +8699,7 @@
       "actions": [
         {
           "type": "SpawnUnit",
-          "catalog": "zealot",
+          "catalog": "rift_raider",
           "owner": 1,
           "x": 24,
           "z": -10

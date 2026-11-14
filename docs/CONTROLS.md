@@ -18,7 +18,7 @@ Successful placement spends 150 minerals and takes 9 seconds to finish.
 current route for units already moving. Queued terrain commands do not currently
 support queuing targeted attacks or worker gather jobs.
 
-**C** queues a Worker at the Command Center (40 minerals); **T** queues a Marine
+**C** queues a Worker at the Command Center (40 minerals); **T** queues a Ranger
 at the first complete Barracks (50 minerals). Production requires available
 supply and is sequential per structure. **X** stops selected mobile units.
 **Ctrl + 1-9** saves currently selected friendly unit IDs into a control group;
@@ -35,7 +35,7 @@ minimap (click to center the camera), a selection/health panel and a clickable
 3×3 command grid instead of a debug-text overlay. HUD clicks are consumed
 before world raycasting, so buttons do not accidentally issue game orders.
 Commands include move **M**, attack-move **A**, stop **X**, build **B**,
-train Marine **T**, train Worker **C**, select all army **F2**, focus/select
+train Ranger **T**, train Worker **C**, select all army **F2**, focus/select
 Command Center **H**, and patrol **P**. Patrol orders move selected units
 between their original position and the clicked destination indefinitely
 until stopped or replaced. **Esc** cancels an armed targeting command before
@@ -48,7 +48,7 @@ has no user-configurable layout system or Unicode font atlas.
 
 **Building rally points:** Select a completed Command Center or Barracks
 and right-click reachable terrain to set its rally point. Trained workers and
-Marines automatically path toward that destination. Select the structure to
+Rangers automatically path toward that destination. Select the structure to
 see its rally marker on the battlefield and current training queue count
 in the selection panel. A mixed mobile+structure selection issues ordinary
 unit orders instead of accidentally changing the rally point. Rally points
@@ -77,7 +77,7 @@ world selection or movement.
 The RTS game command grid now contains **12 clickable actions** in four rows,
 including **Hold Position (G)** and **Select Workers (F3)**. The last button
 cancels an armed targeting mode. The other actions still use their original
-shortcuts: M move, A attack-move, X stop, B build, T Marine, C Worker,
+shortcuts: M move, A attack-move, X stop, B build, T Ranger, C Worker,
 F2 select army, H focus the home base, P patrol, and V cancel production.
 
 **Hold Position (G)** immediately stops all selected mobile units and prevents
@@ -103,7 +103,7 @@ HUD displays the actual catalog unit IDs. **Tab** pages through slots 4–12,
 three at a time; the bottom-right command is the page switch. **V** cancels
 the most recent queued production on the selected structure, refunding its
 reserved minerals and supply. Right-click sets its rally point.
-When no producer is selected, the older B build / T marine / C worker shortcuts
+When no producer is selected, the older B build / T ranger / C worker shortcuts
 continue to work.
 
 

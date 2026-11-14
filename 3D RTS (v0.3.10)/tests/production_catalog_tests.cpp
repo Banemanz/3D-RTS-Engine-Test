@@ -11,14 +11,14 @@ static void rejectInvalid(const RTSProject& p) {
 }
 int main(){
     RTSProject p=RTSProject::defaults();
-    assert(p.catalog.cloneDerived("marine","medic"));
-    assert(p.catalog.cloneDerived("marine","raider"));
+    assert(p.catalog.cloneDerived("ranger","medic"));
+    assert(p.catalog.cloneDerived("ranger","raider"));
     assert(p.catalog.setField("medic","name",picojson::value("Field Medic")));
     assert(p.catalog.setField("medic","mineral_cost",picojson::value(65.0)));
     assert(p.catalog.setField("medic","build_time",picojson::value(1.0)));
     assert(p.catalog.setField("raider","build_time",picojson::value(1.0)));
     assert(p.catalog.setField("barracks","trainable_units",
-        picojson::value(picojson::array{picojson::value("marine"),
+        picojson::value(picojson::array{picojson::value("ranger"),
             picojson::value("medic"),picojson::value("worker"),picojson::value("raider")})));
     p.metadata["player_starting_minerals"]=picojson::value(750.0);
     p.metadata["enemy_spawn_interval"]=picojson::value(900.0);
@@ -44,7 +44,7 @@ int main(){
     }
     assert(producer>0 && game.selectedProducerId()==producer);
     assert(game.trainingPageCount()==2 && game.trainingPage()==0);
-    assert(game.selectedTrainableId(0)=="marine");
+    assert(game.selectedTrainableId(0)=="ranger");
     assert(game.selectedTrainableId(1)=="medic");
     assert(game.selectedTrainableId(2)=="worker");
     assert(game.canQueueSelectedTrainingSlot(1));
@@ -90,10 +90,10 @@ int main(){
     assert(ids[1].get<std::string>()=="field_medic");
 
     RTSProject bad=p;
-    assert(bad.catalog.setField("barracks","trainable_units",picojson::value("marine")));
+    assert(bad.catalog.setField("barracks","trainable_units",picojson::value("ranger")));
     rejectInvalid(bad);
     assert(bad.catalog.setField("barracks","trainable_units",
-        picojson::value(picojson::array{picojson::value("marine"),picojson::value("marine")})));
+        picojson::value(picojson::array{picojson::value("ranger"),picojson::value("ranger")})));
     rejectInvalid(bad);
     assert(bad.catalog.setField("barracks","trainable_units",
         picojson::value(picojson::array{picojson::value("command_center")})));

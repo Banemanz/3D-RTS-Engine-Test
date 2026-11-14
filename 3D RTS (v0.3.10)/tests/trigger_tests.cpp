@@ -21,7 +21,7 @@ int main(){
       makeTrigger("spawn",{{"type",picojson::value("After")},
                              {"seconds",picojson::value(2.0)}},
           {picojson::value(picojson::object{{"type",picojson::value("SpawnUnit")},
-                                           {"catalog",picojson::value("marine")},
+                                           {"catalog",picojson::value("ranger")},
                                            {"owner",picojson::value(0.0)},
                                            {"x",picojson::value(-6.0)},
                                            {"z",picojson::value(6.0)}})})
@@ -53,7 +53,7 @@ int main(){
     first.push_back(makeTrigger("outside",{{"type",picojson::value("After")},
                                            {"seconds",picojson::value(2.0)}},
         {picojson::value(picojson::object{{"type",picojson::value("SpawnUnit")},
-            {"catalog",picojson::value("marine")},{"owner",picojson::value(0.0)},
+            {"catalog",picojson::value("ranger")},{"owner",picojson::value(0.0)},
             {"x",picojson::value(99999999.0)},{"z",picojson::value(0.0)}})}));
     rejected=false;
     try{TriggerEngine::validate(invalidSpawn);}catch(const std::invalid_argument&){rejected=true;}

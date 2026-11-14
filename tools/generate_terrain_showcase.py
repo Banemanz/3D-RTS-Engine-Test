@@ -41,7 +41,7 @@ def generate():
                 cells.append(entry)
     terrain["cells"] = cells
     project["placements"].append({
-        "id":"sculpture_1","kind":"Doodad","catalog":"zealot_actor",
+        "id":"sculpture_1","kind":"Doodad","catalog":"rift_raider_actor",
         "name":"Ridge Monument","owner":-1,"position":[-7,0,23],
         "rotation":[0,36,0],"scale":[1.8,2.6,1.8],
         "amount":0,"overrides":{"editor_note":"User-authored presentation actor instance"}
@@ -56,11 +56,11 @@ def generate():
     project["metadata"]["editor_notes"] = (
         "Terrain authoring demo with declarative triggers; no unrestricted script engine yet."
     )
-    marine = next(p for p in project["placements"] if p["id"] == "marine_1")
-    marine["name"] = "Custom Amber Marine"
-    marine["rotation"] = [0,35,0]
-    marine["scale"] = [1.2,1,1]
-    marine["overrides"] = {
+    ranger = next(p for p in project["placements"] if p["id"] == "ranger_1")
+    ranger["name"] = "Custom Amber Ranger"
+    ranger["rotation"] = [0,35,0]
+    ranger["scale"] = [1.2,1,1]
+    ranger["overrides"] = {
         "unit":{"damage":18,"max_hp":110},
         "actor":{"tint":[1,.45,.12],"opacity":.85},
         "model":{"scale":[1.7,1,1.3]}
@@ -79,7 +79,7 @@ def generate():
         {"id":"reinforcement","event":{"type":"After","seconds":12},"once":True,
          "conditions":[{"type":"UnitCountAtLeast","owner":1,"count":1}],
          "actions":[
-            {"type":"SpawnUnit","catalog":"zealot","owner":1,"x":24,"z":-10},
+            {"type":"SpawnUnit","catalog":"rift_raider","owner":1,"x":24,"z":-10},
             {"type":"ShowMessage","text":"HYBRID REINFORCEMENTS DEPLOYED"}
          ]},
         {"id":"ridge_discovery",

@@ -99,12 +99,18 @@ void RTSSkirmish::reset() {
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     visionIntervalTimer_=0.f;
     vision.reset(project_.terrain);
-    marineId_=metaString(project_,"player_marine","marine");
+    // Modern starter maps use original unit IDs. Older authored projects
+    // retain their embedded catalogs and old skirmish role identifiers.
+    rangerId_=metaString(project_,"player_ranger",
+        metaString(project_,"player_marine",
+            project_.catalog.find("ranger")?"ranger":"marine"));
     workerId_=metaString(project_,"player_worker","worker");
-    enemyId_=metaString(project_,"enemy_soldier","zealot");
+    enemyId_=metaString(project_,"enemy_soldier",
+        project_.catalog.find("rift_raider")?"rift_raider":"zealot");
     barracksId_=metaString(project_,"player_barracks","barracks");
     playerBaseCatalog_=metaString(project_,"player_base","command_center");
-    enemyBaseCatalog_=metaString(project_,"enemy_base","hive");
+    enemyBaseCatalog_=metaString(project_,"enemy_base",
+        project_.catalog.find("rift_bastion")?"rift_bastion":"hive");
     playerMinerals=std::max(0,int(metaNumber(project_,"player_starting_minerals",220)));
     supplyCap=std::max(0,int(metaNumber(project_,"player_supply_cap",18)));
     enemyInterval_=float(std::clamp(metaNumber(project_,"enemy_spawn_interval",16.0),1.0,1000.0));
@@ -440,7 +446,7 @@ std::vector<std::string> RTSSkirmish::trainableUnits(int buildingId) const {
     }
     // Backward compatibility for projects saved before trainable_units existed.
     if(producer->catalogId==playerBaseCatalog_)return {workerId_};
-    if(producer->catalogId==barracksId_)return {marineId_};
+    if(producer->catalogId==barracksId_)return {rangerId_};
     return {};
 }
 int RTSSkirmish::selectedProducerId() const {
@@ -507,9 +513,9 @@ bool RTSSkirmish::queueSelectedTrainingSlot(int slot) {
     if(!canQueueSelectedTrainingSlot(slot))return false;
     return queueAt(selectedProducerId(),selectedTrainableId(slot));
 }
-bool RTSSkirmish::queueMarine() {
+bool RTSSkirmish::queueRanger() {
     for(const auto& u:units)if(u.isStructure && u.isAlive() && u.ownerId==0 &&
-        u.catalogId==barracksId_ && queueAt(u.id,marineId_))return true;
+        u.catalogId==barracksId_ && queueAt(u.id,rangerId_))return true;
     return false;
 }
 bool RTSSkirmish::queueWorker() {
@@ -584,7 +590,7 @@ void RTSSkirmish::updateProduction(float dt) {
         const auto fields=project_.catalog.resolvedFields(it->catalogId);
         const bool worker=boolField(fields,"is_worker");
         const std::string prefix=worker?"Worker ":
-            it->catalogId==marineId_?"Marine ":type.resourceName+" ";
+            it->catalogId==rangerId_?"Ranger ":type.resourceName+" ";
         Unit& produced=spawn(type,spawnPos,0,
                              prefix+std::to_string(nextId_),false,worker,it->catalogId);
         const auto rally=rallyPoints_.find(it->buildingId);
@@ -597,15 +603,15 @@ int RTSSkirmish::countOwnerUnits(int owner) const {
     return n;
 }
 void RTSSkirmish::updateEnemy(float dt) {
-    const Unit* hive=find(enemyBaseId_);
+    const Unit* rift_bastion=find(enemyBaseId_);
     const Unit* base=find(friendlyBaseId_);
-    if(!hive || !hive->isAlive() || !base || !base->isAlive())return;
+    if(!rift_bastion || !rift_bastion->isAlive() || !base || !base->isAlive())return;
     enemySpawnTimer_-=dt;
     if(enemySpawnTimer_<=0 && countOwnerUnits(1)<12) {
         enemySpawnTimer_=enemyInterval_;
         const UnitData enemy=unitFromCatalog(project_.catalog,enemyId_);
         Vec3 spawnPos{};
-        if(findProductionSpawn(*hive,enemy,spawnPos))
+        if(findProductionSpawn(*rift_bastion,enemy,spawnPos))
             spawn(enemy,spawnPos,1,"Hybrid "+std::to_string(nextId_),false,false,enemyId_);
     }
     for(auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&

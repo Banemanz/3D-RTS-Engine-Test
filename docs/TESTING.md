@@ -109,3 +109,8 @@ context for feature/identity parity but still needs a real GPU UI test.
 
 ## Native pause menu parity / screenshot
 `RTSNativeMenuTests` verifies the dependency-free layout and action targets across 1280×720, 640×480, 320×240, 1920×1080 and the degenerate 1×1 viewport, on both CTest runners. Linux Debug also boots the engine with `--smoke-pause-menu --smoke-frames 35 --screenshot rts-pause.ppm` under Mesa/Xvfb, converts PNG and uploads it. The release packager enforces `RTS_FEATURE_NATIVE_PAUSE_MENU=1` on both binaries; feature text is read from the native executable, never guessed from a manifest. The editor lifecycle stress remains mandatory. Test actual Windows GPU/editor interaction separately.
+
+
+## Legacy starter-content and catalog family regression
+
+Headless tests now exercise all-new starter IDs and a previously serialized map's original catalog names. The Data Editor test covers family switching, nonexistent categories and link-based navigation across type filters; the Linux OpenGL UI smoke exercises the real browser. Windows/Linux feature flags, binary packaging and CTests stay aligned.

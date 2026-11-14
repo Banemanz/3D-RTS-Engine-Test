@@ -20,18 +20,18 @@ int main() {
     assert(editor.undo(p) && p.placements.size()==start);
     assert(editor.redo(p) && p.placements.size()==start+1);
     editor.panel=EditorSession::Panel::Data;
-    while(!editor.selected(p) || editor.selected(p)->id!="marine")
+    while(!editor.selected(p) || editor.selected(p)->id!="ranger")
         editor.cycleObject(p,1);
     auto fields=editor.fields(p);
     while(editor.selectedFieldName(p)!="damage")editor.cycleField(p,1);
     assert(editor.beginValueEdit(p));
     editor.editText="34";
     assert(editor.finishEdit(p));
-    assert(unitFromCatalog(p.catalog,"marine").damage==34.0f);
+    assert(unitFromCatalog(p.catalog,"ranger").damage==34.0f);
     assert(editor.undo(p));
-    assert(unitFromCatalog(p.catalog,"marine").damage==7.0f);
+    assert(unitFromCatalog(p.catalog,"ranger").damage==7.0f);
     assert(editor.redo(p));
-    assert(unitFromCatalog(p.catalog,"marine").damage==34.0f);
+    assert(unitFromCatalog(p.catalog,"ranger").damage==34.0f);
     assert(editor.duplicateCatalogObject(p));
     assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size()+1);
     assert(editor.undo(p));
@@ -42,7 +42,7 @@ int main() {
     editor.editText="mArInE";
     assert(editor.finishCatalogSearch(p));
     assert(editor.matchingCatalogCount(p)>=2);
-    assert(editor.selected(p)->id.find("marine")!=std::string::npos);
+    assert(editor.selected(p)->id.find("ranger")!=std::string::npos);
     editor.cycleObject(p,1);
     assert(editor.catalogMatches(*editor.selected(p)));
     editor.beginCatalogSearch();
@@ -57,11 +57,21 @@ int main() {
     assert(editor.finishCatalogSearch(p));
     assert(editor.selected(p)->type=="Unit");
     editor.clearCatalogSearch(p);
+    assert(editor.setCatalogTypeFilter(p,"Actor"));
+    assert(editor.selected(p)->type=="Actor");
+    assert(editor.matchingCatalogCount(p)>0);
+    assert(!editor.setCatalogTypeFilter(p,"ImaginaryType"));
+    assert(editor.catalogTypeFilter=="Actor");
+    // Linked object navigation switches families automatically.
+    assert(editor.selectCatalogId(p,"ranger"));
+    assert(editor.catalogTypeFilter=="Unit");
+    assert(editor.setCatalogTypeFilter(p,""));
+    assert(editor.catalogTypeFilter.empty());
     // Galaxy-style inspector navigation follows stable IDs even when a
     // search filter would otherwise hide the linked actor/model.
     assert(editor.selectCatalogId(p,"worker"));
     editor.catalogFilter="only_something_else";
-    assert(editor.selectCatalogId(p,"marine_actor"));
+    assert(editor.selectCatalogId(p,"ranger_actor"));
     assert(editor.catalogFilter.empty());
     assert(editor.selectCatalogId(p,"procedural_soldier"));
     assert(editor.selected(p)->type=="Model");

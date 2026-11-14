@@ -3,11 +3,11 @@
 #include <cmath>
 #include <stdexcept>
 
-const char* HUMAN_MARINE_TRES = R"(
+const char* HUMAN_RANGER_TRES = R"(
 [gd_resource type="UnitData" format=3]
 
 [resource]
-resource_name = "Human Marine"
+resource_name = "Human Ranger"
 faction = "Humanity"
 max_hp = 45.0
 armor = 0.0
@@ -22,11 +22,11 @@ build_time = 15.0
 visual_scale = 0.92
 )";
 
-const char* HYBRID_ZEALOT_TRES = R"(
+const char* HYBRID_RAIDER_TRES = R"(
 [gd_resource type="UnitData" format=3]
 
 [resource]
-resource_name = "Hybrid Zealot"
+resource_name = "Hybrid Raider"
 faction = "Hybrid"
 max_hp = 160.0
 armor = 3.0

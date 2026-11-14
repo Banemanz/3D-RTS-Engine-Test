@@ -214,14 +214,14 @@ DataCatalog DataCatalog::defaults() {
     c.add(make("Model","procedural_building","",{
         {"mesh",picojson::value("procedural.unit")},{"scale",vector3(1,1,1)}
     }));
-    c.add(make("Actor","marine_actor","",{
+    c.add(make("Actor","ranger_actor","",{
         {"model",picojson::value("procedural_soldier")},
         {"tint",vector3(.22f,.58f,.96f)},{"opacity",picojson::value(1.0)}
     }));
-    c.add(make("Actor","worker_actor","marine_actor",{
+    c.add(make("Actor","worker_actor","ranger_actor",{
         {"tint",vector3(.20f,.90f,.65f)}
     }));
-    c.add(make("Actor","zealot_actor","",{
+    c.add(make("Actor","rift_raider_actor","",{
         {"model",picojson::value("procedural_soldier")},
         {"tint",vector3(.76f,.24f,.88f)}
     }));
@@ -232,8 +232,8 @@ DataCatalog DataCatalog::defaults() {
     c.add(make("Actor","hybrid_building_actor","human_building_actor",{
         {"tint",vector3(.72f,.24f,.85f)}
     }));
-    c.add(make("Unit","marine","",{
-        {"name",picojson::value("Human Marine")},{"actor",picojson::value("marine_actor")},
+    c.add(make("Unit","ranger","",{
+        {"name",picojson::value("Frontier Ranger")},{"actor",picojson::value("ranger_actor")},
         {"faction",picojson::value("Humanity")},{"max_hp",picojson::value(45.0)},
         {"armor",picojson::value(0.0)},{"damage",picojson::value(7.0)},
         {"attack_range",picojson::value(6.5)},{"attack_cooldown",picojson::value(.75)},
@@ -242,7 +242,7 @@ DataCatalog DataCatalog::defaults() {
         {"supply_cost",picojson::value(1.0)},{"mineral_cost",picojson::value(50.0)},
         {"build_time",picojson::value(6.0)},{"visual_scale",picojson::value(.92)}
     }));
-    c.add(make("Unit","worker","marine",{
+    c.add(make("Unit","worker","ranger",{
         {"name",picojson::value("Human Worker")},{"actor",picojson::value("worker_actor")},
         {"max_hp",picojson::value(40.0)},{"damage",picojson::value(2.0)},
         {"attack_range",picojson::value(1.5)},{"attack_cooldown",picojson::value(1.3)},
@@ -250,8 +250,8 @@ DataCatalog DataCatalog::defaults() {
         {"mineral_cost",picojson::value(40.0)},{"sight_range",picojson::value(12.0)},
         {"is_worker",picojson::value(true)},{"build_time",picojson::value(4.5)}
     }));
-    c.add(make("Unit","zealot","",{
-        {"name",picojson::value("Hybrid Zealot")},{"actor",picojson::value("zealot_actor")},
+    c.add(make("Unit","rift_raider","",{
+        {"name",picojson::value("Rift Raider")},{"actor",picojson::value("rift_raider_actor")},
         {"faction",picojson::value("Hybrid")},{"max_hp",picojson::value(160.0)},
         {"armor",picojson::value(3.0)},{"damage",picojson::value(18.0)},
         {"attack_range",picojson::value(1.85)},{"attack_cooldown",picojson::value(1.05)},
@@ -260,7 +260,7 @@ DataCatalog DataCatalog::defaults() {
         {"supply_cost",picojson::value(3.0)},{"mineral_cost",picojson::value(150.0)},
         {"visual_scale",picojson::value(1.28)}
     }));
-    c.add(make("Unit","command_center","marine",{
+    c.add(make("Unit","command_center","ranger",{
         {"name",picojson::value("Command Center")},{"actor",picojson::value("human_building_actor")},
         {"max_hp",picojson::value(700.0)},{"armor",picojson::value(2.0)},
         {"damage",picojson::value(0.0)},{"attack_range",picojson::value(0.0)},
@@ -269,15 +269,15 @@ DataCatalog DataCatalog::defaults() {
         {"supply_cost",picojson::value(0.0)},{"is_structure",picojson::value(true)},
         {"trainable_units",picojson::value(picojson::array{picojson::value("worker")})}
     }));
-    c.add(make("Unit","hive","command_center",{
-        {"name",picojson::value("Hybrid Hive")},{"actor",picojson::value("hybrid_building_actor")},
+    c.add(make("Unit","rift_bastion","command_center",{
+        {"name",picojson::value("Rift Bastion")},{"actor",picojson::value("hybrid_building_actor")},
         {"faction",picojson::value("Hybrid")}
     }));
     c.add(make("Unit","barracks","command_center",{
         {"name",picojson::value("Barracks")},{"max_hp",picojson::value(350.0)},
         {"visual_scale",picojson::value(2.0)},{"build_time",picojson::value(9.0)},
         {"mineral_cost",picojson::value(150.0)},
-        {"trainable_units",picojson::value(picojson::array{picojson::value("marine")})}
+        {"trainable_units",picojson::value(picojson::array{picojson::value("ranger")})}
     }));
     c.validate();
     return c;

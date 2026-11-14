@@ -19,10 +19,10 @@ static void assertBuildingAndProduction() {
     assert(game.playerMinerals==220);
     assert(game.buildBarracks({-28,0,14}));
     assert(game.playerMinerals==70);
-    assert(!game.queueMarine()); // construction has not finished
+    assert(!game.queueRanger()); // construction has not finished
     for(int i=0;i<600;++i)game.update(1.0f/60.0f);
     assert(game.completedBarracksCount()==1);
-    assert(game.queueMarine());
+    assert(game.queueRanger());
     assert(game.playerMinerals==20);
     int previousFriendly=0;
     for(const auto& unit:game.units)if(unit.ownerId==0 && !unit.isWorker && !unit.isStructure)
@@ -112,7 +112,7 @@ static void assertQueuedMovement() {
 static void assertPatrol() {
     RTSProject map=RTSProject::defaults();
     map.placements.erase(std::remove_if(map.placements.begin(),map.placements.end(),
-       [](const ProjectPlacement& p){return p.owner==1 && p.catalogId=="zealot";}),
+       [](const ProjectPlacement& p){return p.owner==1 && p.catalogId=="rift_raider";}),
        map.placements.end());
     RTSSkirmish game;
     game.loadProject(map);
@@ -181,6 +181,29 @@ static void assertRallyProduction(){
     game.reset();
     assert(game.rallyPoints().empty());
 }
+static void assertOldMapsStillLoad(){
+    // Prior project files carry their own catalog and pre-existing IDs.
+    // Loading them must not depend on the new starter roster being present.
+    RTSProject old=RTSProject::defaults();
+    assert(old.renameCatalogObject("ranger","marine"));
+    assert(old.renameCatalogObject("rift_raider","zealot"));
+    assert(old.renameCatalogObject("rift_bastion","hive"));
+    old.metadata.erase("player_ranger");
+    old.metadata["player_marine"]=picojson::value("marine");
+    old.metadata.erase("enemy_soldier");
+    old.metadata.erase("enemy_base");
+    old.validate();
+    RTSSkirmish game;
+    game.loadProject(old);
+    assert(game.playerBaseId()>0);
+    assert(game.units.size()==10);
+    bool oldInfantry=false,oldOpponent=false;
+    for(const auto& u:game.units){
+        if(u.catalogId=="marine" && u.ownerId==0)oldInfantry=true;
+        if(u.catalogId=="zealot" && u.ownerId==1)oldOpponent=true;
+    }
+    assert(oldInfantry && oldOpponent);
+}
 int main() {
     assertStartingState();
     assertBuildingAndProduction();
@@ -192,5 +215,6 @@ int main() {
     assertPatrol();
     assertRallyProduction();
     assertProductionCancellation();
-    std::cout<<"skirmish: 10 tests passed\n";
+    assertOldMapsStillLoad();
+    std::cout<<"skirmish: 11 tests passed\n";
 }

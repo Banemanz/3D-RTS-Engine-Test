@@ -77,7 +77,7 @@ Additional tool: F6 is a JSON trigger inspector (create/clone/delete/inline edit
 `.github/workflows/build.yml` builds optimized Windows x64 and Linux x86_64
 binaries, runs assertions-enabled CTest suites, stages a portable project layout
 with CMake install rules, verifies maps and bundled files, smokes the packaged
-Linux editor, and uploads platform archives as build artifacts.
+Linux editor, and uploads platform arcrift_bastions as build artifacts.
 Artifacts are not published as GitHub Releases or merged into main; see
 `docs/BUILD_ARTIFACTS.md`. Existing Debug CI still runs and captures
 OpenGL screenshots for gameplay, terrain editor and trigger editor.
@@ -331,7 +331,7 @@ multiplayer lockstep determinism is not implemented.
 
 Unit catalog fields support inherited `trainable_units` arrays of at most
 12 non-structure Unit IDs. RTSSkirmish now queues typed catalog unit IDs in
-per-building production tasks (instead of a hardcoded worker-vs-marine bool),
+per-building production tasks (instead of a hardcoded worker-vs-ranger bool),
 resolves costs/duration/supply and actor/worker metadata at runtime, supports
 rally and refund, rejects invalid producers, and remains backwards-compatible
 with old maps missing the field. `DataCatalog::rename` migrates typed
@@ -407,3 +407,8 @@ polish. Real Windows GPU testing is still required.
 The editor still depends on pinned Dear ImGui; the native pause menu and RTS gameplay HUD are the first engine-owned UI components, not a complete replacement. **Do not delete current workbench** before native inspector, hierarchy, terrain, trigger and docking parity. No runtime effect/ability/actor event compiler exists yet; many Galaxy Editor subsystems are missing. Actual interactive Windows GPU stability must be checked manually, even when Windows CI passes.
 
 Next: build native widget tree/font/keyboard/pointer capture and first dockable panels; then typed catalog field schemas plus effect executor; then richer actor/trigger/terrain systems, asset importing and renderer optimization. Keep binary and CTest contract identical between platforms.
+
+
+## November 14 continuation: original sample roster and scalable creator browser
+
+**Branch/PR:** continue `feat/rts-vertical-slice`, Draft PR #1; no merges or new PRs. After the earlier native menu, this pass replaces the shipped example's SC2-like `marine`/`zealot`/`hive` identities with `ranger` / `rift_raider` / `rift_bastion` (Frontier Ranger, Rift Raider, Rift Bastion) across default C++ map data, JSON showcase projects, generator, tests, and docs. Old serialized projects are intentionally left compatible via catalog-detected role fallback and the prior `player_marine` metadata key. Do **not** alter arbitrary user-authored custom unit names when loading. The F7 browser now gains a category selector derived from present catalog types (not hardcoded) and an `ImGuiListClipper` object-list virtualizer, while all searchable/filter operations stay in GPU-independent `EditorSession`. Tests are extended for category changes and backward compatibility. Next: continue native widget architecture, proper text support, typed field schemas and runtime ability/effect composition; validate Windows + Linux CI and installed binaries. Use publicly available Galaxy Editor documentation for object graphs, not content copying.

@@ -145,8 +145,8 @@ struct AppState {
                 if(!game.cancelSelectedProduction())inform("NO TRAINING TO CANCEL");
                 else inform("TRAINING CANCELLED - RESOURCES REFUNDED");
                 break;
-            case HUDCommand::Marine:
-                if(!game.queueMarine())inform("CANNOT TRAIN MARINE: CHECK MINERALS, SUPPLY AND BARRACKS");
+            case HUDCommand::Ranger:
+                if(!game.queueRanger())inform("CANNOT TRAIN RANGER: CHECK MINERALS, SUPPLY AND BARRACKS");
                 break;
             case HUDCommand::Worker:
                 if(!game.queueWorker())inform("CANNOT TRAIN WORKER: CHECK MINERALS AND SUPPLY");
@@ -997,7 +997,7 @@ int main(int argc, char** argv) {
         glEnableVertexAttribArray(0);
 
         std::cout << "RTS Skirmish: LMB select, RMB move/attack/gather, A then RMB attack-move,\n"
-                  << "B then RMB place Barracks (worker needed), T train Marine, C train Worker,\n"
+                  << "B then RMB place Barracks (worker needed), T train Ranger, C train Worker,\n"
                   << "X stop, Q/E rotate, arrows/W/S/D camera, R restart, Esc pause.\n";
         float accumulator = 0.0f;
         const float fixedStep = 1.0f / 60.0f;
@@ -1039,7 +1039,7 @@ int main(int argc, char** argv) {
             if (justPressed(GLFW_KEY_B, app.keyB))
                 app.command(producerSelected?HUDCommand::TrainSlot0:HUDCommand::Build);
             if (justPressed(GLFW_KEY_T, app.keyT))
-                app.command(producerSelected?HUDCommand::TrainSlot1:HUDCommand::Marine);
+                app.command(producerSelected?HUDCommand::TrainSlot1:HUDCommand::Ranger);
             if (justPressed(GLFW_KEY_C, app.keyC))
                 app.command(producerSelected?HUDCommand::TrainSlot2:HUDCommand::Worker);
             if (justPressed(GLFW_KEY_TAB, app.keyTab) && producerSelected)
