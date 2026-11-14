@@ -177,3 +177,10 @@ The creator workbench now adds a typed list editor for `Unit.trainable_units` an
 ## Execution monitor and native focus status
 
 Implemented: a searchable trigger trace monitor and per-rule execution statistics, deterministic timestamped ECA records and a bundled original map demonstrating a successful and blocked trigger. New pure-C++ focus navigation controls the existing native pause menu. These are editor/engine fundamentals inspired by public RTS authoring UX, not copied Galaxy code/content. Future: breakpoint/step debugger, variable/function libraries, visual condition grouping and full native editor tree and widgets.
+
+
+## RTS simulation fundamentals: path changes and repeatable economy
+
+As part of an engine-centric pass, navigation grids now track meaningful topological changes; active paths are repaired only when their remaining corridor becomes invalid. Empty/unreachable paths no longer indefinitely pin move orders when a queued command can be executed. Structure stamping is local to the obstacle footprint, and construction cannot trap mobile units inside newly blocked cells.
+
+Worker jobs and route progression are iterated in unit-ID order to eliminate hash-order dependence for shared mineral contention. This is one required building block for deterministic simulation, **not** full lockstep or rollback support. Priority gaps now include passability classes, air movement, command recording, ability/actor schemas, scenario AI and a native dockable editor. See `RTS_ENGINE_AUDIT.md`.

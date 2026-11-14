@@ -396,3 +396,10 @@ Select **F7 Data Editor**, choose a Unit or Effect catalog entry, then select it
 Use **View → Playtest trigger monitor** or the F6 inspector's **Open playtest monitor**. Play a map (F9), inspect captured rule events, search logs, clear trace entries, and click **Open rule** to edit a rule. The monitor logs first-failed conditions and the actions that executed. Script execution is unchanged when capture is disabled. A project reset/edit starts a fresh trace. `projects/trigger_diagnostics_showcase.rtsproject.json` is a new original sample: successful initialization, blocked condition and a region Effect.
 
 See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for operation, limitations, the screenshot smoke command and future debugger scope.
+
+
+## Build/pathing rules for custom terrain
+
+Edited terrain slope/pathing and new or destroyed structures are reflected in the shared navigation grid. On a topology change, in-flight orders check their remaining waypoints and lazily replan if invalid. If a destination becomes completely unreachable, that leg is abandoned; a subsequent queued move command is then attempted. Circular structure/mineral blockers update a local region of the grid. Building placement does not allow placing a footprint over a live mobile unit.
+
+No movement-class, hover/air navigation or hierarchical flow-field solver has been added yet. Maps with many units are better served by the existing grid/cost system until benchmarked upgrades are ready; see [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md).

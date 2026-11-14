@@ -121,3 +121,15 @@ API remains an outstanding creator-suite feature.
 `TriggerEngine` now exposes opt-in, fixed-step ECA trace records and per-rule counters. Each record contains a rule/event ID, monotonic sequence number, simulation timestamp, subject ID, outcome and first failed condition or executed actions. Trace history is ring-bounded to 192 records; project reconfiguration resets diagnostics, and map JSON is unaffected. The creator UI consumes that data without reinterpreting the scripting system. Capture off does not disable scripts. The trace is observational, not a breakpoint debugger.
 
 `NativeFocus.hpp` holds a pure-C++ cyclic focus-list used for keyboard navigation in the custom OpenGL pause menu. Key and mouse actions share one handler. It has no platform or GPU dependencies; later native editor widgets can reuse this input primitive.
+
+
+## Dynamic path topology, footprint updates and processing order
+
+- `NavigationGrid::revision()` increments on real block/traversal-cost edits, never no-op paints.
+- `RTSSkirmish::navigationGeneration_` increments on full occupancy rebuilds. Each active route stores its requested destination and the generation/revision of the grid used to create it.
+- `NavigationGrid::routeClear` validates the remaining center-cell corridor and diagonal corner conditions **only when the grid has changed**. Invalid routes are replanned via the existing A*, and wholly sealed legs retire so later queued commands may execute.
+- `NavigationGrid::blockDisc` stamps only cells within a circle's axis-aligned bounding box, not the entire world, with the same exact circular inclusion test. Invalid coordinates/radii are ignored.
+- `RTSSkirmish::buildBarracks` rejects footprints intersecting living mobile units; those rejects do not charge minerals or change occupancy.
+- The route and worker-job stores are ordered by numeric unit ID to make path/harvesting updates independent of hash/insertion order. **This does not yet guarantee bitwise float determinism across Windows/Linux.** Full command-stream/replay determinism remains the priority.
+
+Technical research and missing systems are tracked in [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md).

@@ -82,3 +82,8 @@ Open the game and press **Esc** outside an active order to reach the engine-nati
 ## Trigger monitor in shipped builds
 
 Both Windows/Linux Release executables self-report `RTS_FEATURE_TRIGGER_TRACE_MONITOR=1` and existing native UI/visual ECA flags, checked by `tools/verify_build_bundle.py`. GitHub Actions' **Tests + screenshots** workflow now produces `rts-trigger-trace-monitor-screenshot` from a Linux Mesa/Xvfb run of the actual executable, not a mockup. The downloadable executable ZIPs remain in the **Download Windows EXE and Linux RTS Builds** workflow. The new sample map is copied by the existing `projects/` install rule. Native keyboard-focus controls use exactly the same code on Windows and Linux.
+
+
+## November 14 engine foundation flags
+
+Windows/Linux installed executables both must self-report `RTS_FEATURE_DYNAMIC_NAV_REPLAN=1` and `RTS_FEATURE_STABLE_SIM_ORDER=1`. The bundle verifier checks the flags and installs `docs/RTS_ENGINE_AUDIT.md`, alongside existing authoring/creator docs. All new headless CTest targets are built identically on both operating systems. This audit is not itself a new executable; it documents the source branch and outstanding engine work.

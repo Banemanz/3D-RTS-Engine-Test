@@ -237,3 +237,10 @@ Production lists (`trainable_units`) and Effect `Sequence.children` lists no lon
 ## New functional creator diagnostics (November 14)
 
 The editor can now inspect actual rule execution with a 192-entry ring, per-rule attempted/fired/blocked counters, failed condition reasons, and subject unit IDs. `CreatorTriggerMonitor.hpp` is UI-only; `TriggerEngine` owns the authoritative trace in shared C++ simulation. Traces reset on project reload and never become saved map state. It adds no third-party dependencies and keeps identical executable capabilities across Windows/Linux. The native pause menu also has reusable keyboard focus. Still missing: breakpoints, stepping, script variable inspection and complete native dockable editor tooling.
+
+
+## Dynamic obstacles, navigation recovery and stable order (new)
+
+A preexisting failure mode let live move orders continue toward now-blocked waypoints after construction or terrain changes. The engine now tracks changed navigation generations and cell revisions, validates remaining routes, replans affected ones and retires impossible legs so queued commands still execute. New building footprints refuse intersections with live mobile units. `blockDisc` avoids full terrain scans when updating small circular obstacles. Route and worker-harvesting execution is now ordered by unit ID instead of unspecified hash bucket iteration.
+
+Tests include new moving-order reroutes and sealed/queued fallback, a large-map footprint equivalence fixture, invalid/no-op revision assertions, building occupancy protection and identical resource-contest simulations under opposite job insertion orders. These are essential groundwork for a recorded command stream and deterministic multiplayer, not claims those are already complete. [Open-source engine gap audit](RTS_ENGINE_AUDIT.md).

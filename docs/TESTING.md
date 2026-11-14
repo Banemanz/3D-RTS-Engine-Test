@@ -131,3 +131,10 @@ Headless tests now exercise all-new starter IDs and a previously serialized map'
 `RTSTriggerTraceTests` runs on Windows/Linux CTest and checks chronological timestamps, fired/blocked event reasons, opt-in capture, default gameplay equivalence with tracing on/off, bounded 192-record history, and reset semantics. `RTSNativeMenuTests` now exercises focus movement/wrapping and focused action selection, in addition to size-dependent hit-testing. `RTSProjectTool --validate projects/trigger_diagnostics_showcase.rtsproject.json` runs in both suites.
 
 Linux Debug additionally executes the real `--smoke-trigger-monitor` OpenGL editor with the sample project, converts the screenshot to PNG and uploads `rts-trigger-trace-monitor-screenshot`. Windows/Linux Release packaging verifies `RTS_FEATURE_TRIGGER_TRACE_MONITOR=1` from the actual executable. Native Windows GPU testing remains a manual acceptance step, not implied by Linux software OpenGL verification.
+
+
+## Movement and order recovery regression (November 14)
+
+New `RTSDynamicNavigationTests` issues movement orders before adding blockers: verifies a successful detour, no visits to blocked cells and correct execution of a reachable queued command when the first leg is later separated by an impassable wall. `RTSNavigationTests` exercises revision changes only on actual edits, diagonal corner invalidation and exact optimized footprint stamping over a large off-origin grid with overlapping/off-map circles. `RTSProductionSpawnTests` rejects building a structure on a live worker, proves no mineral debit on rejection, then accepts a clear neighboring build site.
+
+`RTSResourceDeterminismTests` issues identical two-worker resource orders in opposite insertion sequences, compares all fixed-tick resource/position/HP/state outcomes and proves identical contention results. All tests are in Windows/Linux CTest Debug/Release with Release assertions retained, and feature flags in both installed native executables are checked. GPU editor screenshot smoke remains unchanged. This is **not** a cross-platform bitwise-deterministic multiplayer guarantee.

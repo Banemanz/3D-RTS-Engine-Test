@@ -458,3 +458,25 @@ The new `Effect` catalog class supports Damage, Heal and Sequence with bounded e
 The underlying trace + monitor functionality passed Windows/Linux Debug and Release packaging at commit `8209c6b6`. Native focus and menu keys passed Debug tests/graphics smoke at `b907741d`; check the newer documentation HEAD's own CI before claiming the entire branch verified. Review failed job logs, do not rely on earlier green runs.
 
 The authoring layer still uses pinned ImGui as an interim adapter. **Not implemented yet:** full in-house retained widget tree, editor docking, rich Unicode font/text pipeline, terrain transform gizmos, trigger breakpoints/stepping, variable-watch debugger, advanced ability/behavior/actor graphs, full asset importer and networking. Keep existing Windows/Linux feature parity and expand in tested increments. This handoff and all Markdown documentation were inspected and updated in the PR. Follow original demo names (Frontier Ranger/Rift Raider/Rift Bastion), preserve older maps using compatibility fallbacks, and never copy SC2 assets or source.
+
+
+## November 14 continuation — dynamic navigation, efficient footprints, stable simulation order
+
+**Continue only Draft PR #1 `feat/rts-vertical-slice` (do not merge/create new PR).** This pass followed the original-roster/creator ECA and native UI milestones. The user requested another substantial engine-first development pass and study of existing RTS engine internals; no proprietary SC2 content or GPL code was copied.
+
+### Implemented source and tests
+
+- `NavigationGrid.hpp/.cpp`: `revision()` for meaningful blocked/cost changes, no-op stability; `routeClear(current,waypoints,next)` tests remaining route cells and corner-cut safety; `blockDisc` now scans only a clamped local footprint rather than a whole map. Includes boundary, overlap, invalid-radius and full-grid reference-equivalence tests.
+- `RTSSkirmish.hpp/.cpp`: route records store an original requested destination, grid revision and a navigation generation to cover rebuilds. Active routes stay untouched when the map is unchanged, and are lazily inspected/replanned after a topology edit. If an A* leg becomes truly impossible, the unit stops trying that blocked leg and advances to the next queued order. Attack-move interruption and patrol replanning refresh route stamps.
+- `RTSSkirmish::buildBarracks` rejects placement on occupied live mobile-unit footprints with no mineral cost.
+- `routes_` and `jobs_` are now `std::map<int,...>`, so movement and contested mineral-job iteration follows stable numeric unit IDs rather than incidental hash-bucket ordering.
+- New `tests/dynamic_navigation_tests.cpp` and `tests/resource_determinism_tests.cpp`, with expanded `navigation_tests.cpp` and `production_spawn_tests.cpp`. CMake adds all to both Windows/Linux Debug and Release test suites with assertions enabled. Earlier functional commits were verified by both platform pipelines; always verify the current HEAD.
+- New `docs/RTS_ENGINE_AUDIT.md` is included in Windows/Linux installed builds and enforced by `tools/verify_build_bundle.py`. Both native executable manifests now must advertise `RTS_FEATURE_DYNAMIC_NAV_REPLAN=1` and `RTS_FEATURE_STABLE_SIM_ORDER=1`.
+
+### External source research and next work
+
+Read the Recoil/Spring `IPathManager`/MoveDef interfaces (terrain-change invalidation, movement-class footprints), 0 A.D. UnitMotion passability/weight/acceleration documentation, OpenRA trait interfaces, and Zero-K's synced game-rule module boundaries. All references are **design-only** because licenses differ. The source and its logic here remain original C++17 and project data remains original and user-extensible.
+
+Next big foundations: typed tick-indexed command stream and reproducible replay/state digest (first before network); unit-specific movement/passability/footprints; localized path-request budgeting on large maps; ability/behavior/actor and AI systems; reliable asset ingestion; true native editor widgets/docking. Never claim deterministic cross-platform lockstep merely from stable iteration. Run real Windows GPU input tests, check Windows/Linux CTest and both Release ZIPs, then update this handoff.
+
+**Latest validation instructions:** use the PR head SHA, not earlier passing builds; check .github/actions `Tests + screenshots (NOT executables)` for both OS Debug and Linux Mesa/Xvfb, and `Download Windows EXE and Linux RTS Builds` for both Release native bundles. Review failed jobs and fix before saying parity is proven for the latest revision.
