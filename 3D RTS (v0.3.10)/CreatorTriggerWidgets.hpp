@@ -1,5 +1,6 @@
 #pragma once
 #include "EditorSession.hpp"
+#include "CreatorTriggerTreeWidgets.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include <algorithm>
@@ -358,8 +359,8 @@ void draw(App& app){
             refresh(app,ed.setTriggerOnce(project,once));
     }
     ImGui::BeginChild("##ecaNodeTree",ImVec2(0,300.f),true);
-    nodes(app,rule,id,true);
-    nodes(app,rule,id,false);
+    CreatorTriggerTreeWidgets::drawList(app,rule,{},"conditions",0);
+    CreatorTriggerTreeWidgets::drawList(app,rule,{},"actions",0);
     ImGui::EndChild();
     if(ImGui::CollapsingHeader("Advanced JSON / custom fields")){
         if(ImGui::Button("Edit full rule JSON"))ed.beginTriggerEdit(project);
