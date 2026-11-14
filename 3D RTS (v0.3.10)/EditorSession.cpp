@@ -1,5 +1,6 @@
 #include "EditorSession.hpp"
 #include "TriggerDefinition.hpp"
+#include "RTSScriptExpression.hpp"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -576,6 +577,24 @@ bool EditorSession::renameTriggerVariable(RTSProject& project,
                ref->second.get<std::string>()==oldName)
                 ref->second=picojson::value(newName);
         };
+        // Migrate only typed expression nodes inside recognized ECA operands.
+        // Unrelated extension data and user-authored text must be left intact.
+        const auto updateExpression=[&](auto&& self,picojson::value& expr)->void {
+            if(!expr.is<picojson::object>())return;
+            auto& object=expr.get<picojson::object>();
+            const auto op=object.find("op");
+            if(op!=object.end() && op->second.is<std::string>() &&
+               op->second.get<std::string>()=="Variable"){
+                auto name=object.find("name");
+                if(name!=object.end() && name->second.is<std::string>() &&
+                   name->second.get<std::string>()==oldName)
+                    name->second=picojson::value(newName);
+            }
+            for(const char* key:{"operand","left","right","value","minimum","maximum"}){
+                auto child=object.find(key);
+                if(child!=object.end())self(self,child->second);
+            }
+        };
         auto rules=candidate.extensions.find("triggers");
         if(rules!=candidate.extensions.end() && rules->second.is<picojson::array>()) {
             for(auto& item:rules->second.get<picojson::array>()) {
@@ -595,6 +614,10 @@ bool EditorSession::renameTriggerVariable(RTSProject& project,
                         else {
                             updateReference(o,"SetVariable");
                             updateReference(o,"AddVariable");
+                        }
+                        for(const char* key:{"value_expr","amount_expr"}){
+                            auto expr=o.find(key);
+                            if(expr!=o.end())updateExpression(updateExpression,expr->second);
                         }
                     }
                 }
@@ -857,6 +880,41 @@ bool EditorSession::setTriggerNodeField(RTSProject& project,bool condition,std::
         if(!fields.count(key))throw std::invalid_argument("Unknown node field");
         fields[key]=value;
     },"TRIGGER FIELD UPDATED");
+}
+bool EditorSession::setTriggerNodeOperand(RTSProject& project,
+                                          bool condition,std::size_t index,
+                                          bool useExpression,
+                                          const std::string& variableId){
+    return mutateTrigger(project,[&](picojson::object& rule){
+        const auto bucket=condition?"conditions":"actions";
+        auto& nodes=rule.at(bucket).get<picojson::array>();
+        if(index>=nodes.size() || !nodes[index].is<picojson::object>())
+            throw std::invalid_argument("Operand node index out of range");
+        auto& node=nodes[index].get<picojson::object>();
+        const auto type=node.at("type").get<std::string>();
+        if(type!="VariableCompare" && type!="SetVariable" &&
+           type!="AddVariable" && type!="GrantMinerals")
+            throw std::invalid_argument("Node cannot accept a numerical expression");
+        if(condition && type!="VariableCompare")
+            throw std::invalid_argument("Invalid condition expression");
+        const char* literal=(type=="GrantMinerals")?"amount":"value";
+        const char* expression=(type=="GrantMinerals")?"amount_expr":"value_expr";
+        if(useExpression){
+            auto it=project.extensions.find("trigger_variables");
+            if(it==project.extensions.end() || !it->second.is<picojson::object>() ||
+               it->second.get<picojson::object>().empty())
+                throw std::invalid_argument("Create a map variable before using an expression");
+            const auto& available=it->second.get<picojson::object>();
+            const std::string chosen=variableId.empty()?available.begin()->first:variableId;
+            if(!available.count(chosen))
+                throw std::invalid_argument("Expression references a missing variable");
+            node.erase(literal);
+            node[expression]=RTSScriptExpression::variable(chosen);
+        }else{
+            node.erase(expression);
+            node[literal]=picojson::value(1.0);
+        }
+    },"SCRIPT OPERAND UPDATED");
 }
 bool EditorSession::beginTriggerEdit(const RTSProject& project) {
     if(textEditing || triggerCount(project)==0)return false;

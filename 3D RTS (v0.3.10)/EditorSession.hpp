@@ -121,6 +121,11 @@ public:
     bool moveTriggerNode(RTSProject& project,bool condition,std::size_t index,int direction);
     bool setTriggerNodeField(RTSProject& project,bool condition,std::size_t index,
                              const std::string& key,const picojson::value& value);
+    // Switch a numerical ECA operand between a literal and a globally
+    // referenced expression. Uses the same transaction and validation gate.
+    bool setTriggerNodeOperand(RTSProject& project,bool condition,
+                               std::size_t index,bool useExpression,
+                               const std::string& variableId="");
     bool beginTriggerEdit(const RTSProject& project);
     bool finishTriggerEdit(RTSProject& project);
     std::string panelName() const;

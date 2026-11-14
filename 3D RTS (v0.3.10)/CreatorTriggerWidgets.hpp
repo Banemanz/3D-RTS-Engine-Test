@@ -133,6 +133,46 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
                 if(pair.first=="type")continue;
                 field(app,id,false,condition,index,pair.first,pair.second);
             }
+            const bool canEvaluate=(condition && kind=="VariableCompare") ||
+                (!condition && (kind=="SetVariable" || kind=="AddVariable" ||
+                               kind=="GrantMinerals"));
+            if(canEvaluate){
+                const char* dynamicKey=kind=="GrantMinerals"?"amount_expr":"value_expr";
+                auto exprIt=node.find(dynamicKey);
+                const bool dynamic=exprIt!=node.end();
+                const auto globalIt=project.extensions.find("trigger_variables");
+                const bool hasGlobals=globalIt!=project.extensions.end() &&
+                    globalIt->second.template is<picojson::object>() &&
+                    !globalIt->second.template get<picojson::object>().empty();
+                if(!dynamic && hasGlobals && ImGui::SmallButton("Use variable expression"))
+                    refresh(app,ed.setTriggerNodeOperand(project,condition,index,true));
+                if(dynamic){
+                    if(ImGui::SmallButton("Use literal instead"))
+                        refresh(app,ed.setTriggerNodeOperand(project,condition,index,false));
+                    ImGui::TextDisabled("Advanced: formulas can be edited in full-rule JSON");
+                    if(exprIt->second.template is<picojson::object>()){
+                        const auto& expr=exprIt->second.template get<picojson::object>();
+                        const auto op=expr.find("op");
+                        const auto ref=expr.find("name");
+                        if(op!=expr.end() && op->second.template is<std::string>() &&
+                           op->second.template get<std::string>()=="Variable" &&
+                           ref!=expr.end() && ref->second.template is<std::string>() &&
+                           hasGlobals){
+                            const auto current=ref->second.template get<std::string>();
+                            if(ImGui::BeginCombo("Operand variable",current.c_str())){
+                                for(const auto& value:
+                                    globalIt->second.template get<picojson::object>()){
+                                    if(ImGui::Selectable(value.first.c_str(),
+                                                         current==value.first))
+                                        refresh(app,ed.setTriggerNodeOperand(
+                                            project,condition,index,true,value.first));
+                                }
+                                ImGui::EndCombo();
+                            }
+                        }
+                    }
+                }
+            }
             ImGui::TreePop();
         }
         ImGui::PopID();
