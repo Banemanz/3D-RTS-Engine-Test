@@ -105,6 +105,11 @@ int main(){
         throw;
     }
     std::cerr<<"STAGE: parse renamed project\n";
+    std::cerr<<"catalog old="<<(p.catalog.find("scripted_ranger")!=nullptr)
+             <<" new="<<(p.catalog.find("archer_variant")!=nullptr)
+             <<" / effect old="<<(p.catalog.find("scripted_effect")!=nullptr)
+             <<" new="<<(p.catalog.find("kinetic_variant")!=nullptr)<<"\n";
+    std::cerr<<"rules="<<p.extensions.at("triggers").serialize()<<"\n";
     const auto rules=parseTriggerRules(p);
     assert(rules.size()==2);
     const auto& branch=rules[0].actions[0];
