@@ -177,3 +177,7 @@ Both `linux` and `windows` jobs must upload **both** `build/command_replay_finge
 ## Nested script action regression (November 14)
 
 `RTSScriptFlowTests` checks actual fixed-step `IfThenElse` and `Repeat` execution, dynamic expression counts, live variable-change notifications, typed condition routing, deterministic mineral effects, project serialization, replay verification, script-global rename through nested actions, and undo/redo. It also rejects oversized loop execution budgets and invalid branch shape. Both Linux/GCC and Windows/MSVC upload `script_flow_fingerprint.txt`; the mandatory replay-parity job requires byte-identical tick/digest rows. Assert remains enabled in Debug and Release. The scripted relay project includes a working branch and bounded repeat action.
+
+## Nested ECA reference integrity and binary flags
+
+`RTSNestedCatalogReferenceTests` makes Unit/Effect catalog refs inside nested IfThenElse and Repeat actions, checks both inbound-usage discovery and dependency-safe deletion, renames both catalog IDs, and confirms serialized branches retain valid references while ordinary text is unchanged. The executable package must expose `RTS_FEATURE_SCRIPT_EXPRESSIONS=1` and `RTS_FEATURE_SCRIPT_CONTROL_FLOW=1` alongside its earlier `RTS_FEATURE_SCRIPT_GLOBALS=1` on **both** Windows and Linux. The bundle verifier rejects missing implementation flags and mismatched source SHAs.

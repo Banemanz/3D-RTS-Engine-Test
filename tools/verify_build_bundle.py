@@ -105,6 +105,8 @@ def main() -> int:
         "RTS_FEATURE_REPLAY_VERIFY",
         "RTS_FEATURE_AI_COMMAND_PLANNER",
         "RTS_FEATURE_SCRIPT_GLOBALS",
+        "RTS_FEATURE_SCRIPT_EXPRESSIONS",
+        "RTS_FEATURE_SCRIPT_CONTROL_FLOW",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

@@ -154,3 +154,5 @@ coroutines or a Galaxy source compiler. The scripted relay showcase now uses
 IfThenElse + Repeat + a map-variable expression to calculate its resource
 reward. Run `RTSScriptFlowTests` to exercise real execution, validation,
 serialization, undo/redo, variable-reference migration and replay parity.
+
+**Reference integrity:** F7 catalog rename and safe deletion now inspect typed Unit/Effect references inside nested IfThenElse/Repeat branches, not only top-level ECA lists. They migrate or reject referenced catalog objects without changing custom text or extension fields. The shared `RTSNestedCatalogReferenceTests` exercises nested Unit/Effect links and serialized projects on Windows and Linux.
