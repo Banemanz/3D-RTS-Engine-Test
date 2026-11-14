@@ -263,3 +263,8 @@ Windows and Linux compare each other's checkpoint fingerprints for the same repl
 The opponent now plans attacks through the fixed-tick command scheduler. The planner computes targets from a read-only world snapshot and returns source-1 attack commands sorted by unit ID. A basic local-defense behavior gives priority to player threats near the enemy base; absent such threats, enemies advance on the player's base. The guard distance and a combat-AI enable toggle are project metadata, validated with the authored map. AI-spawned reinforcements still come from the existing timed scenario system.
 
 Replay JSON now defaults to v2 to include AI source commands, while v1 is recognized and retains historical direct-AI playback. This closes a replay-input gap but does **not** implement modder-authored AI graphs, broader worker economy, multibase strategy, enemy fog-of-war, squad tactics, networking or simulation-state snapshots.
+
+
+## Automated cross-platform defense scenario
+
+The new AI planner isn't just unit-tested in isolation: `ai_defense_behavior` runs an original authored match for 180 fixed ticks, asserts that idle enemy fighters issue source-1 attack orders against nearby player scouts, and produces a replay that verifies without rendering. CI compares the resulting fingerprints directly between MSVC/Windows and GCC/Linux, and Linux captures a screenshot of the actual AI skirmish under Mesa/Xvfb. This does **not** establish networking or comprehensive strategic AI parity.

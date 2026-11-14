@@ -45,3 +45,8 @@ Replay version **2** includes `source=1` commands for opponent Attack decisions,
 On verification, v2 playback **disables automatic AI planning** to avoid generating duplicate orders and consumes exactly the AI inputs recorded in the tape. Existing v1 JSON replay files remain supported: they contain source-0 commands only, and the verifier reinstates the old direct-AI base-target behavior, preserving their historical simulation. The replay-version field is validated and v1 rejects injected AI inputs.
 
 The AI policy is a pure headless source file, not a replay input parser, and has validated map metadata `enemy_ai_enabled` and `enemy_ai_guard_radius`. New sample: `projects/ai_defense_showcase.rtsproject.json`. The version upgrade does not add interactive replay playback or real multiplayer transport; pending commands are still bounded. See `RTS_ENGINE_AUDIT.md` for larger AI gaps.
+
+
+## Cross-platform AI planning parity fixture
+
+The replay CI compares two independent scripted test scenarios: the normal combat/production command replay, and a full 180-tick **AI Defense Combat Lab** simulation from `projects/ai_defense_showcase.rtsproject.json`. This second map deliberately places two player scouts near the enemy home base; the test checks that recorded AI Attack decisions target the nearby scouts. The headless runner exports and verifies the tape, and the Windows/Linux parity job compares its digest checkpoints byte-for-byte. This is significantly stronger than comparing a noninteractive or base-only match, but still not a guarantee of universal multiplayer determinism.

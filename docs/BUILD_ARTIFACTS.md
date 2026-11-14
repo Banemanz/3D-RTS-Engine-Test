@@ -97,3 +97,8 @@ Windows and Linux packages include `RTSProjectTool[.exe]` and `docs/REPLAY_COMMA
 ## AI planner and replay v2 in packaged builds
 
 Both platform bundles include `projects/ai_defense_showcase.rtsproject.json` and the same `RTSAIPlanner` source compiled into the simulation library. The executable's `--features` output must advertise `RTS_FEATURE_AI_COMMAND_PLANNER=1`, checked by the bundle verifier on both Windows and Linux. CTest validates the sample map and the headless planner, and the replay-parity CI job still compares actual Windows/MSVC and Linux/GCC simulation digests. Original executable ZIPs remain in the Release workflow, not the screenshot artifacts.
+
+
+## Combat AI sandbox capture
+
+The CI **Tests + screenshots** workflow produces a `rts-ai-defense-screenshot` artifact from a software OpenGL run of the bundled `projects/ai_defense_showcase.rtsproject.json` map. The same map has a headless `ai_defense_behavior` CTest and Windows/Linux replay-state comparison, on top of the already existing generic replay fingerprint. The executable ZIPs are still under the separate **Download Windows EXE and Linux RTS Builds** workflow; screenshots are not executable artifacts.

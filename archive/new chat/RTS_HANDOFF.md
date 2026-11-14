@@ -523,3 +523,10 @@ This is a first **combat** AI brain, not a full RTS strategic AI. It does not au
 
 ### CI reminder
 The previous source-only test migration `8a1cab55` passed Windows/Linux Debug and replay parity. **Check latest branch head CI**, inspect any failures and fix before claiming Build/Release green. GitHub Actions release artifacts are in `Download Windows EXE and Linux RTS Builds`, screenshots and parity fingerprints are in `Tests + screenshots (NOT executables)`. Keep this new-chat handoff up-to-date.
+
+
+### November 14 follow-up — actual AI guard match cross-OS and screenshot
+
+A second mandatory cross-OS simulation fixture now exercises the **real AI guard-radius path** rather than only the default long-range base objective. `tests/ai_planner_tests.cpp` accepts the original `projects/ai_defense_showcase.rtsproject.json`, records and validates a 180-tick match, checks that the first AI attack commands select nearby Frontier scouts, and writes `ai_defense_fingerprint.txt`. `.github/workflows/ci.yml` uploads this from **both** Linux and Windows and the `replay-parity` job requires exact digest agreement for both AI-defense and prior standard replay scenarios. Linux Mesa/Xvfb additionally captures real in-game combat to the `rts-ai-defense-screenshot` artifact.
+
+Review CI **on the latest PR head**, not earlier successful commits. Keep the same Draft PR #1 unmerged. Keep Windows/Linux ZIP artifacts separate from screenshot artifacts. No external RTS engine source or art was copied.

@@ -424,3 +424,8 @@ This is verification and data portability, **not yet** a cinematic replay viewer
 The default combat policy chooses nearby player combat units defending within 14 units of the enemy base, deterministically resolving distance ties by unit ID; otherwise idle enemy units attack the player's base. Content authors control `enemy_ai_guard_radius` in `metadata` (0–80; 0 means base-only attack) and `enemy_ai_enabled` (bool). These fields are validated by `RTSProject::validate`. Enemy reinforcements still spawn as simulation logic; their subsequent combat decisions use the queue. Source-1 commands are recorded in **replay v2**. Replays exported as v1 remain verifiable by switching to the historical direct-AI behavior on playback, while v2 playback disables autonomous planning and consumes the recorded AI input instead.
 
 This is deterministic rule-based opponent combat, **not** a complete economic/strategic AI, and there is no network/security trust boundary for external source IDs yet. See [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md) and [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).
+
+
+## AI defense sample map
+
+Open `projects/ai_defense_showcase.rtsproject.json`. Two original Frontier scouts are placed closer to the enemy base to exercise the local guard policy. Its `metadata` sets `enemy_ai_enabled=true`, `enemy_ai_guard_radius=16` and a long reinforcement interval to focus on combat behavior. The map is included in Windows and Linux ZIPs, validated with `RTSProjectTool --validate` through CTest, exercised for 180 fixed steps in `ai_defense_behavior` and rendered under Linux software OpenGL for a real screenshot artifact. The simulator retains historical v1 replay support alongside AI-input format v2.

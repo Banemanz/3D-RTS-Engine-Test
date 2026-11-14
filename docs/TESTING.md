@@ -152,3 +152,10 @@ Each Debug CI job uploads a `command_replay_fingerprint.txt` containing **every 
 `RTSAIPlannerTests` verifies sorted stable-id planning independent of vector insertion order, defensive threat prioritization, strategic base fallback, enabled/disabled policy, guard-radius handling and a full headless replay with AI off. `RTSProjectTests` validates round-trip metadata and rejects wrong-type/out-of-range AI settings. `RTSCommandReplayTests` now requires that live AI commands are actually recorded, rejects command-tampering/unauthorized AI actions and verifies legacy format-1 replay compatibility. A new `ai_defense_showcase` CTest validates the example map.
 
 Windows/Linux Debug and Release all compile the same planner and preserve assertions. Windows/Linux replay fingerprints are still compared in a dedicated job; the installed executable advertises `RTS_FEATURE_AI_COMMAND_PLANNER=1` on both platforms. Interactive Windows GPU behavior remains a separate manual acceptance check.
+
+
+## AI-defense cross-OS acceptance (November 14)
+
+The `ai_defense_behavior` CTest loads the original `projects/ai_defense_showcase.rtsproject.json`, confirms that the first recorded AI orders target the advanced Frontier scouts rather than the remote player's base, runs 180 fixed simulation steps, verifies the full self-contained replay and writes `ai_defense_fingerprint.txt`. Each Windows/MSVC and Linux/GCC CI job uploads that fingerprint beside the existing standard replay fixture. The `replay-parity` job now **diffs both scenarios**, so local defense and real gameplay/combat movement are cross-platform-tested, not merely base-target scripting.
+
+Linux Mesa/Xvfb additionally launches the actual game on the AI defense map for 180 smoke frames and uploads an image artifact named `rts-ai-defense-screenshot`. It is a real executable capture, not a constructed mock-up. Windows Release and Linux Release keep assertion-based headless tests, the original AI sample and self-reported executable feature parity. If the current HEAD fails any of these checks, review the corresponding CTest/renderer logs rather than claiming completion.
