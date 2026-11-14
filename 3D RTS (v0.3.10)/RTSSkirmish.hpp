@@ -58,6 +58,15 @@ public:
     bool buildBarracks(const Vec3& at);
     bool queueMarine();
     bool queueWorker();
+    // Per-building, inherited Unit catalog trainable_units lists, 0..12 entries.
+    std::vector<std::string> trainableUnits(int buildingId) const;
+    int selectedProducerId() const;
+    int trainingPage() const;
+    int trainingPageCount() const;
+    bool nextTrainingPage();
+    std::string selectedTrainableId(int slot) const;
+    bool canQueueSelectedTrainingSlot(int slot) const;
+    bool queueSelectedTrainingSlot(int slot);
     std::string statusLine() const;
     int activeWorkerCount() const;
     int completedBarracksCount() const;
@@ -102,13 +111,14 @@ private:
     struct PendingMove { Vec3 target; bool attackMove = false; };
     struct Production {
         int buildingId = -1;
-        bool worker = false;
+        std::string catalogId;
         float remaining = 0.0f;
         int reservedSupply = 1;
         int paidMinerals = 0;
         float totalTime = 0.f;
     };
     int nextId_ = 1;
+    int trainingPage_ = 0;
     float enemySpawnTimer_ = 12.0f;
     float visionIntervalTimer_=0.0f;
     std::unordered_set<int> releasedSupply_;
@@ -128,7 +138,8 @@ private:
     void updateGathering(float dt);
     void updateProduction(float dt);
     void updateEnemy(float dt);
-    bool queueAt(int buildingId, bool worker, int cost, float seconds, int supply);
+    bool canQueueAt(int buildingId,const std::string& unitId) const;
+    bool queueAt(int buildingId,const std::string& unitId);
     int countOwnerUnits(int owner) const;
     Unit& spawn(const UnitData& data, const Vec3& at, int owner, const std::string& name,
                 bool structure = false, bool worker = false,

@@ -95,7 +95,7 @@ const Unit* RTSSkirmish::find(int id)const {
 void RTSSkirmish::reset() {
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
-    nextId_=1;friendlyBaseId_=-1;enemyBaseId_=-1;
+    nextId_=1;trainingPage_=0;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
     visionIntervalTimer_=0.f;
     vision.reset(project_.terrain);
@@ -221,7 +221,7 @@ bool RTSSkirmish::setRallyPoint(const Vec3& destination) {
     bool set=false;
     for(const auto& u:units)if(u.isAlive() && u.ownerId==0 &&
                                u.isSelected && u.isStructure &&
-                               (u.id==friendlyBaseId_ || u.catalogId==barracksId_)) {
+                               !trainableUnits(u.id).empty()) {
         rallyPoints_[u.id]=target;set=true;
     }
     return set;
@@ -424,28 +424,95 @@ bool RTSSkirmish::buildBarracks(const Vec3& target) {
     navigation.blockDisc(b.position,2.25f);
     return true;
 }
-bool RTSSkirmish::queueAt(int id,bool worker,int cost,float seconds,int supply) {
-    Unit* b=find(id);
-    if(!b || !b->isAlive() || b->ownerId!=0 || construction_.count(id)>0 ||
-       playerMinerals<cost || supplyUsed+supply>supplyCap)return false;
+std::vector<std::string> RTSSkirmish::trainableUnits(int buildingId) const {
+    const Unit* producer=find(buildingId);
+    if(!producer || !producer->isAlive() || !producer->isStructure ||
+       producer->ownerId!=0)return {};
+    const auto fields=project_.catalog.resolvedFields(producer->catalogId);
+    auto f=fields.find("trainable_units");
+    if(f!=fields.end()) {
+        std::vector<std::string> ids;
+        if(!f->second.is<picojson::array>())return ids; // project validator reports this
+        for(const auto& candidate:f->second.get<picojson::array>())
+            if(candidate.is<std::string>())ids.push_back(candidate.get<std::string>());
+        return ids;
+    }
+    // Backward compatibility for projects saved before trainable_units existed.
+    if(producer->catalogId==playerBaseCatalog_)return {workerId_};
+    if(producer->catalogId==barracksId_)return {marineId_};
+    return {};
+}
+int RTSSkirmish::selectedProducerId() const {
+    int selected=-1;
+    for(const auto& unit:units)if(unit.isSelected && unit.isAlive() && unit.ownerId==0) {
+        if(!unit.isStructure || selected!=-1)return -1;
+        selected=unit.id;
+    }
+    return selected;
+}
+int RTSSkirmish::trainingPageCount() const {
+    const int producer=selectedProducerId();
+    if(producer<0)return 0;
+    const auto count=trainableUnits(producer).size();
+    return count==0?0:int((count+2)/3);
+}
+int RTSSkirmish::trainingPage() const {
+    const int pages=trainingPageCount();
+    return pages==0?0:trainingPage_%pages;
+}
+bool RTSSkirmish::nextTrainingPage() {
+    const int pages=trainingPageCount();
+    if(pages<=1)return false;
+    trainingPage_=(trainingPage()+1)%pages;
+    return true;
+}
+std::string RTSSkirmish::selectedTrainableId(int slot) const {
+    const int producer=selectedProducerId();
+    if(producer<0 || slot<0 || slot>2)return "";
+    auto choices=trainableUnits(producer);
+    const std::size_t index=std::size_t(trainingPage()*3+slot);
+    return index<choices.size()?choices[index]:"";
+}
+bool RTSSkirmish::canQueueAt(int id,const std::string& unitId) const {
+    const Unit* building=find(id);
+    if(result!=MatchResult::Playing || !building || !building->isAlive() ||
+       !building->isStructure || building->ownerId!=0 ||
+       construction_.count(id)>0)return false;
+    auto choices=trainableUnits(id);
+    if(std::find(choices.begin(),choices.end(),unitId)==choices.end())return false;
+    const UnitData data=unitFromCatalog(project_.catalog,unitId);
+    if(playerMinerals<data.mineral_cost ||
+       supplyUsed+data.supply_cost>supplyCap)return false;
     int pending=0;
     for(const auto& p:production_)if(p.buildingId==id)++pending;
-    if(pending>=5)return false;
-    playerMinerals-=cost;supplyUsed+=supply;
-    production_.push_back({id,worker,seconds,supply,cost,seconds});
+    return pending<5;
+}
+bool RTSSkirmish::canQueueSelectedTrainingSlot(int slot) const {
+    const int producer=selectedProducerId();
+    if(producer<0)return false;
+    const auto id=selectedTrainableId(slot);
+    return !id.empty() && canQueueAt(producer,id);
+}
+bool RTSSkirmish::queueAt(int id,const std::string& unitId) {
+    if(!canQueueAt(id,unitId))return false;
+    const UnitData data=unitFromCatalog(project_.catalog,unitId);
+    playerMinerals-=data.mineral_cost;
+    supplyUsed+=data.supply_cost;
+    production_.push_back({id,unitId,data.build_time,
+                           data.supply_cost,data.mineral_cost,data.build_time});
     return true;
+}
+bool RTSSkirmish::queueSelectedTrainingSlot(int slot) {
+    if(!canQueueSelectedTrainingSlot(slot))return false;
+    return queueAt(selectedProducerId(),selectedTrainableId(slot));
 }
 bool RTSSkirmish::queueMarine() {
     for(const auto& u:units)if(u.isStructure && u.isAlive() && u.ownerId==0 &&
-        u.catalogId==barracksId_ && construction_.count(u.id)==0) {
-        auto d=unitFromCatalog(project_.catalog,marineId_);
-        if(queueAt(u.id,false,d.mineral_cost,d.build_time,d.supply_cost))return true;
-    }
+        u.catalogId==barracksId_ && queueAt(u.id,marineId_))return true;
     return false;
 }
 bool RTSSkirmish::queueWorker() {
-    auto d=unitFromCatalog(project_.catalog,workerId_);
-    return queueAt(friendlyBaseId_,true,d.mineral_cost,d.build_time,d.supply_cost);
+    return queueAt(friendlyBaseId_,workerId_);
 }
 void RTSSkirmish::updateProduction(float dt) {
     for(auto it=construction_.begin();it!=construction_.end();) {
@@ -473,10 +540,13 @@ void RTSSkirmish::updateProduction(float dt) {
         Vec3 spawnPos=origin+Vec3(-5,0,3);
         auto route=navigation.findPath(spawnPos,spawnPos);
         if(route.empty()){++it;continue;}
-        Unit& produced=spawn(unitFromCatalog(project_.catalog,it->worker?workerId_:marineId_),
-              navigation.clampWorld(spawnPos),0,
-              std::string(it->worker?"Worker ":"Marine ")+std::to_string(nextId_),
-              false,it->worker,it->worker?workerId_:marineId_);
+        const UnitData type=unitFromCatalog(project_.catalog,it->catalogId);
+        const auto fields=project_.catalog.resolvedFields(it->catalogId);
+        const bool worker=boolField(fields,"is_worker");
+        const std::string prefix=worker?"Worker ":
+            it->catalogId==marineId_?"Marine ":type.resourceName+" ";
+        Unit& produced=spawn(type,navigation.clampWorld(spawnPos),0,
+                             prefix+std::to_string(nextId_),false,worker,it->catalogId);
         const auto rally=rallyPoints_.find(it->buildingId);
         if(rally!=rallyPoints_.end())setRoute(produced,rally->second,false);
         it=production_.erase(it);

@@ -89,6 +89,14 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Unit" && entry.type=="Unit") {
+            auto field=entry.fields.find("trainable_units");
+            if(field!=entry.fields.end() && field->second.is<picojson::array>())
+                for(auto& candidate:field->second.get<picojson::array>())
+                    if(candidate.is<std::string>() &&
+                       candidate.get<std::string>()==oldId)
+                        candidate=picojson::value(newId);
+        }
     }
     entries_[index].id=newId;
     idIndex_.erase(oldId);
@@ -248,7 +256,8 @@ DataCatalog DataCatalog::defaults() {
         {"damage",picojson::value(0.0)},{"attack_range",picojson::value(0.0)},
         {"aggro_range",picojson::value(0.0)},{"sight_range",picojson::value(18.0)},
         {"visual_scale",picojson::value(2.8)},
-        {"supply_cost",picojson::value(0.0)},{"is_structure",picojson::value(true)}
+        {"supply_cost",picojson::value(0.0)},{"is_structure",picojson::value(true)},
+        {"trainable_units",picojson::value(picojson::array{picojson::value("worker")})}
     }));
     c.add(make("Unit","hive","command_center",{
         {"name",picojson::value("Hybrid Hive")},{"actor",picojson::value("hybrid_building_actor")},
@@ -257,7 +266,8 @@ DataCatalog DataCatalog::defaults() {
     c.add(make("Unit","barracks","command_center",{
         {"name",picojson::value("Barracks")},{"max_hp",picojson::value(350.0)},
         {"visual_scale",picojson::value(2.0)},{"build_time",picojson::value(9.0)},
-        {"mineral_cost",picojson::value(150.0)}
+        {"mineral_cost",picojson::value(150.0)},
+        {"trainable_units",picojson::value(picojson::array{picojson::value("marine")})}
     }));
     c.validate();
     return c;

@@ -207,8 +207,30 @@ void RTSProject::validate() const {
     catalog.validate();
     // Any game-facing data object must be valid before we allow project saves.
     for(const auto& e:catalog.entries()) {
-        if(e.type=="Unit")(void)unitFromCatalog(catalog,e.id);
-        else if(e.type=="Actor")(void)actorFromCatalog(catalog,e.id);
+        if(e.type=="Unit") {
+            (void)unitFromCatalog(catalog,e.id);
+            const auto fields=catalog.resolvedFields(e.id);
+            const auto trains=fields.find("trainable_units");
+            if(trains!=fields.end()) {
+                if(!trains->second.is<picojson::array>() ||
+                   trains->second.get<picojson::array>().size()>12)
+                    throw std::invalid_argument(e.id+": trainable_units must be an array of <=12 IDs");
+                std::set<std::string> unique;
+                for(const auto& choice:trains->second.get<picojson::array>()) {
+                    if(!choice.is<std::string>())
+                        throw std::invalid_argument(e.id+": training entries must be unit IDs");
+                    const std::string& id=choice.get<std::string>();
+                    const auto* target=catalog.find(id);
+                    if(!target || target->type!="Unit" || !unique.insert(id).second)
+                        throw std::invalid_argument(e.id+": missing/duplicate trainable Unit "+id);
+                    const auto targetFields=catalog.resolvedFields(id);
+                    auto structure=targetFields.find("is_structure");
+                    if(structure!=targetFields.end() &&
+                       (!structure->second.is<bool>() || structure->second.get<bool>()))
+                        throw std::invalid_argument(e.id+": cannot train structures: "+id);
+                }
+            }
+        } else if(e.type=="Actor")(void)actorFromCatalog(catalog,e.id);
     }
     std::set<std::string> ids;
     for(const auto& p:placements) {
