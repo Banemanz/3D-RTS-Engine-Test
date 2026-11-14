@@ -69,13 +69,13 @@ int main() {
     assert(editor.selected(p)->id=="procedural_soldier");
     assert(editor.selectCatalogId(p,"worker"));
     // Typed widgets commit exactly one validated undo snapshot.
-    assert(!p.catalog.find("worker")->fields.count("damage"));
-    assert(editor.setCatalogField(p,"damage",picojson::value(17.0)));
-    assert(unitFromCatalog(p.catalog,"worker").damage==17.f);
+    assert(!p.catalog.find("worker")->fields.count("armor"));
+    assert(editor.setCatalogField(p,"armor",picojson::value(2.0)));
+    assert(unitFromCatalog(p.catalog,"worker").armor==2.f);
     assert(editor.undo(p));
-    assert(!p.catalog.find("worker")->fields.count("damage"));
+    assert(!p.catalog.find("worker")->fields.count("armor"));
     assert(editor.redo(p));
-    assert(unitFromCatalog(p.catalog,"worker").damage==17.f);
+    assert(unitFromCatalog(p.catalog,"worker").armor==2.f);
     assert(!editor.setCatalogField(p,"actor",picojson::value("missing_actor")));
     assert(p.catalog.resolvedFields("worker").at("actor").get<std::string>()=="worker_actor");
     assert(editor.setCatalogField(p,"is_worker",picojson::value(false)));

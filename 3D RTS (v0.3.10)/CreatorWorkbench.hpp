@@ -180,6 +180,13 @@ void browser(App& app){
     ImGui::End();
 }
 template<class App>
+bool navigateCatalog(App& app,const char* role,const std::string& id) {
+    if(id.empty() || !app.project.catalog.find(id))return false;
+    const std::string label=std::string(role)+": "+id;
+    if(!ImGui::SmallButton(label.c_str()))return false;
+    return app.editor.selectCatalogId(app.project,id);
+}
+template<class App>
 void inspector(App& app){
     auto& ed=app.editor;
     auto& project=app.project;
@@ -221,19 +228,13 @@ void inspector(App& app){
                 // actionable, and resolved through the headless project data.
                 const auto resolved=project.catalog.resolvedFields(entry->id);
                 ImGui::SeparatorText("Object links");
-                const auto navigate=[&](const char* role,const std::string& id){
-                    if(id.empty() || !project.catalog.find(id))return false;
-                    const std::string label=std::string(role)+": "+id;
-                    return ImGui::SmallButton(label.c_str()) &&
-                           ed.selectCatalogId(project,id);
-                };
-                if(!entry->parent.empty() && navigate("Parent",entry->parent)){
+                if(!entry->parent.empty() && navigateCatalog(app,"Parent",entry->parent)){
                     ImGui::End();return;
                 }
                 const auto linkedField=[&](const char* key,const char* label){
                     auto it=resolved.find(key);
                     return it!=resolved.end() && it->second.template is<std::string>() &&
-                           navigate(label,it->second.template get<std::string>());
+                           navigateCatalog(app,label,it->second.template get<std::string>());
                 };
                 if(entry->type=="Unit" && linkedField("actor","Actor")){
                     ImGui::End();return;
@@ -246,7 +247,7 @@ void inspector(App& app){
                     if(training!=resolved.end() && training->second.template is<picojson::array>()){
                         for(const auto& value:training->second.template get<picojson::array>()){
                             if(value.template is<std::string>() &&
-                               navigate("Trains",value.template get<std::string>())){
+                               navigateCatalog(app,"Trains",value.template get<std::string>())){
                                 ImGui::End();return;
                             }
                         }
