@@ -30,6 +30,38 @@ void draw(App& app){
     ImGui::TextWrapped("Run F9 to play, then F6 to inspect. Editing map data restarts the preview.");
     static ImGuiTextFilter search;
     search.Draw("Search rules / event details");
+    // The monitor reads the headless interpreter state. It never changes it:
+    // editable defaults live in the F6 Map variables authoring inspector.
+    ImGui::SeparatorText("Variable watch (live / initial)");
+    const auto& globals=engine.variables();
+    if(globals.empty())ImGui::TextDisabled("No map variables declared.");
+    else if(ImGui::BeginTable("##globalWatch",3,
+             ImGuiTableFlags_RowBg|ImGuiTableFlags_BordersInnerV|
+             ImGuiTableFlags_SizingStretchProp,ImVec2(0.f,115.f))){
+        ImGui::TableSetupColumn("Variable",ImGuiTableColumnFlags_WidthStretch,2.f);
+        ImGui::TableSetupColumn("Live");ImGui::TableSetupColumn("Initial");
+        ImGui::TableHeadersRow();
+        const auto decl=app.project.extensions.find("trigger_variables");
+        for(const auto& item:globals){
+            if(!search.PassFilter(item.first.c_str()))continue;
+            int initial=item.second;
+            if(decl!=app.project.extensions.end() &&
+               decl->second.template is<picojson::object>()){
+                const auto& initialValues=decl->second.template get<picojson::object>();
+                const auto found=initialValues.find(item.first);
+                if(found!=initialValues.end() && found->second.template is<double>())
+                    initial=static_cast<int>(found->second.template get<double>());
+            }
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);ImGui::TextUnformatted(item.first.c_str());
+            ImGui::TableSetColumnIndex(1);
+            if(item.second!=initial)
+                ImGui::TextColored(ImVec4(.96f,.74f,.36f,1.f),"%d",item.second);
+            else ImGui::Text("%d",item.second);
+            ImGui::TableSetColumnIndex(2);ImGui::Text("%d",initial);
+        }
+        ImGui::EndTable();
+    }
     ImGui::SeparatorText("Rule execution counters");
     const auto& rules=engine.rules();
     if(ImGui::BeginTable("##triggerStats",4,
