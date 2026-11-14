@@ -169,3 +169,7 @@ The `ai_defense_behavior` fixture intentionally begins with player scouts close 
 ### Windows upload contract for dual-scenario parity
 
 Both `linux` and `windows` jobs must upload **both** `build/command_replay_fingerprint.txt` and `build/ai_defense_fingerprint.txt`. The `replay-parity` job downloads those artifacts and fails on a missing file or differing digest. The initial AI-sandbox CI pass exposed a Windows upload step that still listed only the original file, even though `ai_defense_behavior` itself passed. The artifact step was corrected without relaxing or removing the comparison.
+
+## Script-global parity and editor transaction regression (November 14)
+
+`RTSTriggerVariableTests` exercises map-local script globals: declaration validation, bounded signed integers, set/add, operator comparisons, blocked/once rule behavior, reset, editor undo/redo and safe rejection of dangling variable references. It writes `trigger_globals_fingerprint.txt` for the same 120-tick fixed-step scenario under both MSVC and GCC. CI uploads the Windows and Linux files and the required `replay-parity` job compares exact tick/digest lines. Replay verification re-simulates the actual map, and the state digest includes variables only when present so existing v1/v2 projects retain old hashes. Linux OpenGL and native Windows packaging must still pass on the branch head.
