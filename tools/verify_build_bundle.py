@@ -33,6 +33,7 @@ def main() -> int:
         "projects/terrain_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/BUILD_ARTIFACTS.md",
+        "docs/CREATOR_ARCHITECTURE.md",
         "docs/SC2_FEATURE_MATRIX.md",
         "licenses/PICOJSON_LICENSE",
         "licenses/IMGUI_LICENSE",

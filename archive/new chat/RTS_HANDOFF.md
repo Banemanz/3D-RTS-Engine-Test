@@ -387,3 +387,23 @@ Remaining major editor work: real property schemas/wizards, actor/ability/
 effect/dependency graph editors, script debugger, terrain layer pipeline,
 collision/gizmos, assets, selection/list virtualisation and advanced UI
 polish. Real Windows GPU testing is still required.
+
+
+## November 14, 2026 — Galaxy-inspired editor links and first engine-native menu
+
+**Resume on the same draft PR #1, branch `feat/rts-vertical-slice`. Never merge or create a parallel PR.** The user prioritizes Windows/Linux build parity, a high-quality **in-house UI** replacing the existing temporary ImGui adapter, and continuing SC2 Galaxy Editor-style systems on the same platform foundation.
+
+### Changes implemented
+
+- `CreatorWorkbench.hpp`: scene inspector's unsupported numeric flag triggered an ImGui assertion in Linux Debug. Fixed in `c06bab22`, validated Windows/Linux Debug plus Release CI and GPU smoke. Later catalog inspector changes use MSVC/GCC-compatible syntax.
+- `EditorSession::selectCatalogId`: stable catalog object link navigation, even across hidden search filters; `setCatalogField`: atomic primitive property edits with project validation, exact revert and single undo snapshots. Editor inspector shows Parent, Unit Actor, Actor Model, trainable units, recognized incoming references, inherited/local fields and typed boolean/numeric/string controls. Scene instances link into their catalog definitions. Tests extended. Cross-platform CI passed `96bd2b9e`.
+- `NativePauseMenu.hpp` is pure geometry/action hit-testing; `NativePauseMenuGL.hpp` draws the overlay in the engine using existing HUD GL/bitmap font. Escape from uncommanded gameplay opens the menu. Escape again resumes; buttons Resume, Restart, Open World Editor and Exit. While paused world mouse/scroll/camera and simulation are suppressed. Current workbench GUI is hidden behind this modal. No new library.
+- `RTSNativeMenuTests` covers pure layout/hit testing across desktop and compact viewports in both platforms' CTest. `--smoke-pause-menu` makes Linux Mesa/Xvfb capture an actual OpenGL screenshot. Both installed executables must declare `RTS_FEATURE_NATIVE_PAUSE_MENU=1`; `tools/verify_build_bundle.py` enforces this feature.
+- **Last verified functional commit before documentation:** `7c6edafe`. Windows+Linux Debug CI successful (runs 43611190208 and 43611195712) and Windows+Linux Release build/CTest/packaging plus Linux GUI stress successful (run 43611190120). Revalidate current HEAD after every documentation/code commit.
+- New `docs/CREATOR_ARCHITECTURE.md` contains the long-range native retained-mode UI migration, Galaxy Editor research links, and engine needs (typed schemas, ability/effect/behavior, actor events, pathing, triggers).
+
+### Honest limitations and next steps
+
+The editor still depends on pinned Dear ImGui; the native pause menu and RTS gameplay HUD are the first engine-owned UI components, not a complete replacement. **Do not delete current workbench** before native inspector, hierarchy, terrain, trigger and docking parity. No runtime effect/ability/actor event compiler exists yet; many Galaxy Editor subsystems are missing. Actual interactive Windows GPU stability must be checked manually, even when Windows CI passes.
+
+Next: build native widget tree/font/keyboard/pointer capture and first dockable panels; then typed catalog field schemas plus effect executor; then richer actor/trigger/terrain systems, asset importing and renderer optimization. Keep binary and CTest contract identical between platforms.

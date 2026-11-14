@@ -191,3 +191,10 @@ including its embedded commit SHA, before uploading either platform package.
 Run `RTSCameraTerrain.exe --version` on Windows (or `./RTSCameraTerrain --version`
 on Linux) to check whether an older build has been launched. Both packages
 use the same creator GUI, gameplay HUD, fog, terrain and editor source.
+
+
+## Engine-native gameplay pause menu (November 14, 2026)
+
+In play, **Esc** opens a custom engine-rendered pause screen with Resume, Restart, Open World Editor and Exit. Gameplay simulation and world commands stop while this modal is open. The native layout and button hit-testing have no GLFW/ImGui dependency, and the OpenGL UI adapter reuses the game's own HUD resources. The existing creator workbench continues using pinned ImGui **temporarily**; the full retained-mode replacement roadmap and Galaxy Editor architecture are documented in [docs/CREATOR_ARCHITECTURE.md](docs/CREATOR_ARCHITECTURE.md).
+
+The F7 Data Editor also supports clickable Parent / Unit / Actor / Model / trainable references, incoming-reference inspection, inherited/local property indicators and transactional boolean, numeric and text editing. Both Windows and Linux feature manifests include `RTS_FEATURE_NATIVE_PAUSE_MENU=1`.
