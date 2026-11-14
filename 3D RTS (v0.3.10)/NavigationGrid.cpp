@@ -44,12 +44,26 @@ Vec3 NavigationGrid::clampWorld(const Vec3& p) const {
             std::clamp(p.z,minZ_+0.5f*step_,minZ_+(height_-0.5f)*step_)};
 }
 void NavigationGrid::blockDisc(const Vec3& p,float radius) {
-    const float r2=radius*radius;
-    for (int z=0;z<height_;++z)
-        for (int x=0;x<width_;++x) {
-            Vec3 c=centerOf({x,z});
-            float dx=c.x-p.x,dz=c.z-p.z;
-            if(dx*dx+dz*dz<=r2) setBlocked(x,z,true);
+    if(!std::isfinite(p.x) || !std::isfinite(p.z) ||
+       !std::isfinite(radius) || radius<0.f)return;
+    // Dynamic structure/mineral footprints only touch the cells intersecting
+    // their local AABB. Avoid O(map width * map height) per placement.
+    const double x0=(double(p.x)-radius-double(minX_))/double(step_);
+    const double x1=(double(p.x)+radius-double(minX_))/double(step_);
+    const double z0=(double(p.z)-radius-double(minZ_))/double(step_);
+    const double z1=(double(p.z)+radius-double(minZ_))/double(step_);
+    if(x1<0. || z1<0. || x0>=width_ || z0>=height_)return;
+    auto bounded=[&](double v,int maxIndex){
+        return int(std::clamp(std::floor(v),0.,double(maxIndex)));
+    };
+    const int minCellX=bounded(x0,width_-1),maxCellX=bounded(x1,width_-1);
+    const int minCellZ=bounded(z0,height_-1),maxCellZ=bounded(z1,height_-1);
+    const double radiusSquared=double(radius)*radius;
+    for(int z=minCellZ;z<=maxCellZ;++z)
+        for(int x=minCellX;x<=maxCellX;++x){
+            const Vec3 c=centerOf({x,z});
+            const double dx=double(c.x)-p.x,dz=double(c.z)-p.z;
+            if(dx*dx+dz*dz<=radiusSquared)setBlocked(x,z,true);
         }
 }
 bool NavigationGrid::nearestWalkable(Cell from,Cell& out) const {

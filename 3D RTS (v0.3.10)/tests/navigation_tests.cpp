@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <limits>
 static void basic() {
     NavigationGrid g(15,15,2.0f,-15.0f,-15.0f);
     auto path=g.findPath({-10,0,-10},{10,0,10});
@@ -71,8 +72,40 @@ static void topologyRevisionAndCorridor(){
     assert(!corner.routeClear(p,diagonal));
     assert(corner.routeClear(p,diagonal,diagonal.size()));
 }
+static void boundedFootprints(){
+    // Compare the optimized implementation to the exact brute-force
+    // reference, including off-map circles and noninteger grid origins.
+    struct Disc { Vec3 center;float radius; };
+    const Disc discs[]={
+        {{-6.25f,0,12.75f},3.7f},{{47.7f,0,-40.3f},8.3f},
+        {{900.f,0,900.f},7.f},{{-55.f,0,-52.f},16.f},
+        {{-3.5f,0,8.0f},0.f},{{-15.f,0,2.f},21.f}
+    };
+    NavigationGrid large(257,193,1.25f,-55.25f,-52.75f);
+    for(const auto& disc:discs)
+        large.blockDisc(disc.center,disc.radius);
+    std::size_t expectedCount=0;
+    for(int z=0;z<large.height();++z)for(int x=0;x<large.width();++x){
+        const Vec3 center=large.centerOf({x,z});
+        bool expected=false;
+        for(const auto& disc:discs){
+            const double dx=double(center.x)-disc.center.x;
+            const double dz=double(center.z)-disc.center.z;
+            expected|=(dx*dx+dz*dz<=double(disc.radius)*disc.radius);
+        }
+        assert(large.walkable(x,z)!=expected);
+        expectedCount+=expected?1u:0u;
+    }
+    assert(large.revision()==expectedCount);
+    const auto before=large.revision();
+    large.blockDisc({0,0,0},-1.f);
+    large.blockDisc({999999,0,999999},2.f);
+    large.blockDisc({0,0,0},std::numeric_limits<float>::infinity());
+    assert(large.revision()==before);
+}
 int main() {
     basic();obstacles();noCornerCut();weightedDetour();
     topologyRevisionAndCorridor();
+    boundedFootprints();
     std::cout<<"navigation: 4 tests passed\n";
 }
