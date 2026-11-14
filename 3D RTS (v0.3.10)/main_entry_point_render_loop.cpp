@@ -811,7 +811,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_AI_COMMAND_PLANNER=1\n"
                  <<"RTS_FEATURE_SCRIPT_GLOBALS=1\n"
                  <<"RTS_FEATURE_SCRIPT_EXPRESSIONS=1\n"
-                 <<"RTS_FEATURE_SCRIPT_CONTROL_FLOW=1\n";
+                 <<"RTS_FEATURE_SCRIPT_CONTROL_FLOW=1\n"
+                 <<"RTS_FEATURE_RECURSIVE_ECA_UI=1\n"
+                 <<"RTS_FEATURE_TIMED_EFFECTS=1\n";
         return 0;
     }
     RTSCrashReporter::install();
