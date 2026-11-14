@@ -173,8 +173,10 @@ static void assertRallyProduction(){
     assert(game.pendingProduction(base)==0);
     assert(game.activeWorkerCount()==3);
     bool newlyMoving=false;
+    const std::string workerPrefix=
+        unitFromCatalog(game.project().catalog,"worker").resourceName+" ";
     for(const auto& u:game.units)if(u.isWorker && u.ownerId==0 &&
-                                     u.instanceName.rfind("Worker ",0)==0 &&
+                                     u.instanceName.rfind(workerPrefix,0)==0 &&
                                      u.navAgent.hasDestination)
         newlyMoving=true;
     assert(newlyMoving);
