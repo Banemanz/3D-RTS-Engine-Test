@@ -139,29 +139,30 @@ struct AppState {
             case HUDCommand::Patrol:mode=Mode::Patrol;inform("PATROL: RIGHT CLICK DESTINATION");break;
             case HUDCommand::AttackMove:mode=Mode::AttackMove;inform("ATTACK MOVE: RIGHT CLICK");break;
             case HUDCommand::Build:mode=Mode::BuildBarracks;inform("BUILD: RIGHT CLICK CLEAR TERRAIN");break;
-            case HUDCommand::Stop:game.orderStop();mode=Mode::Normal;break;
+            case HUDCommand::Stop:game.queuePlayerCommand(RTSCommandKind::Stop);mode=Mode::Normal;break;
             case HUDCommand::Hold:
-                game.orderHold();
+                game.queuePlayerCommand(RTSCommandKind::Hold);
                 mode=Mode::Normal;
                 inform("HOLD POSITION - ATTACKS WITHOUT MOVING");
                 break;
             case HUDCommand::CancelQueue:
-                if(!game.cancelSelectedProduction())inform("NO TRAINING TO CANCEL");
+                if(!game.queuePlayerCommand(RTSCommandKind::CancelTraining))inform("CANNOT QUEUE TRAINING CANCELLATION");
                 else inform("TRAINING CANCELLED - RESOURCES REFUNDED");
                 break;
             case HUDCommand::Ranger:
-                if(!game.queueRanger())inform("CANNOT TRAIN RANGER: CHECK MINERALS, SUPPLY AND BARRACKS");
+                if(!game.queuePlayerCommand(RTSCommandKind::TrainRanger))inform("CANNOT QUEUE RANGER TRAINING");
                 break;
             case HUDCommand::Worker:
-                if(!game.queueWorker())inform("CANNOT TRAIN WORKER: CHECK MINERALS AND SUPPLY");
+                if(!game.queuePlayerCommand(RTSCommandKind::TrainWorker))inform("CANNOT QUEUE WORKER TRAINING");
                 break;
             case HUDCommand::TrainSlot0:
             case HUDCommand::TrainSlot1:
             case HUDCommand::TrainSlot2: {
                 const int slot=action==HUDCommand::TrainSlot0?0:
                                action==HUDCommand::TrainSlot1?1:2;
-                if(!game.queueSelectedTrainingSlot(slot))
-                    inform("CANNOT TRAIN: CHECK BUILDING, SUPPLY, MINERALS OR QUEUE");
+                if(!game.queuePlayerCommand(RTSCommandKind::TrainCatalog,Vec3{},-1,false,
+                                            game.selectedTrainableId(slot)))
+                    inform("CANNOT QUEUE TRAINING COMMAND");
                 else inform("TRAINING "+game.selectedTrainableId(slot));
                 break;
             }
@@ -465,24 +466,24 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         state->hasMoveMarker = true;
 
         if (state->mode == AppState::Mode::BuildBarracks) {
-            if (!state->game.buildBarracks(hit))
+            if (!state->game.queuePlayerCommand(RTSCommandKind::Build,hit))
                 std::cout << "[Build] Requires a selected worker nearby, 150 minerals and clear terrain.\n";
             state->mode = AppState::Mode::Normal;
             return;
         }
         if (state->mode == AppState::Mode::Patrol) {
-            if(!state->game.orderPatrol(hit))state->inform("NO VALID PATROL ROUTE");
+            if(!state->game.queuePlayerCommand(RTSCommandKind::Patrol,hit))state->inform("CANNOT QUEUE PATROL");
             state->mode=AppState::Mode::Normal;
             return;
         }
         if (state->mode == AppState::Mode::Move) {
-            if(!state->game.orderMove(hit,false,(mods & GLFW_MOD_SHIFT)!=0))
+            if(!state->game.queuePlayerCommand(RTSCommandKind::Move,hit,-1,(mods & GLFW_MOD_SHIFT)!=0))
                 state->inform("NO VALID MOVE ROUTE");
             state->mode=AppState::Mode::Normal;
             return;
         }
         if (state->mode == AppState::Mode::AttackMove) {
-            state->game.orderMove(hit, true, (mods & GLFW_MOD_SHIFT) != 0);
+            state->game.queuePlayerCommand(RTSCommandKind::AttackMove,hit,-1,(mods & GLFW_MOD_SHIFT)!=0);
             state->mode = AppState::Mode::Normal;
             return;
         }
@@ -490,13 +491,11 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             mouseX, mouseY, state->camera,
             state->windowWidth, state->windowHeight, state->game.units,
             &state->game.vision);
-        if (enemy) {
-            state->game.orderAttack(enemy->id);
-        } else if(state->game.setRallyPoint(hit)) {
-            state->inform("RALLY POINT UPDATED");
-        } else if(!state->game.orderGather(hit)) {
-            state->game.orderMove(hit,false,(mods & GLFW_MOD_SHIFT)!=0);
-        }
+        // Context targeting is resolved at the authoritative simulation
+        // tick, not against whatever selection happens to exist one frame
+        // later. Enemy identity is captured by stable integer ID.
+        state->game.queuePlayerCommand(RTSCommandKind::Context,hit,
+            enemy?enemy->id:-1,(mods & GLFW_MOD_SHIFT)!=0);
     }
     } catch(const std::exception& e) {
         reportInputFailure(window,"mouseButtonCallback",e.what());
@@ -787,7 +786,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_VISUAL_ECA_EDITOR=1\n"
                  <<"RTS_FEATURE_TRIGGER_TRACE_MONITOR=1\n"
                  <<"RTS_FEATURE_DYNAMIC_NAV_REPLAN=1\n"
-                 <<"RTS_FEATURE_STABLE_SIM_ORDER=1\n";
+                 <<"RTS_FEATURE_STABLE_SIM_ORDER=1\n"
+                 <<"RTS_FEATURE_COMMAND_STREAM=1\n";
         return 0;
     }
     RTSCrashReporter::install();
