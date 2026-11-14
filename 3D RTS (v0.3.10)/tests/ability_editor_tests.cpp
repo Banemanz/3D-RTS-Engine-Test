@@ -20,7 +20,7 @@ int main(){
     const std::string enemy=editor.selected(project)->id;
     assert(self!=enemy);
     assert(editor.setCatalogField(project,"effect",picojson::value("kinetic_pulse")));
-    assert(editor.setCatalogField(project,"cast_range",picojson::value(9.0)));
+    assert(editor.setCatalogField(project,"cast_range",picojson::value(11.0)));
     assert(editor.setCatalogField(project,"mineral_cost",picojson::value(10.0)));
     assert(editor.setCatalogField(project,"energy_cost",picojson::value(15.0)));
     assert(editor.setCatalogField(project,"cooldown_ticks",picojson::value(90.0)));
@@ -28,7 +28,7 @@ int main(){
     assert(def.target==AbilityTarget::Enemy && def.effect=="kinetic_pulse");
     assert(def.mineralCost==10 && def.energyCost==15 && def.cooldownTicks==90);
     assert(!editor.setCatalogField(project,"cast_range",picojson::value(-8.0)));
-    assert(compileAbility(project.catalog,enemy).castRange==9.f);
+    assert(compileAbility(project.catalog,enemy).castRange==11.f);
     assert(!editor.setCatalogField(project,"energy_cost",picojson::value(-10.0)));
     assert(!editor.setCatalogField(project,"target",picojson::value("Terrain")));
     assert(compileAbility(project.catalog,enemy).target==AbilityTarget::Enemy);

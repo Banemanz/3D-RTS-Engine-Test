@@ -251,7 +251,8 @@
         "damage": 0,
         "aggro_range": 0,
         "move_speed": 0,
-        "sight_range": 0
+        "sight_range": 0,
+        "armor": 0
       }
     }
   ],

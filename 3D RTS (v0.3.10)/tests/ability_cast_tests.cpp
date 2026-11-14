@@ -46,6 +46,7 @@ int main(){
     assert(project.catalog.cloneDerived("rift_raider","dummy_target"));
     assert(project.catalog.setField("dummy_target","name",picojson::value("Training Dummy")));
     assert(project.catalog.setField("dummy_target","damage",picojson::value(0.0)));
+    assert(project.catalog.setField("dummy_target","armor",picojson::value(0.0)));
     assert(project.catalog.setField("dummy_target","aggro_range",picojson::value(0.0)));
     assert(project.catalog.setField("dummy_target","max_hp",picojson::value(300.0)));
     ProjectPlacement target;
