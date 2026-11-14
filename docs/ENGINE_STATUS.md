@@ -310,3 +310,26 @@ target filters and projectile simulations, actor event graphs, importable
 mesh/animation/audio pipelines, custom localization, complete terrain/
 doodad layers and standalone editor toolkit parity. Avoid claiming
 SC2/Galaxy feature parity from these foundational increments.
+
+
+## Ability/energy fixed-tick vertical slice
+
+UnitData now supports max_energy and energy_regen; Unit state includes
+currentEnergy (initially full) and authoritative fixed-step regen.
+DataCatalog defines Ability objects targeting Self/Ally/Enemy/Any
+and applying one prevalidated Effect graph per cast. Unit entries
+hold up to eight Ability IDs. RTSSkirmish enforces per-caster energy,
+global mineral costs, owner/vision/range checks and a persistent
+per-caster per-Ability cooldown clock. CastAbility is an appended,
+source-restricted command kind in the same recorded game input stream
+as movement/combat/production. State digests include energy for units
+with a pool and active cooldowns, preserving earlier replay digests
+on legacy zero-energy maps.
+
+F7 exposes Ability creation and Unit assignment. F9 shows up to three
+assigned skills as real command buttons/hotkeys with target picking.
+The included Ability Workshop map uses original Field Mend/Arc Lance
+content, and two new CTests and cross-OS fingerprint verification
+exercise the entire loop. This is real functionality, but behavior
+stacks, area/projectile casts, actor events, tech requirements,
+channeling and editable command-card paging are not implemented.

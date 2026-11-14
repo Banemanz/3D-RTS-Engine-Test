@@ -82,3 +82,21 @@ The first AI command-routing foundation is complete. `RTSAIPlanner` selects defe
 ## Script-value and expression foundations (November 14)
 
 Following the authoritative command and replay work, scripted ECA operands now accept a compact validated integer expression AST. Nested operations use 64-bit intermediates with saturating ±100000000 results and a strict depth/node budget. Validation is performed in the headless TriggerDefinition authoring module, while fixed-tick execution uses the identical syntax. Project-level variable rename traverses only recognized expression nodes; arbitrary extension data is not rewritten. Independent test coverage includes malformed ASTs, safe arithmetic, full-map event/replay integration, editor undo/redo, and mandatory Linux/GCC vs Windows/MSVC digest comparison. This is a step toward typed logic libraries; an untrusted native-code or full Galaxy interpreter is not introduced.
+
+
+## Ability data and Unit energy milestone
+
+The first Unit Ability runtime now uses an explicit ability→effect
+catalog link and Unit→ability ordered references. It checks target
+policy, vision/range, energy/mineral affordability and per-caster
+cooldown in authoritative fixed simulation ticks; player casting
+is serialized into the existing deterministic command/replay input.
+The F7 editor can create/link/edit these objects, the F9 command grid
+actually casts them, and Windows/MSVC and Linux/GCC replay fingerprints
+are required to match.
+
+Remaining priorities: generalized behavior stacks, area/projectile
+targeting, data-driven weapons and actor events, robust ability
+requirements and cast states, command-card pagination and richer F7
+schema/property editors. AI still lacks a general authored production,
+economy and ability-usage policy. Preserve both OSes and all tests.

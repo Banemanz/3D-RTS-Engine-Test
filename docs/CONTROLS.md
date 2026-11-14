@@ -133,3 +133,18 @@ In F6 use **Open playtest monitor**, or select **View → Playtest trigger monit
 - **RTSProjectTool --verify-replay PATH:** headless 60 Hz replay verification, on both Windows and Linux; returns a nonzero error with the first mismatching tick if simulation diverges
 
 Selection, camera and editor layout are not recorded game commands. The former immediate mouse/HUD gameplay orders run at the next fixed simulation tick, and a rejected order now produces a deferred gameplay message. Detailed command debugging and interactive replay playback remain forthcoming.
+
+
+## Playtest Ability command controls
+
+Press F9 to enter gameplay. Select one allied Unit with an authored
+Ability loadout. The first three assigned skills replace unavailable
+Build/Train slots in the command grid, while movement and other orders
+remain accessible. Press F for slot 1, J for slot 2 or K for slot 3.
+Self-target skills queue immediately; other policies enter targeting
+mode. Left-click a valid visible unit in range to queue the ability.
+Right-click cancels targeting. Disabled buttons indicate insufficient
+minerals/energy or an active cooldown; cooldown seconds and per-Unit
+energy appear in the existing native HUD. Select F7 to edit the
+catalog and loadouts. Up to eight skills may be authored per Unit;
+HUD pagination beyond three skills is not yet implemented.

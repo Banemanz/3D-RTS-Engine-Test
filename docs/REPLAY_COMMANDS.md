@@ -55,3 +55,23 @@ The replay CI compares two independent scripted test scenarios: the normal comba
 ### Pre-movement AI scheduling guarantee
 
 AI command proposals are computed **after the current tick's pending commands are applied, but before any `Unit::update` tactical acquisition or movement runs**. This makes the first defensive command against nearby attackers observable on the replay input stream, rather than letting the automatic combat state machine consume the unit's idle state first. Orders still execute on the **next** fixed tick and are sorted by source/sequence, so selection and UI state cannot affect them. Legacy v1 replay AI runs its original post-unit-update direct policy unchanged.
+
+
+## CastAbility replay, energy, and cooldown identity
+
+CastAbility is appended to the preexisting RTSCommandKind enumeration,
+preserving previous indices and JSON name strings. Source-0 player
+commands require a nonempty Ability catalog ID and stable caster IDs.
+Self targets pass -1; unit-target actions pass a stable target ID.
+Source-1 AI is still restricted to its Attack command. At the
+authoritative tick, casts recheck the catalog, owner, enemy visibility,
+range, minerals, per-Unit energy and cooldown. Rejected inputs are
+recorded as rejections, without spending resources or arming clocks.
+
+The ordered map from (caster unit ID, Ability catalog ID) to next-ready
+tick participates in stateDigest when nonempty. Energy participates
+when the Unit actually has a pool. RTSAbilityCastTests verifies
+serializer roundtrips, rejection, cooldown timing, energy/regeneration,
+target damage and tamper detection. The mandatory replay-parity job
+compares ability_cast_fingerprint.txt from Windows/MSVC and Linux/GCC.
+The replay file schema remains v2.

@@ -453,3 +453,38 @@ The example `projects/timed_effects_showcase.rtsproject.json` combines
 a field medic with passive regeneration, an OnRegionEnter event and a
 Sequence of timed damage/healing Effects. Its source assets and IDs are
 original to this project. No external RTS unit art or names are needed.
+
+
+## Ability catalog and per-Unit loadout creation (F7 → F9)
+
+1. In F7 select "New catalog object..." then "Ability | Self",
+   "Ability | Ally target", "Ability | Enemy target", or "Ability | Any
+   unit target". This creates a valid original object using an existing
+   Effect catalog entry. Create the desired Effect first if necessary.
+2. In the F7 Ability inspector select a Target policy and Applied
+   effect from typed dropdowns. The resolved scalar fields include
+   cooldown_ticks (integer 0–36000), cast_range (0–128 world units),
+   mineral_cost (integer 0–100000), and energy_cost (integer 0–10000).
+   The Effect link must refer to an existing, valid Effect graph.
+3. Select a Unit in F7, click "Enable ability slots" if absent, and add
+   Ability references in the Ability loadout inspector. The ordered
+   list accepts up to eight unique IDs, with Open, reorder and remove
+   controls. The editor displays each Ability's target policy, cooldown
+   and energy/mineral costs. These are inherited catalog properties,
+   with validated per-Unit overrides and undo/redo.
+4. Unit fields max_energy (0–10000, default 0) and energy_regen
+   (0–1000 energy/s, default 0) govern the resource used for skill
+   casting. Units start at full energy and regenerate on fixed steps.
+5. Press F9, select one friendly Unit, and use its first three assigned
+   Ability slots via F/J/K. A Self skill casts immediately. For a unit
+   target, left-click a visible target in range or right-click to
+   cancel. The source-0 command stream checks requirements again on
+   the actual gameplay tick; rejected casts spend no resources and
+   do not arm cooldown clocks.
+
+Try projects/ability_workshop_showcase.rtsproject.json for original
+Field Mend and Arc Lance abilities, an energy-equipped Ranger, and a
+nonattacking training dummy. This is intentionally not a copy of any
+existing RTS's units or assets. Current scope omits autocast, terrain/
+AoE targets, projectiles, channeled casts, upgrades and visual behavior
+stacks; those are subsequent engine/editor tasks.

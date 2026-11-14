@@ -669,3 +669,111 @@ rather than dummy checkboxes; preserve Win/Linux parity.
 ### CI screenshot review and realistic F6 diagnostics (November 14 follow-up)
 
 The first genuine Linux Mesa screenshots revealed an inspector default width of only 360px, clipped recursive fields, and a timed-effects monitor stuck at 0.00 seconds because the ordinary F6 editor correctly freezes the gameplay clock. Fixed the initial F6 inspector width to 490px (user docking/resizing remains authoritative) and moved the monitor to an adjacent 445px default window. A new **screenshot-only** `--smoke-live-trigger-monitor` flag advances exactly one real fixed 60Hz engine tick per rendered smoke frame while the F6 monitor is open. This does **not** enable simulation during ordinary editing. `--smoke-select-trigger-id <ID>` verifies and displays a chosen authored script rule, allowing screenshot jobs to show the actual nested IfThenElse/Repeat rather than the first basic rule. Updated scripted-relay and timed-effects CI captures use these flags. Gameplay script trace, active timed effects, rules and health update from the actual deterministic simulation; no synthetic diagnostics. Revalidate current HEAD Windows/Linux Debug/Release and strict replay diff, then fetch screenshot artifacts for inspection.
+
+
+## November 14 continuation — actual Unit Abilities, F7 workflow and energy
+
+**Continue on original draft PR #1, branch feat/rts-vertical-slice.
+Do NOT merge; do NOT open another PR.** Last fully green functional
+commit at time of this handoff: 4a60032cf42ca2b08d1ccc101304d0d19f6fce0c.
+GitHub Actions workflows Tests + screenshots and Download Windows EXE
+and Linux RTS Builds both completed SUCCESS on that commit, with
+Windows x64/Linux x86_64 Debug and Release, Replay parity, and Linux
+OpenGL screenshots. The later documentation commit may trigger new
+CI; check latest HEAD before claiming newest checks.
+
+### Actual code implemented this pass
+
+1. DataCatalog.hpp/.cpp: AbilityDefinition/AbilityTarget (Self/Ally/
+   Enemy/Any) typed records. compileAbility checks required Effect ID,
+   integer cooldown_ticks 0..36000, cast_range 0..128, mineral_cost
+   0..100000, energy_cost 0..10000. unitAbilityIds validates optional
+   ordered Unit abilities list (0..8 unique existing Ability IDs).
+   DataCatalog::validate compiles and validates all engine links.
+2. RTSProject.cpp and DataCatalog.cpp: typed Unit→Ability refs migrated
+   on Ability rename, Ability→Effect ref on Effect rename. Project
+   inbound reference scans protect referenced object deletion, and
+   preserve arbitrary unrelated custom extension strings.
+3. UnitData.hpp, unitdata_resource_implementation.cpp, Unit.hpp,
+   unit_navigationagent3d_implementation.cpp: max_energy (default0,
+   bound 10000), energy_regen (0..1000/s), mutable currentEnergy filled
+   at spawn; TRES parser/writer supports optional fields.
+4. RTSSkirmish.hpp/.cpp: fixed 60Hz energy regen, ordered map of
+   caster+Ability cooldown-ready ticks, selectedAbilityId,
+   canPrepareAbility, canCastAbility, castAbility, authoritative
+   ownership/vision/world-distance checks, mineral and energy costs
+   spent only after successful Effect execution; reset clears clocks.
+   Per-unit energy (only nonzero-energy types) and nonempty cooldown
+   clocks included in canonical state digest. Legacy default-map hash
+   remains stable when no energy/Ability use.
+5. RTSCommandStream.hpp/.cpp: CastAbility appended at end of enum,
+   validated source-0 command requiring catalog ID + caster IDs,
+   source-1 AI remains Attack only. Serializer/replay v2 otherwise
+   unchanged. Commands execute on the same tick as player orders.
+6. RTSHUDLayout.hpp, RTSHUD.hpp,
+   main_entry_point_render_loop.cpp, SelectionManager.hpp/.cpp:
+   single selected caster displays first three Ability command slots
+   in non-producer buttons; F/J/K hotkeys, instant Self cast,
+   click-to-target Ally/Enemy/Any and RMB cancel. Enemy fog limits,
+   friendly/hostile ownership checks and cast range run again at
+   execution tick. HUD shows energy and cooldown secs, disables
+   unaffordable or cooling commands.
+7. EditorSession.cpp, CreatorWorkbench.hpp,
+   CreatorReferenceWidgets.hpp: F7 New catalog object -> Ability
+   Self/Ally/Enemy/Any presets; inspector has typed target and
+   Effect combo; Unit Ability loadout enable/add/remove/reorder/open
+   and target/cost/cooldown summaries. All validation, undo/redo,
+   inheritance and catalog rename protection use the existing
+   headless project transaction API. New Unit presets have energy
+   stats and empty abilities array.
+
+### Tests and playable map
+
+- projects/ability_workshop_showcase.rtsproject.json: original
+  Field Mend Self healing and Arc Lance Enemy damage, Ranger
+  energy and regenerative stats, harmless unarmored training dummy,
+  AI disabled for controlled testing. F7 authors these objects, F9
+  selects Ranger and F/J casts.
+- tests/ability_cast_tests.cpp: cast and rejection, cooldown timing,
+  energy/mineral transactions, target health, full recorded replay
+  verification and tamper detection, bounded invalid data,
+  catalog dependency/rename; ability_cast_fingerprint.txt.
+- tests/ability_editor_tests.cpp: F7 presets, typed validation and
+  rollback, Unit loadout assignment, rename/delete protection,
+  serialized project roundtrip and undo/redo.
+- CMakeLists.txt includes both tests with active assertions in
+  Release; .github/workflows/ci.yml uploads/diffs new fingerprint
+  across both OSes, runs Linux Mesa screenshots for three views;
+  .github/workflows/build.yml validates workshop map in both
+  packages. main_entry_point_render_loop.cpp --features and
+  tools/verify_build_bundle.py require both Ability feature flags.
+- CLI screenshots-only selectors: --smoke-select-ability-caster for
+  F9 Unit HUD, --smoke-select-catalog-id arc_lance for F7 Ability
+  inspector, --smoke-select-catalog-id ranger for F7 loadout.
+  Unknown/missing IDs fail smoke rather than show fake data.
+
+### Regressions discovered and corrected
+
+- GitHub CI compiled both OSes and found a C++ iterator named refs
+  shadowing a vector named refs in RTSProject::catalogReferences.
+  Corrected in commit 30ce1df4.
+- Initial CMake script accidentally appended new tests to
+  add_test(NAME catalog_creation COMMAND ...) instead of only the
+  Release assertion foreach list. Corrected at 76095a66.
+- Initial test expected a same-value F7 edit to return true and
+  combat damage to bypass target armor. Those were fixture errors,
+  NOT engine defects; corrected (different value, unarmored dummy)
+  at 7e8c98d1. That corrected functional test matrix passed on
+  Windows+Linux with strict replay comparison.
+
+### Forward plan
+
+Do not claim Galaxy Editor parity. Still need behavior/status effect
+stacking, area/projectile/ground targets, visual effect graphs,
+general ability requirements and command-card pagination, tech/
+upgrade trees, script functions/libraries, actor-event graph,
+asset import, richer terrain/pathing and more autonomous AI.
+Next development pass should implement a real connected behavior
+and effect editor + runtime, with GUI, map and replay regression.
+Maintain Windows/Linux source/build equality. Do not copy SC2
+unit identities/assets; use Galaxy docs only for inspiration.

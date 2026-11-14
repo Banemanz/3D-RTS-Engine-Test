@@ -230,3 +230,23 @@ events, behaviors/buffs with stacking and dispels, castable unit
 abilities, weapon/missile actors, tech/upgrade trees, robust pathing
 layers and broad asset import. Keep these explicit milestones in
 future design passes instead of equating checkboxes with parity.
+
+
+## November 14 continuation — authored Abilities, still far from Galaxy
+
+Implemented: data-driven Ability catalog type with Effect references;
+Unit Ability loadouts (up to eight); Self/Ally/Enemy/Any targets;
+owner/fog/range checks, mineral and per-Unit energy costs; energy
+regeneration, fixed-tick cooldowns and cast command/replay recording.
+F7 supports Ability presets, target/Effect selection and Unit
+Ability loadout editing with undoable typed references. F9 exposes
+up to three commands (F/J/K, LMB target pick), alongside existing
+gameplay HUD and vision systems.
+
+Missing: authored Ability/Effect graphs with arbitrary nodes,
+persistent behavior/buff/debuff stacks, cooldown UI pagination,
+autocast/AI ability policy, custom projectile actors and animations,
+area and terrain targeting, cast interruption/channeling, tech trees
+and upgrades, editor user-defined scripting functions/libraries,
+arbitrary advanced data schemas and localization. This progress is
+not StarCraft/Galaxy feature parity and does not reuse Blizzard assets.

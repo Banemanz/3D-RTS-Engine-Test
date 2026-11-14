@@ -217,3 +217,30 @@ Actual Windows 10/11 interactive use remains a manual smoke requirement.
 ### Meaningful screenshot capture
 
 The screenshot-only `--smoke-live-trigger-monitor` argument advances one authoritative fixed 60Hz simulation step per smoke frame without affecting normal paused F6 editor behavior. Thus the timed-effects monitor at smoke frame 180 should show real elapsed simulation time, an executed trigger and live queued effects, rather than the initial zero-state. `--smoke-select-trigger-id relay_support_award` opens the authored nested ECA branch during the recursive editor screenshot; unknown IDs fail startup. Both are CI-only presentation/simulation harness controls and do not affect replay format or normal gameplay. Widened initial F6 inspector/adjacent monitor placement remains user-customizable.
+
+
+## Ability editor, energy and replay tests (November 14 continuation)
+
+RTSAbilityCastTests validates authored Ability/Unit dependencies,
+targeting rules, actual CastAbility input, target health changes,
+cooldown rejections, mineral and energy deductions, fixed-tick
+regeneration, reset, full recorded replay and tamper rejection.
+RTSAbilityEditorTests checks F7 creation presets, typed field
+validation, Unit loadout editing, dependency-safe catalog rename
+and deletion, project save/load and undo/redo. Both have Release
+assertion-on compile flags and fail compilation with NDEBUG enabled.
+
+The Windows/Linux replay-parity job compares the newly generated
+ability_cast_fingerprint.txt byte-for-byte, in addition to earlier
+command, AI, script, trigger and timed-Effect fingerprints.
+Windows/Linux Release ZIPs validate the real
+projects/ability_workshop_showcase.rtsproject.json with the bundled
+RTSProjectTool and require RTS_FEATURE_UNIT_ABILITIES=1 and
+RTS_FEATURE_ABILITY_EDITOR=1 from the actual native executable.
+
+Linux Mesa/Xvfb renders real screenshots for three editor/game views:
+rts-ability-editor-screenshot (F7 authored Arc Lance object),
+rts-unit-ability-loadout-screenshot (F7 Ranger's Ability references)
+and rts-ability-command-hud-screenshot (selected F9 caster).
+These are visual smoke tests, not automated user-click equivalence
+or proof of flawless interactive Windows runtime behavior.

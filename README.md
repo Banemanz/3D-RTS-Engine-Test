@@ -274,3 +274,20 @@ for an original playable example. The same code is built on Windows
 and Linux with strict replay-parity and CTest gates. See
 `docs/TRIGGER_EDITOR.md` and `docs/SC2_FEATURE_MATRIX.md`
 for remaining Galaxy-class editor gaps.
+
+
+## Authored Unit Abilities and energy
+
+F7 can now create original Ability catalog objects with Self, Ally, Enemy,
+or Any-unit target policies, link each to an existing Effect, and edit
+cast range, energy/mineral costs and fixed-tick cooldowns. Unit objects
+have a validated, undoable, ordered Ability loadout of up to eight IDs.
+Units can have custom max_energy and energy_regen gameplay stats.
+
+In F9 playtest, select one caster and use its first three ability slots:
+F/J/K. Self skills execute on the next simulation tick. For targeted
+skills, left-click a visible valid unit in range; right-click cancels.
+The HUD shows energy and unavailable/cooling abilities. Abilities use the
+recorded authoritative command stream and strict Windows/Linux replay
+parity. See projects/ability_workshop_showcase.rtsproject.json for an
+original playable demo; see docs/AUTHORING.md for creator instructions.

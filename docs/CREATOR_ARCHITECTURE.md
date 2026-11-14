@@ -112,3 +112,25 @@ create fully validated transactional F7 catalog objects and effect-kind
 conversions, rather than injecting UI-only state or changing catalog
 entries directly. On a rejected candidate both project and undo history
 remain unchanged. Linux and Windows execute identical C++ source.
+
+
+## Typed Ability authoring, references and runtime command cards
+
+The F7 catalog creates Ability objects with a required typed Effect
+reference, ownership target policy, cast range, cooldown and costs.
+Unit catalog objects store ordered ability ID arrays. DataCatalog
+validates every graph and optional Unit loadout. EditorSession's
+createCatalogObject and setCatalogField transact through the same
+headless project validation and snapshot undo/redo. The F7 inspector
+provides typed target/effect selectors and Ability loadout controls.
+Catalog rename migrates Unit→Ability and Ability→Effect references,
+and inbound reference checks reject invalid deletion.
+
+The independent HUD layer reads the same catalog through RTSSkirmish
+and exposes up to three first-page actions for a single selected
+caster. Gameplay never relies on GUI-only state: stable caster/target
+IDs are serialized in RTSCommandStream and dispatched at fixed ticks.
+For screenshot verification, CLI smoke flags --smoke-select-catalog-id
+and --smoke-select-ability-caster select actual authored entries rather
+than substituting a mock editor. Dedicated Linux Mesa CI artifacts
+capture the F7 Ability inspector, F7 Unit loadout and real F9 HUD.

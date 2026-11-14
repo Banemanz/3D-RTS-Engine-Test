@@ -102,3 +102,17 @@ Both platform bundles include `projects/ai_defense_showcase.rtsproject.json` and
 ## Combat AI sandbox capture
 
 The CI **Tests + screenshots** workflow produces a `rts-ai-defense-screenshot` artifact from a software OpenGL run of the bundled `projects/ai_defense_showcase.rtsproject.json` map. The same map has a headless `ai_defense_behavior` CTest and Windows/Linux replay-state comparison, on top of the already existing generic replay fingerprint. The executable ZIPs are still under the separate **Download Windows EXE and Linux RTS Builds** workflow; screenshots are not executable artifacts.
+
+
+## New Ability Workshop executable checks
+
+The real Windows x64 and Linux x86_64 Release packages now include
+projects/ability_workshop_showcase.rtsproject.json and validate it
+with their included RTSProjectTool. Native --features outputs must
+advertise RTS_FEATURE_UNIT_ABILITIES and RTS_FEATURE_ABILITY_EDITOR;
+tools/verify_build_bundle.py rejects missing flags or the absent
+sample. Debug/Release tests and independent cross-OS replay hashes
+gate publishing. Separate Linux OpenGL artifacts show F7 Ability
+authoring, the selected Unit loadout and the F9 ability command grid.
+The executable ZIPs remain under the Download Windows EXE and Linux
+RTS Builds workflow, not the screenshot-only workflow.
