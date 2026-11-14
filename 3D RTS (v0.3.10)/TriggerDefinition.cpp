@@ -175,8 +175,9 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
             throw std::invalid_argument("Trigger requires 1..64 actions");
 
         std::size_t totalNodes=0;
-        std::function<void(const picojson::array&,int)> validateActions;
-        validateActions=[&](const picojson::array& nodes,int depth){
+        std::function<std::size_t(const picojson::array&,int)> validateActions;
+        validateActions=[&](const picojson::array& nodes,int depth)->std::size_t{
+            std::size_t maxExecuted=0;
             if(depth>4)throw std::invalid_argument("Trigger control flow exceeds depth 4");
             for(const auto& node:nodes){
                 if(++totalNodes>256)
@@ -203,8 +204,12 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                         throw std::invalid_argument("Invalid IfThenElse branches");
                     for(const auto& condition:ci->second.get<picojson::array>())
                         validateCondition(condition);
-                    validateActions(ti->second.get<picojson::array>(),depth+1);
-                    if(ei!=ob.end())validateActions(ei->second.get<picojson::array>(),depth+1);
+                    const auto yes=validateActions(ti->second.get<picojson::array>(),depth+1);
+                    const auto no=ei!=ob.end()
+                        ?validateActions(ei->second.get<picojson::array>(),depth+1):0;
+                    maxExecuted+=1+std::max(yes,no);
+                    if(maxExecuted>512)
+                        throw std::invalid_argument("Trigger action budget exceeds 512 steps");
                     continue;
                 }
                 if(type=="Repeat"){
@@ -219,7 +224,12 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                        body->second.get<picojson::array>().empty() ||
                        body->second.get<picojson::array>().size()>32)
                         throw std::invalid_argument("Repeat requires 1..32 body actions");
-                    validateActions(body->second.get<picojson::array>(),depth+1);
+                    const auto repeatCount=count!=ob.end()?16:
+                        static_cast<std::size_t>(intField(ob,"times",1,0,16));
+                    maxExecuted+=1+repeatCount*
+                        validateActions(body->second.get<picojson::array>(),depth+1);
+                    if(maxExecuted>512)
+                        throw std::invalid_argument("Trigger action budget exceeds 512 steps");
                     continue;
                 }
                 if(type=="SpawnUnit"){
@@ -262,9 +272,12 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
                     requireType(str(ob,"result","Victory"),{"Victory","Defeat"});
                 if(type=="ShowMessage" && str(ob,"text").size()>256)
                     throw std::invalid_argument("Trigger message exceeds 256 bytes");
+                if(++maxExecuted>512)
+                    throw std::invalid_argument("Trigger action budget exceeds 512 steps");
             }
+            return maxExecuted;
         };
-        validateActions(actions->second.get<picojson::array>(),0);
+        (void)validateActions(actions->second.get<picojson::array>(),0);
         for(const auto& node:actions->second.get<picojson::array>())
             rule.actions.push_back(node.get<picojson::object>());
         result.push_back(std::move(rule));
