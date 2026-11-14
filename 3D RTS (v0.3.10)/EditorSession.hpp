@@ -90,6 +90,10 @@ public:
     void cancelEdit();
     bool finishEdit(RTSProject& project);
     bool removeLocalOverride(RTSProject& project);
+    // Create a fully valid original Unit/Actor/Model/Effect starter object.
+    // All presets use the same transactional catalog/undo API as F7 editing.
+    bool createCatalogObject(RTSProject& project,const std::string& type,
+                             const std::string& preset);
     bool duplicateCatalogObject(RTSProject& project);
     bool beginCatalogRename(const RTSProject& project);
     bool finishCatalogRename(RTSProject& project);

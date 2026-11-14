@@ -148,6 +148,25 @@ void browser(App& app){
         ImGui::TextDisabled("%zu of %zu objects",
             ed.matchingCatalogCount(p),p.catalog.entries().size());
         if(ImGui::SmallButton("Clear search"))ed.clearCatalogSearch(p);
+        if(ImGui::BeginCombo("##createCatalogObject","New catalog object...")){
+            const struct {const char* type;const char* preset;const char* label;} presets[]={
+                {"Unit","Combat","Unit | Combat"},
+                {"Unit","Worker","Unit | Worker"},
+                {"Unit","Structure","Unit | Structure"},
+                {"Actor","Visual","Actor | Visual"},
+                {"Model","Procedural","Model | Procedural"},
+                {"Effect","Damage","Effect | Damage"},
+                {"Effect","Heal","Effect | Heal"},
+                {"Effect","PeriodicDamage","Effect | Periodic Damage"},
+                {"Effect","PeriodicHeal","Effect | Periodic Heal"},
+                {"Effect","Sequence","Effect | Sequence"}
+            };
+            for(const auto& item:presets)
+                if(ImGui::Selectable(item.label))
+                    refresh(app,ed.createCatalogObject(app.project,item.type,item.preset));
+            ImGui::EndCombo();
+        }
+
         ImGui::SameLine();
         if(ImGui::SmallButton("Derive selected"))
             refresh(app,ed.duplicateCatalogObject(app.project));

@@ -399,6 +399,104 @@ bool EditorSession::removeLocalOverride(RTSProject& project) {
     remember(before);
     modified=true;message="OVERRIDE REMOVED";return true;
 }
+bool EditorSession::createCatalogObject(RTSProject& project,
+                                        const std::string& type,
+                                        const std::string& preset){
+    if(textEditing)return false;
+    CatalogEntry entry;
+    entry.type=type;
+    try {
+        if(type=="Unit"){
+            const bool worker=preset=="Worker";
+            const bool structure=preset=="Structure";
+            if(!worker && !structure && preset!="Combat")return false;
+            entry.id=worker?"new_worker":structure?"new_structure":"new_unit";
+            entry.fields={
+                {"name",picojson::value(worker?"New Worker":structure?"New Structure":"New Unit")},
+                {"max_hp",picojson::value(structure?300.0:worker?35.0:65.0)},
+                {"hp_regen",picojson::value(0.0)},
+                {"damage",picojson::value(structure?0.0:worker?1.0:8.0)},
+                {"armor",picojson::value(0.0)},
+                {"attack_range",picojson::value(structure?0.0:5.0)},
+                {"move_speed",picojson::value(structure?0.0:8.0)},
+                {"mineral_cost",picojson::value(structure?150.0:worker?35.0:60.0)},
+                {"supply_cost",picojson::value(structure?0.0:1.0)},
+                {"is_structure",picojson::value(structure)},
+                {"is_worker",picojson::value(worker)}
+            };
+            for(const auto& object:project.catalog.entries())
+                if(object.type=="Actor"){
+                    entry.fields["actor"]=picojson::value(object.id);
+                    break;
+                }
+        }else if(type=="Model" && preset=="Procedural"){
+            entry.id="new_model";
+            entry.fields={
+                {"mesh",picojson::value("procedural.unit")},
+                {"scale",picojson::value(picojson::array{
+                    picojson::value(1.0),picojson::value(1.0),picojson::value(1.0)
+                })}
+            };
+        }else if(type=="Actor" && preset=="Visual"){
+            entry.id="new_actor";
+            entry.fields={
+                {"tint",picojson::value(picojson::array{
+                    picojson::value(0.7),picojson::value(0.8),picojson::value(1.0)
+                })},
+                {"opacity",picojson::value(1.0)}
+            };
+            for(const auto& object:project.catalog.entries())
+                if(object.type=="Model"){
+                    entry.fields["model"]=picojson::value(object.id);
+                    break;
+                }
+        }else if(type=="Effect"){
+            const bool periodic=preset=="PeriodicDamage" || preset=="PeriodicHeal";
+            if(preset!="Damage" && preset!="Heal" && !periodic &&
+               preset!="Sequence")return false;
+            entry.id="new_effect";
+            entry.fields["kind"]=picojson::value(preset);
+            if(preset=="Sequence"){
+                for(const auto& object:project.catalog.entries())
+                    if(object.type=="Effect"){
+                        entry.fields["children"]=picojson::value(
+                            picojson::array{picojson::value(object.id)});
+                        break;
+                    }
+                if(!entry.fields.count("children"))
+                    throw std::invalid_argument("Create a leaf Effect before a Sequence");
+            }else{
+                entry.fields["amount"]=picojson::value(8.0);
+                if(periodic){
+                    entry.fields["interval_ticks"]=picojson::value(60.0);
+                    entry.fields["duration_ticks"]=picojson::value(240.0);
+                }
+            }
+        }else return false;
+
+        const std::string base=entry.id;
+        for(int i=2;project.catalog.find(entry.id);++i){
+            if(i>10000)throw std::invalid_argument("No available catalog ID");
+            entry.id=base+std::to_string(i);
+        }
+        RTSProject candidate=project;
+        std::string reason;
+        if(!candidate.catalog.add(entry,&reason))
+            throw std::invalid_argument(reason.empty()?"Unable to create catalog object":reason);
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        remember(project);
+        project=std::move(candidate);
+        selectedObject=project.catalog.entries().size()-1;
+        selectedField=0;
+        modified=true;
+        message="CREATED "+entry.type+" "+entry.id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("CATALOG OBJECT REJECTED: ")+e.what();
+        return false;
+    }
+}
 bool EditorSession::duplicateCatalogObject(RTSProject& project) {
     const auto* e=selected(project);if(!e)return false;
     const std::string base=e->id+"_copy";
