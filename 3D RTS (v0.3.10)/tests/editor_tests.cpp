@@ -39,7 +39,7 @@ int main() {
     assert(editor.redo(p));
     assert(p.catalog.entries().size()==DataCatalog::defaults().entries().size()+1);
     editor.beginCatalogSearch();
-    editor.editText="mArInE";
+    editor.editText="rAnGeR";
     assert(editor.finishCatalogSearch(p));
     assert(editor.matchingCatalogCount(p)>=2);
     assert(editor.selected(p)->id.find("ranger")!=std::string::npos);
@@ -48,7 +48,7 @@ int main() {
     editor.beginCatalogSearch();
     editor.editText="no_such_rts_object_123";
     assert(!editor.finishCatalogSearch(p));
-    assert(editor.catalogFilter=="mArInE");
+    assert(editor.catalogFilter=="rAnGeR");
     editor.clearCatalogSearch(p);
     assert(editor.catalogFilter.empty());
     assert(editor.matchingCatalogCount(p)==p.catalog.entries().size());
