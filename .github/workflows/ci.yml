@@ -131,6 +131,26 @@ jobs:
           name: rts-scripted-relay-screenshot
           path: rts-script-relay.png
           if-no-files-found: error
+      - name: Capture nested trigger branch and formula editing in F6
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --project projects/script_relay_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-recursive-editor.ppm
+      - name: Convert recursive ECA screenshot
+        run: python3 tools/ppm_to_png.py rts-recursive-editor.ppm rts-recursive-editor.png
+      - name: Upload recursive visual trigger editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-recursive-trigger-editor-screenshot
+          path: rts-recursive-editor.png
+          if-no-files-found: error
+      - name: Capture live timed-effect game and debugger
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-trigger-monitor --project projects/timed_effects_showcase.rtsproject.json --smoke-frames 180 --screenshot rts-timed-effects.ppm
+      - name: Convert timed effects screenshot
+        run: python3 tools/ppm_to_png.py rts-timed-effects.ppm rts-timed-effects.png
+      - name: Upload timed combat effects screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-timed-effects-screenshot
+          path: rts-timed-effects.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor
