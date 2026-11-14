@@ -47,6 +47,8 @@ struct AppState {
     std::string projectPath="projects/working.rtsproject.json";
     bool mouseStroke=false;
     bool pauseMenu=false;
+    bool triggerTraceVisible=false;
+    bool triggerTracingEnabled=true;
     bool hoveredTerrain=false;
     Vec3 hoveredWorld{};
     float terrainSlopeLimit()const {
@@ -62,6 +64,7 @@ struct AppState {
         for(const auto& placed:project.placements)
             if(placed.kind=="Doodad")
                 previews.emplace(placed.id,resolvePlacedDoodad(project,placed));
+        game.setTriggerTracing(triggerTracingEnabled);
         game.loadProject(project);
         doodadVisuals=std::move(previews);
         project.terrain.markDirty();
@@ -763,7 +766,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_SCENE_EDITOR=1\n"
                  <<"RTS_FEATURE_DATA_EDITOR=1\n"
                  <<"RTS_FEATURE_TRIGGER_EDITOR=1\n"
-                 <<"RTS_FEATURE_VISUAL_ECA_EDITOR=1\n";
+                 <<"RTS_FEATURE_VISUAL_ECA_EDITOR=1\n"
+                 <<"RTS_FEATURE_TRIGGER_TRACE_MONITOR=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -778,6 +782,7 @@ int main(int argc, char** argv) {
     bool selectProducerForSmoke=false;
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
+    bool triggerMonitorSmoke=false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -793,6 +798,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
+        else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
     }
     int renderedFrames = 0;
     try {
@@ -817,6 +823,7 @@ int main(int argc, char** argv) {
         }
         app.recoverAutosave();
         app.reloadFromProject();
+        if(triggerMonitorSmoke && smokeFrames>0)app.triggerTraceVisible=true;
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
         if(selectProducerForSmoke && smokeFrames>0) {

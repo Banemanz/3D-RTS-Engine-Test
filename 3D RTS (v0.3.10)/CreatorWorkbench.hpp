@@ -3,6 +3,7 @@
 #include "RTSHUDLayout.hpp"
 #include "CreatorTriggerWidgets.hpp"
 #include "CreatorReferenceWidgets.hpp"
+#include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include <algorithm>
@@ -54,6 +55,8 @@ void toolbar(App& app) {
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("View")){
+            ImGui::MenuItem("Playtest trigger monitor",nullptr,&app.triggerTraceVisible);
+            ImGui::Separator();
             ImGui::TextDisabled("Creator GUI: docking enabled");
             ImGui::TextDisabled("Drag panel title bars to dock/float");
             ImGui::EndMenu();
@@ -528,6 +531,7 @@ template<class App>
 void draw(App& app){
     if(app.pauseMenu)return; // Native pause UI owns the entire overlay/input.
     toolbar(app);
+    CreatorTriggerMonitor::draw(app);
     if(app.editor.panel==EditorSession::Panel::Play)return;
     // The center is a pass-through 3D viewport. Panels can dock around it
     // without forcing world clicks to be interpreted as GUI input.

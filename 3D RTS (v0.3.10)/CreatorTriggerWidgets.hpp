@@ -173,6 +173,8 @@ void draw(App& app){
     const std::string id=idIt!=rule.end() && idIt->second.template is<std::string>()
         ?idIt->second.template get<std::string>():"<unnamed>";
     ImGui::TextWrapped("Rule: %s",id.c_str());
+    if(ImGui::SmallButton("Open playtest monitor"))
+        app.triggerTraceVisible=true;
     ImGui::TextDisabled("Changes validate before saving | Ctrl+Z / Ctrl+Y to undo and redo");
     if(ed.textEditing){
         ImGui::TextDisabled("Finish or cancel the JSON edit to use visual controls.");
