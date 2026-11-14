@@ -26,7 +26,7 @@ void field(App& app,const std::string& ruleId,bool event,bool condition,
     const std::string identity=ruleId+(event?".event.":condition?".condition.":".action.")+
                                std::to_string(nodeIndex)+"."+name;
     ImGui::PushID(identity.c_str());
-    if(name=="catalog" || name=="region" || name=="result"){
+    if(name=="catalog" || name=="region" || name=="result" || name=="effect"){
         if(value.template is<std::string>()){
             const std::string current=value.template get<std::string>();
             std::vector<std::string> options;
@@ -36,7 +36,8 @@ void field(App& app,const std::string& ruleId,bool event,bool condition,
                     if(placement.kind=="Region")options.push_back(placement.id);
             }else{
                 for(const auto& entry:project.catalog.entries())
-                    if(entry.type=="Unit")options.push_back(entry.id);
+                    if(entry.type==(name=="effect"?"Effect":"Unit"))
+                        options.push_back(entry.id);
             }
             std::string chosen;
             if(ImGui::BeginCombo(name.c_str(),current.c_str())){
@@ -132,7 +133,8 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
     const std::vector<std::string> options=condition
         ?std::vector<std::string>{"PlayerMineralsAtLeast","UnitCountAtLeast",
                                   "UnitTypeCountAtLeast","SubjectOwnerIs"}
-        :std::vector<std::string>{"ShowMessage","GrantMinerals","SpawnUnit","EndMatch"};
+        :std::vector<std::string>{"ShowMessage","GrantMinerals","SpawnUnit",
+                                  "ApplyEffect","EndMatch"};
     if(ImGui::BeginCombo(condition?"Add condition...":"Add action...","Choose node type")){
         std::string chosen;
         for(const auto& type:options)

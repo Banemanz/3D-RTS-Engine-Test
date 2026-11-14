@@ -668,7 +668,15 @@ bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std:
             node["z"]=picojson::value(double(project.terrain.minZ()+
                       .5f*(project.terrain.depth()-1)*project.terrain.spacing()));
         }else if(type=="EndMatch")node["result"]=picojson::value("Victory");
-        else return false;
+        else if(type=="ApplyEffect"){
+            auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
+                [](const CatalogEntry& item){return item.type=="Effect";});
+            if(it==project.catalog.entries().end()){
+                message="CREATE AN EFFECT CATALOG ENTRY FIRST";
+                return false;
+            }
+            node["effect"]=picojson::value(it->id);
+        }else return false;
     }
     if(type=="SpawnUnit" || type=="UnitTypeCountAtLeast"){
         auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),

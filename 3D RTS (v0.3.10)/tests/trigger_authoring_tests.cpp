@@ -76,6 +76,26 @@ int main(){
     assert(editor.triggerJSON(project,0)==beforeJSON);
     editor.cancelEdit();
     assert(editor.triggerJSON(project,0)==beforeJSON);
+    // Runtime effect graph references are available through the same
+    // visual authoring action editor, never as special copied game assets.
+    RTSProject withEffect=RTSProject::defaults();
+    ProjectPlacement region;
+    region.id="test_region";region.kind="Region";region.position=Vec3(0,0,0);
+    region.overrides["radius"]=picojson::value(4.0);
+    withEffect.placements.push_back(region);
+    withEffect.validate();
+    EditorSession effectEditor;
+    effectEditor.panel=EditorSession::Panel::Triggers;
+    assert(effectEditor.createTrigger(withEffect));
+    assert(effectEditor.setTriggerEvent(withEffect,"OnRegionEnter"));
+    assert(effectEditor.addTriggerNode(withEffect,false,"ApplyEffect"));
+    assert(nodes(effectEditor.triggerObject(withEffect,0),"actions").size()==2);
+    assert(effectEditor.setTriggerNodeField(withEffect,false,1,"effect",
+                                            picojson::value("restorative_pulse")));
+    assert(!effectEditor.setTriggerNodeField(withEffect,false,1,"effect",
+                                             picojson::value("does_not_exist")));
+    assert(parseTriggerRules(withEffect).size()==1);
+
     const picojson::value encoded=project.toJson();
     RTSProject copy=RTSProject::fromJson(encoded);
     assert(parseTriggerRules(copy).size()==1);
