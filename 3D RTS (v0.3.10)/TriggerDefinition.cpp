@@ -3,6 +3,7 @@
 #include "RTSScriptExpression.hpp"
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <map>
 #include <set>
@@ -124,101 +125,148 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
         if(rule.event=="After" && (rule.interval<0 || rule.interval>360000))
             throw std::invalid_argument("Delayed time must be 0..360000 seconds");
         rule.once=flag(o,"once",rule.event=="OnMapStart" || rule.event=="After");
-        auto cond=o.find("conditions");
-        if(cond!=o.end()) {
-            if(!cond->second.is<picojson::array>() ||
-               cond->second.get<picojson::array>().size()>32)
+        // Shared validation for top-level rules and nested control-flow nodes.
+        const auto validateCondition=[&](const picojson::value& value){
+            if(!value.is<picojson::object>())
+                throw std::invalid_argument("Invalid trigger condition");
+            const auto& ob=value.get<picojson::object>();
+            const auto type=str(ob,"type");
+            requireType(type,{"PlayerMineralsAtLeast","UnitCountAtLeast",
+                              "UnitTypeCountAtLeast","SubjectOwnerIs","VariableCompare"});
+            if(type=="PlayerMineralsAtLeast")
+                (void)intField(ob,"amount",0,0,100000000);
+            if(type=="UnitCountAtLeast" || type=="UnitTypeCountAtLeast"){
+                (void)intField(ob,"owner",0,-1,15);
+                (void)intField(ob,"count",1,0,4000);
+                if(type=="UnitTypeCountAtLeast"){
+                    const auto id=str(ob,"catalog");
+                    const auto* catalog=project.catalog.find(id);
+                    if(!catalog || catalog->type!="Unit")
+                        throw std::invalid_argument("Missing Unit catalog for condition: "+id);
+                }
+            }
+            if(type=="SubjectOwnerIs")
+                (void)intField(ob,"owner",0,0,15);
+            if(type=="VariableCompare"){
+                requireVariable(ob);
+                requireType(str(ob,"operator"),{"==","!=","<","<=",">",">="});
+                const auto expr=ob.find("value_expr");
+                if(expr!=ob.end()){
+                    if(ob.count("value"))
+                        throw std::invalid_argument("Ambiguous VariableCompare operand");
+                    RTSScriptExpression::validate(expr->second,variables);
+                }else (void)intField(ob,"value",0,-100000000,100000000);
+            }
+        };
+        const auto conditions=o.find("conditions");
+        if(conditions!=o.end()){
+            if(!conditions->second.is<picojson::array>() ||
+               conditions->second.get<picojson::array>().size()>32)
                 throw std::invalid_argument("Invalid trigger conditions");
-            for(const auto& entry:cond->second.get<picojson::array>()) {
-                if(!entry.is<picojson::object>())throw std::invalid_argument("Invalid trigger condition");
-                const auto& ob=entry.get<picojson::object>();
-                auto type=str(ob,"type");
-                requireType(type,{"PlayerMineralsAtLeast","UnitCountAtLeast",
-                                  "UnitTypeCountAtLeast","SubjectOwnerIs","VariableCompare"});
-                if(type=="PlayerMineralsAtLeast")
-                    (void)intField(ob,"amount",0,0,100000000);
-                if(type=="UnitCountAtLeast" || type=="UnitTypeCountAtLeast") {
-                    (void)intField(ob,"owner",0,-1,15);
-                    (void)intField(ob,"count",1,0,4000);
-                    if(type=="UnitTypeCountAtLeast") {
-                        const std::string id=str(ob,"catalog");
-                        const auto* entry=project.catalog.find(id);
-                        if(!entry || entry->type!="Unit")
-                            throw std::invalid_argument("Missing unit catalog for condition");
-                    }
-                }
-                if(type=="SubjectOwnerIs")
-                    (void)intField(ob,"owner",0,0,15);
-                if(type=="VariableCompare") {
-                    requireVariable(ob);
-                    const std::string comparison=str(ob,"operator");
-                    requireType(comparison,{"==","!=","<","<=",">",">="});
-                    const auto expr=ob.find("value_expr");
-                    if(expr!=ob.end()){
-                        if(ob.count("value"))
-                            throw std::invalid_argument("VariableCompare cannot specify both value and value_expr");
-                        RTSScriptExpression::validate(expr->second,variables);
-                    }else (void)intField(ob,"value",0,-100000000,100000000);
-                }
-                rule.conditions.push_back(ob);
+            for(const auto& condition:conditions->second.get<picojson::array>()){
+                validateCondition(condition);
+                rule.conditions.push_back(condition.get<picojson::object>());
             }
         }
-        auto actions=o.find("actions");
+        const auto actions=o.find("actions");
         if(actions==o.end() || !actions->second.is<picojson::array>() ||
            actions->second.get<picojson::array>().empty() ||
            actions->second.get<picojson::array>().size()>64)
             throw std::invalid_argument("Trigger requires 1..64 actions");
-        for(const auto& entry:actions->second.get<picojson::array>()) {
-            if(!entry.is<picojson::object>())throw std::invalid_argument("Trigger action must be object");
-            auto ob=entry.get<picojson::object>();
-            auto type=str(ob,"type");
-            requireType(type,{"GrantMinerals","SpawnUnit","EndMatch","ShowMessage",
-                              "ApplyEffect","SetVariable","AddVariable"});
-            if(type=="SpawnUnit") {
-                auto catalog=str(ob,"catalog");
-                auto unit=project.catalog.find(catalog);
-                if(!unit || unit->type!="Unit")
-                    throw std::invalid_argument("Trigger spawn catalog is not a Unit: "+catalog);
-                (void)intField(ob,"owner",1,0,15);
-                const double x=num(ob,"x"),z=num(ob,"z");
-                if(!project.terrain.insideWorld(float(x),float(z)))
-                    throw std::invalid_argument("Trigger spawn is outside map bounds");
+
+        std::size_t totalNodes=0;
+        std::function<void(const picojson::array&,int)> validateActions;
+        validateActions=[&](const picojson::array& nodes,int depth){
+            if(depth>4)throw std::invalid_argument("Trigger control flow exceeds depth 4");
+            for(const auto& node:nodes){
+                if(++totalNodes>256)
+                    throw std::invalid_argument("Trigger action graph exceeds 256 nodes");
+                if(!node.is<picojson::object>())
+                    throw std::invalid_argument("Trigger action must be an object");
+                const auto& ob=node.get<picojson::object>();
+                const auto type=str(ob,"type");
+                requireType(type,{"GrantMinerals","SpawnUnit","EndMatch","ShowMessage",
+                                  "ApplyEffect","SetVariable","AddVariable",
+                                  "IfThenElse","Repeat"});
+                if(type=="IfThenElse"){
+                    const auto ci=ob.find("conditions");
+                    const auto ti=ob.find("then");
+                    const auto ei=ob.find("else");
+                    if(ci==ob.end() || !ci->second.is<picojson::array>() ||
+                       ci->second.get<picojson::array>().empty() ||
+                       ci->second.get<picojson::array>().size()>16 ||
+                       ti==ob.end() || !ti->second.is<picojson::array>() ||
+                       ti->second.get<picojson::array>().empty() ||
+                       ti->second.get<picojson::array>().size()>32 ||
+                       (ei!=ob.end() && (!ei->second.is<picojson::array>() ||
+                                          ei->second.get<picojson::array>().size()>32)))
+                        throw std::invalid_argument("Invalid IfThenElse branches");
+                    for(const auto& condition:ci->second.get<picojson::array>())
+                        validateCondition(condition);
+                    validateActions(ti->second.get<picojson::array>(),depth+1);
+                    if(ei!=ob.end())validateActions(ei->second.get<picojson::array>(),depth+1);
+                    continue;
+                }
+                if(type=="Repeat"){
+                    const auto count=ob.find("times_expr");
+                    if(count!=ob.end()){
+                        if(ob.count("times"))
+                            throw std::invalid_argument("Repeat has ambiguous loop count");
+                        RTSScriptExpression::validate(count->second,variables);
+                    }else (void)intField(ob,"times",1,0,16);
+                    const auto body=ob.find("actions");
+                    if(body==ob.end() || !body->second.is<picojson::array>() ||
+                       body->second.get<picojson::array>().empty() ||
+                       body->second.get<picojson::array>().size()>32)
+                        throw std::invalid_argument("Repeat requires 1..32 body actions");
+                    validateActions(body->second.get<picojson::array>(),depth+1);
+                    continue;
+                }
+                if(type=="SpawnUnit"){
+                    const auto id=str(ob,"catalog");
+                    const auto* unit=project.catalog.find(id);
+                    if(!unit || unit->type!="Unit")
+                        throw std::invalid_argument("Trigger spawn is not a Unit: "+id);
+                    (void)intField(ob,"owner",1,0,15);
+                    const double x=num(ob,"x"),z=num(ob,"z");
+                    if(!project.terrain.insideWorld(float(x),float(z)))
+                        throw std::invalid_argument("Trigger spawn is outside map bounds");
+                }
+                if(type=="ApplyEffect"){
+                    if(rule.event!="OnRegionEnter")
+                        throw std::invalid_argument("ApplyEffect requires OnRegionEnter subject");
+                    const auto effect=str(ob,"effect");
+                    const auto* catalog=project.catalog.find(effect);
+                    if(!catalog || catalog->type!="Effect")
+                        throw std::invalid_argument("Missing Effect: "+effect);
+                    (void)compileEffect(project.catalog,effect);
+                }
+                if(type=="GrantMinerals"){
+                    const auto expr=ob.find("amount_expr");
+                    if(expr!=ob.end()){
+                        if(ob.count("amount"))
+                            throw std::invalid_argument("Ambiguous GrantMinerals operand");
+                        RTSScriptExpression::validate(expr->second,variables);
+                    }else (void)intField(ob,"amount",0,-100000000,100000000);
+                }
+                if(type=="SetVariable" || type=="AddVariable"){
+                    requireVariable(ob);
+                    const auto expr=ob.find("value_expr");
+                    if(expr!=ob.end()){
+                        if(ob.count("value"))
+                            throw std::invalid_argument("Ambiguous variable-action operand");
+                        RTSScriptExpression::validate(expr->second,variables);
+                    }else (void)intField(ob,"value",0,-100000000,100000000);
+                }
+                if(type=="EndMatch")
+                    requireType(str(ob,"result","Victory"),{"Victory","Defeat"});
+                if(type=="ShowMessage" && str(ob,"text").size()>256)
+                    throw std::invalid_argument("Trigger message exceeds 256 bytes");
             }
-            if(type=="ApplyEffect"){
-                if(rule.event!="OnRegionEnter")
-                    throw std::invalid_argument("ApplyEffect requires OnRegionEnter subject");
-                const auto effect=str(ob,"effect");
-                const auto* object=project.catalog.find(effect);
-                if(!object || object->type!="Effect")
-                    throw std::invalid_argument("ApplyEffect references missing Effect: "+effect);
-                (void)compileEffect(project.catalog,effect);
-            }
-            if(type=="GrantMinerals"){
-                const auto expr=ob.find("amount_expr");
-                if(expr!=ob.end()){
-                    if(ob.count("amount"))
-                        throw std::invalid_argument("GrantMinerals cannot specify both amount and amount_expr");
-                    RTSScriptExpression::validate(expr->second,variables);
-                }else (void)intField(ob,"amount",0,-100000000,100000000);
-            }
-            if(type=="SetVariable" || type=="AddVariable") {
-                requireVariable(ob);
-                const auto expr=ob.find("value_expr");
-                if(expr!=ob.end()){
-                    if(ob.count("value"))
-                        throw std::invalid_argument("Variable action cannot specify both value and value_expr");
-                    RTSScriptExpression::validate(expr->second,variables);
-                }else (void)intField(ob,"value",0,-100000000,100000000);
-            }
-            if(type=="EndMatch") {
-                const auto result=str(ob,"result","Victory");
-                if(result!="Victory" && result!="Defeat")
-                    throw std::invalid_argument("Trigger must end Victory or Defeat");
-            }
-            if(type=="ShowMessage" && str(ob,"text").size()>256)
-                throw std::invalid_argument("Trigger message exceeds 256 bytes");
-            rule.actions.push_back(std::move(ob));
-        }
+        };
+        validateActions(actions->second.get<picojson::array>(),0);
+        for(const auto& node:actions->second.get<picojson::array>())
+            rule.actions.push_back(node.get<picojson::object>());
         result.push_back(std::move(rule));
     }
     return result;
