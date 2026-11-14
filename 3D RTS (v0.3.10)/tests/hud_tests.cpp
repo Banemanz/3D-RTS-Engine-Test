@@ -10,7 +10,8 @@ int main() {
         assert(ui.bottom.y>ui.topBar.h);
         assert(ui.minimap.x+ui.minimap.w<ui.commandArea.x);
         assert(ui.selectionArea.x+ui.selectionArea.w<=ui.commandArea.x);
-        assert(ui.consumes(12,12));
+        assert(!ui.consumes(12,12)); // shared editor menu bar owns this strip
+        assert(ui.consumes(12,32)); // gameplay resource bar starts below menu
         assert(ui.consumes(12,ui.height-8));
         assert(!ui.consumes(ui.width*.5,ui.height*.5));
         assert(ui.hit(ui.minimap.x+5,ui.minimap.y+5,game)==HUDCommand::Minimap);
