@@ -135,10 +135,28 @@ void nodes(App& app,const picojson::object& rule,const std::string& id,bool cond
                                   "UnitTypeCountAtLeast","SubjectOwnerIs"}
         :std::vector<std::string>{"ShowMessage","GrantMinerals","SpawnUnit",
                                   "ApplyEffect","EndMatch"};
+    std::string eventKind;
+    auto event=rule.find("event");
+    if(event!=rule.end() && event->second.template is<picojson::object>()){
+        const auto& ev=event->second.template get<picojson::object>();
+        auto it=ev.find("type");
+        if(it!=ev.end() && it->second.template is<std::string>())
+            eventKind=it->second.template get<std::string>();
+    }
     if(ImGui::BeginCombo(condition?"Add condition...":"Add action...","Choose node type")){
         std::string chosen;
-        for(const auto& type:options)
-            if(ImGui::Selectable(type.c_str()))chosen=type;
+        for(const auto& type:options){
+            const bool effectUnavailable=!condition && type=="ApplyEffect" &&
+                                          eventKind!="OnRegionEnter";
+            if(effectUnavailable)ImGui::BeginDisabled();
+            if(ImGui::Selectable(type.c_str()) && !effectUnavailable)
+                chosen=type;
+            if(effectUnavailable){
+                if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                    ImGui::SetTooltip("Requires a region-entering unit. Set event to OnRegionEnter first.");
+                ImGui::EndDisabled();
+            }
+        }
         ImGui::EndCombo();
         if(!chosen.empty())refresh(app,ed.addTriggerNode(project,condition,chosen));
     }
@@ -155,6 +173,7 @@ void draw(App& app){
     const std::string id=idIt!=rule.end() && idIt->second.template is<std::string>()
         ?idIt->second.template get<std::string>():"<unnamed>";
     ImGui::TextWrapped("Rule: %s",id.c_str());
+    ImGui::TextDisabled("Changes validate before saving | Ctrl+Z / Ctrl+Y to undo and redo");
     if(ed.textEditing){
         ImGui::TextDisabled("Finish or cancel the JSON edit to use visual controls.");
         return;

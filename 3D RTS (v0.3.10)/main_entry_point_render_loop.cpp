@@ -762,7 +762,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_TERRAIN_EDITOR=1\n"
                  <<"RTS_FEATURE_SCENE_EDITOR=1\n"
                  <<"RTS_FEATURE_DATA_EDITOR=1\n"
-                 <<"RTS_FEATURE_TRIGGER_EDITOR=1\n";
+                 <<"RTS_FEATURE_TRIGGER_EDITOR=1\n"
+                 <<"RTS_FEATURE_VISUAL_ECA_EDITOR=1\n";
         return 0;
     }
     RTSCrashReporter::install();
