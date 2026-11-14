@@ -706,7 +706,10 @@ bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std:
             node["count"]=picojson::value(1.0);
             node["owner"]=picojson::value(0.0);
         }else if(type=="SubjectOwnerIs")node["owner"]=picojson::value(0.0);
-        else return false;
+        else if(type=="VariableCompare"){
+            node["operator"]=picojson::value(">=");
+            node["value"]=picojson::value(1.0);
+        }else return false;
     }else{
         if(type=="ShowMessage")node["text"]=picojson::value("NEW MESSAGE");
         else if(type=="GrantMinerals")node["amount"]=picojson::value(25.0);
@@ -716,6 +719,8 @@ bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std:
                       .5f*(project.terrain.width()-1)*project.terrain.spacing()));
             node["z"]=picojson::value(double(project.terrain.minZ()+
                       .5f*(project.terrain.depth()-1)*project.terrain.spacing()));
+        }else if(type=="SetVariable" || type=="AddVariable"){
+            node["value"]=picojson::value(1.0);
         }else if(type=="EndMatch")node["result"]=picojson::value("Victory");
         else if(type=="ApplyEffect"){
             auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
@@ -726,6 +731,15 @@ bool EditorSession::addTriggerNode(RTSProject& project,bool condition,const std:
             }
             node["effect"]=picojson::value(it->id);
         }else return false;
+    }
+    if(type=="VariableCompare" || type=="SetVariable" || type=="AddVariable"){
+        auto it=project.extensions.find("trigger_variables");
+        if(it==project.extensions.end() || !it->second.is<picojson::object>() ||
+           it->second.get<picojson::object>().empty()){
+            message="CREATE A TRIGGER VARIABLE FIRST";
+            return false;
+        }
+        node["variable"]=picojson::value(it->second.get<picojson::object>().begin()->first);
     }
     if(type=="SpawnUnit" || type=="UnitTypeCountAtLeast"){
         auto it=std::find_if(project.catalog.entries().begin(),project.catalog.entries().end(),
