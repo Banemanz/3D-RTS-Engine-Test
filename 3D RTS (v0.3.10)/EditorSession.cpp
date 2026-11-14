@@ -499,6 +499,55 @@ std::string triggerId(const picojson::value& v) {
         it->second.get<std::string>():"<UNNAMED RULE>";
 }
 }
+bool EditorSession::mutateTriggerVariables(RTSProject& project,
+    const std::function<void(picojson::object&)>& change,
+    const std::string& status){
+    if(textEditing)return false;
+    RTSProject candidate=project;
+    try{
+        auto it=candidate.extensions.find("trigger_variables");
+        if(it==candidate.extensions.end())
+            it=candidate.extensions.emplace("trigger_variables",
+                picojson::value(picojson::object{})).first;
+        if(!it->second.is<picojson::object>())
+            throw std::invalid_argument("trigger_variables must be object");
+        auto& variables=it->second.get<picojson::object>();
+        const std::string before=picojson::value(variables).serialize();
+        change(variables);
+        if(before==picojson::value(variables).serialize())return false;
+        (void)parseTriggerRules(candidate); // checks IDs, ranges, and live references
+        candidate.validate();
+    }catch(const std::exception& e){
+        message=std::string("VARIABLE EDIT REJECTED: ")+e.what();
+        return false;
+    }
+    remember(project);
+    project=std::move(candidate);
+    modified=true;
+    message=status;
+    return true;
+}
+bool EditorSession::addTriggerVariable(RTSProject& project,
+                                       const std::string& name,int initial){
+    return mutateTriggerVariables(project,[&](picojson::object& vars){
+        if(vars.count(name))throw std::invalid_argument("Duplicate variable: "+name);
+        vars.emplace(name,picojson::value(double(initial)));
+    },"VARIABLE CREATED");
+}
+bool EditorSession::setTriggerVariable(RTSProject& project,
+                                       const std::string& name,int value){
+    return mutateTriggerVariables(project,[&](picojson::object& vars){
+        auto it=vars.find(name);
+        if(it==vars.end())throw std::invalid_argument("Unknown variable: "+name);
+        it->second=picojson::value(double(value));
+    },"VARIABLE INITIAL VALUE UPDATED");
+}
+bool EditorSession::removeTriggerVariable(RTSProject& project,
+                                          const std::string& name){
+    return mutateTriggerVariables(project,[&](picojson::object& vars){
+        if(!vars.erase(name))throw std::invalid_argument("Unknown variable: "+name);
+    },"VARIABLE REMOVED");
+}
 std::size_t EditorSession::triggerCount(const RTSProject& project)const {
     return triggerArray(project).size();
 }
