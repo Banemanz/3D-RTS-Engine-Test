@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -135,9 +136,9 @@ private:
     float enemySpawnTimer_ = 12.0f;
     float visionIntervalTimer_=0.0f;
     std::unordered_set<int> releasedSupply_;
-    std::unordered_map<int, Route> routes_;
+    std::map<int, Route> routes_; // stable unit-ID processing order
     std::unordered_map<int, std::deque<PendingMove>> queued_;
-    std::unordered_map<int, WorkerJob> jobs_;
+    std::map<int, WorkerJob> jobs_; // deterministic shared mineral contention
     std::unordered_map<int, float> construction_;
     std::vector<Production> production_;
     std::unordered_map<int,Vec3> rallyPoints_;

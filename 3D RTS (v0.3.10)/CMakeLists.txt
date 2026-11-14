@@ -48,6 +48,9 @@ if(BUILD_TESTING)
     target_link_libraries(RTSFormationTests PRIVATE RTSSimulation)
     add_test(NAME formation COMMAND RTSFormationTests)
 
+    add_executable(RTSResourceDeterminismTests tests/resource_determinism_tests.cpp)
+    target_link_libraries(RTSResourceDeterminismTests PRIVATE RTSSimulation)
+    add_test(NAME resource_determinism COMMAND RTSResourceDeterminismTests)
     add_executable(RTSOrdersTests tests/order_tests.cpp)
     add_executable(RTSCombatResolutionTests tests/combat_resolution_tests.cpp)
     target_link_libraries(RTSCombatResolutionTests PRIVATE RTSSimulation)
@@ -133,7 +136,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests)
+    foreach(test_target IN ITEMS RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
