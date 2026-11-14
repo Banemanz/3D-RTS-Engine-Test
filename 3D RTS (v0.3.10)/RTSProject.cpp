@@ -385,9 +385,9 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                 refs.push_back(entry.id+"."+typed);
         }
         if(original->type=="Ability" && entry.type=="Unit"){
-            const auto refs=properties.find("abilities");
-            if(refs!=properties.end() && refs->second.is<picojson::array>())
-                for(const auto& ref:refs->second.get<picojson::array>())
+            const auto abilityLinks=properties.find("abilities");
+            if(abilityLinks!=properties.end() && abilityLinks->second.is<picojson::array>())
+                for(const auto& ref:abilityLinks->second.get<picojson::array>())
                     if(ref.is<std::string>() && ref.get<std::string>()==id)
                         refs.push_back(entry.id+".abilities");
         }
