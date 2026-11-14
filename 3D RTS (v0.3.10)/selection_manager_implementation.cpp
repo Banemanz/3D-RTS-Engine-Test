@@ -33,6 +33,25 @@ void SelectionManager::onLeftMouseUp(double mouseX, double mouseY, bool shiftHel
     }
 }
 
+Unit* SelectionManager::raycastUnit(double mouseX,double mouseY,const RTSCamera& camera,
+                                    int screenWidth,int screenHeight,
+                                    std::vector<Unit>& units,const RTSVision* vision){
+    Ray ray;
+    if(!camera.screenPointToRay(mouseX,mouseY,screenWidth,screenHeight,ray))
+        return nullptr;
+    Unit* closest=nullptr;
+    float minDistance=std::numeric_limits<float>::max();
+    for(auto& unit:units){
+        if(!unit.isAlive() || (vision && unit.ownerId!=0 &&
+                              !vision->visible(unit.position)))continue;
+        float distance=0.f;
+        if(unit.intersectRay(ray,distance) && distance<minDistance){
+            closest=&unit;minDistance=distance;
+        }
+    }
+    return closest;
+}
+
 Unit* SelectionManager::raycastEnemyUnit(double mouseX, double mouseY, const RTSCamera& camera,
                                          int screenWidth, int screenHeight, std::vector<Unit>& units,const RTSVision* vision) {
     Ray clickRay;

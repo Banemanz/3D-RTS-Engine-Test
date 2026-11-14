@@ -16,7 +16,8 @@ struct HUDRect {
 };
 enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Ranger,
                         Worker, SelectArmy, SelectWorkers, FocusBase, Patrol, Hold, CancelQueue, Cancel,
-                        TrainSlot0, TrainSlot1, TrainSlot2, TrainingPage };
+                        TrainSlot0, TrainSlot1, TrainSlot2, TrainingPage,
+                        CastAbility0, CastAbility1, CastAbility2 };
 struct HUDButton {
     HUDCommand command=HUDCommand::None;
     std::string title;
@@ -143,6 +144,34 @@ public:
         result[11].enabled=true;
         if(paged)result[11].title="PAGE "+std::to_string(game.trainingPage()+1)+"/"+
                                           std::to_string(game.trainingPageCount());
+        // Single-selection Ability bar reuses the otherwise disabled
+        // Build/Train slots when no producer is open. Training remains
+        // accessible on production structures, and core orders stay put.
+        if(selected==1 && !producer){
+            int casterId=-1;
+            for(const auto& u:game.units)
+                if(u.isSelected && u.ownerId==0 && u.isAlive()){
+                    casterId=u.id;break;
+                }
+            for(int i=0;i<3 && casterId>0;++i){
+                const std::string id=game.selectedAbilityId(i);
+                if(id.empty())continue;
+                const auto fields=game.project().catalog.resolvedFields(id);
+                const auto name=fields.find("name");
+                const std::string label=name!=fields.end() &&
+                    name->second.is<std::string>()?
+                    name->second.get<std::string>():id;
+                std::string upper=label.substr(0,12);
+                for(char& ch:upper)
+                    ch=char(std::toupper(static_cast<unsigned char>(ch)));
+                HUDButton& button=result[static_cast<std::size_t>(i+3)];
+                button.command=i==0?HUDCommand::CastAbility0:
+                               i==1?HUDCommand::CastAbility1:HUDCommand::CastAbility2;
+                button.title=upper;
+                button.hotkey=i==0?"F":i==1?"J":"K";
+                button.enabled=live && game.canPrepareAbility(casterId,id);
+            }
+        }
         return result;
     }
     HUDCommand hit(double x,double y,const RTSSkirmish& game)const {

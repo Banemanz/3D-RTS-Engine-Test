@@ -130,9 +130,11 @@ struct AppState {
             inform(editor.message);
         }
     }
-    enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol } mode = Mode::Normal;
+    enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol, CastAbility } mode = Mode::Normal;
+    std::string pendingAbilityId;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
     bool keyX = false, keyR = false, keyM=false, keyP=false, keyV=false,
+         keyF=false, keyJ=false, keyK=false,
          keyF2=false, keyF3=false, keyG=false, keyH=false, keyTab=false;
     std::array<std::vector<int>,10> controlGroups{};
     std::array<bool,10> digitWasDown{};
@@ -182,6 +184,36 @@ struct AppState {
                 else inform("TRAINING "+game.selectedTrainableId(slot));
                 break;
             }
+            case HUDCommand::CastAbility0:
+            case HUDCommand::CastAbility1:
+            case HUDCommand::CastAbility2: {
+                const int slot=action==HUDCommand::CastAbility0?0:
+                               action==HUDCommand::CastAbility1?1:2;
+                const std::string abilityId=game.selectedAbilityId(slot);
+                if(abilityId.empty())break;
+                int casterId=-1;
+                for(const auto& u:game.units)
+                    if(u.isSelected && u.isAlive() && u.ownerId==0){
+                        casterId=u.id;break;
+                    }
+                if(!game.canPrepareAbility(casterId,abilityId)){
+                    inform("ABILITY ON COOLDOWN OR UNAVAILABLE");
+                    break;
+                }
+                const auto ability=compileAbility(project.catalog,abilityId);
+                if(ability.target==AbilityTarget::Self){
+                    if(!game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                         Vec3{},-1,false,abilityId))
+                        inform("CANNOT QUEUE ABILITY");
+                    else inform("CAST "+abilityId);
+                    mode=Mode::Normal;
+                }else{
+                    pendingAbilityId=abilityId;
+                    mode=Mode::CastAbility;
+                    inform("CAST "+abilityId+" - LEFT CLICK UNIT TARGET");
+                }
+                break;
+            }
             case HUDCommand::TrainingPage:
                 if(game.nextTrainingPage())
                     inform("PRODUCTION PAGE "+std::to_string(game.trainingPage()+1)+"/"+
@@ -219,7 +251,7 @@ struct AppState {
                 if(!found)inform("NO COMMAND CENTER");
                 break;
             }
-            case HUDCommand::Cancel:mode=Mode::Normal;break;
+            case HUDCommand::Cancel:mode=Mode::Normal;pendingAbilityId.clear();break;
             default:break;
         }
     }
@@ -419,6 +451,33 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
                 }else state->command(hud.hit(mouseX,mouseY,state->game),mouseX,mouseY);
             }
             return; // even a HUD background click must never issue a world command
+        }
+        if(state->mode==AppState::Mode::CastAbility &&
+           button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+            Unit* target=state->selectionManager.raycastUnit(mouseX,mouseY,
+                state->camera,state->windowWidth,state->windowHeight,
+                state->game.units,&state->game.vision);
+            int casterId=-1;
+            for(const auto& unit:state->game.units)
+                if(unit.isSelected && unit.ownerId==0 && unit.isAlive()){
+                    casterId=unit.id;break;
+                }
+            if(target && casterId>0 && state->game.canCastAbility(
+                    casterId,state->pendingAbilityId,target->id) &&
+               state->game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                    Vec3{},target->id,false,state->pendingAbilityId)){
+                state->inform("CAST "+state->pendingAbilityId);
+                state->pendingAbilityId.clear();
+                state->mode=AppState::Mode::Normal;
+            }else state->inform("SELECT A VISIBLE TARGET WITHIN CAST RANGE");
+            return;
+        }
+        if(state->mode==AppState::Mode::CastAbility &&
+           button==GLFW_MOUSE_BUTTON_RIGHT && action==GLFW_PRESS){
+            state->mode=AppState::Mode::Normal;
+            state->pendingAbilityId.clear();
+            state->inform("CAST CANCELLED");
+            return;
         }
     }
     if(state->editor.panel==EditorSession::Panel::Scene) {
@@ -1104,6 +1163,9 @@ int main(int argc, char** argv) {
                 return fired;
             };
             if(app.editor.panel==EditorSession::Panel::Play && !app.pauseMenu) {
+            if (justPressed(GLFW_KEY_F, app.keyF)) app.command(HUDCommand::CastAbility0);
+            if (justPressed(GLFW_KEY_J, app.keyJ)) app.command(HUDCommand::CastAbility1);
+            if (justPressed(GLFW_KEY_K, app.keyK)) app.command(HUDCommand::CastAbility2);
             if (justPressed(GLFW_KEY_M, app.keyM)) app.command(HUDCommand::Move);
             if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
             if (justPressed(GLFW_KEY_V, app.keyV)) app.command(HUDCommand::CancelQueue);

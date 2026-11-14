@@ -19,6 +19,9 @@ public:
                        const RTSCamera& camera, int screenWidth, int screenHeight,
                        std::vector<Unit>& units,const RTSVision* vision=nullptr);
 
+    Unit* raycastUnit(double mouseX,double mouseY,const RTSCamera& camera,
+                      int screenWidth,int screenHeight,std::vector<Unit>& units,
+                      const RTSVision* vision=nullptr);
     Unit* raycastEnemyUnit(double mouseX, double mouseY, const RTSCamera& camera,
                            int screenWidth, int screenHeight, std::vector<Unit>& units,
                            const RTSVision* vision=nullptr);
