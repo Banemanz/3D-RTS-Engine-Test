@@ -206,3 +206,7 @@ F6 now exposes authorable map-global integer values and reference-aware editor c
 ## Typed expression foundation (November 14 continuation)
 
 The trigger runtime now evaluates a bounded integer AST in VariableCompare, SetVariable, AddVariable and GrantMinerals rather than only fixed numbers. It supports variables, arithmetic, min/max and clamping, strict authoring validation, undoable literal/reference widgets and global rename migration. The implementation is deterministic and included in strict cross-platform replay fingerprints. This is **not** a Galaxy text compiler, general script function system, event coroutine executor or branch/loop runtime yet.
+
+## Nested ECA control flow (November 14 continuation)
+
+`IfThenElse` and `Repeat` authorable action nodes now run in the fixed-step trigger interpreter. Top-level and nested conditions share the same validator, and nested actions use a recursive budgeted executor. Branches consume one of two ordered action lists; repeated bodies support a static count or a validated integer expression. Static complexity checking rejects graphs that could exceed a 512-step worst-case invocation budget; recursion depth is capped. The F6 GUI offers templates and branch summaries while full recursive node editing still needs a dedicated UI pass. The new `RTSScriptFlowTests` produces a mandatory Windows/Linux replay fingerprint. Full Galaxy control flow/custom functions/local scopes remain pending.

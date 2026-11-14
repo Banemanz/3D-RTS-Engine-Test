@@ -26,6 +26,7 @@ jobs:
             build/ai_defense_fingerprint.txt
             build/trigger_globals_fingerprint.txt
             build/script_expression_fingerprint.txt
+            build/script_flow_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -181,3 +182,4 @@ jobs:
           diff -u fingerprints/linux/ai_defense_fingerprint.txt fingerprints/windows/ai_defense_fingerprint.txt
           diff -u fingerprints/linux/trigger_globals_fingerprint.txt fingerprints/windows/trigger_globals_fingerprint.txt
           diff -u fingerprints/linux/script_expression_fingerprint.txt fingerprints/windows/script_expression_fingerprint.txt
+          diff -u fingerprints/linux/script_flow_fingerprint.txt fingerprints/windows/script_flow_fingerprint.txt

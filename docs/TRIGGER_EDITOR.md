@@ -125,3 +125,32 @@ The runnable `script_relay_showcase.rtsproject.json` now uses an expression for
 its reward size. The new `RTSScriptExpressionTests` checks math boundaries,
 validation, editor transactions, replay verification and generates the
 Windows/Linux strict parity file `script_expression_fingerprint.txt`.
+
+### Safe branching and bounded loops
+
+The ECA runtime now executes nested **IfThenElse** and **Repeat** action
+nodes as real simulation logic. These are declarative script objects, not raw
+C++ or arbitrary Galaxy-language text.
+
+- `IfThenElse` has `conditions` (1..16 normal ECA conditions), `then`
+  (1..32 ordered actions) and optional `else` (0..32 actions). All conditions
+  must pass; only one branch executes.
+- `Repeat` has `actions` (1..32 actions) plus either `times` (0..16) or
+  `times_expr` (a validated integer expression). A dynamic count is clamped
+  to 0..16, evaluated once when the loop begins.
+- Nested control-flow depth is bounded to 4, with at most 256 total authorable
+  action nodes per trigger and a validated **512-step worst-case execution
+  budget** (counting even the maximum possible variable-driven repeats).
+  Invalid graphs are rejected before saving. Repetition, branches and variable
+  writes occur within the authoritative fixed-step simulation and participate
+  in replay verification.
+
+The F6 action menu offers both node types with valid initial templates.
+Expandable summaries show their nested branches/conditions; edit nested lists
+through the existing full-rule Advanced JSON inspector until the recursive
+property widget milestone. This is a partial Galaxy-style control-flow
+foundation, not lexical scopes, custom action definitions, unbounded loops,
+coroutines or a Galaxy source compiler. The scripted relay showcase now uses
+IfThenElse + Repeat + a map-variable expression to calculate its resource
+reward. Run `RTSScriptFlowTests` to exercise real execution, validation,
+serialization, undo/redo, variable-reference migration and replay parity.

@@ -173,3 +173,7 @@ Both `linux` and `windows` jobs must upload **both** `build/command_replay_finge
 ## Script-global parity and editor transaction regression (November 14)
 
 `RTSTriggerVariableTests` exercises map-local script globals: declaration validation, bounded signed integers, set/add, operator comparisons, blocked/once rule behavior, reset, editor undo/redo and safe rejection of dangling variable references. It writes `trigger_globals_fingerprint.txt` for the same 120-tick fixed-step scenario under both MSVC and GCC. CI uploads the Windows and Linux files and the required `replay-parity` job compares exact tick/digest lines. Replay verification re-simulates the actual map, and the state digest includes variables only when present so existing v1/v2 projects retain old hashes. Linux OpenGL and native Windows packaging must still pass on the branch head.
+
+## Nested script action regression (November 14)
+
+`RTSScriptFlowTests` checks actual fixed-step `IfThenElse` and `Repeat` execution, dynamic expression counts, live variable-change notifications, typed condition routing, deterministic mineral effects, project serialization, replay verification, script-global rename through nested actions, and undo/redo. It also rejects oversized loop execution budgets and invalid branch shape. Both Linux/GCC and Windows/MSVC upload `script_flow_fingerprint.txt`; the mandatory replay-parity job requires byte-identical tick/digest rows. Assert remains enabled in Debug and Release. The scripted relay project includes a working branch and bounded repeat action.

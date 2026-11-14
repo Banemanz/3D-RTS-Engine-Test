@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Frontier Relay - Scripted Operations",
-  "description": "Original RTS creator example: map globals, timed changes, deferred variable events, catalog-driven reinforcements, a counter-gated resource reward and visual debugger watch. Resource rewards are evaluated from an authored arithmetic expression.",
+  "description": "Original RTS creator example: map globals, timed changes, deferred variable events, catalog-driven reinforcements, a counter-gated resource reward and visual debugger watch. Resource rewards are evaluated from an authored arithmetic expression. The reward is composed using validated nested conditional and repeat nodes.",
   "terrain": {
     "width": 49,
     "depth": 49,
@@ -620,22 +620,43 @@
       ],
       "actions": [
         {
-          "type": "GrantMinerals",
-          "amount_expr": {
-            "op": "Multiply",
-            "left": {
-              "op": "Variable",
-              "name": "raid_count"
-            },
-            "right": {
-              "op": "Literal",
-              "value": 10
+          "type": "IfThenElse",
+          "conditions": [
+            {
+              "type": "VariableCompare",
+              "variable": "raid_count",
+              "operator": ">=",
+              "value": 2
             }
-          }
-        },
-        {
-          "type": "ShowMessage",
-          "text": "Relay intelligence recovered: +20 supply minerals."
+          ],
+          "then": [
+            {
+              "type": "Repeat",
+              "times": 2,
+              "actions": [
+                {
+                  "type": "GrantMinerals",
+                  "amount_expr": {
+                    "op": "Multiply",
+                    "left": {
+                      "op": "Variable",
+                      "name": "raid_count"
+                    },
+                    "right": {
+                      "op": "Literal",
+                      "value": 5
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "else": [
+            {
+              "type": "ShowMessage",
+              "text": "Relay watch: waiting for more raid reports."
+            }
+          ]
         }
       ]
     }
