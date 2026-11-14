@@ -284,6 +284,53 @@ void inspector(App& app){
                         }
                     }
                 }
+                if(entry->type=="Effect"){
+                    const auto kind=resolved.find("kind");
+                    if(kind!=resolved.end() &&
+                       kind->second.template is<std::string>() &&
+                       kind->second.template get<std::string>()=="Sequence"){
+                        const auto members=resolved.find("children");
+                        if(members!=resolved.end() &&
+                           members->second.template is<picojson::array>()){
+                            const auto children=members->second.template get<picojson::array>();
+                            ImGui::SeparatorText("Effect graph | Sequence");
+                            ImGui::TextDisabled("%zu ordered effects (maximum 8)",children.size());
+                            for(std::size_t i=0;i<children.size();++i){
+                                if(!children[i].is<std::string>())continue;
+                                ImGui::PushID(static_cast<int>(i));
+                                const std::string refId=children[i].get<std::string>();
+                                if(navigateCatalog(app,"Open effect",refId)){
+                                    ImGui::PopID();ImGui::End();return;
+                                }
+                                if(children.size()>1){
+                                    ImGui::SameLine();
+                                    if(ImGui::SmallButton("Remove")){
+                                        auto changed=children;
+                                        changed.erase(changed.begin()+static_cast<std::ptrdiff_t>(i));
+                                        refresh(app,ed.setCatalogField(project,"children",
+                                            picojson::value(changed)));
+                                        ImGui::PopID();ImGui::End();return;
+                                    }
+                                }
+                                ImGui::PopID();
+                            }
+                            if(children.size()<8 &&
+                               ImGui::BeginCombo("Append effect","Choose Effect...")){
+                                for(const auto& candidate:project.catalog.entries())
+                                    if(candidate.type=="Effect" && candidate.id!=entry->id){
+                                        if(ImGui::Selectable(candidate.id.c_str(),false)){
+                                            auto changed=children;
+                                            changed.emplace_back(candidate.id);
+                                            refresh(app,ed.setCatalogField(project,"children",
+                                                picojson::value(changed)));
+                                            ImGui::EndCombo();ImGui::End();return;
+                                        }
+                                    }
+                                ImGui::EndCombo();
+                            }
+                        }
+                    }
+                }
                 const auto incoming=project.catalogReferences(entry->id);
                 if(!incoming.empty()){
                     if(ImGui::TreeNode("##uses","Used by (%zu)",incoming.size())){

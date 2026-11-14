@@ -67,6 +67,12 @@ int main() {
     assert(editor.catalogTypeFilter=="Unit");
     assert(editor.setCatalogTypeFilter(p,""));
     assert(editor.catalogTypeFilter.empty());
+    // One undoable Effect field edit is visible in the typed editor as well.
+    assert(editor.selectCatalogId(p,"restorative_pulse"));
+    assert(editor.setCatalogField(p,"amount",picojson::value(9.0)));
+    assert(compileEffect(p.catalog,"restorative_pulse")[0].amount==9.f);
+    assert(editor.undo(p));
+    assert(compileEffect(p.catalog,"restorative_pulse")[0].amount==8.f);
     // Galaxy-style inspector navigation follows stable IDs even when a
     // search filter would otherwise hide the linked actor/model.
     assert(editor.selectCatalogId(p,"worker"));
