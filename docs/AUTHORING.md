@@ -441,15 +441,15 @@ renamed or used as inheritance roots. IDs are unique and stable.
 A transactional **Effect operation** selector preserves the chosen ID
 while converting operation kind and filling required fields.
 
-Unit catalog fields may include \`hp_regen\` (default 0, up to 1000 HP/sec).
-Effects may use \`kind: PeriodicDamage\` or \`PeriodicHeal\`, with
-\`amount\` (health per pulse), \`interval_ticks\` (1–600) and
-\`duration_ticks\` (1–3600). Fixed 60 Hz simulation makes effect timing
+Unit catalog fields may include `hp_regen` (default 0, up to 1000 HP/sec).
+Effects may use `kind: PeriodicDamage` or `PeriodicHeal`, with
+`amount` (health per pulse), `interval_ticks` (1–600) and
+`duration_ticks` (1–3600). Fixed 60 Hz simulation makes effect timing
 independent of rendering refresh rates. The number of concurrently scheduled
 effect steps is limited to 256. Applications beyond that limit are rejected
 atomically before any immediate Sequence steps execute.
 
-The example \`projects/timed_effects_showcase.rtsproject.json\` combines
+The example `projects/timed_effects_showcase.rtsproject.json` combines
 a field medic with passive regeneration, an OnRegionEnter event and a
 Sequence of timed damage/healing Effects. Its source assets and IDs are
 original to this project. No external RTS unit art or names are needed.

@@ -269,8 +269,8 @@ nested edits can be undone/redone without switching to raw JSON. F7
 adds standalone Unit/Actor/Model/Effect templates and an Effect type
 selector. The shared gameplay engine executes authored periodic damage
 and healing Effect graphs, plus optional per-Unit HP regeneration on
-fixed ticks. Open \`projects/timed_effects_showcase.rtsproject.json\`
+fixed ticks. Open `projects/timed_effects_showcase.rtsproject.json`
 for an original playable example. The same code is built on Windows
 and Linux with strict replay-parity and CTest gates. See
-\`docs/TRIGGER_EDITOR.md\` and \`docs/SC2_FEATURE_MATRIX.md\`
+`docs/TRIGGER_EDITOR.md` and `docs/SC2_FEATURE_MATRIX.md`
 for remaining Galaxy-class editor gaps.

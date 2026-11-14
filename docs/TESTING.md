@@ -191,25 +191,25 @@ Functional commit `b9e84cf3` passed Release Windows/Linux jobs in [workflow run 
 
 ## Recursive authoring, new catalog creators and timed effects (November 14)
 
-\`RTSRecursiveTriggerEditorTests\` tests nested Add/Duplicate/Move/
+`RTSRecursiveTriggerEditorTests` tests nested Add/Duplicate/Move/
 Delete, typed property edits, formulas and nested arithmetic replacement,
 branch constraints, invalid paths, rollback and global rename migration.
 
-\`RTSCatalogCreationTests\` creates each standalone F7 type/preset,
+`RTSCatalogCreationTests` creates each standalone F7 type/preset,
 tests Effect operation conversions, validates all catalogs, serialized
-roundtrips and undo/redo. \`RTSTimedEffectTests\` applies a composed
+roundtrips and undo/redo. `RTSTimedEffectTests` applies a composed
 periodic damage/healing sequence from a real OnRegionEnter event, checks
 regeneration and pulse deadlines at individual ticks, enforces the
 256-slot scheduler limit, rejects malformed intervals, verifies reset
-and full authoritative replay, and emits \`timed_effect_fingerprint.txt\`.
+and full authoritative replay, and emits `timed_effect_fingerprint.txt`.
 
-All tests run in both Debug and Release with \`NDEBUG\` disabled and a
+All tests run in both Debug and Release with `NDEBUG` disabled and a
 compile-time assertion guard. Both Windows and Linux upload the timed
 effect fingerprint; the mandatory replay-parity job requires an exact
 byte-for-byte match in addition to existing fingerprints. Release bundles
-must validate \`timed_effects_showcase.rtsproject.json\` and self-report
-\`RTS_FEATURE_RECURSIVE_ECA_UI=1\` and
-\`RTS_FEATURE_TIMED_EFFECTS=1\`.
-Linux Mesa/Xvfb separately captures \`rts-recursive-trigger-editor-screenshot\`
-and \`rts-timed-effects-screenshot\` from the real OpenGL executable.
+must validate `timed_effects_showcase.rtsproject.json` and self-report
+`RTS_FEATURE_RECURSIVE_ECA_UI=1` and
+`RTS_FEATURE_TIMED_EFFECTS=1`.
+Linux Mesa/Xvfb separately captures `rts-recursive-trigger-editor-screenshot`
+and `rts-timed-effects-screenshot` from the real OpenGL executable.
 Actual Windows 10/11 interactive use remains a manual smoke requirement.

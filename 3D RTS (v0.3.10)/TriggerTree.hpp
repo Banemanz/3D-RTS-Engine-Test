@@ -49,15 +49,6 @@ inline picojson::object& objectAt(picojson::object& root,
     }
     return *current;
 }
-inline const picojson::object& objectAt(const picojson::object& root,
-                                       const TriggerTreePath& path){
-    // picojson's object is immutable via const; the identical traversal is
-    // exposed by a safe copy when needed by renderer snapshots.
-    picojson::object copy=root;
-    const auto& selected=objectAt(copy,path);
-    static_cast<void>(selected);
-    throw std::logic_error("Use listSnapshot for immutable trigger inspection");
-}
 inline picojson::array& listAt(picojson::object& root,
                               const TriggerTreePath& parent,
                               const std::string& list){

@@ -285,13 +285,13 @@ Real fixed-step `IfThenElse` and `Repeat` ECA actions support validated conditio
 
 ## Data-driven timed combat effects and editable ECA (November 14 continuation)
 
-**Engine:** Effect graphs can now emit \`PeriodicDamage\` and
-\`PeriodicHeal\` operations, with integer tick interval/duration and a
+**Engine:** Effect graphs can now emit `PeriodicDamage` and
+`PeriodicHeal` operations, with integer tick interval/duration and a
 bounded target-specific schedule. The shared 60 Hz simulation evaluates
 pulses after combat and passive HP regeneration, removes expired/dead
 targets, resets the queue at match reset, includes active effects in
 deterministic replay digests and admits graph scheduling atomically up
-to 256 active instances. \`UnitData.hp_regen\` can be authored in the
+to 256 active instances. `UnitData.hp_regen` can be authored in the
 Unit catalog; default zero preserves existing combat behavior.
 The actual playtest monitor exposes the number of active timed effects.
 
