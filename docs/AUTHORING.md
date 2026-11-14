@@ -283,3 +283,30 @@ projects grow. Use **Data Editor duplicate/derive actions** or the
 author fields. The `entries()` collection is intentionally read-only:
 mutating entry IDs directly would corrupt object references. Safe object
 renaming with reference migration is planned but not yet implemented.
+
+## Catalog-driven production (creator suite foundation)
+
+A producer is any Unit catalog object with `is_structure: true` and an
+inherited or local `trainable_units` list of at most 12 **non-structure**
+Unit catalog IDs. Unit mineral cost, supply, build time, name, actor and
+worker role are resolved from the trained unit's own catalog definition.
+Modify this property in F7 Data Editor as a JSON array, for example:
+
+```json
+"trainable_units": ["marine", "worker", "field_medic", "raider"]
+```
+
+In play mode, select exactly one friendly producer. The B/T/C command cells
+become its three contextual training slots. **Tab** cycles sets of three when
+there are more units. The selected building owns its individual queue
+(maximum five reserved jobs), rally point, resource costs and cancellation.
+Without a producer selected, legacy B/T/C build/marine/worker commands
+continue to work. Old project files lacking `trainable_units` retain the
+built-in base/worker and barracks/marine training roles.
+
+The validator checks every typed reference (existing Unit, no duplicates,
+no structures), maximum 12 slots, and JSON array shape. Catalog renaming
+migrates these typed links; arbitrary custom fields still round-trip.
+This is a real runtime training mechanic, not merely an editable string field.
+Tech prerequisites, upgrades, ability graphs and multiple queue lanes are
+not implemented yet.

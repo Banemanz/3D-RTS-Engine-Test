@@ -326,3 +326,18 @@ in the unit vector. Direct `Unit::update` callers without an optional hit
 buffer retain immediate damage. `RTSCombatResolutionTests` checks duels in
 both source orderings. Movement/target acquisition remain sequential and
 multiplayer lockstep determinism is not implemented.
+
+## Data-driven production & HUD (2026-11-13 continuation)
+
+Unit catalog fields support inherited `trainable_units` arrays of at most
+12 non-structure Unit IDs. RTSSkirmish now queues typed catalog unit IDs in
+per-building production tasks (instead of a hardcoded worker-vs-marine bool),
+resolves costs/duration/supply and actor/worker metadata at runtime, supports
+rally and refund, rejects invalid producers, and remains backwards-compatible
+with old maps missing the field. `DataCatalog::rename` migrates typed
+training references. `RTSProject::validate` rejects invalid lists.
+When exactly one trainable friendly structure is selected, B/T/C commands
+become three configurable training slots, with Tab and HUD page buttons
+for up to four pages. `RTSProductionCatalogTests` covers catalog entries,
+paging, HUD hit tests, reservation/refund, save/load and invalid definitions.
+Do not describe this as a full SC2 ability/tech/production system.

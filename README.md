@@ -154,3 +154,14 @@ even when a unit's position in the source list changes. Project authors may
 tune `formation_spacing_multiplier` under JSON `metadata`; default
 `2.4`, accepted value range `1.5`–`6.0`. Navigation still finds
 walkable paths for each unit independently.
+
+## Data-driven production / context commands
+
+Unit catalog definitions can now declare `trainable_units` (up to 12 Unit IDs)
+on buildings. Each building trains its own authorized unit types using the
+unit's catalog costs, supply, build duration, actor and worker flag; queues,
+cancellation and rally points are supported. Select exactly one producer to
+access contextual B/T/C training commands; **Tab** pages through more than three
+types. Legacy commands still apply with no producer selected. The F7 Data
+Editor edits these lists as JSON. See docs/AUTHORING.md for validation and
+project format.

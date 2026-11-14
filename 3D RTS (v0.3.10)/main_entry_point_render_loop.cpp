@@ -106,7 +106,7 @@ struct AppState {
     enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol } mode = Mode::Normal;
     bool keyA = false, keyB = false, keyT = false, keyC = false;
     bool keyX = false, keyR = false, keyM=false, keyP=false, keyV=false,
-         keyF2=false, keyF3=false, keyG=false, keyH=false;
+         keyF2=false, keyF3=false, keyG=false, keyH=false, keyTab=false;
     std::array<std::vector<int>,10> controlGroups{};
     std::array<bool,10> digitWasDown{};
     int framebufferWidth = 1280, framebufferHeight = 720;
@@ -143,6 +143,21 @@ struct AppState {
                 break;
             case HUDCommand::Worker:
                 if(!game.queueWorker())inform("CANNOT TRAIN WORKER: CHECK MINERALS AND SUPPLY");
+                break;
+            case HUDCommand::TrainSlot0:
+            case HUDCommand::TrainSlot1:
+            case HUDCommand::TrainSlot2: {
+                const int slot=action==HUDCommand::TrainSlot0?0:
+                               action==HUDCommand::TrainSlot1?1:2;
+                if(!game.queueSelectedTrainingSlot(slot))
+                    inform("CANNOT TRAIN: CHECK BUILDING, SUPPLY, MINERALS OR QUEUE");
+                else inform("TRAINING "+game.selectedTrainableId(slot));
+                break;
+            }
+            case HUDCommand::TrainingPage:
+                if(game.nextTrainingPage())
+                    inform("PRODUCTION PAGE "+std::to_string(game.trainingPage()+1)+"/"+
+                           std::to_string(game.trainingPageCount()));
                 break;
             case HUDCommand::SelectArmy:{
                 int count=0;
@@ -917,9 +932,16 @@ int main(int argc, char** argv) {
             if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
             if (justPressed(GLFW_KEY_V, app.keyV)) app.command(HUDCommand::CancelQueue);
             if (justPressed(GLFW_KEY_A, app.keyA)) app.command(HUDCommand::AttackMove);
-            if (justPressed(GLFW_KEY_B, app.keyB)) app.command(HUDCommand::Build);
-            if (justPressed(GLFW_KEY_T, app.keyT)) app.command(HUDCommand::Marine);
-            if (justPressed(GLFW_KEY_C, app.keyC)) app.command(HUDCommand::Worker);
+            const bool producerSelected=app.game.selectedProducerId()>=0 &&
+                                        app.game.trainingPageCount()>0;
+            if (justPressed(GLFW_KEY_B, app.keyB))
+                app.command(producerSelected?HUDCommand::TrainSlot0:HUDCommand::Build);
+            if (justPressed(GLFW_KEY_T, app.keyT))
+                app.command(producerSelected?HUDCommand::TrainSlot1:HUDCommand::Marine);
+            if (justPressed(GLFW_KEY_C, app.keyC))
+                app.command(producerSelected?HUDCommand::TrainSlot2:HUDCommand::Worker);
+            if (justPressed(GLFW_KEY_TAB, app.keyTab) && producerSelected)
+                app.command(HUDCommand::TrainingPage);
             if (justPressed(GLFW_KEY_X, app.keyX)) app.command(HUDCommand::Stop);
             if (justPressed(GLFW_KEY_F2, app.keyF2)) app.command(HUDCommand::SelectArmy);
             if (justPressed(GLFW_KEY_F3, app.keyF3)) app.command(HUDCommand::SelectWorkers);

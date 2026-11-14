@@ -94,3 +94,14 @@ interrupted waypoint. Patrol likewise resumes the interrupted leg.
 combat army selection, and complements building rally points and harvesting.
 The HUD highlights active Hold Position orders and shows a gold stripe on
 held unit cards.
+
+### Contextual training (data-driven producer)
+
+Select one friendly structure with a non-empty `trainable_units` list:
+**B**, **T**, and **C** become training slots 1, 2, and 3. The bottom-right
+HUD displays the actual catalog unit IDs. **Tab** pages through slots 4–12,
+three at a time; the bottom-right command is the page switch. **V** cancels
+the most recent queued production on the selected structure, refunding its
+reserved minerals and supply. Right-click sets its rally point.
+When no producer is selected, the older B build / T marine / C worker shortcuts
+continue to work.

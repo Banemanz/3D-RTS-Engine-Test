@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cctype>
 #include <string>
 
 // Pure screen-space layout, command availability, and hit-testing.
@@ -14,10 +15,11 @@ struct HUDRect {
     }
 };
 enum class HUDCommand { None, Minimap, Move, AttackMove, Stop, Build, Marine,
-                        Worker, SelectArmy, SelectWorkers, FocusBase, Patrol, Hold, CancelQueue, Cancel };
+                        Worker, SelectArmy, SelectWorkers, FocusBase, Patrol, Hold, CancelQueue, Cancel,
+                        TrainSlot0, TrainSlot1, TrainSlot2, TrainingPage };
 struct HUDButton {
     HUDCommand command=HUDCommand::None;
-    const char* title="";
+    std::string title;
     const char* hotkey="";
     HUDRect bounds{};
     bool enabled=false;
@@ -82,21 +84,26 @@ public:
         }
         const bool live=game.result==MatchResult::Playing;
         const bool supply=game.supplyUsed<game.supplyCap;
+        const bool producer=game.selectedProducerId()>=0 && game.trainingPageCount()>0;
+        const bool paged=producer && game.trainingPageCount()>1;
         const std::array<HUDCommand,12> types={
           HUDCommand::Move,HUDCommand::AttackMove,HUDCommand::Stop,
-          HUDCommand::Build,HUDCommand::Marine,HUDCommand::Worker,
+          producer?HUDCommand::TrainSlot0:HUDCommand::Build,
+          producer?HUDCommand::TrainSlot1:HUDCommand::Marine,
+          producer?HUDCommand::TrainSlot2:HUDCommand::Worker,
           HUDCommand::SelectArmy,HUDCommand::FocusBase,
           selectedBuilding && !combat?HUDCommand::CancelQueue:HUDCommand::Patrol,
-          HUDCommand::Hold,HUDCommand::SelectWorkers,HUDCommand::Cancel
+          HUDCommand::Hold,HUDCommand::SelectWorkers,
+          paged?HUDCommand::TrainingPage:HUDCommand::Cancel
         };
         const std::array<const char*,12> labels={
           "MOVE","ATK MOVE","STOP","BUILD","MARINE","WORKER",
           "ALL ARMY","HOME BASE",selectedBuilding && !combat?"CANCEL Q":"PATROL",
-          "HOLD","WORKERS","CANCEL"
+          "HOLD","WORKERS",paged?"MORE":"CANCEL"
         };
         const std::array<const char*,12> keys={
           "M","A","X","B","T","C","F2","H",
-          selectedBuilding && !combat?"V":"P","G","F3","ESC"
+          selectedBuilding && !combat?"V":"P","G","F3",paged?"TAB":"ESC"
         };
         std::array<HUDButton,12> result{};
         const float gap=6;
@@ -112,9 +119,20 @@ public:
         result[0].enabled=live && combat;
         result[1].enabled=live && combat;
         result[2].enabled=live && combat;
-        result[3].enabled=live && worker;
-        result[4].enabled=live && barracks && supply;
-        result[5].enabled=live && base && supply;
+        if(producer) {
+            for(int i=0;i<3;++i) {
+                const std::string id=game.selectedTrainableId(i);
+                std::string title=id.empty()?"EMPTY":id.substr(0,10);
+                for(auto& c:title)c=char(std::toupper(static_cast<unsigned char>(c)));
+                result[static_cast<size_t>(3+i)].title=title;
+                result[static_cast<size_t>(3+i)].enabled=
+                    live && game.canQueueSelectedTrainingSlot(i);
+            }
+        }else{
+            result[3].enabled=live && worker;
+            result[4].enabled=live && barracks && supply;
+            result[5].enabled=live && base && supply;
+        }
         result[6].enabled=army;
         result[7].enabled=base;
         result[8].enabled=live && (combat ||
@@ -123,6 +141,8 @@ public:
         result[9].enabled=live && combat;
         result[10].enabled=live && workersAvailable;
         result[11].enabled=true;
+        if(paged)result[11].title="PAGE "+std::to_string(game.trainingPage()+1)+"/"+
+                                          std::to_string(game.trainingPageCount());
         return result;
     }
     HUDCommand hit(double x,double y,const RTSSkirmish& game)const {
