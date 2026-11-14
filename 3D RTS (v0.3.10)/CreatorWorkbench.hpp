@@ -1,6 +1,7 @@
 #pragma once
 #include "EditorSession.hpp"
 #include "RTSHUDLayout.hpp"
+#include "CreatorTriggerWidgets.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include <algorithm>
@@ -490,15 +491,7 @@ void inspector(App& app){
                 ed.beginSceneOverrideEdit(project);
         }else ImGui::TextWrapped("Select an object in the hierarchy or click it in the world viewport.");
     }else if(ed.panel==EditorSession::Panel::Triggers){
-        const std::size_t count=ed.triggerCount(project);
-        ImGui::Text("%zu map rules",count);
-        if(count){
-            ImGui::TextWrapped("%s",ed.triggerLabel(project,ed.selectedTrigger%count).c_str());
-            if(ImGui::Button("Edit ECA rule JSON"))ed.beginTriggerEdit(project);
-            ImGui::SeparatorText("Current rule");
-            const auto text=ed.triggerJSON(project,ed.selectedTrigger%count);
-            ImGui::TextWrapped("%s",text.c_str());
-        }
+        CreatorTriggerWidgets::draw(app);
     }
     if(ed.textEditing){
         ImGui::SeparatorText("Edit");
