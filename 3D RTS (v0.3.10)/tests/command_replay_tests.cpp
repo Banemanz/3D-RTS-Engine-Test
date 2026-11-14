@@ -70,6 +70,22 @@ int main(){
     bool invalidExport=false;
     try{(void)untracked.replayTape();}catch(const std::runtime_error&){invalidExport=true;}
     assert(invalidExport);
+    // Failed actions are still ordered simulation inputs, but their result
+    // can be shown to the creator without putting UI events in game state.
+    RTSSkirmish denied;
+    denied.loadProject(project);
+    for(auto& u:denied.units)
+        u.isSelected=u.ownerId==0 && u.catalogId=="command_center";
+    assert(denied.queuePlayerCommand(RTSCommandKind::TrainCatalog,{},-1,false,
+                                     "nonexistent_unit"));
+    denied.update(1.f/60.f);
+    const auto outcome=denied.takeCommandOutcomes();
+    assert(outcome.size()==1 && !outcome[0].accepted &&
+           outcome[0].kind==RTSCommandKind::TrainCatalog &&
+           outcome[0].tick==1);
+    assert(denied.takeCommandOutcomes().empty());
+    assert(verifyRTSReplay(denied.replayTape()));
+
     const RTSReplayTape encoded=RTSReplayTape::fromJson(tape.toJson());
     assert(verifyRTSReplay(encoded));
     const std::string path="command_replay_regression.rtsreplay.json";

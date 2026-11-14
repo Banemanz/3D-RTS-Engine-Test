@@ -1133,7 +1133,13 @@ int main(int argc, char** argv) {
                 accumulator += deltaTime;
                 int steps = 0;
                 while (accumulator >= fixedStep && steps < 8) {
-                    try{app.game.update(fixedStep);}
+                    try{
+                        app.game.update(fixedStep);
+                        for(const auto& order:app.game.takeCommandOutcomes())
+                            if(!order.accepted)
+                                app.inform(std::string("COMMAND REJECTED: ")+
+                                           rtsCommandName(order.kind));
+                    }
                     catch(const std::exception& e) {
                         // Do not tear down the editor on malformed game scripting.
                         reportInputFailure(window,"simulation",e.what());

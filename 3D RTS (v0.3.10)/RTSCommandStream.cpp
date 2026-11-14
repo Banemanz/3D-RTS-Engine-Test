@@ -53,6 +53,10 @@ bool commandLess(const RTSCommand& a,const RTSCommand& b){
     return a.sequence<b.sequence;
 }
 }
+const char* rtsCommandName(RTSCommandKind kind){
+    const auto index=static_cast<std::size_t>(kind);
+    return index<names.size()?names[index]:"Unknown";
+}
 void validateRTSCommand(const RTSCommand& c){
     if(c.tick==0 || c.tick>RTSCommandStream::MaxCommandTick)
         throw std::invalid_argument("Command tick outside supported replay duration");

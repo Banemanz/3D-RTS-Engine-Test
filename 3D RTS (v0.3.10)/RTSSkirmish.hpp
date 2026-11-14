@@ -26,6 +26,11 @@ enum class MatchResult { Playing, Victory, Defeat };
 // vector reallocation. GPU objects and mouse input deliberately live elsewhere.
 class RTSSkirmish {
 public:
+    struct CommandOutcome {
+        std::uint64_t tick=0,sequence=0;
+        RTSCommandKind kind=RTSCommandKind::Move;
+        bool accepted=false;
+    };
     RTSSkirmish();
     RTSSkirmish(const RTSSkirmish&) = delete;
     RTSSkirmish& operator=(const RTSSkirmish&) = delete;
@@ -46,6 +51,8 @@ public:
     std::string stateDigest()const;
     RTSReplayTape replayTape()const;
     bool replayRecordingValid()const{return replayValid_;}
+    // Small UI-observable result channel; never part of game-state hashing.
+    std::vector<CommandOutcome> takeCommandOutcomes();
     // Playtest diagnostics are ephemeral, never saved to authored map data.
     void setTriggerTracing(bool enabled){triggers_.enableTracing(enabled);}
     const TriggerEngine& triggerDiagnostics()const{return triggers_;}
@@ -114,6 +121,7 @@ private:
     std::uint64_t tick_=0;
     bool replayValid_=true;
     bool applyingCommand_=false;
+    std::deque<CommandOutcome> commandOutcomes_;
     std::vector<RTSCommand> recordedCommands_;
     std::vector<RTSReplayCheckpoint> checkpoints_;
     bool applyCommand(const RTSCommand& command);

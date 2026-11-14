@@ -43,6 +43,7 @@ private:
     std::uint64_t nextSequence_=1;
     std::size_t pending_=0;
 };
+const char* rtsCommandName(RTSCommandKind kind);
 void validateRTSCommand(const RTSCommand& command);
 picojson::value commandToJson(const RTSCommand& command);
 RTSCommand commandFromJson(const picojson::value& root);

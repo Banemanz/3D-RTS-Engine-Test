@@ -99,6 +99,7 @@ const Unit* RTSSkirmish::find(int id)const {
 }
 void RTSSkirmish::reset() {
     commandStream_.clear();
+    commandOutcomes_.clear();
     recordedCommands_.clear();
     checkpoints_.clear();
     tick_=0;
@@ -692,7 +693,15 @@ void RTSSkirmish::update(float dt) {
     if(tick_>RTSReplayTape::MaxTicks)replayValid_=false;
     const auto pending=commandStream_.take(tick_);
     for(const auto& command:pending){
-        (void)applyCommand(command);
+        bool accepted=false;
+        try{accepted=applyCommand(command);}
+        catch(...){
+            commandOutcomes_.push_back({tick_,command.sequence,command.kind,false});
+            if(commandOutcomes_.size()>128)commandOutcomes_.pop_front();
+            throw;
+        }
+        commandOutcomes_.push_back({tick_,command.sequence,command.kind,accepted});
+        if(commandOutcomes_.size()>128)commandOutcomes_.pop_front();
         if(replayValid_){
             if(recordedCommands_.size()<32768)recordedCommands_.push_back(command);
             else replayValid_=false; // bounded tape, never silently truncated
@@ -1048,4 +1057,10 @@ RTSReplayTape RTSSkirmish::replayTape()const{
         tape.checkpoints.push_back({tick_,stateDigest()});
     (void)tape.toJson();
     return tape;
+}
+
+std::vector<RTSSkirmish::CommandOutcome> RTSSkirmish::takeCommandOutcomes(){
+    std::vector<CommandOutcome> result(commandOutcomes_.begin(),commandOutcomes_.end());
+    commandOutcomes_.clear();
+    return result;
 }
