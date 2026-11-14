@@ -505,3 +505,21 @@ This passes a particular cross-platform scripted scenario; it does NOT prove uni
 
 ### CI and ongoing work
 Latest verified functional replay before this documentation was `899acd14`: Windows/Linux Debug and Release test/packaging plus cross-platform state fingerprints passed. A newer async command-outcome regression is on the branch; **check CI for the current final commit**, inspect errors and fix any failures. GitHub Actions executable ZIPs belong to `Download Windows EXE and Linux RTS Builds`, not the screenshot test workflow. Maintain `archive/new chat/RTS_HANDOFF.md` for any further large passes.
+
+
+## November 14 continuation — AI now uses the recorded simulation command stream
+
+Keep **Draft PR #1** on `feat/rts-vertical-slice`, do not merge or open a parallel PR. Previous head was `75980662`, Build 110 (green Windows and Linux, cross-platform replay fingerprints). This continuation implements source-labeled autonomous opponent **Attack** commands, deterministic target planning, a new AI sandbox and backward-compatible replay format update.
+
+### Core implementation
+- `RTSCommandStream.hpp/.cpp`: accepts source 0 player and source 1 internal AI, with source 1 restricted to Attack commands that include unit IDs and a target. Replay tape now defaults to **version 2** and records AI inputs, validates source IDs and ordered commands. Existing v1 tapes remain loadable and reject injected source1 actions.
+- `RTSSkirmish.cpp/.hpp`: replaces direct `u.attackTarget(base)` in live AI with scheduler-issued tick+1 Attack commands, without affecting human unit selection. The restricted source1 dispatcher validates unit team and target ownership. The verifier enables **recorded-AI mode** for version2 (no autonomous duplicate generation), or **legacy-direct AI** for version1 (historical compatibility). Timed enemy spawning remains deterministic world logic. Command outcomes now contain source ID; human HUD ignores AI-only failures.
+- `RTSAIPlanner.hpp/.cpp`: pure headless read-only deterministic planner. Idle enemy combat units sorted by ID evaluate player threats within authored guard radius of enemy base; closest candidate to each attacker wins (lowest target ID on tie), otherwise AI targets the player's base. The planner never mutates units or reads GPU input. `enemy_ai_enabled` and `enemy_ai_guard_radius` project metadata control behavior; validation enforces boolean and radius [0,80].
+- `projects/ai_defense_showcase.rtsproject.json`: original sandbox map with two advanced Frontier scouts near enemy territory, `enemy_ai_guard_radius=16` and long wave interval, included in both installed ZIPs.
+- `tests/ai_planner_tests.cpp` plus project validation and augmented replay regression. CTest on Windows/Linux Debug/Release, mandatory replay source-data/checkpoint parity between MSVC and GCC. `RTS_FEATURE_AI_COMMAND_PLANNER=1` required by Windows/Linux native bundle verifier. No external library or copied RTS source.
+
+### Important honest scope and next work
+This is a first **combat** AI brain, not a full RTS strategic AI. It does not autonomously harvest, construct, train, scout or manage supply; those still need designed policies and permissions. Source IDs are internally trusted; never expose raw `queueCommand(source=1)` to untrusted network peers without an explicit authority layer. Full input/session replay exists but there is no interactive replay timeline/seek, snapshot restore, rollback or real multiplayer. Legacy direct C++ order APIs still exist for integrations and mark live capture incomplete.
+
+### CI reminder
+The previous source-only test migration `8a1cab55` passed Windows/Linux Debug and replay parity. **Check latest branch head CI**, inspect any failures and fix before claiming Build/Release green. GitHub Actions release artifacts are in `Download Windows EXE and Linux RTS Builds`, screenshots and parity fingerprints are in `Tests + screenshots (NOT executables)`. Keep this new-chat handoff up-to-date.

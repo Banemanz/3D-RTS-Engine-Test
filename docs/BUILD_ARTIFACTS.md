@@ -92,3 +92,8 @@ Windows/Linux installed executables both must self-report `RTS_FEATURE_DYNAMIC_N
 ## Portable replay verification in the ZIP
 
 Windows and Linux packages include `RTSProjectTool[.exe]` and `docs/REPLAY_COMMANDS.md`. Both native `RTSCameraTerrain --features` outputs are verified to include `RTS_FEATURE_COMMAND_STREAM=1` and `RTS_FEATURE_REPLAY_VERIFY=1`; the bundle verifier checks the exact installed executable rather than a loose manifest. The command project schema and replay verification tool are the same on Windows/Linux. Each release also runs the command/replay CTest suite with assertions enabled.
+
+
+## AI planner and replay v2 in packaged builds
+
+Both platform bundles include `projects/ai_defense_showcase.rtsproject.json` and the same `RTSAIPlanner` source compiled into the simulation library. The executable's `--features` output must advertise `RTS_FEATURE_AI_COMMAND_PLANNER=1`, checked by the bundle verifier on both Windows and Linux. CTest validates the sample map and the headless planner, and the replay-parity CI job still compares actual Windows/MSVC and Linux/GCC simulation digests. Original executable ZIPs remain in the Release workflow, not the screenshot artifacts.

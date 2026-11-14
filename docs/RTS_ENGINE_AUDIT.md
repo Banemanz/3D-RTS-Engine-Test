@@ -71,3 +71,10 @@ The previous roadmap item for *typed, tick-indexed command streams* is now a fun
 `RTSReplayTape` records a versioned map snapshot, successful **and failed** scheduled commands and **per 60 simulation ticks** canonical state digests. `verifyRTSReplay` and `RTSProjectTool --verify-replay` reconstruct and check the run. Windows/Linux CI compares every checkpoint of a scripted scenario via the dedicated `replay-parity` job. Recording is bounded (24 hours, 32 MiB, 32,768 commands), while live gameplay input continues beyond those limits. The new `REPLAY_COMMANDS.md` is included in both packaged executables. No new runtime GUI dependency or third-party networking library was introduced.
 
 Next work on the command system: AI-originated and network-originated authorized commands, richer failure reasons, snapshot/restore and timeline scrubbing. Replay tools do **not** yet constitute live multiplayer or cryptographic anti-cheat.
+
+
+## First recorded-AI control boundary
+
+The first AI command-routing foundation is complete. `RTSAIPlanner` selects defensive threats only near the enemy base using deterministic distance/unit-ID tie breaking; otherwise enemies attack the player's base. Its output is ordinary source-1 `RTSCommand` objects, not immediate mutations. AI attacks are validated for source/owner/kind/target on entry. The engine's earlier automatic reinforcement spawner is still fixed-simulation logic, and the AI does not yet issue economy, production, or building commands.
+
+`RTSReplayTape` upgraded to format 2 to record human **and AI** orders; the verifier disables AI planning during v2 playback. Format-1 inputs remain loadable using the old direct-AI path. This completes the earlier roadmap entry *route opponent combat AI through command stream*, but not AI-authoring/strategic economy tasks, replay scrubbing or networking. Suggested next slice: design reusable faction-agnostic strategy tasks (economy, production, scouting, defense), then execute via the source-safe command scheduler, with scenarios that demonstrate measurable outcomes.

@@ -191,3 +191,10 @@ Worker jobs and route progression are iterated in unit-ID order to eliminate has
 Completed: one tick-indexed, versioned game-command schema covering player move, attack, patrol, rally, gather, production, hold/stop and building orders. The creator no longer dispatches these directly from mouse/HUD callbacks. Replay JSON contains the self-contained project, input timeline and periodic state fingerprints; it can be verified headlessly. CI compares a scripted scenario's Windows/Linux digests and checks malformed/reordered/tampered replays. Failed orders receive asynchronous notifications.
 
 Still missing: replay timeline viewer, arbitrary snapshot/restore, deterministic multiplayer transport, scripting debugger, gameplay AI commanding through the same public queue, richer actor/ability/mover definitions and the completed engine-native editor.
+
+
+## AI support: baseline gameplay
+
+Implemented: source-1 enemy attack orders go through the shared simulation command queue; enemy combat target selection is read-only, ordered by unit IDs and deterministic for a given world/tick. The minimal policy checks nearby defender threats around the opponent's base and otherwise attacks the player's command center. Enable/disable and defense radius are authorable metadata. There is an original combat AI demonstration map and unit/project validation tests.
+
+Missing: AI harvesting, resource/supply optimization, construction strategies, tech/build-order trees, tactical squads, opponent fog-of-war decision constraints, designer AI behavior editor and multiplayer trust model. The policy's default behavior is intentionally simple rather than claiming StarCraft-like strategic intelligence.

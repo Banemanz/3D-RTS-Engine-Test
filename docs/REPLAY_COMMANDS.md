@@ -36,3 +36,12 @@ Digests use explicit FNV-1a byte-order handling with quantized floating values (
 - Real-time mouse/HUD input now schedules commands at the *next fixed tick*. Commands can fail gameplay checks at execution time (insufficient resources or blocked targets), rather than always resolving synchronously inside the input callback. A future UI pass should show detailed queued/executed/rejected command feedback.
 - The replay verifier runs in the headless project tool. Visual interactive playback and timeline scrubbing remain future creator features. Standard unit selection and camera movement remain presentation state, not simulation commands.
 - The next engineering work includes authoritative AI commands through the same queue, saved replays with incremental progress/debugging, replay state snapshots, movement classes, and deeper data-driven ability/actor authoring.
+
+
+## Replay schema v2 — recorded AI input and v1 playback
+
+Replay version **2** includes `source=1` commands for opponent Attack decisions, in addition to the existing `source=0` player order stream. AI command authorization currently limits source 1 to `Attack` with an explicit target ID and at least one sorted unit ID; the world checks the attacking units belong to team 1 and the target belongs to the player. AI orders are planned after a fixed tick, scheduled for the next tick, and recorded when actually consumed (including unsuccessful orders).
+
+On verification, v2 playback **disables automatic AI planning** to avoid generating duplicate orders and consumes exactly the AI inputs recorded in the tape. Existing v1 JSON replay files remain supported: they contain source-0 commands only, and the verifier reinstates the old direct-AI base-target behavior, preserving their historical simulation. The replay-version field is validated and v1 rejects injected AI inputs.
+
+The AI policy is a pure headless source file, not a replay input parser, and has validated map metadata `enemy_ai_enabled` and `enemy_ai_guard_radius`. New sample: `projects/ai_defense_showcase.rtsproject.json`. The version upgrade does not add interactive replay playback or real multiplayer transport; pending commands are still bounded. See `RTS_ENGINE_AUDIT.md` for larger AI gaps.

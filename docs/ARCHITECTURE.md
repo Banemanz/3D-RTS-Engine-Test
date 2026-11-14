@@ -142,3 +142,10 @@ Technical research and missing systems are tracked in [RTS_ENGINE_AUDIT.md](RTS_
 The self-contained `RTSReplayTape` stores the starting `RTSProject`, processed input commands and periodic state digests. `verifyRTSReplay` reloads the authored project headlessly, schedules the stored inputs at their recorded ticks and compares canonical 64-bit FNV-1a digests of quantized simulation state (units, resources, production, pathing, visibility and triggers). `RTSSkirmish::takeCommandOutcomes` exposes bounded accepted/rejected results for GUI feedback without perturbing replay state.
 
 CI builds `RTSCommandReplayTests` and `replay_cli`, and compares matching checkpoint files **across Windows and Linux** with a dedicated `replay-parity` job. It detects divergence for the tested scenario; it is not a proof that all maps/platform math behave bit-identically. [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).
+
+
+## Map-authored AI combat behavior
+
+The project `metadata` object supports two new validated keys: `"enemy_ai_enabled": false` disables automated enemy Attack orders without removing enemy units or simulation-driven spawns; `"enemy_ai_guard_radius": 16` makes enemy idle units prioritize attacking player units within 16 world units of their base before targeting the player's command center. The guard radius must be a number from 0 to 80; a zero radius disables local defense prioritization, **not** base aggression. Omitted fields use `true` and `14`.
+
+For an example, open `projects/ai_defense_showcase.rtsproject.json` (an original scenario with two frontier scouts advanced near enemy territory). The map's settings can also be edited through JSON or `RTSProjectTool --set-root <map> metadata <json-object>` and are validated at load/save time. AI uses the same source-labelled fixed-step execution as player commands. This is presently a minimal combat policy, not a full RTS build-order/economy editor.

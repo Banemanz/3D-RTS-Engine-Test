@@ -145,3 +145,10 @@ New `RTSDynamicNavigationTests` issues movement orders before adding blockers: v
 `RTSCommandReplayTests` checks fixed-tick scheduling, immutable selection ID snapshots, command ordering and duplicate rejection, replay JSON and disk roundtrip, rejecting tampered checksums/commands, out-of-horizon behavior, unrecorded direct gameplay changes, and rejected-order notifications. A separate `replay_cli` CTest invokes the actual `RTSProjectTool --verify-replay` against its generated disk fixture. Both Windows and Linux run the tests with Release assertions enabled.
 
 Each Debug CI job uploads a `command_replay_fingerprint.txt` containing **every checkpoint** from the same scenario. The mandatory `replay-parity` job downloads both OS artifacts and requires exact line-by-line equality. This tests real MSVC/GCC divergence (for one deterministic fixture) beyond independent green suites; it is not a universal bit-for-bit reproducibility proof. Native binary feature parity includes `RTS_FEATURE_COMMAND_STREAM` and `RTS_FEATURE_REPLAY_VERIFY`. See `REPLAY_COMMANDS.md`.
+
+
+## New AI and replay regression gates
+
+`RTSAIPlannerTests` verifies sorted stable-id planning independent of vector insertion order, defensive threat prioritization, strategic base fallback, enabled/disabled policy, guard-radius handling and a full headless replay with AI off. `RTSProjectTests` validates round-trip metadata and rejects wrong-type/out-of-range AI settings. `RTSCommandReplayTests` now requires that live AI commands are actually recorded, rejects command-tampering/unauthorized AI actions and verifies legacy format-1 replay compatibility. A new `ai_defense_showcase` CTest validates the example map.
+
+Windows/Linux Debug and Release all compile the same planner and preserve assertions. Windows/Linux replay fingerprints are still compared in a dedicated job; the installed executable advertises `RTS_FEATURE_AI_COMMAND_PLANNER=1` on both platforms. Interactive Windows GPU behavior remains a separate manual acceptance check.

@@ -415,3 +415,12 @@ The unit display name in a Unit catalog's inherited/resolved `name` field now co
 In Play (F9), issue gameplay orders as normal. They are queued for the next fixed simulation tick. Press **Ctrl+Shift+L** or choose **View → Export playtest replay** to write a `<project-path>.rtsreplay.json` containing the project snapshot, scheduled game commands and 60-tick digests. Open the file with a text editor or verify it headlessly using `RTSProjectTool --verify-replay yourfile.rtsreplay.json`. If terrain editing or external direct order calls occurred during this recording, export is rejected instead of producing a misleading log. Commands rejected for gameplay reasons still appear in the stream and generate a gameplay notification.
 
 This is verification and data portability, **not yet** a cinematic replay viewer or integrated scrub timeline. See [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).
+
+
+## Deterministic combat AI proposal layer
+
+`RTSAIPlanner.hpp/.cpp` is a read-only pure planning layer: given world units, the enemy's base, a strategic target and a simulation tick, it produces sorted, validated **source=1 Attack** commands without touching Unit state. The world enqueues them for the next fixed tick. `RTSCommandStream` permits AI source 1 only for bounded unit-target attack orders, while player actions use source 0. The command dispatcher validates AI ownership and uses stable unit IDs without modifying the human player's selection.
+
+The default combat policy chooses nearby player combat units defending within 14 units of the enemy base, deterministically resolving distance ties by unit ID; otherwise idle enemy units attack the player's base. Content authors control `enemy_ai_guard_radius` in `metadata` (0–80; 0 means base-only attack) and `enemy_ai_enabled` (bool). These fields are validated by `RTSProject::validate`. Enemy reinforcements still spawn as simulation logic; their subsequent combat decisions use the queue. Source-1 commands are recorded in **replay v2**. Replays exported as v1 remain verifiable by switching to the historical direct-AI behavior on playback, while v2 playback disables autonomous planning and consumes the recorded AI input instead.
+
+This is deterministic rule-based opponent combat, **not** a complete economic/strategic AI, and there is no network/security trust boundary for external source IDs yet. See [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md) and [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).

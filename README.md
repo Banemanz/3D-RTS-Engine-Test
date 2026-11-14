@@ -244,3 +244,10 @@ Production-spawned units, AI reinforcements and newly built structures now use t
 User-issued RTS commands now enter a shared `RTSCommandStream`, keyed by a simulation tick and captured unit IDs, instead of directly mutating gameplay from mouse/HUD callbacks. During Play mode use **Ctrl+Shift+L** or **View → Export playtest replay** to save a self-contained `.rtsreplay.json` file next to the loaded project. Run `RTSProjectTool --verify-replay path.rtsreplay.json` on Windows or Linux to rerun and verify all saved state checkpoints. The simulation also reports rejected queued orders asynchronously to the gameplay notification layer.
 
 A new CI gate compares replay state fingerprints **between Windows and Linux**, not just within each OS. This is an early deterministic foundation; it does not yet provide a networked or rollback multiplayer session or visual replay scrubbing. See [Replay and command guide](docs/REPLAY_COMMANDS.md).
+
+
+## AI combat orders and replay compatibility (November 14 continuation)
+
+The opposing skirmish AI now enters **Attack** orders through the same source-labeled fixed-tick command stream used by human orders, instead of modifying units directly. An original, read-only `RTSAIPlanner` selects targets deterministically, with local defense around the opponent's base and fallback aggression toward the player's command center. Its choices are saved in replay **format v2** and can be verified headlessly on Windows/Linux. Existing replay format v1 remains loadable using the historical AI behavior.
+
+The creator's map metadata supports `enemy_ai_enabled` (boolean, default true) and `enemy_ai_guard_radius` (number 0–80, default 14 world units; 0 disables local defense but not strategic attacks). Load the included [AI Defense Combat Lab](projects/ai_defense_showcase.rtsproject.json) to test these choices. This first AI policy does not implement economy/build orders, squads, terrain-awareness beyond local targeting, or sophisticated strategic decision trees.

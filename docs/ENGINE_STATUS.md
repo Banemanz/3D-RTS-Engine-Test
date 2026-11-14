@@ -256,3 +256,10 @@ Runtime production no longer injects fixed `Ranger`, `Worker`, `Barracks` or `Hy
 All core player mouse/HUD orders now flow through a bounded, tick-indexed command stream with captured unit IDs and stable order. The headless replay tape contains a snapshot of the authored map plus the commands and periodic canonical digests. A dedicated verifier can replay matches from disk without OpenGL, with explicit errors for invalid command data, inconsistent state or unsupported replay versions. A result channel reports rejected gameplay commands asynchronously to the editor/HUD adapter. Edited terrain or legacy immediate C++ order mutations intentionally invalidate export.
 
 Windows and Linux compare each other's checkpoint fingerprints for the same replay scenario in CI. This is a substantive improvement over testing each OS in isolation, but deterministic network transport, snapshots/rollback, full actor/ability systems and native dockable editor widgets are still incomplete.
+
+
+## AI combat policy milestone
+
+The opponent now plans attacks through the fixed-tick command scheduler. The planner computes targets from a read-only world snapshot and returns source-1 attack commands sorted by unit ID. A basic local-defense behavior gives priority to player threats near the enemy base; absent such threats, enemies advance on the player's base. The guard distance and a combat-AI enable toggle are project metadata, validated with the authored map. AI-spawned reinforcements still come from the existing timed scenario system.
+
+Replay JSON now defaults to v2 to include AI source commands, while v1 is recognized and retains historical direct-AI playback. This closes a replay-input gap but does **not** implement modder-authored AI graphs, broader worker economy, multibase strategy, enemy fog-of-war, squad tactics, networking or simulation-state snapshots.
