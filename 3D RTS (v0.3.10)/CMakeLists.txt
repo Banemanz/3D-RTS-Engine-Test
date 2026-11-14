@@ -86,6 +86,9 @@ if(BUILD_TESTING)
     target_link_libraries(RTSProjectTests PRIVATE RTSAuthoring)
     add_test(NAME project COMMAND RTSProjectTests)
 
+    add_executable(RTSReferenceAuthoringTests tests/reference_authoring_tests.cpp)
+    target_link_libraries(RTSReferenceAuthoringTests PRIVATE RTSAuthoring)
+    add_test(NAME reference_authoring COMMAND RTSReferenceAuthoringTests)
     add_executable(RTSEditorTests tests/editor_tests.cpp)
     target_link_libraries(RTSEditorTests PRIVATE RTSAuthoring)
     add_test(NAME editor COMMAND RTSEditorTests)
@@ -122,7 +125,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSNativeMenuTests RTSNavigationTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests)
+    foreach(test_target IN ITEMS RTSNativeMenuTests RTSNavigationTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()

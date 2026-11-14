@@ -89,7 +89,8 @@ bool draw(App& app,const std::string& parentId,const std::string& field,
         }
         candidates.push_back(candidate.id);
     }
-    if(ImGui::BeginCombo("Add reference","Choose "+category=="Unit"?"Unit":"Effect")){
+    const std::string prompt="Choose "+category;
+    if(ImGui::BeginCombo("Add reference",prompt.c_str())){
         std::string selected;
         for(const auto& id:candidates)
             if(ImGui::Selectable(id.c_str()))selected=id;
