@@ -69,7 +69,7 @@ int main(){
     assert(editor.addTriggerTreeNode(p,{},"conditions","PlayerMineralsAtLeast"));
     const auto rootConditions=TriggerTree::listSnapshot(editor.triggerObject(p,0),{},"conditions");
     assert(rootConditions.size()==1);
-    assert(!editor.removeTriggerTreeNode(p,{{"actions",1},{"then",0}}));
+    assert(!editor.removeTriggerTreeNode(p,{{"actions",1},{"then",99}}));
     assert(!editor.addTriggerTreeNode(p,{{"actions",0}},"then","ShowMessage"));
     assert(!editor.addTriggerTreeNode(p,branch,"conditions","ApplyEffect"));
     assert(!editor.addTriggerTreeNode(p,branch,"then","ApplyEffect"));
@@ -81,7 +81,8 @@ int main(){
     p.validate();
     assert(editor.renameTriggerVariable(p,"score","mission_score"));
     const auto rule=editor.triggerObject(p,0);
-    const auto& child=TriggerTree::listSnapshot(rule,loop,"actions").back().get<picojson::object>();
+    const auto body=TriggerTree::listSnapshot(rule,loop,"actions");
+    const auto& child=body.back().get<picojson::object>();
     const auto& expr=child.at("value_expr").get<picojson::object>();
     const auto& lhs=expr.at("left").get<picojson::object>();
     assert(lhs.at("name").get<std::string>()=="mission_score");
