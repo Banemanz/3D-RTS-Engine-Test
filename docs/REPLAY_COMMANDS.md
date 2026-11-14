@@ -50,3 +50,8 @@ The AI policy is a pure headless source file, not a replay input parser, and has
 ## Cross-platform AI planning parity fixture
 
 The replay CI compares two independent scripted test scenarios: the normal combat/production command replay, and a full 180-tick **AI Defense Combat Lab** simulation from `projects/ai_defense_showcase.rtsproject.json`. This second map deliberately places two player scouts near the enemy home base; the test checks that recorded AI Attack decisions target the nearby scouts. The headless runner exports and verifies the tape, and the Windows/Linux parity job compares its digest checkpoints byte-for-byte. This is significantly stronger than comparing a noninteractive or base-only match, but still not a guarantee of universal multiplayer determinism.
+
+
+### Pre-movement AI scheduling guarantee
+
+AI command proposals are computed **after the current tick's pending commands are applied, but before any `Unit::update` tactical acquisition or movement runs**. This makes the first defensive command against nearby attackers observable on the replay input stream, rather than letting the automatic combat state machine consume the unit's idle state first. Orders still execute on the **next** fixed tick and are sorted by source/sequence, so selection and UI state cannot affect them. Legacy v1 replay AI runs its original post-unit-update direct policy unchanged.

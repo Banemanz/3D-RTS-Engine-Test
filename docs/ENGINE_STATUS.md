@@ -268,3 +268,8 @@ Replay JSON now defaults to v2 to include AI source commands, while v1 is recogn
 ## Automated cross-platform defense scenario
 
 The new AI planner isn't just unit-tested in isolation: `ai_defense_behavior` runs an original authored match for 180 fixed ticks, asserts that idle enemy fighters issue source-1 attack orders against nearby player scouts, and produces a replay that verifies without rendering. CI compares the resulting fingerprints directly between MSVC/Windows and GCC/Linux, and Linux captures a screenshot of the actual AI skirmish under Mesa/Xvfb. This does **not** establish networking or comprehensive strategic AI parity.
+
+
+### AI first-tick scheduling correction
+
+The AI combat planner now runs before movement/tactical auto-acquisition each simulation tick, after processing already queued inputs. The order matters: adjacent player units can cause an enemy to leave IDLE during its ordinary unit update, so planning afterward would fail to record the explicit defense order. The original v1 direct-AI fallback remains at the prior position in the loop. The authored AI Defense sandbox's headless test now asserts this ordering and replay reconstruction.

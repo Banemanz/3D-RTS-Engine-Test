@@ -530,3 +530,10 @@ The previous source-only test migration `8a1cab55` passed Windows/Linux Debug an
 A second mandatory cross-OS simulation fixture now exercises the **real AI guard-radius path** rather than only the default long-range base objective. `tests/ai_planner_tests.cpp` accepts the original `projects/ai_defense_showcase.rtsproject.json`, records and validates a 180-tick match, checks that the first AI attack commands select nearby Frontier scouts, and writes `ai_defense_fingerprint.txt`. `.github/workflows/ci.yml` uploads this from **both** Linux and Windows and the `replay-parity` job requires exact digest agreement for both AI-defense and prior standard replay scenarios. Linux Mesa/Xvfb additionally captures real in-game combat to the `rts-ai-defense-screenshot` artifact.
 
 Review CI **on the latest PR head**, not earlier successful commits. Keep the same Draft PR #1 unmerged. Keep Windows/Linux ZIP artifacts separate from screenshot artifacts. No external RTS engine source or art was copied.
+
+
+### Corrected phase order after defensive-scene regression
+
+The new `ai_defense_behavior` CTest exposed that nearby player scouts can trigger `Unit::update` automatic tactical acquisition *before* a planner called at the end of the tick sees an idle enemy. The early pass compiled, but failed `assert(choseDefense)` on the real sample. The fix in `e7842596` splits read-only AI command planning from the existing reinforcement system and runs `planAIOrders()` **after consuming commands, before moving/updating units**. A planned order executes next tick and appears in replay v2; legacy v1 AI still runs its historical direct post-update code. This is meaningful functional/regression work, not a test being relaxed.
+
+Check final commit CI and both executable ZIP artifacts. Retain same Draft PR #1 and do not merge. If the local-defense fingerprint differs between MSVC and GCC, investigate numerical divergence rather than dropping the new parity gate.

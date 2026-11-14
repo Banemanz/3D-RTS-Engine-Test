@@ -159,3 +159,8 @@ Windows/Linux Debug and Release all compile the same planner and preserve assert
 The `ai_defense_behavior` CTest loads the original `projects/ai_defense_showcase.rtsproject.json`, confirms that the first recorded AI orders target the advanced Frontier scouts rather than the remote player's base, runs 180 fixed simulation steps, verifies the full self-contained replay and writes `ai_defense_fingerprint.txt`. Each Windows/MSVC and Linux/GCC CI job uploads that fingerprint beside the existing standard replay fixture. The `replay-parity` job now **diffs both scenarios**, so local defense and real gameplay/combat movement are cross-platform-tested, not merely base-target scripting.
 
 Linux Mesa/Xvfb additionally launches the actual game on the AI defense map for 180 smoke frames and uploads an image artifact named `rts-ai-defense-screenshot`. It is a real executable capture, not a constructed mock-up. Windows Release and Linux Release keep assertion-based headless tests, the original AI sample and self-reported executable feature parity. If the current HEAD fails any of these checks, review the corresponding CTest/renderer logs rather than claiming completion.
+
+
+### First-tick AI guard regression
+
+The `ai_defense_behavior` fixture intentionally begins with player scouts close enough to trigger normal tactical auto-targeting. Its first two fixed frames must nevertheless contain explicit source-1 recorded defensive attacks. This guards against moving the planner behind `Unit::update` and silently bypassing the command log. It also runs 180 ticks, verifies the complete replay, exports cross-platform fingerprints and feeds the mandatory parity comparator.
