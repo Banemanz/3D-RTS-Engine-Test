@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "InstanceOverrides.hpp"
 #include "RTSFormation.hpp"
+#include "RTSAIPlanner.hpp"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -686,25 +687,24 @@ void RTSSkirmish::updateEnemy(float dt) {
     // All new enemy decisions enter the very same tick-indexed command
     // queue as player input. Legacy tapes alone use direct historical AI.
     if(aiInputMode_==AIInputMode::ReplayRecorded)return;
-    std::vector<int> idleEnemies;
-    for(const auto& u:units)if(u.ownerId==1 && u.isAlive() && !u.isStructure &&
-                                u.state==UnitState::IDLE)idleEnemies.push_back(u.id);
-    std::sort(idleEnemies.begin(),idleEnemies.end());
-    for(int id:idleEnemies){
-        if(aiInputMode_==AIInputMode::LegacyDirect){
-            if(Unit* u=find(id))u->attackTarget(friendlyBaseId_);
-        }else{
-            RTSCommand command;
-            command.tick=tick_+1;
-            command.source=1;
-            command.kind=RTSCommandKind::Attack;
-            command.units={id};
-            command.targetId=friendlyBaseId_;
-            // A bounded queue may refuse additional orders. Those units
-            // simply retry next tick; never mutate the world as a fallback.
-            (void)queueCommand(std::move(command));
-        }
+    if(aiInputMode_==AIInputMode::LegacyDirect){
+        // Keep the exact historical policy for version-1 recordings.
+        for(auto& u:units)if(u.ownerId==1 && u.isAlive() &&
+            !u.isStructure && u.state==UnitState::IDLE)
+            u.attackTarget(friendlyBaseId_);
+        return;
     }
+    const auto aiEnabled=project_.metadata.find("enemy_ai_enabled");
+    if(aiEnabled!=project_.metadata.end() && aiEnabled->second.is<bool>() &&
+       !aiEnabled->second.get<bool>())return;
+    const RTSAICombatPolicy policy{true,float(std::clamp(
+        metaNumber(project_,"enemy_ai_guard_radius",14.0),0.0,80.0))};
+    const auto decisions=planRTSEnemyAttackOrders(
+        units,1,enemyBaseId_,friendlyBaseId_,tick_+1,policy);
+    for(const auto& decision:decisions)
+        // On queue saturation, a unit retries next tick. Never fall back
+        // to a direct, unrecorded mutation when capacity is exhausted.
+        (void)queueCommand(decision);
 }
 void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
