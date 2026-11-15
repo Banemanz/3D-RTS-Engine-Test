@@ -128,6 +128,7 @@ public:
         std::string abilityId;
         bool projectileVisible=false;
         Vec3 projectilePosition{};
+        Vec3 projectileTrailStart{};
         Vec3 projectileTint{};
         float projectileScale=0.f;
     };

@@ -1585,6 +1585,22 @@ int main(int argc, char** argv) {
                     glUniform1f(glGetUniformLocation(unitShader,"uOpacity"),1.f);
                     glBindVertexArray(unitVAO);
                     glDrawArrays(GL_TRIANGLES,0,33);
+                    const auto& tail=shot.projectileTrailStart;
+                    const auto& head=shot.projectilePosition;
+                    const float lineVerts[]={
+                        tail.x,tail.y,tail.z,head.x,head.y,head.z};
+                    glUseProgram(lineShader);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(lineShader,"uColor"),
+                                shot.projectileTint.x,shot.projectileTint.y,
+                                shot.projectileTint.z,.75f);
+                    glBindVertexArray(lineVAO);
+                    glBindBuffer(GL_ARRAY_BUFFER,lineVBO);
+                    glBufferSubData(GL_ARRAY_BUFFER,0,sizeof(lineVerts),lineVerts);
+                    glDrawArrays(GL_LINES,0,2);
                 }
             }
 

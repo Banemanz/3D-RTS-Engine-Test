@@ -1117,6 +1117,9 @@ std::vector<RTSSkirmish::AreaImpactWatch> RTSSkirmish::areaImpactWatch(
             tick_<a.launchTick+a.flightTicks;
         if(item.projectileVisible){
             item.projectilePosition=projectilePositionAt(a,tick_);
+            const auto earlier=tick_>3?tick_-3:0;
+            item.projectileTrailStart=projectilePositionAt(
+                a,std::max(a.launchTick,earlier));
             item.projectileTint=a.tint;
             item.projectileScale=a.visualScale;
         }
