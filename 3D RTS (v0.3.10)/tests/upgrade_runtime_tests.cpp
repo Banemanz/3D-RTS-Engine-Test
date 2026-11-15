@@ -1,5 +1,6 @@
 #include "RTSSkirmish.hpp"
 #include "RTSUpgrades.hpp"
+#include "RTSHUDLayout.hpp"
 #include <cassert>
 #if defined(NDEBUG)
 #error "Upgrade tests must keep assertions enabled in Release"
@@ -76,6 +77,10 @@ int main(){
     assert(game.selectedTrainableId(0)=="worker");
     assert(game.selectedResearchableId(1)=="frontier_tactics");
     assert(game.trainingPageCount()==1);
+    const RTSHUDLayout hud(1280,720);
+    auto buttons=hud.buttons(game);
+    assert(!buttons[3].enabled && buttons[3].title=="WORKER");
+    assert(buttons[4].enabled && buttons[4].title=="FRONTI 1/2");
     assert(game.upgradeLevel(0,"frontier_tactics")==0);
     assert(!game.canQueueSelectedTrainingSlot(0)); // no tech
     assert(game.canResearchSelectedSlot(1));
@@ -109,6 +114,8 @@ int main(){
     assert(game.upgradeLevel(0,"frontier_tactics")==1);
     assert(game.canQueueSelectedTrainingSlot(0));
     assert(game.canResearchSelectedSlot(1));
+    buttons=hud.buttons(game);
+    assert(buttons[3].enabled && buttons[4].title=="FRONTI 2/2");
     const Unit* ranger=findUnit(game,"ranger");
     const Unit* worker=findUnit(game,"worker");
     assert(ranger && std::fabs(ranger->upgradeDamageBonus-4.f)<.001f);
@@ -120,6 +127,8 @@ int main(){
     step(game,7);
     assert(game.upgradeLevel(0,"frontier_tactics")==2);
     assert(!game.canResearchSelectedSlot(1)); // max level reached
+    buttons=hud.buttons(game);
+    assert(!buttons[4].enabled && buttons[4].title=="MAX FRONTI");
     assert(findUnit(game,"ranger")->upgradeDamageBonus==8.f);
     assert(findUnit(game,"ranger")->upgradeArmorBonus==4.f);
     out<<"14 "<<game.stateDigest()<<"\n";

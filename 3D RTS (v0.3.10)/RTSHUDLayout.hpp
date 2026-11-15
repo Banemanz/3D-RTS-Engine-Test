@@ -131,8 +131,15 @@ public:
                 if(!upgrade.empty()){
                     const auto def=compileUpgrade(game.project().catalog,upgrade);
                     const int level=game.upgradeLevel(0,upgrade);
-                    title="TECH "+upgrade.substr(0,7);
-                    if(level>=def.maxLevel)title="MAX "+upgrade.substr(0,7);
+                    const auto fields=game.project().catalog.resolvedFields(upgrade);
+                    const auto name=fields.find("name");
+                    const std::string label=name!=fields.end() &&
+                        name->second.is<std::string>()?
+                        name->second.get<std::string>():upgrade;
+                    title=label.substr(0,6);
+                    for(auto& ch:title)
+                        ch=char(std::toupper(static_cast<unsigned char>(ch)));
+                    if(level>=def.maxLevel)title="MAX "+title;
                     else title+=" "+std::to_string(level+1)+"/"+
                                 std::to_string(def.maxLevel);
                 }else for(auto& c:title)

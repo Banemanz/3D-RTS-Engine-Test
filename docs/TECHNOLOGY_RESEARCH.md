@@ -32,7 +32,8 @@ Show/Use distinctions, and by OpenRA's public production/trait docs.
    can gate subsequent Upgrades, trainable Units or Abilities.
 5. Press F9, select that producer building and use its normal command
    cards. Training and research share 3 paginated slots per page.
-   Research shows TECH <id> nextLevel/maxLevel, or MAX when finished.
+   Research shows a six-character Upgrade label plus nextLevel/maxLevel
+   (or MAX once fully researched) to fit narrow command cards.
    F6 Trigger Monitor shows active research, remaining ticks, level
    and a progress bar. Cancel Queue refunds an in-progress job.
 

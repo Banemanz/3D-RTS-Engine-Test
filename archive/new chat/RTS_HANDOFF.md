@@ -1564,3 +1564,13 @@ Next major gaps: research-level field operation tables, tech Show vs
 Use, research AI, deeper F7 tree visualization, per-level cost scales,
 Actor animation/audio actions, resource + player tech overview, and
 native scene editor improvements. No proprietary content reused.
+
+### Research command-card visual QA
+
+The screenshot after fixing structure selection showed technology
+cards, but long IDs still clipped the research level text. The
+RTSHUDLayout now uses the first six characters of the Upgrade display
+name with a compact level suffix (e.g. FRONTI 1/3) or MAX prefix.
+upgrade_runtime checks all three button states (locked, enabled,
+max-level) headlessly across Windows/Linux; native F9 screenshot CI
+verifies the actual layout. Recheck final green head before reporting.
