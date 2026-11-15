@@ -197,6 +197,10 @@ if(BUILD_TESTING)
     add_executable(RTSCatalogNavigatorTests tests/catalog_navigator_tests.cpp)
     target_link_libraries(RTSCatalogNavigatorTests PRIVATE RTSAuthoring)
     add_test(NAME catalog_navigator COMMAND RTSCatalogNavigatorTests)
+    add_executable(RTSTechGraphTests tests/tech_graph_tests.cpp)
+    target_link_libraries(RTSTechGraphTests PRIVATE RTSAuthoring)
+    add_test(NAME tech_graph COMMAND RTSTechGraphTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/technology_forge_showcase.rtsproject.json")
     add_executable(RTSWeaponProjectileRuntimeTests tests/weapon_projectile_runtime_tests.cpp)
     target_link_libraries(RTSWeaponProjectileRuntimeTests PRIVATE RTSSimulation)
     add_test(NAME weapon_projectile_runtime COMMAND RTSWeaponProjectileRuntimeTests)
@@ -264,7 +268,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSAIPlannerTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
+    foreach(test_target IN ITEMS RTSAIPlannerTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
@@ -275,6 +279,10 @@ endif()
 
 add_executable(RTSProjectTool "../tools/rts_project_tool.cpp")
 target_link_libraries(RTSProjectTool PRIVATE RTSSimulation)
+if(BUILD_TESTING)
+    add_test(NAME tech_graph_cli COMMAND RTSProjectTool --tech-graph
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/technology_forge_showcase.rtsproject.json")
+endif()
 
 if(RTS_BUILD_DEMO)
     find_package(glfw3 QUIET)

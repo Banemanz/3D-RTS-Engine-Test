@@ -1,6 +1,7 @@
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
 #include "RTSCommandStream.hpp"
+#include "RTSTechGraph.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -21,7 +22,8 @@ static void usage() {
       << "RTSProjectTool --remove path object-id\n"
       << "RTSProjectTool --place path kind catalog-id x z owner\n"
       << "RTSProjectTool --placements path\n"
-      << "RTSProjectTool --verify-replay path.rtsreplay.json\n";
+      << "RTSProjectTool --verify-replay path.rtsreplay.json\n"
+      << "RTSProjectTool --tech-graph path.rtsproject.json  # Graphviz DOT to stdout\n";
 }
 int main(int argc,char** argv) {
     try {
@@ -44,6 +46,15 @@ int main(int argc,char** argv) {
         RTSProject project;
         project.loadFile(path);
         TriggerEngine::validate(project);
+        if(action=="--tech-graph") {
+            if(argc!=3){usage();return 2;}
+            project.validate();
+            const auto graph=rtsBuildTechGraph(project);
+            if(graph.truncated)
+                throw std::runtime_error("Tech graph exceeds 512 nodes or 2048 links");
+            std::cout<<rtsTechGraphDot(graph);
+            return 0;
+        }
         if(action=="--validate") {
             if(argc!=3){usage();return 2;}
             project.validate();
