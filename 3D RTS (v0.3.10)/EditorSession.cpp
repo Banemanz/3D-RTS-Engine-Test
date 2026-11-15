@@ -453,6 +453,21 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     entry.fields["model"]=picojson::value(object.id);
                     break;
                 }
+        }else if(type=="Projectile"){
+            if(preset!="Arc" && preset!="Bolt")return false;
+            entry.id="new_projectile";
+            entry.fields={
+                {"name",picojson::value(preset=="Arc"?"Arc Spark":"Pulse Bolt")},
+                {"speed",picojson::value(preset=="Arc"?8.0:20.0)},
+                {"arc_height",picojson::value(preset=="Arc"?3.0:0.0)},
+                {"visual_scale",picojson::value(preset=="Arc"?0.65:0.40)},
+                {"collision_radius",picojson::value(0.40)},
+                {"collide_units",picojson::value(preset=="Bolt")},
+                {"tint",picojson::value(picojson::array{
+                    picojson::value(preset=="Arc"?0.20:1.0),
+                    picojson::value(preset=="Arc"?0.85:0.50),
+                    picojson::value(preset=="Arc"?1.0:0.20)})}
+            };
         }else if(type=="Behavior"){
             if(preset!="Fortify" && preset!="Sharpen" && preset!="Hinder")
                 return false;
@@ -551,6 +566,40 @@ bool EditorSession::createCatalogObject(RTSProject& project,
         return false;
     }
 }
+bool EditorSession::setProjectileDefinition(
+    RTSProject& project,const ProjectileDefinition& values){
+    if(textEditing)return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Projectile" || current->id!=values.id)
+        return false;
+    try{
+        RTSProject candidate=project;
+        auto* projectile=candidate.catalog.find(values.id);
+        if(!projectile)throw std::invalid_argument("Missing Projectile");
+        auto& f=projectile->fields;
+        f["speed"]=picojson::value(double(values.speed));
+        f["arc_height"]=picojson::value(double(values.arcHeight));
+        f["visual_scale"]=picojson::value(double(values.visualScale));
+        f["collision_radius"]=picojson::value(double(values.collisionRadius));
+        f["collide_units"]=picojson::value(values.collideUnits);
+        f["tint"]=picojson::value(picojson::array{
+            picojson::value(double(values.tint.x)),
+            picojson::value(double(values.tint.y)),
+            picojson::value(double(values.tint.z))});
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        if(candidate.toJson().serialize()==project.toJson().serialize())
+            return false;
+        remember(project);
+        project=std::move(candidate);
+        modified=true;
+        message="PROJECTILE SETTINGS SAVED: "+values.id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("PROJECTILE REJECTED: ")+e.what();
+        return false;
+    }
+}
 bool EditorSession::setAbilityTargetPolicy(
     RTSProject& project,const std::string& target){
     if(textEditing)return false;
@@ -566,6 +615,7 @@ bool EditorSession::setAbilityTargetPolicy(
         if(it!=fields.end() && it->second.is<std::string>() &&
            it->second.get<std::string>()==target)return false;
         ability->fields["target"]=picojson::value(target);
+        if(target!="Ground")ability->fields.erase("projectile");
         const auto priorRange=fields.find("cast_range");
         const double range=priorRange!=fields.end() &&
             priorRange->second.is<double>()?priorRange->second.get<double>():0.;

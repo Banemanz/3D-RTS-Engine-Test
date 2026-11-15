@@ -34,7 +34,7 @@ void draw(App& app){
                 app.game.activePeriodicEffectCount());
     ImGui::Text("Active status behaviors: %zu",
                 app.game.activeBehaviorCount());
-    ImGui::Text("Pending area impacts: %zu",
+    ImGui::Text("Pending area impacts/projectiles: %zu",
                 app.game.pendingAreaImpactCount());
     if(app.game.pendingAreaImpactCount()>0 &&
        ImGui::TreeNode("##pendingAreas","Ground impact watch")){

@@ -155,6 +155,8 @@ void browser(App& app){
                 {"Unit","Combat","Unit | Combat"},
                 {"Unit","Worker","Unit | Worker"},
                 {"Unit","Structure","Unit | Structure"},
+                {"Projectile","Arc","Projectile | Arcing spark"},
+                {"Projectile","Bolt","Projectile | Intercepting bolt"},
                 {"Behavior","Fortify","Behavior | Armor shield"},
                 {"Behavior","Sharpen","Behavior | Attack focus"},
                 {"Behavior","Hinder","Behavior | Movement slow"},
@@ -321,6 +323,35 @@ void inspector(App& app){
                    navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
                     ImGui::End();return;
                 }
+                if(entry->type=="Projectile"){
+                    ImGui::SeparatorText("Projectile delivery | Tick-driven");
+                    static ProjectileDefinition draft;
+                    static std::string editingProjectile;
+                    if(editingProjectile!=entry->id){
+                        draft=compileProjectile(project.catalog,entry->id);
+                        editingProjectile=entry->id;
+                    }
+                    ImGui::InputFloat("Speed (units/s)",&draft.speed,.5f,3.f,"%.2f");
+                    ImGui::InputFloat("Arc height",&draft.arcHeight,.25f,1.f,"%.2f");
+                    ImGui::InputFloat("Visual size",&draft.visualScale,.05f,.25f,"%.2f");
+                    ImGui::InputFloat("Contact radius",&draft.collisionRadius,.05f,.25f,"%.2f");
+                    ImGui::Checkbox("Intercept units during flight",&draft.collideUnits);
+                    float tint[3]={draft.tint.x,draft.tint.y,draft.tint.z};
+                    if(ImGui::ColorEdit3("Projectile color",tint))
+                        draft.tint=Vec3(tint[0],tint[1],tint[2]);
+                    if(ImGui::Button("Apply projectile settings")){
+                        if(ed.setProjectileDefinition(project,draft)){
+                            refresh(app,true);editingProjectile.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Revert projectile")){
+                        draft=compileProjectile(project.catalog,entry->id);
+                    }
+                    ImGui::TextDisabled("Speed .5..100 | Arc 0..24 | Contact .05..4");
+                    ImGui::TextWrapped("A Ground Ability can reference this projectile. Flight time is based on distance and speed; optional contact interrupts the flight.");
+                }
                 if(entry->type=="Behavior"){
                     ImGui::SeparatorText("Status behavior | Live modifiers");
                     static BehaviorDefinition draft;
@@ -382,6 +413,35 @@ void inspector(App& app){
                         ImGui::EndCombo();
                     }
                     if(current=="Ground"){
+                        const auto defined=compileAbility(project.catalog,entry->id);
+                        const std::string projectileRef=defined.projectileId.empty()?
+                            "None | impact scheduler":defined.projectileId;
+                        ImGui::SeparatorText("Projectile delivery");
+                        if(ImGui::BeginCombo("Projectile",projectileRef.c_str())){
+                            if(ImGui::Selectable("None | impact scheduler",
+                                                 defined.projectileId.empty())){
+                                refresh(app,ed.setCatalogField(project,"projectile",
+                                          picojson::value(std::string{})));
+                                ImGui::EndCombo();ImGui::End();return;
+                            }
+                            for(const auto& candidate:project.catalog.entries()){
+                                if(candidate.type!="Projectile")continue;
+                                if(ImGui::Selectable(candidate.id.c_str(),
+                                     candidate.id==defined.projectileId)){
+                                    refresh(app,ed.setCatalogField(project,
+                                          "projectile",picojson::value(candidate.id)));
+                                    ImGui::EndCombo();ImGui::End();return;
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+                        if(!defined.projectileId.empty() &&
+                           navigateCatalog(app,"Edit projectile",defined.projectileId)){
+                            ImGui::End();return;
+                        }
+                        ImGui::TextWrapped(defined.projectileId.empty()?
+                            "No projectile: delay counts directly from cast.":
+                            "Delivery takes distance / projectile speed, then adds the authored post-flight delay.");
                         static std::string editingAbility;
                         static float radius=4.f;
                         static int delay=60;
