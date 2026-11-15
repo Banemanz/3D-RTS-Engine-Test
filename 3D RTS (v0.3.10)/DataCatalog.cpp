@@ -156,6 +156,31 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Upgrade" && entry.type=="Validator"){
+            auto field=entry.fields.find("upgrade");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+        if(type=="Upgrade" && entry.type=="Unit"){
+            auto field=entry.fields.find("researchable_upgrades");
+            if(field!=entry.fields.end() && field->second.is<picojson::array>())
+                for(auto& value:field->second.get<picojson::array>())
+                    if(value.is<std::string>() && value.get<std::string>()==oldId)
+                        value=picojson::value(newId);
+        }
+        if(type=="Unit" && entry.type=="Upgrade"){
+            auto field=entry.fields.find("unit");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+        if(type=="Requirement" && entry.type=="Upgrade"){
+            auto field=entry.fields.find("requirement");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
         if(type=="Unit" && entry.type=="Validator"){
             auto field=entry.fields.find("unit");
             if(field!=entry.fields.end() && field->second.is<std::string>() &&

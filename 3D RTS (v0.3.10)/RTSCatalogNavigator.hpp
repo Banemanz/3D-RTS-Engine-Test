@@ -22,7 +22,7 @@ inline std::vector<RTSCatalogLink> rtsCatalogLinks(
         const bool relevant=entry.type=="Unit" || entry.type=="Weapon" ||
             entry.type=="Ability" || entry.type=="Effect" ||
             entry.type=="Actor" || entry.type=="Validator" ||
-            entry.type=="Requirement";
+            entry.type=="Requirement" || entry.type=="Upgrade";
         if(!relevant)continue;
         const auto fields=project.catalog.resolvedFields(entry.id);
         const auto single=[&](const char* field,const char* expected){
@@ -53,6 +53,7 @@ inline std::vector<RTSCatalogLink> rtsCatalogLinks(
             single("weapon","Weapon");
             many("abilities","Ability");
             many("trainable_units","Unit");
+            many("researchable_upgrades","Upgrade");
             single("requirement","Requirement");
         }else if(entry.type=="Weapon")
             single("projectile","Projectile");
@@ -60,12 +61,16 @@ inline std::vector<RTSCatalogLink> rtsCatalogLinks(
             single("effect","Effect");
             single("projectile","Projectile");
             single("requirement","Requirement");
+        }else if(entry.type=="Upgrade"){
+            single("unit","Unit");
+            single("requirement","Requirement");
         }else if(entry.type=="Requirement"){
             single("validator","Validator");
             many("children","Requirement");
         }else if(entry.type=="Validator"){
             single("behavior","Behavior");
             single("unit","Unit");
+            single("upgrade","Upgrade");
         }else if(entry.type=="Effect"){
             single("behavior","Behavior");
             many("children","Effect");

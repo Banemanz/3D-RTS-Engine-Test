@@ -465,20 +465,43 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     entry.fields["model"]=picojson::value(object.id);
                     break;
                 }
+        }else if(type=="Upgrade"){
+            if(preset!="Damage" && preset!="Armor")return false;
+            entry.id="new_upgrade";
+            entry.fields={{"name",picojson::value(
+                              preset=="Damage"?"Sharpened Arms":"Layered Plating")},
+                          {"max_level",picojson::value(3.)},
+                          {"mineral_cost",picojson::value(75.)},
+                          {"research_ticks",picojson::value(120.)},
+                          {"damage_per_level",picojson::value(
+                              preset=="Damage"?2.:0.)},
+                          {"armor_per_level",picojson::value(
+                              preset=="Armor"?1.:0.)}};
         }else if(type=="Validator"){
             entry.id="new_validator";
             if(preset!="Health" && preset!="Energy" && preset!="Status" &&
-               preset!="Structure" && preset!="UnitCount")return false;
+               preset!="Structure" && preset!="UnitCount" &&
+               preset!="Upgrade")return false;
             const std::string kind=preset=="Health"?"HealthBelowPercent":
                 preset=="Energy"?"EnergyAtLeast":
                 preset=="Status"?"HasBehavior":
-                preset=="Structure"?"IsStructure":"OwnerUnitCountAtLeast";
+                preset=="Structure"?"IsStructure":
+                preset=="Upgrade"?"UpgradeLevelAtLeast":"OwnerUnitCountAtLeast";
             entry.fields={{"kind",picojson::value(kind)},
                           {"subject",picojson::value(
-                              preset=="Energy" || preset=="UnitCount"?
-                                  "Caster":"Target")},
+                              preset=="Energy" || preset=="UnitCount" ||
+                              preset=="Upgrade"?"Caster":"Target")},
                           {"value",picojson::value(
                               preset=="Health"?50.:preset=="Energy"?25.:1.)}};
+            if(preset=="Upgrade"){
+                for(const auto& object:project.catalog.entries())
+                    if(object.type=="Upgrade"){
+                        entry.fields["upgrade"]=picojson::value(object.id);
+                        break;
+                    }
+                if(!entry.fields.count("upgrade"))
+                    throw std::invalid_argument("Create an Upgrade first");
+            }
             if(preset=="Status"){
                 for(const auto& object:project.catalog.entries())
                     if(object.type=="Behavior"){
@@ -663,6 +686,34 @@ bool EditorSession::setActorCues(
         return false;
     }
 }
+bool EditorSession::setUpgradeDefinition(
+    RTSProject& project,const RTSUpgradeDefinition& values){
+    if(textEditing)return false;
+    const auto* selectedUpgrade=selected(project);
+    if(!selectedUpgrade || selectedUpgrade->type!="Upgrade" ||
+       selectedUpgrade->id!=values.id)return false;
+    try{
+        RTSProject next=project;
+        auto* entry=next.catalog.find(values.id);
+        auto& fields=entry->fields;
+        fields["max_level"]=picojson::value(double(values.maxLevel));
+        fields["mineral_cost"]=picojson::value(double(values.mineralCost));
+        fields["research_ticks"]=picojson::value(double(values.researchTicks));
+        fields["damage_per_level"]=picojson::value(double(values.damagePerLevel));
+        fields["armor_per_level"]=picojson::value(double(values.armorPerLevel));
+        fields["unit"]=picojson::value(values.unitId);
+        fields["requirement"]=picojson::value(values.requirementId);
+        next.validate();
+        (void)parseTriggerRules(next);
+        if(next.toJson().serialize()==project.toJson().serialize())return false;
+        remember(project);project=std::move(next);
+        modified=true;message="UPGRADE SAVED: "+values.id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("UPGRADE REJECTED: ")+e.what();
+        return false;
+    }
+}
 bool EditorSession::setValidatorDefinition(
     RTSProject& project,const RTSValidatorDefinition& values){
     if(textEditing)return false;
@@ -678,6 +729,7 @@ bool EditorSession::setValidatorDefinition(
         f["value"]=picojson::value(double(values.value));
         f["behavior"]=picojson::value(values.behaviorId);
         f["unit"]=picojson::value(values.unitId);
+        f["upgrade"]=picojson::value(values.upgradeId);
         candidate.validate();
         (void)parseTriggerRules(candidate);
         if(candidate.toJson().serialize()==project.toJson().serialize())return false;

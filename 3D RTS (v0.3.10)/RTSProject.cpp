@@ -421,6 +421,31 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                     if(value.is<std::string>() && value.get<std::string>()==id)
                         refs.push_back(entry.id+".children");
         }
+        if(original->type=="Upgrade" && entry.type=="Unit"){
+            const auto it=properties.find("researchable_upgrades");
+            if(it!=properties.end() && it->second.is<picojson::array>())
+                for(const auto& value:it->second.get<picojson::array>())
+                    if(value.is<std::string>() && value.get<std::string>()==id)
+                        refs.push_back(entry.id+".researchable_upgrades");
+        }
+        if(original->type=="Upgrade" && entry.type=="Validator"){
+            const auto it=properties.find("upgrade");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".upgrade");
+        }
+        if(original->type=="Unit" && entry.type=="Upgrade"){
+            const auto it=properties.find("unit");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".unit");
+        }
+        if(original->type=="Requirement" && entry.type=="Upgrade"){
+            const auto it=properties.find("requirement");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".requirement");
+        }
         if(original->type=="Validator" && entry.type=="Requirement"){
             const auto it=properties.find("validator");
             if(it!=properties.end() && it->second.is<std::string>() &&

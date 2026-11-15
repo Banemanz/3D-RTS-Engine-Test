@@ -23,11 +23,14 @@ bool draw(App& app,const std::string& parentId,const std::string& field,
     auto& ed=app.editor;
     auto& project=app.project;
     const std::string category=field=="trainable_units"?"Unit":
+                                field=="researchable_upgrades"?"Upgrade":
                                 field=="abilities"?"Ability":"Effect";
     if(!value.template is<picojson::array>())return false;
     const picojson::array items=value.template get<picojson::array>();
-    const std::size_t limit=field=="trainable_units"?12:8;
+    const std::size_t limit=field=="trainable_units" ||
+                             field=="researchable_upgrades"?12:8;
     ImGui::SeparatorText(category=="Unit"?"Trainable units":
+                          category=="Upgrade"?"Researchable upgrades":
                           category=="Ability"?"Assigned abilities":"Effect sequence children");
     ImGui::TextDisabled("%zu / %zu references | ordered",items.size(),limit);
     for(std::size_t index=0;index<items.size();++index){
@@ -46,6 +49,11 @@ bool draw(App& app,const std::string& parentId,const std::string& field,
             ImGui::TextDisabled("  %s | %.1fs CD | %d Energy | %d Minerals",
                                 policy,double(data.cooldownTicks)/60.,
                                 data.energyCost,data.mineralCost);
+        }
+        if(category=="Upgrade" && project.catalog.find(target)){
+            const auto data=compileUpgrade(project.catalog,target);
+            ImGui::TextDisabled("  %d Levels | %d Minerals | %u Ticks",
+                                data.maxLevel,data.mineralCost,data.researchTicks);
         }
         if(project.catalog.find(target)){
             ImGui::SameLine();
