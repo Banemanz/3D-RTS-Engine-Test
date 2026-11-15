@@ -114,6 +114,7 @@ void RTSSkirmish::reset() {
     periodicEffects_.clear();
     behaviors_.clear();
     pendingAreas_.clear();
+    impactFlashes_.clear();
     abilityReadyAt_.clear();
     nextId_=1;trainingPage_=0;abilityPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
@@ -1078,14 +1079,48 @@ bool RTSSkirmish::canPrepareAbility(int casterId,
            playerMinerals>=ability.mineralCost &&
            caster->currentEnergy>=float(ability.energyCost);
 }
+Vec3 RTSSkirmish::projectilePositionAt(const PendingAreaImpact& area,
+                                        std::uint64_t atTick){
+    if(!area.projectile || area.flightTicks==0)return area.center;
+    const double t=std::clamp(
+        double(atTick-area.launchTick)/double(area.flightTicks),0.,1.);
+    const float f=static_cast<float>(t);
+    Vec3 point=area.launchPosition+
+        (area.destination-area.launchPosition)*f;
+    point.y+=4.f*area.arcHeight*f*(1.f-f);
+    return point;
+}
+std::vector<RTSSkirmish::ImpactFlashWatch> RTSSkirmish::impactFlashWatch(
+    std::size_t limit)const{
+    std::vector<ImpactFlashWatch> watch;
+    for(const auto& flash:impactFlashes_){
+        if(watch.size()>=limit)break;
+        const std::uint64_t age=tick_>=flash.bornTick?
+                                   tick_-flash.bornTick:FlashTicks;
+        if(age>=FlashTicks)continue;
+        watch.push_back({flash.center,flash.radius,
+            float(FlashTicks-age)/float(FlashTicks),flash.applied});
+    }
+    return watch;
+}
 std::vector<RTSSkirmish::AreaImpactWatch> RTSSkirmish::areaImpactWatch(
     std::size_t limit)const{
     std::vector<AreaImpactWatch> watch;
     watch.reserve(std::min({limit,pendingAreas_.size(),std::size_t(128)}));
     for(const auto& a:pendingAreas_){
         if(watch.size()>=limit)break;
-        watch.push_back({a.center,a.radius,
-                         a.impactTick>tick_?a.impactTick-tick_:0,a.abilityId});
+        AreaImpactWatch item;
+        item.center=a.center;item.radius=a.radius;
+        item.remainingTicks=a.impactTick>tick_?a.impactTick-tick_:0;
+        item.abilityId=a.abilityId;
+        item.projectileVisible=a.projectile &&
+            tick_<a.launchTick+a.flightTicks;
+        if(item.projectileVisible){
+            item.projectilePosition=projectilePositionAt(a,tick_);
+            item.projectileTint=a.tint;
+            item.projectileScale=a.visualScale;
+        }
+        watch.push_back(std::move(item));
     }
     return watch;
 }
@@ -1166,11 +1201,68 @@ bool RTSSkirmish::applyAreaEffect(const PendingAreaImpact& area){
     }
     return true;
 }
+bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
+    if(!area.projectile || !area.collideUnits ||
+       tick_<=area.launchTick ||
+       tick_>area.launchTick+area.flightTicks)return false;
+    const Vec3 previous=projectilePositionAt(area,tick_-1);
+    const Vec3 current=projectilePositionAt(area,tick_);
+    const Vec3 path=current-previous;
+    const double lengthSq=double(path.x)*path.x+
+                          double(path.y)*path.y+
+                          double(path.z)*path.z;
+    double best=2.;
+    int bestId=0;
+    // Collision uses a swept XZ disc and Y interval of the Unit's actual
+    // cylindrical volume. No tunneling across fast-projectile tick segments.
+    for(const auto& unit:units){
+        if(!unit.isAlive())continue;
+        if(area.team==AbilityAreaTeam::Enemy && unit.ownerId==area.owner)continue;
+        if(area.team==AbilityAreaTeam::Ally && unit.ownerId!=area.owner)continue;
+        const double vx=double(unit.position.x)-previous.x;
+        const double vz=double(unit.position.z)-previous.z;
+        const double lengthXZSq=double(path.x)*path.x+
+                                double(path.z)*path.z;
+        const double t=lengthXZSq>1e-12?
+            std::clamp((vx*path.x+vz*path.z)/lengthXZSq,0.,1.):0.;
+        const Vec3 contact=previous+path*float(t);
+        const double dx=double(unit.position.x)-contact.x;
+        const double dz=double(unit.position.z)-contact.z;
+        const double reach=double(unit.radius)+area.collisionRadius;
+        if(dx*dx+dz*dz>reach*reach)continue;
+        if(contact.y<double(unit.position.y)-area.collisionRadius ||
+           contact.y>double(unit.position.y+unit.height)+area.collisionRadius)
+            continue;
+        // Segment parameter first, Unit ID second. Iteration order of the
+        // underlying unit vector can never determine which object intercepts.
+        if(t<best-1e-10 ||
+           (std::fabs(t-best)<=1e-10 && (bestId==0 || unit.id<bestId))){
+            best=t;bestId=unit.id;
+        }
+    }
+    (void)lengthSq;
+    if(bestId<=0)return false;
+    const Unit* hit=find(bestId);
+    if(!hit)return false;
+    // Contact burst centers on the intercepted Unit, ensuring the unit
+    // actually hit receives the Area Effect even for a tiny area radius.
+    area.center=hit->position;
+    area.impactTick=tick_;
+    return true;
+}
 void RTSSkirmish::updateAreaImpacts(){
-    // Preserve the recorded cast order when several impacts share a tick.
+    // Presentation events have a bounded lifetime and are never authoritative.
+    while(!impactFlashes_.empty() &&
+          tick_>=impactFlashes_.front().bornTick+FlashTicks)
+        impactFlashes_.pop_front();
+    // Preserve the recorded cast order when multiple projectiles share a tick.
     for(auto it=pendingAreas_.begin();it!=pendingAreas_.end();){
+        if(it->projectile)detectProjectileCollision(*it);
         if(it->impactTick>tick_){++it;continue;}
-        (void)applyAreaEffect(*it); // an over-cap arrival fizzles, no partial effects
+        const bool applied=applyAreaEffect(*it);
+        if(impactFlashes_.size()>=MaxImpactFlashes)
+            impactFlashes_.pop_front();
+        impactFlashes_.push_back({it->center,it->radius,tick_,applied});
         it=pendingAreas_.erase(it);
     }
 }
@@ -1180,7 +1272,9 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
     if(ability.target==AbilityTarget::Ground){
         if(targetId!=-1 || !canCastAbilityAt(casterId,abilityId,ground))
             return false;
-        if(ability.impactDelayTicks>0 &&
+        // Projectiles always enter the future queue, even with a 0-tick
+        // post-flight delay. Old instant Areas do not use that queue.
+        if((ability.impactDelayTicks>0 || !ability.projectileId.empty()) &&
            pendingAreas_.size()>=MaxPendingAreaImpacts)return false;
         const Unit* caster=find(casterId);
         PendingAreaImpact area;
@@ -1191,7 +1285,29 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
         area.abilityId=abilityId;
         area.effectId=ability.effect;
         area.impactTick=tick_+ability.impactDelayTicks;
-        if(ability.impactDelayTicks==0){
+        if(!ability.projectileId.empty()){
+            const auto p=compileProjectile(project_.catalog,ability.projectileId);
+            area.projectile=true;
+            area.projectileId=p.id;
+            area.launchTick=tick_;
+            area.launchPosition=caster->position+
+                Vec3(0.f,caster->height*.66f,0.f);
+            area.destination={ground.x,
+                project_.terrain.sampleHeight(ground.x,ground.z)+.08f,
+                ground.z};
+            const double dx=double(area.destination.x)-area.launchPosition.x;
+            const double dz=double(area.destination.z)-area.launchPosition.z;
+            const double travel=std::sqrt(dx*dx+dz*dz);
+            area.flightTicks=std::max<std::uint64_t>(1,
+                static_cast<std::uint64_t>(std::ceil(travel*60./double(p.speed))));
+            area.impactTick+=area.flightTicks;
+            area.arcHeight=p.arcHeight;
+            area.visualScale=p.visualScale;
+            area.tint=p.tint;
+            area.collisionRadius=p.collisionRadius;
+            area.collideUnits=p.collideUnits;
+        }
+        if(ability.impactDelayTicks==0 && !area.projectile){
             if(!applyAreaEffect(area))return false;
         }else pendingAreas_.push_back(std::move(area));
     }else{
@@ -1406,6 +1522,14 @@ std::string RTSSkirmish::stateDigest()const{
             hash.signedNumber(static_cast<int>(area.team));
             hash.text(area.abilityId);hash.text(area.effectId);
             hash.number(area.impactTick);
+            if(area.projectile){
+                hash.text("projectile");hash.text(area.projectileId);
+                hash.point(area.launchPosition);hash.point(area.destination);
+                hash.number(area.launchTick);hash.number(area.flightTicks);
+                hash.scalar(area.arcHeight);hash.scalar(area.visualScale);
+                hash.point(area.tint);hash.scalar(area.collisionRadius);
+                hash.boolean(area.collideUnits);
+            }
         }
     }
     // Empty arrays preserve all pre-periodic-effect replay fingerprints.

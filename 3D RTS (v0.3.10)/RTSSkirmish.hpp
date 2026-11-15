@@ -126,7 +126,18 @@ public:
         float radius=0.f;
         std::uint64_t remainingTicks=0;
         std::string abilityId;
+        bool projectileVisible=false;
+        Vec3 projectilePosition{};
+        Vec3 projectileTint{};
+        float projectileScale=0.f;
     };
+    struct ImpactFlashWatch {
+        Vec3 center{};
+        float radius=0.f;
+        float remainingFraction=0.f;
+        bool applied=false;
+    };
+    std::vector<ImpactFlashWatch> impactFlashWatch(std::size_t limit=32)const;
     std::vector<AreaImpactWatch> areaImpactWatch(std::size_t limit=32)const;
     std::size_t pendingAreaImpactCount()const{return pendingAreas_.size();}
     std::uint64_t abilityCooldownRemaining(int casterId,const std::string& abilityId) const;
@@ -183,7 +194,32 @@ private:
         std::string abilityId;
         std::string effectId;
         std::uint64_t impactTick=0;
+        // Optional authored projectile delivery. Legacy timed areas keep
+        // projectile=false and their exact prior impact scheduling.
+        bool projectile=false;
+        std::string projectileId;
+        Vec3 launchPosition{};
+        Vec3 destination{};
+        std::uint64_t launchTick=0;
+        std::uint64_t flightTicks=0;
+        float arcHeight=0.f;
+        float visualScale=0.f;
+        Vec3 tint{};
+        float collisionRadius=0.f;
+        bool collideUnits=false;
     };
+    struct ImpactFlash {
+        Vec3 center{};
+        float radius=0.f;
+        std::uint64_t bornTick=0;
+        bool applied=false;
+    };
+    std::deque<ImpactFlash> impactFlashes_;
+    static constexpr std::uint64_t FlashTicks=24;
+    static constexpr std::size_t MaxImpactFlashes=64;
+    static Vec3 projectilePositionAt(const PendingAreaImpact& area,
+                                     std::uint64_t atTick);
+    bool detectProjectileCollision(PendingAreaImpact& area);
     static constexpr std::size_t MaxPendingAreaImpacts=128;
     std::vector<PendingAreaImpact> pendingAreas_;
     bool castAbility(int casterId,const std::string& abilityId,
