@@ -1076,8 +1076,13 @@ Ability milestone: fe77c22c with Linux/Windows Debug and
 Release and mandatory replay parity. First integrated projectile
 milestone fac7d2159b75715dc16149402ade62bd3abe6f80 passed
 Windows/Linux Debug and replay parity, real OpenGL screenshots.
-Later cosmetic trail/F6 improvements committed to 9a490252;
-check latest Actions results before claiming it green.
+The cosmetic trail/F6 improvements at 9a490252 fully passed
+Windows/Linux Debug replay parity and Release bundles:
+https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43702124095
+https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43702120511
+Further commits add correct spatial broadphase collision and its
+oversized-Unit regression; verify latest CI before claiming
+these newest changes fully green.
 
 ### Actual code modified
 
@@ -1143,6 +1148,16 @@ check latest Actions results before claiming it green.
 
 ### New tests and CI parity
 
+- UnitSpatialIndex.hpp/.cpp now computes maxEntityRadius()
+  from every living Unit when rebuilding. Swept projectile
+  collision uses spatial_.nearby(midpoint,
+  halfSegmentLength+maxEntityRadius+collisionRadius) to
+  narrow candidates after Unit movement. Exact swept contact
+  and stable Unit-ID tie-breaks stay intact. An additional
+  test offsets a radius=3 target whose center would be missed
+  by a narrow trajectory query. Instant Ground effects still
+  enumerate all Units because their command phase can
+  precede the fresh spatial rebuild.
 - tests/projectile_runtime_tests.cpp: typed data,
   launch/midflight position and apex, flight+postflight
   impact timing, energy/minerals, enemy-team burst,
@@ -1159,7 +1174,8 @@ check latest Actions results before claiming it green.
   .github/workflows/ci.yml includes new replay file
   uploads and mandatory byte diff Windows/Linux, plus
   rts-projectile-editor-screenshot and
-  rts-projectile-flight-screenshot (actual Mesa GL).
+  rts-projectile-flight-screenshot and
+  rts-projectile-impact-screenshot (actual Mesa GL).
   .github/workflows/build.yml checks packaged sample
   on Windows/Linux native RTSProjectTool.
   tools/verify_build_bundle.py requires sample and
@@ -1173,15 +1189,17 @@ check latest Actions results before claiming it green.
   verify exact files before linking in later turn.
 - Confirm current branch CI state before final; first
   functional fac7d2159 Windows/Linux Debug and replay
-  checks fully green, further 9a490252 trail/monitor
-  improvement may have a later build.
+  checks fully green, and 9a490252 trail/monitor
+  Release and Debug tests also passed. Check post-broadphase
+  HEAD after the latest CI runs complete.
 
 ### Immediate future priorities
 
 1. Actor event pipeline for explicit on-launch/on-contact/
    on-impact animation and sound/particles, original assets.
-2. Spatial broadphase for projectile collision without
-   stale index queries after spawn/teleport/cast changes.
+2. Optimized area-target lookup with explicit index freshness
+   at instant CastAbility and trigger-spawn phases. The
+   postmovement projectile collision broadphase is complete.
 3. Real terrain/mesh collision, homing and Unit-targeted
    projectile delivery, projectiles on normal weapons.
 4. Advanced creator node/link graphs, tech/upgrades,

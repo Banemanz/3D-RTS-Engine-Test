@@ -317,7 +317,8 @@ RTSProjectileRuntimeTests covers valid typed Projectile and
 Ground Ability references, instant-versus-delayed delivery,
 fixed-tick position/arc projection, owner/team impact behavior,
 per-cast resources, exact arrival, 3D swept early interception,
-out-of-area dodge, procedural hit-flash watch, replay roundtrip/
+out-of-area dodge, oversized scaled-Unit broadphase coverage,
+procedural hit-flash watch, replay roundtrip/
 tampering, projectile ID rename/deletion protection and invalid
 speed/arc/scale/contact/type fields. Writes a mandatory
 projectile_fingerprint.txt in the CTest working directory.
@@ -331,8 +332,9 @@ Ground -> Self reference cleanup, and JSON roundtrip.
 Both CTests run Debug/Release (Release asserts enabled) on
 Windows and Linux. CI uploads and byte-compares the projectile
 replay fingerprint, plus uses Mesa/Xvfb and the real GL renderer
-to capture F7 Projectile inspector and an actual F9
---smoke-cast-projectile flight. No fake flight positions are
+to capture F7 Projectile inspector, an actual F9
+--smoke-cast-projectile flight and a later-frame
+rts-projectile-impact-screenshot showing genuine hit feedback. No fake flight positions are
 injected by screenshot modes. Both Release archives validate
 projects/projectile_forge_showcase.rtsproject.json using their
 own native RTSProjectTool and require executable flags

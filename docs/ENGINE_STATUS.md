@@ -389,7 +389,8 @@ presets, one-click grouped settings with validation/undo, Ground
 Ability typed Projectile link, safe rename/deletion and Ground
 target conversion, 60Hz flight quantized by speed, vertical
 parabolic arcs, optional swept Unit-cylinder interception,
-first-contact/Unit-ID stable tie breaks, explosion on contact
+first-contact/Unit-ID stable tie breaks, tick-fresh spatial bucket
+broadphase expanded by maximum Unit radius, explosion on contact
 or destination, deferred postflight impact delay, shared
 Effect/Behavior application and costs, state-digest replay hashing,
 native 3D procedural projectile/trail rendering and expanding

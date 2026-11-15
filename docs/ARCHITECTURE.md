@@ -232,9 +232,14 @@ from launchTick and flightTicks. No wall clock, GPU physics or cursor
 is consulted. The destination impact triggers at flight arrival plus
 the authored postflight delay. The old nonprojectile path is unchanged.
 
-For intercepting projectiles, each simulation tick checks the swept
-XZ segment between consecutive projectile positions, coupled with the
-eligible Unit's vertical body interval. The earliest contact parameter
+For intercepting projectiles, the runtime queries the existing
+UnitSpatialIndex::nearby broadphase *after* its tick rebuild and
+incremental Unit movement updates. The search disc covers the entire
+swept XZ segment plus maxEntityRadius() and authored collision radius,
+so even very large Unit collision volumes cannot be missed by their
+center falling outside a narrow trajectory query. Candidate Units
+then undergo the exact swept XZ contact test coupled with their
+vertical body interval. The earliest contact parameter
 wins; exact ties pick smaller Unit ID. An early contact recenters
 the area explosion on the hit Unit and applies the same bounded,
 capacity-preadmitted Effect area algorithm. A miss continues to its

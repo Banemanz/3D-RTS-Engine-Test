@@ -357,6 +357,11 @@ The same Effect/Behavior graph, costs, cooldowns and team filters remain
 authoritative. Projectiles are rendered as original procedural 3D meshes
 with a short trail and on-impact flash; no third-party art is included.
 
+Swept contact uses the tick-updated spatial buckets to narrow
+candidates and includes maximum living Unit radius in the search,
+so large scaled actors are not missed. Exact swept-contact
+ordering remains stable independently of entity vector order.
+
 Flight advances at 60 fixed simulation ticks/second. Time-to-target is
 ceil(XZ distance / speed * 60), minimum one tick, with the Ground
 Ability's impact_delay_ticks added **after** flight arrival. Optional

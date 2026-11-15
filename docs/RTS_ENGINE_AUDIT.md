@@ -167,9 +167,16 @@ and atomic Effect admission still apply.
 An active projectile's launch/start/end, flight ticks, arc,
 collision parameters and other game-relevant state are hashed
 in replay digests, while decorative trails and flashes are
-excluded. Current contact candidates use a linear Unit scan
-per active shot: a spatial broadphase is the next performance
-optimization, provided index freshness is guaranteed after
-all Unit movement, spawns, and terrain modifications.
+excluded. Contact candidates now come from UnitSpatialIndex::nearby, using
+a midpoint-centered search disc whose radius covers half the
+swept segment plus maximum living Unit radius and authored contact
+padding. The index is rebuilt/updated before the postmovement
+projectile phase, so contact tests remain complete without scanning
+every Unit for each active projectile. Precise swept collision and
+Unit-ID tie-breaks still run on that reduced candidate set.
+Immediate Ground casts can execute earlier than the tick's spatial
+rebuild; applyAreaEffect deliberately retains full Unit enumeration
+to avoid a stale-index correctness bug. That separate area-query
+optimization remains future work.
 Actor visual import, hit reactions, particle/sound events,
 homing steering, weapons and targeting remain future work.
