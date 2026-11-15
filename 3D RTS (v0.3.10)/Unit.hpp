@@ -4,6 +4,7 @@
 #include "Ray.hpp"
 #include "NavigationGrid.hpp"
 #include "UnitData.hpp"
+#include "RTSActorCue.hpp"
 #include <string>
 #include <cstddef>
 #include <vector>
@@ -72,6 +73,8 @@ public:
     Vec3 modelScale{1,1,1};
     float actorOpacity = 1.0f;
     std::string actorMesh = "procedural.unit";
+    // Spawn-time Actor presentation snapshot (including instance overrides).
+    std::vector<RTSActorCueDefinition> actorCues;
 
     float currentHp = 45.0f;
     float currentEnergy = 0.0f;

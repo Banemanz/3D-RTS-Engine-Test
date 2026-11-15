@@ -85,6 +85,7 @@ Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
             u.modelScale=visual.scale;
             u.actorOpacity=visual.opacity;
             u.actorMesh=visual.mesh;
+            u.actorCues=visual.cues;
         }
     }
     u.position.y=project_.terrain.sampleHeight(at.x,at.z);
@@ -116,6 +117,7 @@ void RTSSkirmish::reset() {
     behaviors_.clear();
     pendingAreas_.clear();
     impactFlashes_.clear();
+    actorCues_.clear();
     abilityReadyAt_.clear();
     nextId_=1;trainingPage_=0;abilityPage_=0;occupancyDirty_=false;friendlyBaseId_=-1;enemyBaseId_=-1;
     observedDead_.clear();elapsedSeconds_=0.0;triggerMessage.clear();
@@ -155,6 +157,7 @@ void RTSSkirmish::reset() {
             instance.modelScale=resolved.actor.scale;
             instance.actorOpacity=resolved.actor.opacity;
             instance.actorMesh=resolved.actor.mesh;
+            instance.actorCues=resolved.actor.cues;
         }
         instance.modelScale=Vec3(instance.modelScale.x*placement.scale.x,
                                  instance.modelScale.y*placement.scale.y,
@@ -713,11 +716,44 @@ void RTSSkirmish::planAIOrders(){
         // the replay log by modifying the unit directly.
         (void)queueCommand(decision);
 }
+void RTSSkirmish::emitActorCue(int unitId,RTSActorCueEvent event,
+                                const Vec3& at){
+    const Unit* subject=find(unitId);
+    if(!subject)return;
+    // Snapshot the definition at spawn/placement time. Watchers are visual
+    // only: no script action, Effect, collision, or replay state may depend
+    // on the emitted cue list or its eviction order.
+    for(const auto& definition:subject->actorCues){
+        if(definition.event!=event)continue;
+        if(actorCues_.size()>=MaxActorCues)actorCues_.pop_front();
+        actorCues_.push_back({definition,at,tick_,unitId});
+    }
+}
+std::vector<RTSSkirmish::ActorCueWatch> RTSSkirmish::actorCueWatch(
+    std::size_t limit)const{
+    std::vector<ActorCueWatch> projected;
+    projected.reserve(std::min(limit,actorCues_.size()));
+    for(const auto& cue:actorCues_){
+        if(projected.size()>=limit)break;
+        const std::uint64_t elapsed=tick_>=cue.bornTick?
+            tick_-cue.bornTick:cue.definition.durationTicks;
+        if(elapsed>=cue.definition.durationTicks)continue;
+        projected.push_back({cue.definition.event,cue.definition.style,
+            cue.position,cue.definition.tint,cue.definition.radius,
+            float(cue.definition.durationTicks-elapsed)/
+                float(cue.definition.durationTicks),cue.unitId});
+    }
+    return projected;
+}
 void RTSSkirmish::update(float dt) {
     if(result!=MatchResult::Playing)return;
     dt=std::clamp(dt,0.0f,0.1f);
     if(std::fabs(dt-1.f/60.f)>0.000001f)replayValid_=false;
     ++tick_;
+    while(!actorCues_.empty() &&
+          tick_>=actorCues_.front().bornTick+
+                 actorCues_.front().definition.durationTicks)
+        actorCues_.pop_front();
     if(tick_>RTSReplayTape::MaxTicks)replayValid_=false;
     // Expired modifiers cannot affect this tick's casts or combat.
     updateBehaviors();
@@ -765,11 +801,15 @@ void RTSSkirmish::update(float dt) {
             return a.targetId!=b.targetId ? a.targetId<b.targetId : a.attackerId<b.attackerId;
         });
     for(const auto& hit:pendingHits){
+        if(const Unit* source=find(hit.attackerId))
+            emitActorCue(hit.attackerId,RTSActorCueEvent::Attack,source->position);
         // All attacks have already been issued for this tick. Projectile
         // Weapons only defer the damage; old hitscan attacks remain instant.
         if(!hit.projectileId.empty() && queueWeaponProjectile(hit))continue;
-        if(Unit* target=find(hit.targetId))
+        if(Unit* target=find(hit.targetId)){
+            emitActorCue(hit.attackerId,RTSActorCueEvent::Impact,target->position);
             target->takeDamage(hit.rawDamage,hit.attackerName,hit.armorPiercing);
+        }
     }
     // Delayed ground impact runs after movement/combat so moving out of the
     // radius matters, but before health/energy regeneration and periodic ticks.
@@ -812,8 +852,10 @@ void RTSSkirmish::update(float dt) {
     updateEnemy(dt);
     elapsedSeconds_+=dt;
     std::vector<int> killed;
-    for(const auto& unit:units)if(!unit.isAlive() && observedDead_.insert(unit.id).second)
+    for(const auto& unit:units)if(!unit.isAlive() && observedDead_.insert(unit.id).second){
         killed.push_back(unit.id);
+        emitActorCue(unit.id,RTSActorCueEvent::Death,unit.position);
+    }
     triggers_.tick(*this,elapsedSeconds_,killed);
     visionIntervalTimer_+=dt;
     if(visionIntervalTimer_>=.2f){
@@ -901,6 +943,8 @@ void RTSSkirmish::applyBehavior(int targetId,const BehaviorDefinition& b){
         if(b.refreshDuration)it->second.expiresTick=tick_+b.durationTicks;
     }
     recalculateBehaviorStats(targetId);
+    if(const Unit* affected=find(targetId))
+        emitActorCue(targetId,RTSActorCueEvent::Status,affected->position);
 }
 void RTSSkirmish::removeBehavior(int targetId,const std::string& id){
     auto it=behaviors_.find({targetId,id});
@@ -1279,6 +1323,7 @@ bool RTSSkirmish::queueWeaponProjectile(const CombatHit& hit){
     PendingAreaImpact shot;
     shot.projectile=true;
     shot.weaponShot=true;
+    shot.actorSourceId=hit.attackerId;
     shot.projectileId=hit.projectileId;
     shot.abilityId="Weapon: "+attacker->data.weaponId;
     shot.attackerId=hit.attackerId;
@@ -1305,6 +1350,8 @@ bool RTSSkirmish::queueWeaponProjectile(const CombatHit& hit){
     shot.collisionRadius=profile.collisionRadius;
     shot.collideUnits=profile.collideUnits;
     pendingAreas_.push_back(std::move(shot));
+    emitActorCue(hit.attackerId,RTSActorCueEvent::Launch,
+                 attacker->position);
     return true;
 }
 void RTSSkirmish::updateAreaImpacts(){
@@ -1319,6 +1366,7 @@ void RTSSkirmish::updateAreaImpacts(){
     for(auto it=pendingAreas_.begin();it!=pendingAreas_.end();){
         if(it->projectile)detectProjectileCollision(*it);
         if(it->impactTick>tick_){++it;continue;}
+        emitActorCue(it->actorSourceId,RTSActorCueEvent::Impact,it->center);
         if(it->weaponShot){
             const bool landed=it->contactTargetId>0;
             if(landed)weaponImpacts.push_back({
@@ -1366,6 +1414,7 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
         area.owner=caster->ownerId;
         area.abilityId=abilityId;
         area.effectId=ability.effect;
+        area.actorSourceId=casterId;
         area.impactTick=tick_+ability.impactDelayTicks;
         if(!ability.projectileId.empty()){
             const auto p=compileProjectile(project_.catalog,ability.projectileId);
@@ -1388,6 +1437,8 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
             area.tint=p.tint;
             area.collisionRadius=p.collisionRadius;
             area.collideUnits=p.collideUnits;
+            emitActorCue(casterId,RTSActorCueEvent::Launch,
+                         caster->position);
         }
         if(ability.impactDelayTicks==0 && !area.projectile){
             if(!applyAreaEffect(area))return false;
@@ -1402,8 +1453,10 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
         caster->currentEnergy=std::max(0.f,
             caster->currentEnergy-float(ability.energyCost));
     abilityReadyAt_[{casterId,abilityId}]=tick_+ability.cooldownTicks;
-    if(Unit* caster=find(casterId))
+    if(Unit* caster=find(casterId)){
         caster->attackFlashTimer=std::max(caster->attackFlashTimer,.35f);
+        emitActorCue(casterId,RTSActorCueEvent::Cast,caster->position);
+    }
     return true;
 }
 bool RTSSkirmish::queueCommand(RTSCommand command){

@@ -142,6 +142,18 @@ public:
         float remainingFraction=0.f;
         bool applied=false;
     };
+    // Read-only visual cue projection; never included in stateDigest/replay.
+    struct ActorCueWatch {
+        RTSActorCueEvent event=RTSActorCueEvent::Attack;
+        RTSActorCueStyle style=RTSActorCueStyle::Pulse;
+        Vec3 position{};
+        Vec3 tint{1.f,1.f,1.f};
+        float radius=1.f;
+        float remainingFraction=0.f;
+        int unitId=-1;
+    };
+    std::vector<ActorCueWatch> actorCueWatch(std::size_t limit=96)const;
+    std::size_t activeActorCueCount()const{return actorCues_.size();}
     std::vector<ImpactFlashWatch> impactFlashWatch(std::size_t limit=32)const;
     std::vector<AreaImpactWatch> areaImpactWatch(std::size_t limit=32)const;
     // Both kinds share the same flight/collision loop, but Weapon volleys
@@ -223,6 +235,7 @@ private:
         // Reuse this fixed-tick projectile scheduler for normal Weapons.
         // An authored Weapon hit is NOT an Ability's area Effect graph.
         bool weaponShot=false;
+        int actorSourceId=-1; // presentation cue source, not game authority
         int attackTargetId=-1,contactTargetId=-1,attackerId=-1;
         float attackDamage=0.f,armorPiercing=0.f;
         std::string attackerName;
@@ -233,6 +246,15 @@ private:
         std::uint64_t bornTick=0;
         bool applied=false;
     };
+    struct ActorCueInstance {
+        RTSActorCueDefinition definition;
+        Vec3 position{};
+        std::uint64_t bornTick=0;
+        int unitId=-1;
+    };
+    static constexpr std::size_t MaxActorCues=256;
+    std::deque<ActorCueInstance> actorCues_;
+    void emitActorCue(int unitId,RTSActorCueEvent event,const Vec3& at);
     std::deque<ImpactFlash> impactFlashes_;
     static constexpr std::uint64_t FlashTicks=24;
     static constexpr std::size_t MaxImpactFlashes=64;

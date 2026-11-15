@@ -1,6 +1,7 @@
 #pragma once
 #include "UnitData.hpp"
 #include "RTSAreaShape.hpp"
+#include "RTSActorCue.hpp"
 #include "third_party/picojson.h"
 #include <stdexcept>
 #include <cstdint>
@@ -124,6 +125,10 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
 std::vector<std::string> unitAbilityIds(const DataCatalog& catalog,
                                          const std::string& unitId);
 
+// Typed Actor event rules are strictly bounded and presentation-only.
+std::vector<RTSActorCueDefinition> compileActorCues(
+    const DataCatalog& catalog,const std::string& actorId);
+
 // Typed runtime adapters. Unknown catalog fields are not deleted or discarded.
 UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id);
 struct ActorVisual {
@@ -134,5 +139,6 @@ struct ActorVisual {
     std::string texture;
     std::string animation;
     std::string sound;
+    std::vector<RTSActorCueDefinition> cues;
 };
 ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actorId);

@@ -472,6 +472,7 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Actor")(void)compileActorCues(*this,e.id);
         if(e.type=="Weapon")(void)compileWeapon(*this,e.id);
         if(e.type=="Projectile")(void)compileProjectile(*this,e.id);
         if(e.type=="Behavior")(void)compileBehavior(*this,e.id);
@@ -673,6 +674,47 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     }
     return d;
 }
+std::vector<RTSActorCueDefinition> compileActorCues(
+    const DataCatalog& catalog,const std::string& actorId){
+    const auto* actor=catalog.find(actorId);
+    if(!actor || actor->type!="Actor")
+        throw std::invalid_argument("Missing Actor catalog reference: "+actorId);
+    const auto fields=catalog.resolvedFields(actorId);
+    const auto it=fields.find("events");
+    if(it==fields.end())return {};
+    if(!it->second.is<picojson::array>())
+        throw std::invalid_argument("Actor events must be an array: "+actorId);
+    const auto& array=it->second.get<picojson::array>();
+    if(array.size()>12)
+        throw std::invalid_argument("Actor events exceed twelve cues: "+actorId);
+    std::vector<RTSActorCueDefinition> result;
+    result.reserve(array.size());
+    for(const auto& item:array){
+        if(!item.is<picojson::object>())
+            throw std::invalid_argument("Actor event entry must be an object: "+actorId);
+        const auto& properties=item.get<picojson::object>();
+        RTSActorCueDefinition cue;
+        RTSActorCueEvent event;
+        RTSActorCueStyle style;
+        if(!rtsParseActorCueEvent(stringField(properties,"when",""),event) ||
+           !rtsParseActorCueStyle(stringField(properties,"style",""),style))
+            throw std::invalid_argument("Unknown Actor event/style: "+actorId);
+        cue.event=event;cue.style=style;
+        cue.tint=vec3Field(properties,"tint",cue.tint);
+        if(cue.tint.x<0.f || cue.tint.x>1.f || cue.tint.y<0.f ||
+           cue.tint.y>1.f || cue.tint.z<0.f || cue.tint.z>1.f)
+            throw std::invalid_argument("Actor event tint must be RGB [0,1]: "+actorId);
+        const double radius=numeric(properties,"radius",cue.radius);
+        const double ticks=numeric(properties,"duration_ticks",cue.durationTicks);
+        if(radius<.25 || radius>12. || ticks<1. || ticks>180. ||
+           std::floor(ticks)!=ticks)
+            throw std::invalid_argument("Invalid Actor cue size/duration: "+actorId);
+        cue.radius=static_cast<float>(radius);
+        cue.durationTicks=static_cast<std::uint32_t>(ticks);
+        result.push_back(cue);
+    }
+    return result;
+}
 ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actorId) {
     const auto* entry=catalog.find(actorId);
     if(!entry || entry->type!="Actor")throw std::invalid_argument("Not an Actor: "+actorId);
@@ -683,6 +725,7 @@ ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actor
     v.opacity=float(numeric(f,"opacity",1.0));
     v.animation=stringField(f,"animation","");
     v.sound=stringField(f,"sound","");
+    v.cues=compileActorCues(catalog,actorId);
     auto modelId=stringField(f,"model","");
     if(!modelId.empty()){
         auto m=catalog.resolvedFields(modelId);
