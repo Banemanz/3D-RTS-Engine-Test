@@ -904,7 +904,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_STATUS_BEHAVIORS=1\n"
                  <<"RTS_FEATURE_VISUAL_EFFECT_FLOW=1\n"
                  <<"RTS_FEATURE_GROUND_AREA_ABILITIES=1\n"
-                 <<"RTS_FEATURE_DELAYED_AREA_IMPACTS=1\n";
+                 <<"RTS_FEATURE_DELAYED_AREA_IMPACTS=1\n"
+                 <<"RTS_FEATURE_AUTHORED_PROJECTILES=1\n"
+                 <<"RTS_FEATURE_PROJECTILE_INTERCEPTION=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -920,6 +922,7 @@ int main(int argc, char** argv) {
     bool selectAbilityCasterSmoke=false;
     bool castSelfAbilityForSmoke=false;
     bool castGroundAbilityForSmoke=false;
+    bool castProjectileForSmoke=false;
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
@@ -942,6 +945,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-select-ability-caster")selectAbilityCasterSmoke=true;
         else if(arg == "--smoke-cast-self-ability")castSelfAbilityForSmoke=true;
         else if(arg == "--smoke-cast-ground-ability")castGroundAbilityForSmoke=true;
+        else if(arg == "--smoke-cast-projectile")castProjectileForSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
@@ -1005,7 +1009,7 @@ int main(int argc, char** argv) {
                                             Vec3{},-1,false,abilityId))
                 throw std::invalid_argument("Smoke cannot cast first authored Self Ability");
         }
-        if(castGroundAbilityForSmoke && smokeFrames>0){
+        if((castGroundAbilityForSmoke || castProjectileForSmoke) && smokeFrames>0){
             if(!selectAbilityCasterSmoke)
                 throw std::invalid_argument("Ground smoke needs an ability caster");
             int casterId=-1;
@@ -1021,8 +1025,14 @@ int main(int argc, char** argv) {
             for(const auto& candidate:unitAbilityIds(
                     app.project.catalog,caster->catalogId))
                 if(compileAbility(app.project.catalog,candidate).target==
-                   AbilityTarget::Ground){skill=candidate;break;}
-            if(skill.empty())throw std::invalid_argument("No authored Ground Ability");
+                   AbilityTarget::Ground &&
+                   (!castProjectileForSmoke ||
+                    !compileAbility(app.project.catalog,candidate).projectileId.empty())){
+                    skill=candidate;break;
+                }
+            if(skill.empty())throw std::invalid_argument(
+                castProjectileForSmoke?"No authored Projectile Ground Ability":
+                                       "No authored Ground Ability");
             Vec3 point=app.game.units.front().position;
             for(const auto& u:app.game.units)if(u.ownerId!=0 && u.isAlive() &&
                   app.game.canCastAbilityAt(casterId,skill,u.position)){
@@ -1549,6 +1559,35 @@ int main(int argc, char** argv) {
                 glDrawArrays(GL_TRIANGLES,0,33);
             }
 
+            // Data-authored projectile models use the native procedural mesh
+            // (no copied models/textures). World position comes exclusively
+            // from the authoritative fixed-tick flight snapshot.
+            if(app.editor.panel==EditorSession::Panel::Play) {
+                for(const auto& shot:app.game.areaImpactWatch(128)){
+                    if(!shot.projectileVisible ||
+                       !app.game.vision.explored(shot.projectilePosition))
+                        continue;
+                    const Mat4 projectileModel=Mat4::translate(shot.projectilePosition)
+                        *Mat4::scale(Vec3(shot.projectileScale,
+                                         shot.projectileScale,
+                                         shot.projectileScale));
+                    glUseProgram(unitShader);
+                    glUniformMatrix4fv(glGetUniformLocation(unitShader,"uModel"),
+                                       1,GL_FALSE,projectileModel.m);
+                    glUniformMatrix4fv(glGetUniformLocation(unitShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(unitShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform3f(glGetUniformLocation(unitShader,"uColor"),
+                                shot.projectileTint.x,shot.projectileTint.y,
+                                shot.projectileTint.z);
+                    glUniform1f(glGetUniformLocation(unitShader,"uSelected"),0.f);
+                    glUniform1f(glGetUniformLocation(unitShader,"uOpacity"),1.f);
+                    glBindVertexArray(unitVAO);
+                    glDrawArrays(GL_TRIANGLES,0,33);
+                }
+            }
+
             // Rally location marker for currently selected production buildings.
             for(const auto& building:app.game.units)if(building.isAlive() &&
                 building.isSelected && building.isStructure && building.ownerId==0) {
@@ -1591,6 +1630,13 @@ int main(int argc, char** argv) {
                 };
                 for(const auto& impact:app.game.areaImpactWatch())
                     previewRing(impact.center,impact.radius,.98f,.60f,.16f,.48f);
+                for(const auto& hit:app.game.impactFlashWatch())
+                    previewRing(hit.center,
+                                hit.radius*(1.08f+(1.f-hit.remainingFraction)*.32f),
+                                hit.applied?.25f:1.f,
+                                hit.applied?.95f:.20f,
+                                hit.applied?.78f:.20f,
+                                hit.remainingFraction*.90f);
                 if(app.mode==AppState::Mode::CastAbility &&
                    !app.pendingAbilityId.empty()) {
                     const auto ability=compileAbility(app.project.catalog,
