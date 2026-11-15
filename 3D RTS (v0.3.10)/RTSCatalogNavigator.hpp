@@ -55,15 +55,18 @@ inline std::vector<RTSCatalogLink> rtsCatalogLinks(
             many("trainable_units","Unit");
             many("researchable_upgrades","Upgrade");
             single("requirement","Requirement");
+            single("show_requirement","Requirement");
         }else if(entry.type=="Weapon")
             single("projectile","Projectile");
         else if(entry.type=="Ability"){
             single("effect","Effect");
             single("projectile","Projectile");
             single("requirement","Requirement");
+            single("show_requirement","Requirement");
         }else if(entry.type=="Upgrade"){
             single("unit","Unit");
             single("requirement","Requirement");
+            single("show_requirement","Requirement");
         }else if(entry.type=="Requirement"){
             single("validator","Validator");
             many("children","Requirement");

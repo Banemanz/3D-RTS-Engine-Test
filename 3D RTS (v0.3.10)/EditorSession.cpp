@@ -703,6 +703,7 @@ bool EditorSession::setUpgradeDefinition(
         fields["armor_per_level"]=picojson::value(double(values.armorPerLevel));
         fields["unit"]=picojson::value(values.unitId);
         fields["requirement"]=picojson::value(values.requirementId);
+        fields["show_requirement"]=picojson::value(values.showRequirementId);
         next.validate();
         (void)parseTriggerRules(next);
         if(next.toJson().serialize()==project.toJson().serialize())return false;

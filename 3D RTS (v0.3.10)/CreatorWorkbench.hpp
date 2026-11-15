@@ -425,9 +425,25 @@ void inspector(App& app){
                                 draft.unitId=item.id;
                         ImGui::EndCombo();
                     }
+                    const std::string show=draft.showRequirementId.empty()?
+                        "Always visible":draft.showRequirementId;
+                    if(ImGui::BeginCombo("Show tech when",show.c_str())){
+                        if(ImGui::Selectable("Always visible",draft.showRequirementId.empty()))
+                            draft.showRequirementId.clear();
+                        for(const auto& item:project.catalog.entries())
+                            if(item.type=="Requirement" &&
+                               ImGui::Selectable(item.id.c_str(),
+                                                 draft.showRequirementId==item.id))
+                                draft.showRequirementId=item.id;
+                        ImGui::EndCombo();
+                    }
+                    if(!draft.showRequirementId.empty() &&
+                       navigateCatalog(app,"Open Show graph",draft.showRequirementId)){
+                        ImGui::End();return;
+                    }
                     const std::string req=draft.requirementId.empty()?
                         "None (unrestricted)":draft.requirementId;
-                    if(ImGui::BeginCombo("Research prerequisite",req.c_str())){
+                    if(ImGui::BeginCombo("Use tech when",req.c_str())){
                         if(ImGui::Selectable("None (unrestricted)",
                                              draft.requirementId.empty()))
                             draft.requirementId.clear();
@@ -442,7 +458,7 @@ void inspector(App& app){
                        navigateCatalog(app,"Open tech prerequisite",draft.requirementId)){
                         ImGui::End();return;
                     }
-                    ImGui::TextWrapped("One owner-wide research level affects present and future matching Units. Training and research share a producer timeline; damage boosts normal attacks, armor boosts damage mitigation.");
+                    ImGui::TextWrapped("Show Requirement hides a command until its Caster rule passes. Use Requirement leaves it visible but disabled until its prerequisite passes. Completion affects present and future owned Units.");
                     if(ImGui::Button("Apply Upgrade research")){
                         if(ed.setUpgradeDefinition(project,draft)){
                             refresh(app,true);editingUpgrade.clear();
@@ -760,6 +776,33 @@ void inspector(App& app){
                     ImGui::TextDisabled(entry->type=="Unit"?
                         "Checked by production queue admission":
                         "Checked at actual cast target/ground admission");
+                    ImGui::SeparatorText("Show versus Use requirements");
+                    const auto showField=resolved.find("show_requirement");
+                    const std::string showReq=showField!=resolved.end() &&
+                        showField->second.template is<std::string>()?
+                        showField->second.template get<std::string>():"";
+                    if(ImGui::BeginCombo("Show command when",
+                        showReq.empty()?"Always visible":showReq.c_str())){
+                        if(ImGui::Selectable("Always visible",showReq.empty())){
+                            refresh(app,ed.setCatalogField(project,
+                                "show_requirement",picojson::value(std::string{})));
+                            ImGui::EndCombo();ImGui::End();return;
+                        }
+                        for(const auto& candidate:project.catalog.entries())
+                            if(candidate.type=="Requirement" &&
+                               ImGui::Selectable(candidate.id.c_str(),
+                                                 candidate.id==showReq)){
+                                refresh(app,ed.setCatalogField(project,
+                                    "show_requirement",picojson::value(candidate.id)));
+                                ImGui::EndCombo();ImGui::End();return;
+                            }
+                        ImGui::EndCombo();
+                    }
+                    if(!showReq.empty() &&
+                       navigateCatalog(app,"Open Show graph",showReq)){
+                        ImGui::End();return;
+                    }
+                    ImGui::TextWrapped("Show hides commands entirely until its Caster-only graph passes. Use leaves visible commands disabled until the live prerequisite passes.");
                 }
                 if(entry->type=="Ability"){
                     const auto effectRef=resolved.find("effect");

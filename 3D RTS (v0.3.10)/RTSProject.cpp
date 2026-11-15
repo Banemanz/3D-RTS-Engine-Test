@@ -335,6 +335,12 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
         if(field!=overrides.end() && field->second.is<std::string>() &&
            field->second.get<std::string>()==oldId)
             field->second=picojson::value(newId);
+        if(type=="Requirement"){
+            auto shown=overrides.find("show_requirement");
+            if(shown!=overrides.end() && shown->second.is<std::string>() &&
+               shown->second.get<std::string>()==oldId)
+                shown->second=picojson::value(newId);
+        }
     }
     if(type=="Unit") {
         // The built-in skirmish has six metadata-configurable unit roles.
@@ -421,11 +427,14 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
         }
 
         if(original->type=="Requirement" &&
-           (entry.type=="Ability" || entry.type=="Unit")){
-            const auto it=properties.find("requirement");
-            if(it!=properties.end() && it->second.is<std::string>() &&
-               it->second.get<std::string>()==id)
-                refs.push_back(entry.id+".requirement");
+           (entry.type=="Ability" || entry.type=="Unit" ||
+            entry.type=="Upgrade")){
+            for(const char* field:{"requirement","show_requirement"}){
+                const auto it=properties.find(field);
+                if(it!=properties.end() && it->second.is<std::string>() &&
+                   it->second.get<std::string>()==id)
+                    refs.push_back(entry.id+"."+field);
+            }
         }
         if(original->type=="Requirement" && entry.type=="Requirement"){
             const auto it=properties.find("children");
@@ -452,12 +461,6 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
             if(it!=properties.end() && it->second.is<std::string>() &&
                it->second.get<std::string>()==id)
                 refs.push_back(entry.id+".unit");
-        }
-        if(original->type=="Requirement" && entry.type=="Upgrade"){
-            const auto it=properties.find("requirement");
-            if(it!=properties.end() && it->second.is<std::string>() &&
-               it->second.get<std::string>()==id)
-                refs.push_back(entry.id+".requirement");
         }
         if(original->type=="Validator" && entry.type=="Requirement"){
             const auto it=properties.find("validator");
@@ -535,6 +538,12 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
         if(it!=fields.end() && it->second.is<std::string>() &&
            it->second.get<std::string>()==id)
             refs.push_back("placement "+placement.id+"."+section+"."+property);
+        if(original->type=="Requirement"){
+            auto shown=fields.find("show_requirement");
+            if(shown!=fields.end() && shown->second.is<std::string>() &&
+               shown->second.get<std::string>()==id)
+                refs.push_back("placement "+placement.id+".unit.show_requirement");
+        }
     }
     if(original->type=="Unit") {
         const std::pair<const char*,const char*> roles[]={
