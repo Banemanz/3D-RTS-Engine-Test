@@ -184,6 +184,24 @@ int main(){
     near(hp(intercept,farDummy),hpFar); // intercepted before destination
     assert(intercept.impactFlashWatch()[0].applied);
 
+    // A large authored/scaled entity may have its *center* outside the
+    // narrow projectile path. The broadphase must expand by the largest
+    // living entity radius and still see its actual swept cylinder contact.
+    RTSSkirmish wide;wide.loadProject(decoded);
+    select(wide,caster);
+    for(auto& unit:wide.units)if(unit.id==nearDummy){
+        unit.position.z=-6.5f;
+        unit.radius=3.f;
+    }
+    assert(wide.queuePlayerCommand(RTSCommandKind::CastAbility,
+                                   goal,-1,false,"bolt_impact"));
+    wide.update(1.f/60.f);
+    const auto window=wide.areaImpactWatch().at(0).remainingTicks;
+    for(std::uint64_t t=0;t<window && wide.pendingAreaImpactCount();++t)
+        wide.update(1.f/60.f);
+    near(hp(wide,nearDummy),hpNear-12.f);
+    near(hp(wide,farDummy),hpFar);
+
     // Target moves out after launch: no persistent target tracking is stored.
     RTSSkirmish dodge;dodge.loadProject(decoded);select(dodge,caster);
     assert(dodge.queuePlayerCommand(RTSCommandKind::CastAbility,
