@@ -126,11 +126,21 @@ public:
         if(producer) {
             for(int i=0;i<3;++i) {
                 const std::string id=game.selectedTrainableId(i);
+                const std::string upgrade=game.selectedResearchableId(i);
                 std::string title=id.empty()?"EMPTY":id.substr(0,10);
-                for(auto& c:title)c=char(std::toupper(static_cast<unsigned char>(c)));
+                if(!upgrade.empty()){
+                    const auto def=compileUpgrade(game.project().catalog,upgrade);
+                    const int level=game.upgradeLevel(0,upgrade);
+                    title="TECH "+upgrade.substr(0,7);
+                    if(level>=def.maxLevel)title="MAX "+upgrade.substr(0,7);
+                    else title+=" "+std::to_string(level+1)+"/"+
+                                std::to_string(def.maxLevel);
+                }else for(auto& c:title)
+                    c=char(std::toupper(static_cast<unsigned char>(c)));
                 result[static_cast<size_t>(3+i)].title=title;
-                result[static_cast<size_t>(3+i)].enabled=
-                    live && game.canQueueSelectedTrainingSlot(i);
+                result[static_cast<size_t>(3+i)].enabled=live &&
+                    (!upgrade.empty()?game.canResearchSelectedSlot(i):
+                                      game.canQueueSelectedTrainingSlot(i));
             }
         }else{
             result[3].enabled=live && worker;

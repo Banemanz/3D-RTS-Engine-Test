@@ -165,10 +165,13 @@ void browser(App& app){
                 {"Validator","Status","Validator | Status presence"},
                 {"Validator","Structure","Validator | Is structure"},
                 {"Validator","UnitCount","Validator | Owned unit count"},
+                {"Validator","Upgrade","Validator | Research level"},
                 {"Requirement","Predicate","Requirement | Single validator"},
                 {"Requirement","All","Requirement | All children"},
                 {"Requirement","Any","Requirement | Any child"},
                 {"Requirement","Not","Requirement | Negate child"},
+                {"Upgrade","Damage","Upgrade | Attack research"},
+                {"Upgrade","Armor","Upgrade | Armor research"},
                 {"Weapon","Ranged","Weapon | Ranged rifle"},
                 {"Weapon","Melee","Weapon | Melee blade"},
                 {"Projectile","Arc","Projectile | Arcing spark"},
@@ -394,6 +397,64 @@ void inspector(App& app){
                     ImGui::TextDisabled("Radius .25..12 | Duplicate event types allowed");
                     ImGui::Separator();
                 }
+                if(entry->type=="Upgrade"){
+                    ImGui::SeparatorText("Owner research | Persistent tech");
+                    static RTSUpgradeDefinition draft;
+                    static std::string editingUpgrade;
+                    if(editingUpgrade!=entry->id){
+                        draft=compileUpgrade(project.catalog,entry->id);
+                        editingUpgrade=entry->id;
+                    }
+                    ImGui::InputInt("Maximum research level",&draft.maxLevel);
+                    ImGui::InputInt("Minerals per level",&draft.mineralCost,10,50);
+                    int ticks=int(draft.researchTicks);
+                    if(ImGui::InputInt("Research time (ticks)",&ticks,30,60))
+                        draft.researchTicks=static_cast<std::uint32_t>(
+                            std::max(0,ticks));
+                    ImGui::InputFloat("Damage / level",&draft.damagePerLevel,.5f,2.f,"%.2f");
+                    ImGui::InputFloat("Armor / level",&draft.armorPerLevel,.5f,2.f,"%.2f");
+                    const std::string target=draft.unitId.empty()?
+                        "All owned Unit types":draft.unitId;
+                    if(ImGui::BeginCombo("Affected Unit class",target.c_str())){
+                        if(ImGui::Selectable("All owned Unit types",
+                                             draft.unitId.empty()))
+                            draft.unitId.clear();
+                        for(const auto& item:project.catalog.entries())
+                            if(item.type=="Unit" &&
+                               ImGui::Selectable(item.id.c_str(),draft.unitId==item.id))
+                                draft.unitId=item.id;
+                        ImGui::EndCombo();
+                    }
+                    const std::string req=draft.requirementId.empty()?
+                        "None (unrestricted)":draft.requirementId;
+                    if(ImGui::BeginCombo("Research prerequisite",req.c_str())){
+                        if(ImGui::Selectable("None (unrestricted)",
+                                             draft.requirementId.empty()))
+                            draft.requirementId.clear();
+                        for(const auto& item:project.catalog.entries())
+                            if(item.type=="Requirement" &&
+                               ImGui::Selectable(item.id.c_str(),
+                                                 draft.requirementId==item.id))
+                                draft.requirementId=item.id;
+                        ImGui::EndCombo();
+                    }
+                    if(!draft.requirementId.empty() &&
+                       navigateCatalog(app,"Open tech prerequisite",draft.requirementId)){
+                        ImGui::End();return;
+                    }
+                    ImGui::TextWrapped("One owner-wide research level affects present and future matching Units. Training and research share a producer timeline; damage boosts normal attacks, armor boosts damage mitigation.");
+                    if(ImGui::Button("Apply Upgrade research")){
+                        if(ed.setUpgradeDefinition(project,draft)){
+                            refresh(app,true);editingUpgrade.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Revert Upgrade"))
+                        draft=compileUpgrade(project.catalog,entry->id);
+                    ImGui::TextDisabled("Levels 1..5 | Minerals 0..100000 | Ticks 1..36000");
+                    ImGui::TextDisabled("Damage/Armor per level 0..100 | Unit bonus cap 1000");
+                }
                 if(entry->type=="Validator"){
                     ImGui::SeparatorText("Reusable Validator | Gameplay");
                     static RTSValidatorDefinition draft;
@@ -403,9 +464,10 @@ void inspector(App& app){
                         editingValidator=entry->id;
                     }
                     const char* kinds[]={"HealthBelowPercent","EnergyAtLeast",
-                        "HasBehavior","IsStructure","OwnerUnitCountAtLeast"};
+                        "HasBehavior","IsStructure","OwnerUnitCountAtLeast",
+                        "UpgradeLevelAtLeast"};
                     int kind=static_cast<int>(draft.kind);
-                    if(ImGui::Combo("Predicate kind",&kind,kinds,5))
+                    if(ImGui::Combo("Predicate kind",&kind,kinds,6))
                         draft.kind=static_cast<RTSValidatorKind>(kind);
                     const char* subjects[]={"Caster","Target"};
                     int subject=static_cast<int>(draft.subject);
@@ -415,6 +477,23 @@ void inspector(App& app){
                         ImGui::InputFloat("Below HP %",&draft.value,.5f,5.f,"%.1f");
                     if(draft.kind==RTSValidatorKind::EnergyAtLeast)
                         ImGui::InputFloat("Minimum energy",&draft.value,1.f,5.f,"%.1f");
+                    if(draft.kind==RTSValidatorKind::UpgradeLevelAtLeast){
+                        ImGui::InputFloat("Required Upgrade level",&draft.value,1.f,2.f,"%.0f");
+                        const std::string chosen=draft.upgradeId.empty()?
+                            "Choose Upgrade":draft.upgradeId;
+                        if(ImGui::BeginCombo("Required Upgrade",chosen.c_str())){
+                            for(const auto& option:project.catalog.entries())
+                                if(option.type=="Upgrade" &&
+                                   ImGui::Selectable(option.id.c_str(),
+                                                      option.id==draft.upgradeId))
+                                    draft.upgradeId=option.id;
+                            ImGui::EndCombo();
+                        }
+                        if(!draft.upgradeId.empty() &&
+                           navigateCatalog(app,"Open Upgrade",draft.upgradeId)){
+                            ImGui::End();return;
+                        }
+                    }
                     if(draft.kind==RTSValidatorKind::OwnerUnitCountAtLeast){
                         ImGui::InputFloat("Minimum owned Units",&draft.value,1.f,5.f,"%.0f");
                         const std::string current=draft.unitId.empty()?
@@ -841,6 +920,18 @@ void inspector(App& app){
                         }
                     }else if(CreatorReferenceWidgets::draw(
                         app,entry->id,"abilities",abilities->second)){
+                        ImGui::End();return;
+                    }
+                    auto researchable=resolved.find("researchable_upgrades");
+                    if(researchable==resolved.end()){
+                        if(ImGui::SmallButton("Enable research options")){
+                            refresh(app,ed.setCatalogField(project,
+                                "researchable_upgrades",
+                                picojson::value(picojson::array{})));
+                            ImGui::End();return;
+                        }
+                    }else if(CreatorReferenceWidgets::draw(
+                        app,entry->id,"researchable_upgrades",researchable->second)){
                         ImGui::End();return;
                     }
                     auto training=resolved.find("trainable_units");

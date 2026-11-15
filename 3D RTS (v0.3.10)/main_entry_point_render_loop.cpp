@@ -178,10 +178,19 @@ struct AppState {
             case HUDCommand::TrainSlot2: {
                 const int slot=action==HUDCommand::TrainSlot0?0:
                                action==HUDCommand::TrainSlot1?1:2;
-                if(!game.queuePlayerCommand(RTSCommandKind::TrainCatalog,Vec3{},-1,false,
-                                            game.selectedTrainableId(slot)))
-                    inform("CANNOT QUEUE TRAINING COMMAND");
-                else inform("TRAINING "+game.selectedTrainableId(slot));
+                const auto research=game.selectedResearchableId(slot);
+                if(!research.empty()){
+                    if(!game.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+                                                Vec3{},-1,false,research))
+                        inform("CANNOT QUEUE RESEARCH");
+                    else inform("RESEARCHING "+research);
+                }else{
+                    const auto unit=game.selectedTrainableId(slot);
+                    if(unit.empty() || !game.queuePlayerCommand(
+                            RTSCommandKind::TrainCatalog,Vec3{},-1,false,unit))
+                        inform("CANNOT QUEUE TRAINING COMMAND");
+                    else inform("TRAINING "+unit);
+                }
                 break;
             }
             case HUDCommand::CastAbility0:
@@ -912,7 +921,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_ARMOR_PENETRATION=1\n"
                  <<"RTS_FEATURE_WEAPON_PROJECTILES=1\n"
                  <<"RTS_FEATURE_ACTOR_EVENT_CUES=1\n"
-                 <<"RTS_FEATURE_REQUIREMENT_GRAPHS=1\n";
+                 <<"RTS_FEATURE_REQUIREMENT_GRAPHS=1\n"
+                 <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n";
         return 0;
     }
     RTSCrashReporter::install();

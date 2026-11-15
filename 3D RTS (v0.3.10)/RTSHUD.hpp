@@ -170,9 +170,11 @@ public:
                     text(s.x+12,s.y+130,1.8f,
                          std::string(first->isWorker?"WORKER  ":"COMBAT  ")+
                          "DMG "+std::to_string(int(std::max(0.f,
-                             first->data.damage+first->behaviorDamageBonus)))+
+                             first->data.damage+first->behaviorDamageBonus+
+                             first->upgradeDamageBonus)))+
                          "  ARM "+std::to_string(int(std::max(0.f,
-                             first->data.armor+first->behaviorArmorBonus)))+
+                             first->data.armor+first->behaviorArmorBonus+
+                             first->upgradeArmorBonus)))+
                          (first->data.armor_piercing>0.f?
                              "  PEN "+std::to_string(int(first->data.armor_piercing)):"")+
                          (game.unitBehaviorCount(first->id)>0?

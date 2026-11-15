@@ -663,7 +663,7 @@ bool RTSSkirmish::canQueueAt(int id,const std::string& unitId) const {
     if(result!=MatchResult::Playing || !building || !building->isAlive() ||
        !building->isStructure || building->ownerId!=0 ||
        construction_.count(id)>0)return false;
-    if(researchRemainingTicks(id)>0)return false;
+    for(const auto& job:research_)if(job.buildingId==id)return false;
     auto choices=trainableUnits(id);
     if(std::find(choices.begin(),choices.end(),unitId)==choices.end())return false;
     const auto trainFields=project_.catalog.resolvedFields(unitId);
