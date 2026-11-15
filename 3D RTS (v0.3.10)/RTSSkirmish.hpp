@@ -104,6 +104,14 @@ public:
     bool canResearchSelectedSlot(int slot)const;
     int upgradeLevel(int owner,const std::string& upgradeId)const;
     std::uint64_t researchRemainingTicks(int buildingId)const;
+    struct ResearchWatch {
+        int producerId=0,ownerId=0;
+        std::string upgradeId;
+        int nextLevel=0;
+        std::uint64_t remainingTicks=0;
+        float progress=0.f;
+    };
+    std::vector<ResearchWatch> researchWatch(std::size_t limit=64)const;
     std::string statusLine() const;
     int activeWorkerCount() const;
     int completedBarracksCount() const;

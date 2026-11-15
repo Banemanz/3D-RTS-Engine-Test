@@ -314,6 +314,19 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
              type=="Model"?"actor":type=="Requirement"?"unit":nullptr;
         const char* property=type=="Actor"?"actor":
              type=="Model"?"model":type=="Requirement"?"requirement":nullptr;
+        if(type=="Upgrade"){
+            auto category=placement.overrides.find("unit");
+            if(category!=placement.overrides.end() &&
+               category->second.is<picojson::object>()){
+                auto& fields=category->second.get<picojson::object>();
+                auto it=fields.find("researchable_upgrades");
+                if(it!=fields.end() && it->second.is<picojson::array>())
+                    for(auto& value:it->second.get<picojson::array>())
+                        if(value.is<std::string>() &&
+                           value.get<std::string>()==oldId)
+                            value=picojson::value(newId);
+            }
+        }
         if(!section)continue;
         auto category=placement.overrides.find(section);
         if(category==placement.overrides.end() || !category->second.is<picojson::object>())continue;
@@ -499,6 +512,20 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
         const char* property=original->type=="Actor"?"actor":
             original->type=="Model"?"model":
             original->type=="Requirement"?"requirement":nullptr;
+        if(original->type=="Upgrade"){
+            const auto item=placement.overrides.find("unit");
+            if(item!=placement.overrides.end() &&
+               item->second.is<picojson::object>()){
+                const auto& fields=item->second.get<picojson::object>();
+                const auto it=fields.find("researchable_upgrades");
+                if(it!=fields.end() && it->second.is<picojson::array>())
+                    for(const auto& value:it->second.get<picojson::array>())
+                        if(value.is<std::string>() &&
+                           value.get<std::string>()==id)
+                            refs.push_back("placement "+placement.id+
+                                           ".unit.researchable_upgrades");
+            }
+        }
         if(!section)continue;
         auto category=placement.overrides.find(section);
         if(category==placement.overrides.end() ||

@@ -283,6 +283,21 @@ float RTSSkirmish::productionProgress(int buildingId) const {
     }
     return -1.f;
 }
+std::vector<RTSSkirmish::ResearchWatch> RTSSkirmish::researchWatch(
+    std::size_t limit)const{
+    std::vector<ResearchWatch> result;
+    result.reserve(std::min(limit,research_.size()));
+    for(const auto& job:research_){
+        if(result.size()>=limit)break;
+        const auto remaining=job.finishTick>tick_?job.finishTick-tick_:0;
+        const auto duration=job.finishTick-job.startTick;
+        const float fraction=duration?float(std::clamp(
+            double(tick_-job.startTick)/double(duration),0.,1.)):1.f;
+        result.push_back({job.buildingId,job.ownerId,job.upgradeId,
+            upgradeLevel(job.ownerId,job.upgradeId)+1,remaining,fraction});
+    }
+    return result;
+}
 std::uint64_t RTSSkirmish::researchRemainingTicks(int buildingId)const{
     for(const auto& job:research_)if(job.buildingId==buildingId)
         return tick_>=job.finishTick?0:job.finishTick-tick_;

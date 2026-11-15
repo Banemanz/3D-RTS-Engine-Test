@@ -44,6 +44,17 @@ int main(){
     p.validate();
     assert(p.catalog.cloneDerived(id,"derived_upgrade"));
     assert(compileUpgrade(p.catalog,"derived_upgrade").armorPerLevel==1.5f);
+    // One placed producer can override its research list; typed Upgrade
+    // rename/delete must track these references too.
+    ProjectPlacement placed;
+    placed.id="research_instance";placed.kind="Unit";
+    placed.catalogId="command_center";placed.owner=0;
+    placed.name="Research Instance";placed.position={0.f,0.f,0.f};
+    placed.overrides["unit"]=picojson::value(picojson::object{
+        {"researchable_upgrades",picojson::value(picojson::array{
+            picojson::value(id)})}});
+    p.placements.push_back(placed);
+    p.validate();
     const auto references=p.catalogReferences(id);
     bool producer=false,predicate=false;
     for(const auto& r:references){
@@ -51,12 +62,20 @@ int main(){
         if(r==validator+".upgrade")predicate=true;
     }
     assert(producer && predicate);
+    bool placementRef=false;
+    for(const auto& r:references)
+        if(r=="placement research_instance.unit.researchable_upgrades")
+            placementRef=true;
+    assert(placementRef);
     const auto navigator=rtsCatalogLinks(p,id);
     assert(navigator.size()>=2);
     std::string message;
     assert(!p.removeCatalogObject(id,&message));
     assert(!message.empty());
     assert(p.renameCatalogObject(id,"enhanced_blades"));
+    const auto& local=p.placements.back().overrides.at("unit").
+        get<picojson::object>().at("researchable_upgrades").get<picojson::array>();
+    assert(local.size()==1 && local[0].get<std::string>()=="enhanced_blades");
     assert(compileValidator(p.catalog,validator).upgradeId=="enhanced_blades");
     assert(unitResearchIds(p.catalog,"command_center")[0]=="enhanced_blades");
     assert(p.renameCatalogObject("ranger","forward_ranger"));

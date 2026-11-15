@@ -38,6 +38,19 @@ void draw(App& app){
                 app.game.pendingAreaImpactCount());
     ImGui::Text("Live actor visual cues: %zu",
                 app.game.activeActorCueCount());
+    const auto research=app.game.researchWatch();
+    ImGui::Text("Active technology research: %zu",research.size());
+    if(!research.empty() &&
+       ImGui::TreeNode("##research","Live research progress")){
+        for(const auto& job:research){
+            ImGui::Text("%s | level %d | producer #%d",
+                job.upgradeId.c_str(),job.nextLevel,job.producerId);
+            ImGui::ProgressBar(job.progress,ImVec2(-1,0));
+            ImGui::TextDisabled("%llu ticks remaining",
+                static_cast<unsigned long long>(job.remainingTicks));
+        }
+        ImGui::TreePop();
+    }
     if(app.game.activeActorCueCount()>0 &&
        ImGui::TreeNode("##actorCues","Actor presentation events")){
         for(const auto& cue:app.game.actorCueWatch(24))

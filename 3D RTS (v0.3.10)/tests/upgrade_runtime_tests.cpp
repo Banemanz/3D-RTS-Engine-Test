@@ -91,6 +91,12 @@ int main(){
     game.update(1.f/60.f);
     assert(game.playerMinerals==minerals-25);
     assert(game.pendingProduction(base)==1);
+    const auto snapshot=game.stateDigest();
+    const auto watch=game.researchWatch();
+    assert(watch.size()==1 && watch[0].upgradeId=="frontier_tactics" &&
+           watch[0].nextLevel==1 && watch[0].remainingTicks==6 &&
+           watch[0].producerId==base && watch[0].progress==0.f);
+    assert(game.stateDigest()==snapshot);
     assert(game.researchRemainingTicks(base)==6);
     assert(!game.canResearchSelectedSlot(1));
     assert(!game.canQueueSelectedTrainingSlot(0));
