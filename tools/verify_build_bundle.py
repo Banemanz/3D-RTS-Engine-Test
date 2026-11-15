@@ -42,6 +42,8 @@ def main() -> int:
         "projects/actor_events_showcase.rtsproject.json",
         "projects/requirements_workshop_showcase.rtsproject.json",
         "docs/AUTHORING.md",
+        "docs/ACTOR_EVENT_AUTHORING.md",
+        "docs/REQUIREMENT_AUTHORING.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
         "docs/TRIGGER_EDITOR.md",

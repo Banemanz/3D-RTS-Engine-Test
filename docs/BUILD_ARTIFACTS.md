@@ -209,3 +209,10 @@ two dedicated Requirement regression programs plus the sample
 project validation; Debug CI compares the new deterministic
 requirement_fingerprint.txt on Linux and Windows. Native editor
 screenshot artifacts are independent of executable downloads.
+
+## Packaged extended authoring references
+
+Release archives now explicitly ship the full original Actor Event
+and Validator/Requirement authoring manuals alongside the existing
+core documentation. The installed-bundle verifier fails when either
+manual is missing, rather than linking only to repository-side files.

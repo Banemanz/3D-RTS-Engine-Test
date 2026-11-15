@@ -450,7 +450,7 @@ requirements_workshop_showcase is validated in CTest and with
 the packaged ProjectTool on Windows/Linux.
 
 CI compares requirement_fingerprint.txt byte-for-byte across
-Windows/GCC and Windows/MSVC (Linux/GCC and Windows/MSVC), runs
+Linux/GCC and Windows/MSVC, runs
 native F7 Requirement editor capture under xvfb/Mesa, and verifies
 RTS_FEATURE_REQUIREMENT_GRAPHS=1 in packaged binary metadata.
 All Release assertions remain active.
