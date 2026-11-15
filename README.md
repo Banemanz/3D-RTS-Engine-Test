@@ -399,3 +399,18 @@ angle and width, alongside green/red example target dots based on the
 same simulation predicate. No map edits occur until Apply is selected.
 The preview uses the existing editor adapter; F9 targeting remains the
 separate engine-owned OpenGL overlay.
+
+## Normal-attack Weapon catalog and original Weapon Forge (November 15)
+
+The F7 creator now supports an independent, reusable Weapon catalog family.
+Weapons have authored damage, attack reach, cooldown and armor penetration.
+Units can equip a Weapon through a typed dropdown, navigate to it, or use
+their legacy Unit stats. Equip settings and Weapon edits are validated and
+undoable; reference rename/deletion and derived Unit inheritance are handled.
+
+Normal Weapon hits resolve in deterministic two-phase combat. Penetration
+reduces the target armor (including active status bonuses) for ordinary
+attacks, but does not change ability or Effect damage. The F9 HUD shows
+PEN on armor-piercing units. The original playable Weapon Forge map has
+a Piercer Rifle and Impact Maul. Both platform CTests cover combat and F7
+workflows, with replay fingerprint comparisons and native GUI screenshots.

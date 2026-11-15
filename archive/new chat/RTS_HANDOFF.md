@@ -1294,3 +1294,44 @@ This is useful editor UX but not a replacement for in-house native
 docking, generic schema panels, graph editing or asset inspection.
 The existing Mesa F7 screenshot command uses fan_surge and will
 exercise the new canvas after CI rebuild. Verify latest CI.
+
+## November 15 2026 continuation — normal-attack Weapons
+
+All development remains on the same unmerged Draft PR #1, branch
+feat/rts-vertical-slice; do not create a second PR.
+
+Commits so far:
+- e4e74a8df9616a2be723abb3f7ce00f3722bf955:
+  Added typed WeaponDefinition and catalog compiler; bounded damage,
+  range, cooldown and armor_piercing fields. Optional Unit weapon
+  reference overrides basic UnitData attack stats when present.
+  Unit.takeDamage accepts penetration only for normal CombatHit data;
+  generic Effect damage remains unchanged. Status-added armor is
+  still mitigated, but penetration subtracts from effective armor.
+  Two-phase combat is retained. DataCatalog rename and RTSProject
+  reference inspection/deletion recognize inherited weapon links.
+  EditorSession adds Weapon Ranged/Melee creation, grouped F7 edits,
+  undo/redo and candidate validation. CreatorWorkbench adds typed
+  Unit equipment selector and linked Weapon navigation.
+  First code revision passed its existing Windows/Linux CI.
+- 5354f303f1d2b65c441edc5840c47aa3ad946343:
+  Added CTests weapon_runtime and weapon_editor. Runtime exercises
+  fixed-tick Attack gameplay, combat mitigation, replay JSON/tamper
+  rejection, and legacy fallback; editor covers schema, rollback,
+  inheritance, typed rename/deletion and undo/redo. Weapon test writes
+  weapon_fingerprint.txt; Windows/Linux compare exact bytes.
+  Added original weapon_forge_showcase.rtsproject.json with Piercer
+  Rifle / Impact Maul and neutral Worker inheritance override.
+  New F7 and real F9 OpenGL screenshot jobs; Release bundle checks
+  for sample and feature flags.
+- Final HUD/docs pass: F9 native single-unit dossier conditionally
+  displays PEN with authored Weapon penetration. README, authoring,
+  audit/feature matrix, build documentation and this handoff updated.
+
+Outstanding tasks: verify latest Windows/Linux Debug tests, replay parity
+and packaged Release builds; fix any regressions on this SAME branch.
+The standard weapon attack still applies immediate two-phase damage,
+not ballistic Projectile delivery. Next meaningful work:
+weapon/projectile link; contact/launch Actor events; multi-weapon and
+damage-class systems; tech upgrades, asset import, richer native GUI.
+No SC2 proprietary data/assets or names have been incorporated.

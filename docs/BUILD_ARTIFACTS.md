@@ -165,3 +165,14 @@ projectile_fingerprint.txt on Windows and Linux, rejects a
 byte mismatch in replay-parity, and captures native GL images
 of the Projectile inspector and a moving shot in play mode.
 Screenshots are not downloadable executables.
+
+## Weapon Forge bundled sample and feature gate
+
+Windows and Linux share identical Weapon catalog/combat/editor source.
+The installed native zip/tar artifacts must contain the Weapon Forge
+sample. The packaged RTSProjectTool validates it on both targets.
+The native RTSCameraTerrain --features output must report authored
+weapons and armor penetration as enabled. Headless tests and replay
+fingerprints run on Windows and Linux; Linux Mesa captures the actual
+F7 inspector and F9 combat/HUD as screenshot artifacts. Screenshot
+artifacts are not substitutes for the executable build workflow.

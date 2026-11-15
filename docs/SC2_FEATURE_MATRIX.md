@@ -328,3 +328,14 @@ than Blizzard scripting or content. Advanced filters, terrain
 occlusion, collision-volume overlaps, explicit shape orientation
 policies, falloff, actor VFX events, arbitrary node graphs and
 a fully in-house dockable data editor are still outstanding.
+
+## Original Weapon object model (November 15 continuation)
+
+Implemented: first-class Weapon data, reusable Unit equipment reference,
+typed inherited references and migration, F7 grouped creator controls,
+deterministic normal-attack penetration, replay parity, F9 HUD feedback,
+and an independent playable sample. This is general RTS engine capability,
+not SC2 naming or borrowed assets. Incomplete: attack pattern graphs,
+weapon/projectile links, multi-weapon selectors, attack point animation,
+damage type bonuses, ballistic VFX/SFX, tech upgrades and full editor
+dockable authoring workspace.

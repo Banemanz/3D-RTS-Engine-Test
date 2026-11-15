@@ -621,3 +621,23 @@ search predicate as the runtime to classify example target points
 (green means affected, red means outside). The caster is displayed left
 of the impact origin and the ability faces right. The preview never
 commits a project change: Apply ground settings does that transaction.
+
+## Authorable standard-attack Weapons
+
+In F7, create a Weapon using the Ranged or Melee preset. Adjust damage
+(0..10000), range (0..128 world units), cooldown (.05..60 seconds), and
+armor penetration (0..1000); Apply commits one undoable validated change.
+Select a Unit and choose its Equipped weapon from the typed dropdown.
+The resulting damage/range/cooldown/pierce stats are shown below the
+selector. Choosing Legacy unit stats restores its authored base fields.
+An inherited Unit inherits the Weapon link unless locally overridden
+with an empty string. Weapon rename migrates all linked Unit entries,
+and Weapon deletion refuses dangling references.
+
+A Weapon hit subtracts armor penetration from target mitigation, including
+Behavior armor, before evaluating damage. Generic Effect damage remains
+unmodified. Attack commands, impact order and replay semantics are unchanged.
+The original weapon_forge_showcase.rtsproject.json demonstrates Ranged and
+Melee Weapon authoring and runtime play. Normal attacks remain instant
+two-phase hits; ballistic, homing, multi-target and Actor event pipelines
+are future work.

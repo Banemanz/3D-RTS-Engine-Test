@@ -377,3 +377,21 @@ F9 cone telegraph) and validates area_shapes_showcase in headless
 and packaged executables. Both bundled binaries must report
 RTS_FEATURE_AREA_SHAPES=1. Check current CI run before claiming
 the new milestone fully green.
+
+## New Weapon runtime/editor and Release parity coverage
+
+weapon_runtime verifies Weapon bounds and typed refs, penetration versus
+ordinary Effect armor mitigation, stacked armor, CombatHit data, an actual
+queued Attack command, replay roundtrip and tampered replay rejection.
+It writes weapon_fingerprint.txt for mandatory byte comparison across
+Windows/MSVC and Linux/GCC. weapon_editor validates F7 preset creation,
+grouped field transactions, invalid edit rollback, undo/redo, inherited
+Unit weapon refs, rename/deletion protection and JSON persistence.
+Release asserts are enabled for both new CTests.
+
+The original Weapon Forge project is validated by both headless CTest
+and the native packaged RTSProjectTool on both platforms. Build bundle
+checks require RTS_FEATURE_AUTHORED_WEAPONS=1 and
+RTS_FEATURE_ARMOR_PENETRATION=1 from the executable itself.
+Linux Mesa OpenGL smoke jobs capture the F7 Weapon inspector and the F9
+native game/HUD, not simulated UI images.

@@ -417,3 +417,15 @@ Pending noncircular shape properties participate in the
 authoritative replay state digest. F7 typed inputs, F6 read-only
 monitor, F9 native preview and an original sample map are
 wired end to end on shared Windows/Linux code.
+
+## Reusable normal Weapon combat foundation
+
+WeaponDefinition and compileWeapon validate independent normal-attack
+profiles. The optional Unit weapon reference resolves into the existing
+UnitData attack values at spawn, so legacy unlinked Unit stats behave as
+before. CombatHit carries armor penetration into target damage resolution,
+including Behavior armor buffs, without affecting Effects. The F7 Weapon
+inspector, equip selector, typed project rename/deletion, native F9 HUD,
+original Weapon Forge showcase and replayable attack CTests all use the same
+headless Windows/Linux runtime. Still missing: ordinary attack projectiles,
+multi-weapon loadouts, damage classes and richer Actor events.
