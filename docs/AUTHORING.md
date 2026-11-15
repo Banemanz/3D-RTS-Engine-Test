@@ -641,3 +641,20 @@ The original weapon_forge_showcase.rtsproject.json demonstrates Ranged and
 Melee Weapon authoring and runtime play. Normal attacks remain instant
 two-phase hits; ballistic, homing, multi-target and Actor event pipelines
 are future work.
+
+## Weapon Projectile delivery and F7 object navigation
+
+In F7 create a Projectile, configure speed, visual tint, arc, hit radius
+and collide_units, then create a Weapon and select it in the Projectile
+delivery dropdown. Equip that Weapon on a Unit. The Weapon -> Projectile
+and Unit -> Weapon links are validated, inherited, rename-aware and
+undoable. The Projectile selector's Instant (legacy) option restores
+ordinary direct hits.
+
+F9 fixed-tick attacks now travel to the target position sampled at
+launch, can miss moved targets, and optionally intercept other eligible
+enemy Unit cylinders. Impact applies the Weapon's damage and armor
+penetration; nonprojectile Ability effects retain their own rules.
+In F7, open Creator | Data Navigator to inspect Depends on / Used by
+references, inherited links and search results. Click any object to
+open its editor. The navigator is read-only and does not edit map data.

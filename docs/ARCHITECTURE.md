@@ -268,3 +268,21 @@ are all handled explicitly. This replaces the less accurate
 closest-point approximation, which could choose the wrong
 victim when a large collider is entered before a nearby small one.
 The helper is reusable for later normal weapons and projectiles.
+
+## Common authoritative Projectile scheduler
+
+Weapon shots use tagged PendingAreaImpact records in RTSSkirmish,
+sharing the existing 60Hz flight, spatial broadphase, exact swept
+cylinder collision, native projectile watcher, and fixed-step replay
+state hashing with Ground Ability projectiles. Direct Weapon shots
+carry attacker and target IDs, launch-time aim, damage and penetration;
+they apply a direct CombatHit on contact instead of using Ability's
+area Effect graph. A stable target/attacker sort processes simultaneous
+arrivals. No OpenGL call can affect targeting.
+
+Weapon shot capacity (512) is logically independent of Ability area
+capacity (128), avoiding unintended starvation of special abilities.
+At saturation an existing Weapon shot falls back deterministically to
+instant damage. RTSCatalogNavigator is headless typed link extraction;
+CreatorCatalogNavigator is its F7 renderer/controller. Neither mutates
+catalog properties during graph traversal.

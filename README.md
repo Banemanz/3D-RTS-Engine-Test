@@ -414,3 +414,21 @@ attacks, but does not change ability or Effect damage. The F9 HUD shows
 PEN on armor-piercing units. The original playable Weapon Forge map has
 a Piercer Rifle and Impact Maul. Both platform CTests cover combat and F7
 workflows, with replay fingerprint comparisons and native GUI screenshots.
+
+## November 15: Native Weapon projectiles and F7 Data Navigator
+
+Basic Weapons may now reference Projectile catalog objects. Ordinary Attack
+orders fire deterministic swept-collision shots instead of dealing immediate
+damage, while unlinked Weapons remain hitscan. Targets can dodge the
+original launch trajectory; collide_units on the Projectile enables enemy
+interception. Authoritative damage/penetration occurs on contact, not in
+OpenGL. The original Weapon Forge project has a Tracer Bolt and practice
+target. The shared scheduler reserves 512 Weapon flight and 128 Ability
+area slots independently.
+
+The new F7 Data Navigator is a dockable catalog dependency explorer:
+forward links, reverse "Used by" references, inheritance indicators,
+searchable jump navigation. It uses the same typed project catalog as
+gameplay and preserves unknown extension data. Windows/Linux tests
+verify combat, editor transactions and replay parity. Reference research
+is archived in docs/EDITOR_REFERENCE_RESEARCH.md.

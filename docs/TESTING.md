@@ -403,3 +403,17 @@ The Weapon Forge gameplay screenshot smoke uses the native
 armed Ranger, ensuring that the F9 detailed unit dossier
 shows PEN next to damage/armor rather than the group-selection grid.
 The run is fixed 60 Hz smoke, not a mocked interface.
+
+## Native Weapon flight and Data Navigator regressions
+
+weapon_projectile_runtime covers launched-hit delay, moving-target
+dodge, earliest eligible enemy interception, armor mitigation,
+authoritative replay roundtrip and invalid Projectile links.
+weapon_projectile_editor verifies F7 typed link transactions,
+Undo/Redo, inherited references, rename/delete safety and JSON.
+catalog_navigator covers typed forward/reverse/parent/inherited links,
+explicit empty overrides, unknown extension fields and stable ordering.
+Release assertions remain on; Windows and Linux CI byte-compare
+weapon_projectile_fingerprint.txt. The native Mesa OpenGL screenshot
+pipeline captures F7 Weapon and gameplay Projectile flight.
+The packaged executable reports RTS_FEATURE_WEAPON_PROJECTILES=1.

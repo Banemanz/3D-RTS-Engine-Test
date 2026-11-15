@@ -150,3 +150,15 @@ The target set is chosen at impact, with stable numeric Unit-ID
 sorting; the target orientation does not recompute from any
 Unit movement after casting. The dedicated area_shapes_fingerprint
 fixture is compared between the Windows and Linux CTest runners.
+
+## Tagged Weapon Projectile replay state
+
+Existing Attack command JSON is unchanged. When a Weapon has a
+Projectile reference, a tagged PendingAreaImpact holds attacker,
+aimed target and intercept target IDs, damage, armor penetration,
+flight endpoints/ticks and collision settings. All pending shot
+fields are included in authoritative state digest calculation
+only when such shots exist. A moving target can dodge a flight.
+Windows/Linux compare weapon_projectile_fingerprint.txt byte-for-byte,
+including a serialized replay roundtrip and tamper rejection.
+Old Weapon and other map fingerprints are preserved.

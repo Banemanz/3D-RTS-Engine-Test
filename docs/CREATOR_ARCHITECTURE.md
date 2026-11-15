@@ -223,3 +223,15 @@ origin so the world does not refer to mutable GUI selection or
 later Unit facing. No new UI library or external RTS code was
 imported. The more elaborate editor remains on its temporary
 Dear ImGui adapter; in-house docking is still unfinished.
+
+## Typed Data Navigator
+
+RTSCatalogNavigator.hpp computes deterministic forward and reverse
+links for Units, Actors, Models, Weapons, Projectiles, Abilities,
+Behaviors and Effects, including parent and inherited references.
+CreatorCatalogNavigator.hpp renders a dockable F7 relationship view,
+with navigation buttons, source-field labels and searchable ID/type
+jump. This replaces guesswork in JSON and does not touch authoritative
+map data. The F7 Weapon editor also has typed Projectile delivery
+selection, with grouped undoable transactions. Additional references
+and the full specialized subeditor catalog remain incomplete.

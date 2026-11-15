@@ -1344,3 +1344,40 @@ PEN stat. CI now selects exactly one ability-equipped Ranger via
 --smoke-select-ability-caster; this exercises the actual unit
 combat dossier, reuses the same runtime and does not change
 user input or regular gameplay.
+
+## November 15 continuation — RTS source research, Weapon delivery and F7 Data Navigator
+
+Do not create a new PR or merge: use existing Draft PR #1,
+branch feat/rts-vertical-slice only.
+
+Reviewed SC2 Galaxy Data Editor, Actors and Trigger documentation and
+screenshots; OpenRA traits/Weapons/Projectiles/Warheads; Spring and
+Recoil synced/unsynced projectile concepts; and historical 0 A.D.
+Attack.js and Atlas. No proprietary content or copyleft source code
+was copied. Full links and capability audit: docs/EDITOR_REFERENCE_RESEARCH.md.
+
+Commits on same branch:
+- 2cee395a: normal Weapon attacks can use typed Projectile references
+  with shared RTSSkirmish pending-flight scheduler and 60Hz swept
+  collision, first-contact interception, moving-target dodge, no
+  renderer authority. F7 Weapon Projectile selector and project
+  rename/deletion protection, live F6 monitor, native F9 visual.
+- 68e5cf07: dedicated projectile combat/editor CTests, extra
+  Windows/Linux replay fingerprint, Tracer Bolt and practice target
+  in Weapon Forge sample, actual GL in-flight screenshot, package
+  feature marker. CI across Linux/Windows passed.
+- f38256aa: headless RTSCatalogNavigator + dockable CreatorCatalogNavigator
+  with forward, reverse and inherited typed links, jump search,
+  field provenance; dedicated graph CTest.
+- d3362ace: independent capacities (512 normal Weapon flights,
+  128 delayed Ability impacts) on one authoritative scheduler.
+  Capacity regression added. Windows/Linux Debug, Replay and
+  Release CI passed on this implementation revision.
+- This documentation revision: updated architecture, authoring,
+  test instructions, research, feature matrix and this handoff.
+
+Outstanding: 0 copy/visual parity claims. Projectile guidance/homing,
+terrain mesh contact, salvos and Warhead chains, damage-type filters,
+Actor presentation events, Upgrades/Requirements/Validators, deeper
+typed node graphs, source layers, asset and model import. Check latest
+CI head; retain same branch, same Draft PR, one Windows/Linux code path.

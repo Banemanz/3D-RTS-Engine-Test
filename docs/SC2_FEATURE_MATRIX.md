@@ -339,3 +339,14 @@ not SC2 naming or borrowed assets. Incomplete: attack pattern graphs,
 weapon/projectile links, multi-weapon selectors, attack point animation,
 damage type bonuses, ballistic VFX/SFX, tech upgrades and full editor
 dockable authoring workspace.
+
+## Engine/editor references, November 15
+
+New independent functionality: Weapon -> Projectile typed references,
+fixed-tick attack flight and interception, inherited F7 object links,
+a dockable Data Navigator and headless cross-platform tests. The editor
+still lacks much Galaxy Data Editor functionality: Validators,
+Requirements, Upgrades, Movers, actor event term/message workflows,
+source layers, advanced asset import and editable multi-hop graphs.
+Do not confuse compatibility of the concept with parity of features.
+See docs/EDITOR_REFERENCE_RESEARCH.md for reference links.

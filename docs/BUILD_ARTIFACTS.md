@@ -176,3 +176,13 @@ weapons and armor penetration as enabled. Headless tests and replay
 fingerprints run on Windows and Linux; Linux Mesa captures the actual
 F7 inspector and F9 combat/HUD as screenshot artifacts. Screenshot
 artifacts are not substitutes for the executable build workflow.
+
+## Weapon flight artifact verification
+
+Windows and Linux native Release bundles validate the original Weapon
+Forge map with Tracer Bolt and practice target. Executables advertise
+RTS_FEATURE_WEAPON_PROJECTILES=1 in --features; CTests include the new
+Projectile and Navigator tests, and CI strictly compares new replay
+fingerprints across MSVC and GCC. Linux captures real OpenGL Weapon
+flight and F7 editor screenshots; those are test artifacts, not
+substitutes for downloadable executable bundles.

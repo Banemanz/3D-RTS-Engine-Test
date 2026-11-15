@@ -429,3 +429,15 @@ inspector, equip selector, typed project rename/deletion, native F9 HUD,
 original Weapon Forge showcase and replayable attack CTests all use the same
 headless Windows/Linux runtime. Still missing: ordinary attack projectiles,
 multi-weapon loadouts, damage classes and richer Actor events.
+
+## Shared normal Weapon Projectile delivery
+
+Ordinary Weapon attacks can reference a validated Projectile and travel
+with deterministic fixed-tick swept collision, launch-point snapshot,
+dodge behavior, optional interception and standard armor penetration.
+Legacy unlinked attacks remain instantaneous. F7 exposes Weapon to
+Projectile authoring and a dockable Data Navigator for typed catalog
+dependencies. The original Weapon Forge sample demonstrates this,
+with new headless editor/runtime tests, replay fingerprints and Linux
+OpenGL smoke captures. Remaining work includes homing, terrain mesh
+collision, Warheads, target filters and Actor audiovisual events.
