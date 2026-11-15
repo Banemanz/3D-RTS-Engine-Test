@@ -1434,3 +1434,73 @@ assets, validators/requirements, tech upgrades, deeper graph/scene
 editor, data source layers, navigation footprints, projectile
 homing/terrain collision, multi-hit Warheads. Never copy Galaxy
 source, assets or third-party GPL implementations.
+
+## November 15, 2026 — gameplay Validator and Requirement pass
+
+KEEP ALL CODE IN EXISTING OPEN UNMERGED DRAFT PR #1:
+Banemanz/3D-RTS-Engine-Test, branch feat/rts-vertical-slice.
+Prior tested head 7c2c962 had 75 Windows/Linux CTests and strict
+Debug/replay parity green. No new PR. Continue Linux/Windows parity.
+
+New engine/editor commits:
+- 51d48d20e1953e8802389a0ecb2842cdc5935670:
+  Added reusable typed RTSRequirements.hpp/.cpp catalog compiler
+  and runtime gate: HealthBelowPercent, EnergyAtLeast,
+  HasBehavior, IsStructure, OwnerUnitCountAtLeast, scopes Caster /
+  Target. Requirement kinds Predicate/All/Any/Not, typed links,
+  bounded graph compile (depth 8, max 64 expanded nodes and 8
+  unique children), cycle/type/numeric safety. Abilities can
+  reference requirement; canCastAbility/At evaluates actual
+  fixed-tick Unit/status state, canQueueAt applies producer's
+  status/owner counts to trained Unit Requirement.
+- 5ccb4ceccf15d5d95b4ec5756ed526133a0bf452:
+  explicit algorithm include for GCC/MSVC portability.
+- 1988e0ec3fb6db4847c1c74b6843a99b659275d7:
+  DataCatalog/RTSProject typed rename and delete protection,
+  RTSCatalogNavigator forward/back/inherited links; F7 starter
+  Validator/Requirement presets and transactional
+  EditorSession::setValidatorDefinition/setRequirementDefinition.
+- 9f7a6935a6376c27474535452d4bf23506a419ac:
+  F7 specialized forms for Validator kinds, scoped fields,
+  typed Behavior/Unit links, and editable Requirement children
+  with All/Any/Not/Predicate; typed Requirement selector on
+  Ability and trained Unit inspect views.
+- 0d1f83cca0a31882dd0f1e5fde3f2d42ea951503:
+  two Release-asserted regression programs:
+  requirement_runtime (actual cast/train commands and replay)
+  and requirement_editor (validation/rollback/undo/rename).
+  Compiler disallows Target-scoped predicates in Ground or
+  training gates even under nested Boolean operations.
+- c5c75e7f2847bfa7b90f98ffde7a87d4a70a375d:
+  test fixture Ranger has real energy pool for Energy gate.
+- 7bf709c85fae725306425366c1dde68cd8b1a3c5:
+  Requirement Graph Workshop sample, mandatory packaged
+  map validation, native --features marker, Linux F7 GL
+  screenshot, Windows/Linux requirement_fingerprint.txt
+  byte parity in Debug CI.
+- 3077014ba33bb3cbaeded595d0a9a3e0ae830ace:
+  canPrepareAbility evaluates Self/Ground requirements early
+  for truthful UI enable state. Project-level renames/delete
+  references also include placement-level Unit Requirement
+  overrides. 78/78 Release CTests passed Windows/Linux at
+  this commit, plus all Debug/replay parity and package CI.
+- 509451fd36901f072a5a4cc3e9966cf1f562e981:
+  stronger tests for true HasBehavior runtime status
+  expiration and per-placement requirement override migration.
+
+This documentation pass adds docs/REQUIREMENT_AUTHORING.md and
+expands README, authoring, status, feature matrix, replay,
+testing, packaging and research/handoff documents.
+
+Current exact latest head may be newer; verify latest GitHub
+Actions Release Windows/Linux 78/78 tests, Debug replay
+fingerprint equality and native F7 screenshot artifact before
+stating it is fully green. If any failure, fix on SAME branch.
+Downloaded action screenshots may be in connector ZIP artifacts;
+use container or GitHub download to inspect.
+
+Missing: Upgrades/Research, ECA Requirement query predicates,
+target selector/weapon validators, tech visibility vs admission,
+per-rule failure text, more validator kinds, true node graph GUI,
+advanced visual actor assets/sounds, modeling/terrain improvements.
+No copied SC2 or GPL source.

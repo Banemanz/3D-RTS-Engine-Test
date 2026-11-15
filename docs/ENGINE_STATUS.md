@@ -457,3 +457,20 @@ Actor Event Laboratory project and strict schema/editor tests make
 the feature portable across Windows/Linux builds. This remains
 a visual-cue foundation, not sound, animation, particles, or complete
 Galaxy Actor Events parity.
+
+## Gameplay prerequisites and bounded Boolean graphs
+
+Added headless RTSRequirements.hpp/.cpp with compileValidator
+and compileRequirement. Validator kinds: HealthBelowPercent,
+EnergyAtLeast, HasBehavior, IsStructure, OwnerUnitCountAtLeast.
+Boolean Requirement nodes: Predicate, All, Any, Not. Graph compile
+rejects cycles, missing typed refs, duplicate children, depth >8,
+expanded node count >64 and invalid numeric values.
+
+The live fixed-tick simulation enforces Ability gates when a
+command is checked and Unit training gates when a production queue
+entry is admitted, both with actual Unit/Behavior/owner state.
+Ground/production links cannot inspect nonexistent targets.
+Legacy unlinked objects and replay command formats remain unchanged.
+F7 authoring, Data Navigator links, standalone Workshop map,
+portable regression CTests and native screenshots are integrated.

@@ -434,3 +434,23 @@ The new actor_cues_fingerprint.txt is uploaded and byte-compared
 in replay parity CI. Native Linux OpenGL captures an F7 Actor event
 inspector and F9 live event gameplay screenshot. The Release
 bundle verifier requires RTS_FEATURE_ACTOR_EVENT_CUES=1.
+
+## Requirement graph testing matrix
+
+requirement_runtime covers positive/negative Ability admission,
+strict less-than health thresholds, energy checks, All/Any/Not
+short-circuiting, status Behavior presence and expiration,
+production Unit-count gating, targetless rejection rules, invalid
+graph references/cycles/bounds, replay roundtrip and rejected
+command fingerprints. requirement_editor covers create/edit/preset,
+invalid transactional rollback, undo/redo, inherited Unit
+references, rename/delete prevention, graph browser forward/reverse
+links, per-instance typed override migration and JSON roundtrip.
+requirements_workshop_showcase is validated in CTest and with
+the packaged ProjectTool on Windows/Linux.
+
+CI compares requirement_fingerprint.txt byte-for-byte across
+Windows/GCC and Windows/MSVC (Linux/GCC and Windows/MSVC), runs
+native F7 Requirement editor capture under xvfb/Mesa, and verifies
+RTS_FEATURE_REQUIREMENT_GRAPHS=1 in packaged binary metadata.
+All Release assertions remain active.

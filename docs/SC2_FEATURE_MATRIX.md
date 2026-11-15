@@ -362,3 +362,16 @@ messages/terms, timelines, sounds, particles, animation controllers,
 validators, model attachment trees and specialized action catalogs.
 The current system is an original generic RTS creator implementation,
 not a recreation of those proprietary assets or scripts.
+
+## Requirements/Validators progression
+
+Implemented a useful generic subset of Galaxy-like gameplay authoring:
+five typed live Unit/owner Validators, four Boolean Requirement node
+kinds, nested graph checking, typed links, inheritance, safe rename
+and deletion, F7 graph forms, and real cast/production enforcement.
+Not yet at parity: upgrades/research levels, variable/trigger
+validators, custom expression functions, tech resource trees,
+multi-caster evaluation, graphical drag-wire requirement editing,
+arbitrary unit class tests, or authored failure texts. This is an
+independent engine/editor capability and does not borrow Blizzard
+code or content.

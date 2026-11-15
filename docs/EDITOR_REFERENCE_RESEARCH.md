@@ -76,3 +76,15 @@ independent content. Visual fidelity to reference products does not
 justify borrowing their copyrighted artwork or GPL implementation.
 Next priority should be Validators and Requirements tied to orders/
 abilities, then Actor events and multi-weapon payload rules.
+
+## 2026-11-15 implementation follow-up
+
+Validator/Requirement data objects now exist as reusable typed
+headless catalogs with bounded All/Any/Not Boolean graphs. They
+directly gate Ability casting and Unit production queue admission,
+and F7 edits their references rather than hardcoded rule branches.
+The broader Galaxy Validator and Requirement editor capabilities
+remain incomplete, particularly scripted predicates, research and
+upgrade trees, field provenance and advanced graph editing. The
+new original schema and exact implementation limits are documented
+in docs/REQUIREMENT_AUTHORING.md.

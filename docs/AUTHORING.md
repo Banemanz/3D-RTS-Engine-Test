@@ -674,3 +674,21 @@ F9 renders them from read-only cue snapshots; F6 shows the active
 events. The original Actor Event Laboratory shows projectile
 launch/impact cues without borrowing third-party content. Full
 schema and details: docs/ACTOR_EVENT_AUTHORING.md.
+
+## Gameplay Validators and reusable Requirement graphs
+
+In F7 create a Validator (health, energy, active status, structure
+or owned Unit count). Its subject is Caster or Target. Then create
+Requirement | Single validator to reference it; compose nested
+All, Any or Not Requirement objects as reusable Boolean logic.
+Apply commits validated changes atomically, with undo/redo.
+The Data Navigator shows incoming and outgoing typed links.
+
+Attach a Requirement to any Ability or Unit via the Required graph
+selector. Abilities check the rule at cast admission; Unit gates
+apply to production of that Unit by a producer building. The
+production Caster is the producer, not the uncreated Unit.
+Only Caster predicates are valid for Ground or training gates.
+Missing and invalid IDs, duplicate children, cycles and excessive
+depth are rejected before project save. Existing unlinked objects
+remain playable. See docs/REQUIREMENT_AUTHORING.md for details.

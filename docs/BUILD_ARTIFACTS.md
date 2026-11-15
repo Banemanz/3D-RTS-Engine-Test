@@ -197,3 +197,15 @@ in the shipped executable. New CTests and strict Windows/Linux
 replay parity cover authored event rules and deterministic game
 isolation. Mesa screenshot artifacts show actual F7 and F9 output,
 not user-facing executable substitutes.
+
+## Requirement Workshop in native release bundles
+
+Both platform bundles now include
+projects/requirements_workshop_showcase.rtsproject.json, validated
+by the platform's installed RTSProjectTool. The actual packaged
+RTSCameraTerrain executable must return
+RTS_FEATURE_REQUIREMENT_GRAPHS=1 in --features. Test suites include
+two dedicated Requirement regression programs plus the sample
+project validation; Debug CI compares the new deterministic
+requirement_fingerprint.txt on Linux and Windows. Native editor
+screenshot artifacts are independent of executable downloads.

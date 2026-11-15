@@ -173,3 +173,16 @@ actor_event_runtime CTest checks these boundaries by simulating
 identical matches with and without cue rules and comparing the
 authoritative digest at every tick. actor_cues_fingerprint.txt is
 also byte-compared between Windows and Linux in CI.
+
+## Deterministic Requirement admission
+
+Requirement definitions live in the project catalog, not renderer
+state. Ability cast orders and Unit train orders evaluate fixed
+Validator/Requirement data at their authoritative command tick.
+A failed gate rejects the order before costs or cooldowns are
+consumed; command failure remains recordable in replay tapes.
+Evaluation uses Unit HP, energy, active Behavior state, structure
+flags and stable owner Unit counts. No wall-clock or platform APIs
+participate. The runtime Requirement CTest writes
+requirement_fingerprint.txt, byte-compared in Linux and Windows CI,
+with JSON replay/tamper verification.

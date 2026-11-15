@@ -260,3 +260,18 @@ a read-only live cue watch, and F9 displays original GL effects,
 neither of which can change combat. This is a foundational
 subeditor; full animation state/event term/message graph authoring
 is still missing.
+
+## Typed F7 Validator and Requirement editing
+
+CreatorWorkbench now includes full typed forms for the new Validator
+and Requirement catalogs: predicate kind/subject, numeric threshold,
+typed Behavior/Unit references, Boolean operation selection and
+editable nested Requirement children with add/reorder/delete.
+EditorSession provides setValidatorDefinition and
+setRequirementDefinition with complete candidate validation,
+transactional Undo/Redo and invalid-edit rollback.
+Unit and Ability inspectors offer a typed Required graph selector;
+the Data Navigator exposes forward, reverse and inherited links.
+Both gameplay and editor share the same headless catalog compiler.
+This is a functional Boolean tree foundation, not yet a graphical
+drag-wire node canvas or the complete Galaxy Data Editor.

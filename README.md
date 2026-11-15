@@ -447,3 +447,20 @@ damage or replay state. A new regression suite verifies identical
 gameplay digests with and without cues. The new Actor Event Laboratory
 project and Windows/Linux CI screenshots exercise real gameplay.
 See docs/ACTOR_EVENT_AUTHORING.md for schema and current limits.
+
+## Validator and Requirement graph workshop
+
+F7 now has first-class Validator and Requirement catalog editors.
+Validators inspect authoritative live gameplay (HP %, energy,
+active Behaviors, structure flag, or owner Unit count). Requirement
+graphs combine predicates through All, Any and Not nodes with bounded
+depth, node count, typed references and cycle detection. Abilities
+and trained Unit catalog items can reference a Requirement; the
+engine evaluates it when a cast or production order is submitted.
+Existing maps with no Requirement remain unchanged.
+
+The original Requirement Graph Workshop includes an Arc Lance gate
+and a Worker training prerequisite. Windows/Linux Release and
+Debug CI validate it and byte-compare requirement_fingerprint.txt;
+F7 captures a native graph inspector screenshot. See
+docs/REQUIREMENT_AUTHORING.md for workflow, data schema and limits.
