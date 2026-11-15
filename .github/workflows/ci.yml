@@ -35,6 +35,7 @@ jobs:
             build/area_shapes_fingerprint.txt
             build/weapon_fingerprint.txt
             build/weapon_projectile_fingerprint.txt
+            build/actor_cues_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -218,6 +219,26 @@ jobs:
           name: rts-active-behavior-hud-screenshot
           path: rts-active-status.png
           if-no-files-found: error
+      - name: Capture actual F7 Actor event rule inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/actor_events_showcase.rtsproject.json --smoke-select-catalog-id ranger_actor --smoke-frames 85 --screenshot rts-actor-events-f7.ppm
+      - name: Convert F7 Actor event screenshot
+        run: python3 tools/ppm_to_png.py rts-actor-events-f7.ppm rts-actor-events-f7.png
+      - name: Upload native Actor event inspector screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-actor-event-editor-screenshot
+          path: rts-actor-events-f7.png
+          if-no-files-found: error
+      - name: Capture real Actor cue on normal projectile launch
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/actor_events_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 35 --screenshot rts-actor-events-f9.ppm
+      - name: Convert F9 Actor event screenshot
+        run: python3 tools/ppm_to_png.py rts-actor-events-f9.ppm rts-actor-events-f9.png
+      - name: Upload native Actor event gameplay screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-actor-event-gameplay-screenshot
+          path: rts-actor-events-f9.png
+          if-no-files-found: error
       - name: Capture reusable Weapon F7 inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-catalog-id piercer_rifle --smoke-frames 90 --screenshot rts-weapon-f7.ppm
       - name: Convert Weapon inspector screenshot
@@ -358,6 +379,7 @@ jobs:
             build/area_shapes_fingerprint.txt
             build/weapon_fingerprint.txt
             build/weapon_projectile_fingerprint.txt
+            build/actor_cues_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -389,3 +411,4 @@ jobs:
           diff -u fingerprints/linux/area_shapes_fingerprint.txt fingerprints/windows/area_shapes_fingerprint.txt
           diff -u fingerprints/linux/weapon_fingerprint.txt fingerprints/windows/weapon_fingerprint.txt
           diff -u fingerprints/linux/weapon_projectile_fingerprint.txt fingerprints/windows/weapon_projectile_fingerprint.txt
+          diff -u fingerprints/linux/actor_cues_fingerprint.txt fingerprints/windows/actor_cues_fingerprint.txt

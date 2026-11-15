@@ -17,7 +17,7 @@ inline const char* rtsActorCueEventName(RTSActorCueEvent event){
         case RTSActorCueEvent::Cast:return "Cast";
         case RTSActorCueEvent::Status:return "Status";
     }
-    return "Attack";
+    return "";
 }
 inline const char* rtsActorCueStyleName(RTSActorCueStyle style){
     switch(style){
@@ -25,7 +25,7 @@ inline const char* rtsActorCueStyleName(RTSActorCueStyle style){
         case RTSActorCueStyle::Ring:return "Ring";
         case RTSActorCueStyle::Beacon:return "Beacon";
     }
-    return "Pulse";
+    return "";
 }
 inline bool rtsParseActorCueEvent(const std::string& name,
                                   RTSActorCueEvent& out){

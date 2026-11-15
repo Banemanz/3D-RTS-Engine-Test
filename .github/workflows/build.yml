@@ -94,6 +94,7 @@ jobs:
           ./RTSProjectTool --validate projects/projectile_forge_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/area_shapes_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/weapon_forge_showcase.rtsproject.json
+          ./RTSProjectTool --validate projects/actor_events_showcase.rtsproject.json
 
       - name: Validate bundled maps with bundled project utility (Windows)
         if: runner.os == 'Windows'
@@ -112,6 +113,7 @@ jobs:
           .\RTSProjectTool.exe --validate projects/projectile_forge_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/area_shapes_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/weapon_forge_showcase.rtsproject.json
+          .\RTSProjectTool.exe --validate projects/actor_events_showcase.rtsproject.json
 
       - name: Smoke test the packaged Linux editor with software OpenGL
         if: runner.os == 'Linux'
