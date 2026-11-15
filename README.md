@@ -390,3 +390,12 @@ The new original Area Shape Laboratory example is
 projects/area_shapes_showcase.rtsproject.json. F7 edit Fan Surge
 and Rail Line; F9 select the Ranger and cast each to compare their
 impact volumes. Windows and Linux compile the same runtime and editor.
+
+### F7 live area footprint inspection
+
+The Ground Ability form now draws an interactive-property preview canvas:
+the chosen Circle/Cone/Line geometry is shown at the authored radius,
+angle and width, alongside green/red example target dots based on the
+same simulation predicate. No map edits occur until Apply is selected.
+The preview uses the existing editor adapter; F9 targeting remains the
+separate engine-owned OpenGL overlay.

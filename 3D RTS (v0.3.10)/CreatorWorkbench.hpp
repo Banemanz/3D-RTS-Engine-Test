@@ -4,6 +4,7 @@
 #include "CreatorTriggerWidgets.hpp"
 #include "CreatorReferenceWidgets.hpp"
 #include "CreatorEffectGraphWidgets.hpp"
+#include "CreatorAreaShapePreview.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
@@ -489,6 +490,10 @@ void inspector(App& app){
                         }
                         ImGui::TextDisabled("Radius .5..24 | Cone 10..170 deg | Line .25..12 wide");
                         ImGui::TextDisabled("Impact 0..300 ticks | Max 64 Units");
+                        CreatorAreaShapePreview::draw(
+                            shape==1?RTSAreaShape::Cone:
+                                shape==2?RTSAreaShape::Line:RTSAreaShape::Circle,
+                            radius,angle,width);
                         ImGui::TextWrapped("Cones and lines extend from the impact point away from the caster. Direction is fixed at cast time; occupants resolve on impact.");
                         ImGui::TextWrapped("The ground point must be visible. Delayed impacts hit units at arrival, not when cast.");
                     }

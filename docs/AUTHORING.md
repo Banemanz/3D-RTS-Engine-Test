@@ -612,3 +612,12 @@ the authored shape. F7 supports inherited catalog overrides,
 F6 shows the pending shape, and F9 renders a read-only outline.
 The original area_shapes_showcase.rtsproject.json gives Fan Surge,
 Rail Line, and the older Repair Circle in one playable project.
+
+### Shape preview in the F7 inspector
+
+The area footprint panel updates when the shape, radius, cone angle or
+line width changes, **before** saving. It uses the same headless area
+search predicate as the runtime to classify example target points
+(green means affected, red means outside). The caster is displayed left
+of the impact origin and the ability faces right. The preview never
+commits a project change: Apply ground settings does that transaction.

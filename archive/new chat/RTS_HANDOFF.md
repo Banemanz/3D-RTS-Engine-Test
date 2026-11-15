@@ -1281,3 +1281,16 @@ Next: check all CI results first; fix any errors,
 inspect real F7/F9 screenshots, then grow actor events,
 weapons, tech/upgrades, asset import and native editor UI.
 Keep handoff and feature matrix updated.
+
+### F7 live shape-preview follow-up (November 15)
+
+New header CreatorAreaShapePreview.hpp draws a model-level F7 footprint
+canvas using the existing temporary ImGui adapter with no native
+renderer or project-side effects. Circle fills, cone sectors and line
+rectangles share RTSAreaShape.hpp shape generation. Preview dots use
+the exact runtime rtsAreaContains predicate, so the creator can
+visually inspect candidate settings before one validated Apply.
+This is useful editor UX but not a replacement for in-house native
+docking, generic schema panels, graph editing or asset inspection.
+The existing Mesa F7 screenshot command uses fan_surge and will
+exercise the new canvas after CI rebuild. Verify latest CI.
