@@ -1,0 +1,817 @@
+{
+  "schema_version": 1,
+  "name": "Frontier Area Shape Laboratory",
+  "description": "Original creator demo. F7 inspect Fan Surge (Cone) and Rail Line (Line), F9 select Ranger: F aims Fan Surge, J aims Rail Line, K aims Repair Circle. Cone and line extend from clicked impact point away from caster. Fixed-tick targeting, damage and previews work on Windows and Linux.",
+  "terrain": {
+    "width": 49,
+    "depth": 49,
+    "spacing": 2,
+    "min_x": -48,
+    "min_z": -48,
+    "cells": []
+  },
+  "catalog": [
+    {
+      "type": "Model",
+      "id": "procedural_soldier",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "material": "default"
+      }
+    },
+    {
+      "type": "Model",
+      "id": "procedural_building",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "ranger_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.22,
+          0.58,
+          0.96
+        ],
+        "opacity": 1
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "worker_actor",
+      "parent": "ranger_actor",
+      "fields": {
+        "tint": [
+          0.2,
+          0.9,
+          0.65
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "rift_raider_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.76,
+          0.24,
+          0.88
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "human_building_actor",
+      "fields": {
+        "model": "procedural_building",
+        "tint": [
+          0.24,
+          0.61,
+          0.86
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "hybrid_building_actor",
+      "parent": "human_building_actor",
+      "fields": {
+        "tint": [
+          0.72,
+          0.24,
+          0.85
+        ]
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "ranger",
+      "fields": {
+        "name": "Frontier Ranger",
+        "actor": "ranger_actor",
+        "faction": "Humanity",
+        "max_hp": 45,
+        "armor": 0,
+        "damage": 7,
+        "attack_range": 6.5,
+        "attack_cooldown": 0.75,
+        "aggro_range": 10.5,
+        "move_speed": 9.5,
+        "supply_cost": 1,
+        "mineral_cost": 50,
+        "build_time": 6,
+        "visual_scale": 0.92,
+        "abilities": [
+          "fan_surge",
+          "rail_line",
+          "ember_arc",
+          "repair_circle",
+          "brace_stance",
+          "tether_bolt",
+          "break_tether"
+        ],
+        "max_energy": 140,
+        "energy_regen": 7
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "worker",
+      "parent": "ranger",
+      "fields": {
+        "name": "Human Worker",
+        "actor": "worker_actor",
+        "max_hp": 40,
+        "damage": 2,
+        "attack_range": 1.5,
+        "attack_cooldown": 1.3,
+        "move_speed": 7,
+        "visual_scale": 0.72,
+        "mineral_cost": 40,
+        "is_worker": true,
+        "build_time": 4.5
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "rift_raider",
+      "fields": {
+        "name": "Rift Raider",
+        "actor": "rift_raider_actor",
+        "faction": "Hybrid",
+        "max_hp": 160,
+        "armor": 3,
+        "damage": 18,
+        "attack_range": 1.85,
+        "attack_cooldown": 1.05,
+        "aggro_range": 11,
+        "move_speed": 8.2,
+        "supply_cost": 3,
+        "mineral_cost": 150,
+        "visual_scale": 1.28
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "command_center",
+      "parent": "ranger",
+      "fields": {
+        "name": "Command Center",
+        "actor": "human_building_actor",
+        "max_hp": 700,
+        "armor": 2,
+        "damage": 0,
+        "attack_range": 0,
+        "aggro_range": 0,
+        "visual_scale": 2.8,
+        "supply_cost": 0,
+        "is_structure": true,
+        "abilities": []
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "rift_bastion",
+      "parent": "command_center",
+      "fields": {
+        "name": "Rift Bastion",
+        "actor": "hybrid_building_actor",
+        "faction": "Hybrid"
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "barracks",
+      "parent": "command_center",
+      "fields": {
+        "name": "Barracks",
+        "max_hp": 350,
+        "visual_scale": 2,
+        "build_time": 9,
+        "mineral_cost": 150
+      }
+    },
+    {
+      "id": "restorative_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Heal",
+        "amount": 8
+      }
+    },
+    {
+      "id": "kinetic_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Damage",
+        "amount": 12
+      }
+    },
+    {
+      "id": "field_mend",
+      "type": "Ability",
+      "fields": {
+        "name": "Field Mend",
+        "effect": "restorative_pulse",
+        "target": "Self",
+        "cooldown_ticks": 120,
+        "cast_range": 0,
+        "mineral_cost": 5,
+        "energy_cost": 15
+      }
+    },
+    {
+      "id": "arc_lance",
+      "type": "Ability",
+      "fields": {
+        "name": "Arc Lance",
+        "effect": "kinetic_pulse",
+        "target": "Enemy",
+        "cooldown_ticks": 90,
+        "cast_range": 13,
+        "mineral_cost": 10,
+        "energy_cost": 25
+      }
+    },
+    {
+      "id": "training_dummy",
+      "type": "Unit",
+      "parent": "rift_raider",
+      "fields": {
+        "name": "Training Dummy",
+        "max_hp": 300,
+        "damage": 0,
+        "aggro_range": 0,
+        "move_speed": 0,
+        "sight_range": 0,
+        "armor": 0
+      }
+    },
+    {
+      "id": "brace_field",
+      "type": "Behavior",
+      "fields": {
+        "name": "Brace Field",
+        "duration_ticks": 600,
+        "max_stacks": 3,
+        "armor_bonus": 3,
+        "damage_bonus": 1,
+        "speed_multiplier": 0.9,
+        "refresh_duration": true,
+        "dispellable": true
+      }
+    },
+    {
+      "id": "tethered",
+      "type": "Behavior",
+      "fields": {
+        "name": "Tethered",
+        "duration_ticks": 300,
+        "max_stacks": 1,
+        "armor_bonus": 0,
+        "damage_bonus": -3,
+        "speed_multiplier": 0.55,
+        "refresh_duration": true,
+        "dispellable": true
+      }
+    },
+    {
+      "id": "apply_brace_field",
+      "type": "Effect",
+      "fields": {
+        "kind": "ApplyBehavior",
+        "behavior": "brace_field"
+      }
+    },
+    {
+      "id": "apply_tethered",
+      "type": "Effect",
+      "fields": {
+        "kind": "ApplyBehavior",
+        "behavior": "tethered"
+      }
+    },
+    {
+      "id": "remove_tethered",
+      "type": "Effect",
+      "fields": {
+        "kind": "RemoveBehavior",
+        "behavior": "tethered"
+      }
+    },
+    {
+      "id": "brace_combo",
+      "type": "Effect",
+      "fields": {
+        "kind": "Sequence",
+        "children": [
+          "apply_brace_field",
+          "restorative_pulse"
+        ]
+      }
+    },
+    {
+      "id": "brace_stance",
+      "type": "Ability",
+      "fields": {
+        "name": "Brace Stance",
+        "target": "Self",
+        "effect": "brace_combo",
+        "cooldown_ticks": 90,
+        "cast_range": 0,
+        "mineral_cost": 0,
+        "energy_cost": 12
+      }
+    },
+    {
+      "id": "tether_bolt",
+      "type": "Ability",
+      "fields": {
+        "name": "Tether Bolt",
+        "target": "Enemy",
+        "effect": "apply_tethered",
+        "cooldown_ticks": 120,
+        "cast_range": 13,
+        "mineral_cost": 0,
+        "energy_cost": 15
+      }
+    },
+    {
+      "id": "break_tether",
+      "type": "Ability",
+      "fields": {
+        "name": "Break Tether",
+        "target": "Enemy",
+        "effect": "remove_tethered",
+        "cooldown_ticks": 90,
+        "cast_range": 13,
+        "mineral_cost": 0,
+        "energy_cost": 10
+      }
+    },
+    {
+      "id": "ember_arc_damage",
+      "type": "Effect",
+      "fields": {
+        "kind": "Damage",
+        "amount": 18
+      }
+    },
+    {
+      "id": "ember_arc_slow",
+      "type": "Effect",
+      "fields": {
+        "kind": "ApplyBehavior",
+        "behavior": "tethered"
+      }
+    },
+    {
+      "id": "ember_arc_sequence",
+      "type": "Effect",
+      "fields": {
+        "kind": "Sequence",
+        "children": [
+          "ember_arc_damage",
+          "ember_arc_slow"
+        ]
+      }
+    },
+    {
+      "id": "repair_circle_heal",
+      "type": "Effect",
+      "fields": {
+        "kind": "Heal",
+        "amount": 15
+      }
+    },
+    {
+      "id": "ember_arc",
+      "type": "Ability",
+      "fields": {
+        "name": "Ember Arc",
+        "target": "Ground",
+        "effect": "ember_arc_sequence",
+        "area_radius": 3.5,
+        "area_team": "Enemy",
+        "impact_delay_ticks": 240,
+        "cooldown_ticks": 180,
+        "cast_range": 13,
+        "mineral_cost": 0,
+        "energy_cost": 20
+      }
+    },
+    {
+      "id": "repair_circle",
+      "type": "Ability",
+      "fields": {
+        "name": "Repair Circle",
+        "target": "Ground",
+        "effect": "repair_circle_heal",
+        "area_radius": 4,
+        "area_team": "Ally",
+        "impact_delay_ticks": 0,
+        "cooldown_ticks": 120,
+        "cast_range": 11,
+        "mineral_cost": 0,
+        "energy_cost": 10
+      }
+    },
+    {
+      "id": "fan_surge",
+      "type": "Ability",
+      "fields": {
+        "name": "Fan Surge",
+        "target": "Ground",
+        "effect": "ember_arc_damage",
+        "area_shape": "Cone",
+        "area_radius": 5,
+        "area_angle": 75,
+        "area_width": 2,
+        "area_team": "Enemy",
+        "impact_delay_ticks": 90,
+        "cooldown_ticks": 120,
+        "cast_range": 13,
+        "mineral_cost": 0,
+        "energy_cost": 15
+      }
+    },
+    {
+      "id": "rail_line",
+      "type": "Ability",
+      "fields": {
+        "name": "Rail Line",
+        "target": "Ground",
+        "effect": "ember_arc_damage",
+        "area_shape": "Line",
+        "area_radius": 8,
+        "area_angle": 90,
+        "area_width": 1.5,
+        "area_team": "Enemy",
+        "impact_delay_ticks": 0,
+        "cooldown_ticks": 80,
+        "cast_range": 13,
+        "mineral_cost": 0,
+        "energy_cost": 10
+      }
+    }
+  ],
+  "placements": [
+    {
+      "id": "human_base",
+      "kind": "Unit",
+      "catalog": "command_center",
+      "name": "Command Center",
+      "owner": 0,
+      "position": [
+        -22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "enemy_base",
+      "kind": "Unit",
+      "catalog": "rift_bastion",
+      "name": "Rift Bastion",
+      "owner": 1,
+      "position": [
+        22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_1",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 1",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_2",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 2",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_3",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 3",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_4",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 4",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_1",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 1",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        -5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_2",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 2",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "rift_raider_1",
+      "kind": "Unit",
+      "catalog": "rift_raider",
+      "name": "Raider 1",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        -3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "rift_raider_2",
+      "kind": "Unit",
+      "catalog": "rift_raider",
+      "name": "Raider 2",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_north",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals North",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        -12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_south",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals South",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_center",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals Center",
+      "owner": -1,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 1000,
+      "overrides": {}
+    },
+    {
+      "id": "ability_dummy",
+      "kind": "Unit",
+      "catalog": "training_dummy",
+      "name": "Ability Practice Target",
+      "owner": 1,
+      "position": [
+        -5,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    }
+  ],
+  "metadata": {
+    "player_starting_minerals": 220,
+    "player_supply_cap": 18,
+    "enemy_spawn_interval": 999,
+    "player_ranger": "ranger",
+    "enemy_ai_enabled": false
+  }
+}

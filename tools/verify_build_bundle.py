@@ -37,6 +37,7 @@ def main() -> int:
         "projects/behavior_workshop_showcase.rtsproject.json",
         "projects/ground_impact_showcase.rtsproject.json",
         "projects/projectile_forge_showcase.rtsproject.json",
+        "projects/area_shapes_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
@@ -121,6 +122,7 @@ def main() -> int:
         "RTS_FEATURE_DELAYED_AREA_IMPACTS",
         "RTS_FEATURE_AUTHORED_PROJECTILES",
         "RTS_FEATURE_PROJECTILE_INTERCEPTION",
+        "RTS_FEATURE_AREA_SHAPES",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

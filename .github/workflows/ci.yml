@@ -32,6 +32,7 @@ jobs:
             build/behavior_fingerprint.txt
             build/ground_area_fingerprint.txt
             build/projectile_fingerprint.txt
+            build/area_shapes_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -215,6 +216,26 @@ jobs:
           name: rts-active-behavior-hud-screenshot
           path: rts-active-status.png
           if-no-files-found: error
+      - name: Capture F7 Cone authoring inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/area_shapes_showcase.rtsproject.json --smoke-select-catalog-id fan_surge --smoke-frames 70 --screenshot rts-shapes-editor.ppm
+      - name: Convert area shape editor screenshot
+        run: python3 tools/ppm_to_png.py rts-shapes-editor.ppm rts-shapes-editor.png
+      - name: Upload real Cone creator screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-area-shapes-editor-screenshot
+          path: rts-shapes-editor.png
+          if-no-files-found: error
+      - name: Capture native F9 Cone impact telegraph
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/area_shapes_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-ground-ability --smoke-fixed-ticks --smoke-frames 40 --screenshot rts-shapes-play.ppm
+      - name: Convert area shape gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-shapes-play.ppm rts-shapes-play.png
+      - name: Upload native area search outline screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-area-shapes-playtest-screenshot
+          path: rts-shapes-play.png
+          if-no-files-found: error
       - name: Capture F7 Ground Ability radius/team/delay inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ground_impact_showcase.rtsproject.json --smoke-select-catalog-id ember_arc --smoke-frames 90 --screenshot rts-ground-editor.ppm
       - name: Convert Ground Ability inspector
@@ -302,6 +323,7 @@ jobs:
             build/behavior_fingerprint.txt
             build/ground_area_fingerprint.txt
             build/projectile_fingerprint.txt
+            build/area_shapes_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -330,3 +352,4 @@ jobs:
           diff -u fingerprints/linux/behavior_fingerprint.txt fingerprints/windows/behavior_fingerprint.txt
           diff -u fingerprints/linux/ground_area_fingerprint.txt fingerprints/windows/ground_area_fingerprint.txt
           diff -u fingerprints/linux/projectile_fingerprint.txt fingerprints/windows/projectile_fingerprint.txt
+          diff -u fingerprints/linux/area_shapes_fingerprint.txt fingerprints/windows/area_shapes_fingerprint.txt
