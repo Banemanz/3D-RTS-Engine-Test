@@ -39,9 +39,11 @@ void draw(App& app){
     if(app.game.pendingAreaImpactCount()>0 &&
        ImGui::TreeNode("##pendingAreas","Ground impact watch")){
         for(const auto& a:app.game.areaImpactWatch(32))
-            ImGui::BulletText("%s  [%s]  (%.1f, %.1f)  r %.1f  %.1fs",
+            ImGui::BulletText("%s  [%s]  %s (%.1f, %.1f) r %.1f  %.1fs",
                 a.abilityId.c_str(),
                 a.projectileVisible?"PROJECTILE FLIGHT":"IMPACT TIMER",
+                a.shape==RTSAreaShape::Cone?"CONE":
+                   a.shape==RTSAreaShape::Line?"LINE":"CIRCLE",
                 a.center.x,a.center.z,a.radius,
                 double(a.remainingTicks)/60.);
         ImGui::TreePop();

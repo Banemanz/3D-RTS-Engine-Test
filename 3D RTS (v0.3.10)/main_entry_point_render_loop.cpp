@@ -1650,8 +1650,43 @@ int main(int argc, char** argv) {
                     glBindVertexArray(ringVAO);
                     glDrawArrays(GL_TRIANGLES,0,6);
                 };
+                const auto previewShape=[&](const Vec3& center,float radius,
+                                            RTSAreaShape shape,const Vec3& origin,
+                                            float angle,float width,
+                                            float red,float green,float blue,float alpha){
+                    if(shape==RTSAreaShape::Circle){
+                        previewRing(center,radius,red,green,blue,alpha);
+                        return;
+                    }
+                    const auto boundary=rtsAreaOutline(shape,center.x,center.z,
+                        double(center.x)-origin.x,double(center.z)-origin.z,
+                        radius,angle,width);
+                    if(boundary.empty())return;
+                    std::vector<float> vertices;
+                    vertices.reserve(boundary.size()*3);
+                    for(const auto& pos:boundary){
+                        vertices.push_back(float(pos.x));
+                        vertices.push_back(app.project.terrain.sampleHeight(
+                            float(pos.x),float(pos.z))+.11f);
+                        vertices.push_back(float(pos.z));
+                    }
+                    glUseProgram(lineShader);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(lineShader,"uColor"),
+                                red,green,blue,alpha);
+                    glBindVertexArray(lineVAO);
+                    glBindBuffer(GL_ARRAY_BUFFER,lineVBO);
+                    glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(float),
+                                 vertices.data(),GL_DYNAMIC_DRAW);
+                    glDrawArrays(GL_LINE_STRIP,0,GLsizei(boundary.size()));
+                };
                 for(const auto& impact:app.game.areaImpactWatch())
-                    previewRing(impact.center,impact.radius,.98f,.60f,.16f,.48f);
+                    previewShape(impact.center,impact.radius,impact.shape,
+                        impact.shapeOrigin,impact.areaAngle,impact.areaWidth,
+                        .98f,.60f,.16f,.85f);
                 for(const auto& hit:app.game.impactFlashWatch())
                     previewRing(hit.center,
                                 hit.radius*(1.08f+(1.f-hit.remainingFraction)*.32f),
@@ -1676,9 +1711,14 @@ int main(int argc, char** argv) {
                                    unit.isAlive()){casterId=unit.id;break;}
                             const bool valid=app.game.canCastAbilityAt(
                                 casterId,app.pendingAbilityId,ground);
-                            previewRing(ground,ability.areaRadius,
-                                        valid?.20f:.90f,valid?.92f:.25f,
-                                        valid?.92f:.30f,.63f);
+                            Vec3 casterPosition=ground;
+                            for(const auto& unit:app.game.units)
+                                if(unit.id==casterId){casterPosition=unit.position;break;}
+                            previewShape(ground,ability.areaRadius,
+                                         ability.areaShape,casterPosition,
+                                         ability.areaAngle,ability.areaWidth,
+                                         valid?.20f:.90f,valid?.92f:.25f,
+                                         valid?.92f:.30f,.85f);
                         }
                     }
                 }

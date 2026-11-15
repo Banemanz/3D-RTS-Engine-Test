@@ -124,6 +124,9 @@ public:
     struct AreaImpactWatch {
         Vec3 center{};
         float radius=0.f;
+        RTSAreaShape shape=RTSAreaShape::Circle;
+        Vec3 shapeOrigin{};
+        float areaAngle=90.f,areaWidth=2.f;
         std::uint64_t remainingTicks=0;
         std::string abilityId;
         bool projectileVisible=false;
@@ -190,6 +193,9 @@ private:
     struct PendingAreaImpact {
         Vec3 center{};
         float radius=0.f;
+        RTSAreaShape shape=RTSAreaShape::Circle;
+        Vec3 shapeOrigin{}; // caster position captured at cast time
+        float areaAngle=90.f,areaWidth=2.f;
         int owner=0;
         AbilityAreaTeam team=AbilityAreaTeam::Enemy;
         std::string abilityId;

@@ -369,6 +369,18 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
         const double radius=numeric(fields,"area_radius",3.);
         const double delay=numeric(fields,"impact_delay_ticks",0.);
         const std::string team=stringField(fields,"area_team","Enemy");
+        const std::string shape=stringField(fields,"area_shape","Circle");
+        const double angle=numeric(fields,"area_angle",90.);
+        const double width=numeric(fields,"area_width",2.);
+        if(!std::isfinite(angle) || angle<10. || angle>170. ||
+           !std::isfinite(width) || width<.25 || width>12.)
+            throw std::invalid_argument("Invalid Ground area arc/line width: "+id);
+        if(shape=="Circle")ability.areaShape=RTSAreaShape::Circle;
+        else if(shape=="Cone")ability.areaShape=RTSAreaShape::Cone;
+        else if(shape=="Line")ability.areaShape=RTSAreaShape::Line;
+        else throw std::invalid_argument("Invalid Ground area shape: "+id);
+        ability.areaAngle=static_cast<float>(angle);
+        ability.areaWidth=static_cast<float>(width);
         if(radius<.5 || radius>24. ||
            std::floor(delay)!=delay || delay<0 || delay>300)
             throw std::invalid_argument("Invalid Ground area radius/impact delay: "+id);

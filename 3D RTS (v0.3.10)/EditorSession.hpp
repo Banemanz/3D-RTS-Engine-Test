@@ -99,7 +99,9 @@ public:
     // mutations, keeping the map valid through Self<->Ground conversion.
     bool setAbilityTargetPolicy(RTSProject& project,const std::string& target);
     bool setGroundAbilitySettings(RTSProject& project,float radius,
-                                  const std::string& team,int delayTicks);
+                                  const std::string& team,int delayTicks,
+                                  const std::string& shape="Circle",
+                                  float angle=90.f,float width=2.f);
     // Commit a grouped Behavior inspector as one validated undo record.
     bool setBehaviorDefinition(RTSProject& project,const BehaviorDefinition& values);
     bool setProjectileDefinition(RTSProject& project,const ProjectileDefinition& values);

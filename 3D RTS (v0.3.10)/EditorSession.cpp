@@ -627,6 +627,9 @@ bool EditorSession::setAbilityTargetPolicy(
             if(range<.5)ability->fields["cast_range"]=picojson::value(12.0);
             ability->fields["area_radius"]=picojson::value(4.0);
             ability->fields["area_team"]=picojson::value(std::string("Enemy"));
+            ability->fields["area_shape"]=picojson::value(std::string("Circle"));
+            ability->fields["area_angle"]=picojson::value(90.0);
+            ability->fields["area_width"]=picojson::value(2.0);
             ability->fields["impact_delay_ticks"]=picojson::value(60.0);
         }else if(target!="Self" && range<.5)
             ability->fields["cast_range"]=picojson::value(9.0);
@@ -640,7 +643,8 @@ bool EditorSession::setAbilityTargetPolicy(
     }
 }
 bool EditorSession::setGroundAbilitySettings(
-    RTSProject& project,float radius,const std::string& team,int delayTicks){
+    RTSProject& project,float radius,const std::string& team,int delayTicks,
+    const std::string& shape,float angle,float width){
     if(textEditing)return false;
     const auto* current=selected(project);
     if(!current || current->type!="Ability" ||
@@ -651,6 +655,9 @@ bool EditorSession::setGroundAbilitySettings(
         auto* ability=candidate.catalog.find(current->id);
         ability->fields["area_radius"]=picojson::value(double(radius));
         ability->fields["area_team"]=picojson::value(team);
+        ability->fields["area_shape"]=picojson::value(shape);
+        ability->fields["area_angle"]=picojson::value(double(angle));
+        ability->fields["area_width"]=picojson::value(double(width));
         ability->fields["impact_delay_ticks"]=picojson::value(double(delayTicks));
         candidate.validate();(void)parseTriggerRules(candidate);
         if(candidate.toJson().serialize()==project.toJson().serialize())return false;

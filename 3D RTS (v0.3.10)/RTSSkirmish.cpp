@@ -1112,6 +1112,8 @@ std::vector<RTSSkirmish::AreaImpactWatch> RTSSkirmish::areaImpactWatch(
         if(watch.size()>=limit)break;
         AreaImpactWatch item;
         item.center=a.center;item.radius=a.radius;
+        item.shape=a.shape;item.shapeOrigin=a.shapeOrigin;
+        item.areaAngle=a.areaAngle;item.areaWidth=a.areaWidth;
         item.remainingTicks=a.impactTick>tick_?a.impactTick-tick_:0;
         item.abilityId=a.abilityId;
         item.projectileVisible=a.projectile &&
@@ -1164,14 +1166,16 @@ bool RTSSkirmish::applyAreaEffect(const PendingAreaImpact& area){
     // admission identical after Windows/Linux entity vector reorders.
     std::vector<int> targets;
     targets.reserve(64);
-    const double radius2=double(area.radius)*double(area.radius);
     for(const Unit& unit:units){
         if(!unit.isAlive())continue;
         if(area.team==AbilityAreaTeam::Enemy && unit.ownerId==area.owner)continue;
         if(area.team==AbilityAreaTeam::Ally && unit.ownerId!=area.owner)continue;
         const double dx=double(unit.position.x)-double(area.center.x);
         const double dz=double(unit.position.z)-double(area.center.z);
-        if(dx*dx+dz*dz<=radius2)
+        if(rtsAreaContains(area.shape,dx,dz,
+                double(area.center.x)-area.shapeOrigin.x,
+                double(area.center.z)-area.shapeOrigin.z,
+                area.radius,area.areaAngle,area.areaWidth))
             targets.push_back(unit.id);
     }
     std::sort(targets.begin(),targets.end());
@@ -1281,6 +1285,10 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
         PendingAreaImpact area;
         area.center={ground.x,0.f,ground.z};
         area.radius=ability.areaRadius;
+        area.shape=ability.areaShape;
+        area.shapeOrigin=caster->position;
+        area.areaAngle=ability.areaAngle;
+        area.areaWidth=ability.areaWidth;
         area.team=ability.areaTeam;
         area.owner=caster->ownerId;
         area.abilityId=abilityId;
@@ -1519,6 +1527,12 @@ std::string RTSSkirmish::stateDigest()const{
         hash.number(pendingAreas_.size());
         for(const auto& area:pendingAreas_){
             hash.point(area.center);hash.scalar(area.radius);
+            if(area.shape!=RTSAreaShape::Circle){
+                hash.text("shaped_area");
+                hash.signedNumber(static_cast<int>(area.shape));
+                hash.point(area.shapeOrigin);
+                hash.scalar(area.areaAngle);hash.scalar(area.areaWidth);
+            }
             hash.signedNumber(area.owner);
             hash.signedNumber(static_cast<int>(area.team));
             hash.text(area.abilityId);hash.text(area.effectId);

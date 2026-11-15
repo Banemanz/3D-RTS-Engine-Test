@@ -1,5 +1,6 @@
 #pragma once
 #include "UnitData.hpp"
+#include "RTSAreaShape.hpp"
 #include "third_party/picojson.h"
 #include <stdexcept>
 #include <cstdint>
@@ -98,6 +99,9 @@ struct AbilityDefinition {
     int mineralCost=0;
     int energyCost=0;
     float areaRadius=0.f; // Ground only: 0.5..24 world units
+    RTSAreaShape areaShape=RTSAreaShape::Circle;
+    float areaAngle=90.f; // Cone opening in degrees (10..170)
+    float areaWidth=2.f;  // Line width (.25..12)
     AbilityAreaTeam areaTeam=AbilityAreaTeam::Enemy;
     std::uint32_t impactDelayTicks=0; // Ground only: 0..300 ticks at 60Hz
     std::string projectileId; // optional typed Projectile reference for Ground

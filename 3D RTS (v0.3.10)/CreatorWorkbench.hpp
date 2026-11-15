@@ -446,21 +446,31 @@ void inspector(App& app){
                         static float radius=4.f;
                         static int delay=60;
                         static int team=0;
+                        static int shape=0;
+                        static float angle=90.f,width=2.f;
+                        const char* shapes[]={"Circle","Cone","Line"};
                         if(editingAbility!=entry->id){
                             const auto ground=compileAbility(project.catalog,entry->id);
                             radius=ground.areaRadius;delay=int(ground.impactDelayTicks);
+                            shape=ground.areaShape==RTSAreaShape::Cone?1:
+                                  ground.areaShape==RTSAreaShape::Line?2:0;
+                            angle=ground.areaAngle;width=ground.areaWidth;
                             team=ground.areaTeam==AbilityAreaTeam::Enemy?0:
                                  ground.areaTeam==AbilityAreaTeam::Ally?1:2;
                             editingAbility=entry->id;
                         }
                         ImGui::SeparatorText("Ground area & impact");
+                        ImGui::Combo("Search shape",&shape,shapes,3);
                         ImGui::InputFloat("Area radius",&radius,.25f,1.f,"%.2f");
+                        if(shape==1)ImGui::InputFloat("Cone angle (degrees)",&angle,5.f,15.f,"%.1f");
+                        if(shape==2)ImGui::InputFloat("Line width",&width,.25f,1.f,"%.2f");
                         ImGui::InputInt("Impact delay (ticks)",&delay,15,60);
                         const char* teams[]={"Enemy","Ally","Any"};
                         ImGui::Combo("Affected team",&team,teams,3);
                         if(ImGui::Button("Apply ground settings")){
                             if(ed.setGroundAbilitySettings(project,radius,
-                                    teams[std::clamp(team,0,2)],delay)){
+                                    teams[std::clamp(team,0,2)],delay,
+                                    shapes[std::clamp(shape,0,2)],angle,width)){
                                 refresh(app,true);
                                 editingAbility.clear();
                                 ImGui::End();return;
@@ -470,11 +480,16 @@ void inspector(App& app){
                         if(ImGui::SmallButton("Revert area changes")){
                             const auto defined=compileAbility(project.catalog,entry->id);
                             radius=defined.areaRadius;
+                            shape=defined.areaShape==RTSAreaShape::Cone?1:
+                                  defined.areaShape==RTSAreaShape::Line?2:0;
+                            angle=defined.areaAngle;width=defined.areaWidth;
                             delay=int(defined.impactDelayTicks);
                             team=defined.areaTeam==AbilityAreaTeam::Enemy?0:
                                  defined.areaTeam==AbilityAreaTeam::Ally?1:2;
                         }
-                        ImGui::TextDisabled("Radius 0.5..24 | Impact 0..300 ticks | Max 64 units");
+                        ImGui::TextDisabled("Radius .5..24 | Cone 10..170 deg | Line .25..12 wide");
+                        ImGui::TextDisabled("Impact 0..300 ticks | Max 64 Units");
+                        ImGui::TextWrapped("Cones and lines extend from the impact point away from the caster. Direction is fixed at cast time; occupants resolve on impact.");
                         ImGui::TextWrapped("The ground point must be visible. Delayed impacts hit units at arrival, not when cast.");
                     }
                     ImGui::TextDisabled("Cooldown: ticks at 60Hz | Cast range: world units");
