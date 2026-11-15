@@ -338,6 +338,22 @@ void inspector(App& app){
                     ImGui::InputFloat("Attack reach",&draft.range,.25f,1.f,"%.2f");
                     ImGui::InputFloat("Cooldown (seconds)",&draft.cooldown,.05f,.25f,"%.2f");
                     ImGui::InputFloat("Armor penetration",&draft.armorPiercing,.5f,2.f,"%.2f");
+                    if(ImGui::BeginCombo("Projectile delivery",
+                         draft.projectileId.empty()?"Instant (legacy)":draft.projectileId.c_str())){
+                        if(ImGui::Selectable("Instant (legacy)",draft.projectileId.empty()))
+                            draft.projectileId.clear();
+                        for(const auto& candidate:project.catalog.entries())
+                            if(candidate.type=="Projectile" &&
+                               ImGui::Selectable(candidate.id.c_str(),
+                                                 draft.projectileId==candidate.id))
+                                draft.projectileId=candidate.id;
+                        ImGui::EndCombo();
+                    }
+                    if(!draft.projectileId.empty() &&
+                       navigateCatalog(app,"Edit delivery Projectile",draft.projectileId)){
+                        ImGui::End();return;
+                    }
+                    ImGui::TextWrapped("Projectile attacks use fixed-tick swept contact; targets may dodge. Intercept units on flight is configured in the linked Projectile.");
                     if(ImGui::Button("Apply weapon settings")){
                         if(ed.setWeaponDefinition(project,draft)){
                             refresh(app,true);editingWeapon.clear();

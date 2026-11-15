@@ -409,7 +409,7 @@ void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
                 lastAttackTargetPos = target->position + Vec3(0.0f, target->height * 0.55f, 0.0f);
                 if(pendingHits)pendingHits->push_back({id,target->id,
                     std::max(0.f,data.damage+behaviorDamageBonus),instanceName,
-                    data.armor_piercing});
+                    data.armor_piercing,data.projectileId});
                 else target->takeDamage(std::max(0.f,data.damage+behaviorDamageBonus),
                                             instanceName,data.armor_piercing);
             }

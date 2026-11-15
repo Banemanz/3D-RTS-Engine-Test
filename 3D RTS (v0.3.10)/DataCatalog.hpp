@@ -92,6 +92,7 @@ struct WeaponDefinition {
     float range=6.f;
     float cooldown=.75f;     // seconds, same as legacy attack cooldown
     float armorPiercing=0.f; // subtracts from target's nonnegative armor
+    std::string projectileId; // typed Projectile delivery; empty retains hitscan
 };
 WeaponDefinition compileWeapon(const DataCatalog& catalog,
                                const std::string& id);

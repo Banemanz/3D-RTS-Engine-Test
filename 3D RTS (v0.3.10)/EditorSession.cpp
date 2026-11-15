@@ -591,6 +591,7 @@ bool EditorSession::setWeaponDefinition(
         f["range"]=picojson::value(double(values.range));
         f["cooldown"]=picojson::value(double(values.cooldown));
         f["armor_piercing"]=picojson::value(double(values.armorPiercing));
+        f["projectile"]=picojson::value(values.projectileId);
         candidate.validate();(void)parseTriggerRules(candidate);
         if(candidate.toJson().serialize()==project.toJson().serialize())
             return false;

@@ -23,6 +23,7 @@ public:
     float armor              = 0.0f;
     float damage             = 6.0f;
     std::string weaponId; // optional reusable Weapon catalog reference
+    std::string projectileId; // compiled from a Weapon, empty for legacy hits
     float armor_piercing     = 0.0f; // normal attacks only
     float attack_range       = 6.0f;
     float attack_cooldown    = 0.85f;

@@ -130,6 +130,7 @@ public:
         std::uint64_t remainingTicks=0;
         std::string abilityId;
         bool projectileVisible=false;
+        bool weaponShot=false;
         Vec3 projectilePosition{};
         Vec3 projectileTrailStart{};
         Vec3 projectileTint{};
@@ -144,6 +145,7 @@ public:
     std::vector<ImpactFlashWatch> impactFlashWatch(std::size_t limit=32)const;
     std::vector<AreaImpactWatch> areaImpactWatch(std::size_t limit=32)const;
     std::size_t pendingAreaImpactCount()const{return pendingAreas_.size();}
+    std::size_t pendingWeaponShotCount()const;
     std::uint64_t abilityCooldownRemaining(int casterId,const std::string& abilityId) const;
 
     // Script actions expose only explicit, bounded game-state mutations.
@@ -214,6 +216,12 @@ private:
         Vec3 tint{};
         float collisionRadius=0.f;
         bool collideUnits=false;
+        // Reuse this fixed-tick projectile scheduler for normal Weapons.
+        // An authored Weapon hit is NOT an Ability's area Effect graph.
+        bool weaponShot=false;
+        int attackTargetId=-1,contactTargetId=-1,attackerId=-1;
+        float attackDamage=0.f,armorPiercing=0.f;
+        std::string attackerName;
     };
     struct ImpactFlash {
         Vec3 center{};
@@ -233,6 +241,7 @@ private:
                      int targetId,const Vec3& ground);
     bool applyAreaEffect(const PendingAreaImpact& area);
     void updateAreaImpacts();
+    bool queueWeaponProjectile(const CombatHit& hit);
     RTSCommandStream commandStream_;
     std::uint64_t tick_=0;
     bool replayValid_=true;

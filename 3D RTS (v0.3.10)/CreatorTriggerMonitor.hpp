@@ -42,6 +42,7 @@ void draw(App& app){
             ImGui::BulletText("%s  [%s]  %s (%.1f, %.1f) r %.1f  %.1fs",
                 a.abilityId.c_str(),
                 a.projectileVisible?"PROJECTILE FLIGHT":"IMPACT TIMER",
+                a.weaponShot?"WEAPON":
                 a.shape==RTSAreaShape::Cone?"CONE":
                    a.shape==RTSAreaShape::Line?"LINE":"CIRCLE",
                 a.center.x,a.center.z,a.radius,

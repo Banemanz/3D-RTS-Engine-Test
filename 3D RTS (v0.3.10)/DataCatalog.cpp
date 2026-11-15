@@ -95,7 +95,7 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
-        if(type=="Projectile" && entry.type=="Ability"){
+        if(type=="Projectile" && (entry.type=="Ability" || entry.type=="Weapon")){
             auto field=entry.fields.find("projectile");
             if(field!=entry.fields.end() && field->second.is<std::string>() &&
                field->second.get<std::string>()==oldId)
@@ -349,6 +349,8 @@ WeaponDefinition compileWeapon(const DataCatalog& catalog,
     w.range=field("range",6.,0.,128.);
     w.cooldown=field("cooldown",.75,.05,60.);
     w.armorPiercing=field("armor_piercing",0.,0.,1000.);
+    w.projectileId=stringField(fields,"projectile","");
+    if(!w.projectileId.empty())(void)compileProjectile(catalog,w.projectileId);
     return w;
 }
 AbilityDefinition compileAbility(const DataCatalog& catalog,
@@ -647,6 +649,7 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
         d.attack_range=weapon.range;
         d.attack_cooldown=weapon.cooldown;
         d.armor_piercing=weapon.armorPiercing;
+        d.projectileId=weapon.projectileId;
     }
     d.aggro_range=float(numeric(f,"aggro_range",d.aggro_range));
     d.sight_range=float(numeric(f,"sight_range",d.sight_range));

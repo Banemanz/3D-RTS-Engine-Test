@@ -16,6 +16,7 @@ struct CombatHit {
     float rawDamage=0.f;
     std::string attackerName;
     float armorPiercing=0.f;
+    std::string projectileId; // an empty ID is the original immediate hit
 };
 
 class NavigationAgent3D {

@@ -1687,6 +1687,7 @@ int main(int argc, char** argv) {
                     glDrawArrays(GL_LINE_STRIP,0,GLsizei(boundary.size()));
                 };
                 for(const auto& impact:app.game.areaImpactWatch())
+                    if(!impact.weaponShot)
                     previewShape(impact.center,impact.radius,impact.shape,
                         impact.shapeOrigin,impact.areaAngle,impact.areaWidth,
                         .98f,.60f,.16f,.85f);

@@ -764,9 +764,13 @@ void RTSSkirmish::update(float dt) {
         [](const CombatHit& a,const CombatHit& b) {
             return a.targetId!=b.targetId ? a.targetId<b.targetId : a.attackerId<b.attackerId;
         });
-    for(const auto& hit:pendingHits)
+    for(const auto& hit:pendingHits){
+        // All attacks have already been issued for this tick. Projectile
+        // Weapons only defer the damage; old hitscan attacks remain instant.
+        if(!hit.projectileId.empty() && queueWeaponProjectile(hit))continue;
         if(Unit* target=find(hit.targetId))
             target->takeDamage(hit.rawDamage,hit.attackerName,hit.armorPiercing);
+    }
     // Delayed ground impact runs after movement/combat so moving out of the
     // radius matters, but before health/energy regeneration and periodic ticks.
     updateAreaImpacts();
@@ -1105,6 +1109,11 @@ std::vector<RTSSkirmish::ImpactFlashWatch> RTSSkirmish::impactFlashWatch(
     }
     return watch;
 }
+std::size_t RTSSkirmish::pendingWeaponShotCount()const{
+    return static_cast<std::size_t>(std::count_if(pendingAreas_.begin(),
+        pendingAreas_.end(),
+        [](const PendingAreaImpact& a){return a.weaponShot;}));
+}
 std::vector<RTSSkirmish::AreaImpactWatch> RTSSkirmish::areaImpactWatch(
     std::size_t limit)const{
     std::vector<AreaImpactWatch> watch;
@@ -1117,6 +1126,7 @@ std::vector<RTSSkirmish::AreaImpactWatch> RTSSkirmish::areaImpactWatch(
         item.areaAngle=a.areaAngle;item.areaWidth=a.areaWidth;
         item.remainingTicks=a.impactTick>tick_?a.impactTick-tick_:0;
         item.abilityId=a.abilityId;
+        item.weaponShot=a.weaponShot;
         item.projectileVisible=a.projectile &&
             tick_<a.launchTick+a.flightTicks;
         if(item.projectileVisible){
@@ -1211,7 +1221,7 @@ bool RTSSkirmish::applyAreaEffect(const PendingAreaImpact& area){
     return true;
 }
 bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
-    if(!area.projectile || !area.collideUnits ||
+    if(!area.projectile || (!area.collideUnits && !area.weaponShot) ||
        tick_<=area.launchTick ||
        tick_>area.launchTick+area.flightTicks)return false;
     const Vec3 previous=projectilePositionAt(area,tick_-1);
@@ -1233,6 +1243,8 @@ bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
     for(const auto index:candidates){
         const Unit& unit=units[index];
         if(!unit.isAlive())continue;
+        if(area.weaponShot && !area.collideUnits &&
+           unit.id!=area.attackTargetId)continue;
         if(area.team==AbilityAreaTeam::Enemy && unit.ownerId==area.owner)continue;
         if(area.team==AbilityAreaTeam::Ally && unit.ownerId!=area.owner)continue;
         double t=0.;
@@ -1254,6 +1266,45 @@ bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
     // actually hit receives the Area Effect even for a tiny area radius.
     area.center=hit->position;
     area.impactTick=tick_;
+    if(area.weaponShot)area.contactTargetId=bestId;
+    return true;
+}
+bool RTSSkirmish::queueWeaponProjectile(const CombatHit& hit){
+    const Unit* attacker=find(hit.attackerId);
+    const Unit* target=find(hit.targetId);
+    if(!attacker || !target || !target->isAlive() ||
+       pendingAreas_.size()>=MaxPendingAreaImpacts)
+        return false; // deterministic hitscan fallback at saturation
+    const auto profile=compileProjectile(project_.catalog,hit.projectileId);
+    PendingAreaImpact shot;
+    shot.projectile=true;
+    shot.weaponShot=true;
+    shot.projectileId=hit.projectileId;
+    shot.abilityId="Weapon: "+attacker->data.weaponId;
+    shot.attackerId=hit.attackerId;
+    shot.attackTargetId=hit.targetId;
+    shot.attackerName=hit.attackerName;
+    shot.attackDamage=hit.rawDamage;
+    shot.armorPiercing=hit.armorPiercing;
+    shot.owner=attacker->ownerId;
+    shot.team=AbilityAreaTeam::Enemy;
+    shot.launchTick=tick_;
+    shot.launchPosition=attacker->position+
+        Vec3(0.f,attacker->height*.55f,0.f);
+    shot.destination=target->position+
+        Vec3(0.f,target->height*.55f,0.f);
+    shot.center=target->position;
+    shot.radius=std::max(.4f,profile.collisionRadius);
+    const double dist=(shot.destination-shot.launchPosition).lengthXZ();
+    shot.flightTicks=std::max<std::uint64_t>(1,
+        static_cast<std::uint64_t>(std::ceil(dist*60./double(profile.speed))));
+    shot.impactTick=tick_+shot.flightTicks;
+    shot.arcHeight=profile.arcHeight;
+    shot.visualScale=profile.visualScale;
+    shot.tint=profile.tint;
+    shot.collisionRadius=profile.collisionRadius;
+    shot.collideUnits=profile.collideUnits;
+    pendingAreas_.push_back(std::move(shot));
     return true;
 }
 void RTSSkirmish::updateAreaImpacts(){
@@ -1261,16 +1312,37 @@ void RTSSkirmish::updateAreaImpacts(){
     while(!impactFlashes_.empty() &&
           tick_>=impactFlashes_.front().bornTick+FlashTicks)
         impactFlashes_.pop_front();
+    // Collect all Weapon impacts before applying them so simultaneous
+    // projectile arrivals keep the same two-phase kill semantics as hitscan.
+    std::vector<CombatHit> weaponImpacts;
     // Preserve the recorded cast order when multiple projectiles share a tick.
     for(auto it=pendingAreas_.begin();it!=pendingAreas_.end();){
         if(it->projectile)detectProjectileCollision(*it);
         if(it->impactTick>tick_){++it;continue;}
-        const bool applied=applyAreaEffect(*it);
-        if(impactFlashes_.size()>=MaxImpactFlashes)
-            impactFlashes_.pop_front();
-        impactFlashes_.push_back({it->center,it->radius,tick_,applied});
+        if(it->weaponShot){
+            const bool landed=it->contactTargetId>0;
+            if(landed)weaponImpacts.push_back({
+                it->attackerId,it->contactTargetId,it->attackDamage,
+                it->attackerName,it->armorPiercing,{}});
+            if(impactFlashes_.size()>=MaxImpactFlashes)
+                impactFlashes_.pop_front();
+            impactFlashes_.push_back({it->center,it->radius,tick_,landed});
+        }else{
+            const bool applied=applyAreaEffect(*it);
+            if(impactFlashes_.size()>=MaxImpactFlashes)
+                impactFlashes_.pop_front();
+            impactFlashes_.push_back({it->center,it->radius,tick_,applied});
+        }
         it=pendingAreas_.erase(it);
     }
+    std::sort(weaponImpacts.begin(),weaponImpacts.end(),
+        [](const CombatHit& a,const CombatHit& b){
+            return a.targetId!=b.targetId?a.targetId<b.targetId:
+                   a.attackerId<b.attackerId;
+        });
+    for(const auto& hit:weaponImpacts)
+        if(Unit* unit=find(hit.targetId))
+            unit->takeDamage(hit.rawDamage,hit.attackerName,hit.armorPiercing);
 }
 bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
                             int targetId,const Vec3& ground){
@@ -1538,6 +1610,15 @@ std::string RTSSkirmish::stateDigest()const{
             hash.signedNumber(static_cast<int>(area.team));
             hash.text(area.abilityId);hash.text(area.effectId);
             hash.number(area.impactTick);
+            if(area.weaponShot){
+                hash.text("weapon_direct_hit");
+                hash.signedNumber(area.attackerId);
+                hash.signedNumber(area.attackTargetId);
+                hash.signedNumber(area.contactTargetId);
+                hash.scalar(area.attackDamage);
+                hash.scalar(area.armorPiercing);
+                hash.text(area.attackerName);
+            }
             if(area.projectile){
                 hash.text("projectile");hash.text(area.projectileId);
                 hash.point(area.launchPosition);hash.point(area.destination);
