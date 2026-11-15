@@ -144,7 +144,11 @@ public:
     };
     std::vector<ImpactFlashWatch> impactFlashWatch(std::size_t limit=32)const;
     std::vector<AreaImpactWatch> areaImpactWatch(std::size_t limit=32)const;
-    std::size_t pendingAreaImpactCount()const{return pendingAreas_.size();}
+    // Both kinds share the same flight/collision loop, but Weapon volleys
+    // must not exhaust capacity reserved for authored Ability impacts.
+    std::size_t pendingAreaImpactCount()const{
+        return pendingAreas_.size()-pendingWeaponShotCount();
+    }
     std::size_t pendingWeaponShotCount()const;
     std::uint64_t abilityCooldownRemaining(int casterId,const std::string& abilityId) const;
 
@@ -236,6 +240,7 @@ private:
                                      std::uint64_t atTick);
     bool detectProjectileCollision(PendingAreaImpact& area);
     static constexpr std::size_t MaxPendingAreaImpacts=128;
+    static constexpr std::size_t MaxPendingWeaponShots=512;
     std::vector<PendingAreaImpact> pendingAreas_;
     bool castAbility(int casterId,const std::string& abilityId,
                      int targetId,const Vec3& ground);

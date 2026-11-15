@@ -73,6 +73,7 @@ void fire(RTSSkirmish& game,int target){
     game.update(1.f/60.f);
     game.update(1.f/60.f);
     assert(game.pendingWeaponShotCount()==1);
+    assert(game.pendingAreaImpactCount()==0);
 }
 }
 int main(){

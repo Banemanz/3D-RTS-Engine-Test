@@ -1273,7 +1273,7 @@ bool RTSSkirmish::queueWeaponProjectile(const CombatHit& hit){
     const Unit* attacker=find(hit.attackerId);
     const Unit* target=find(hit.targetId);
     if(!attacker || !target || !target->isAlive() ||
-       pendingAreas_.size()>=MaxPendingAreaImpacts)
+       pendingWeaponShotCount()>=MaxPendingWeaponShots)
         return false; // deterministic hitscan fallback at saturation
     const auto profile=compileProjectile(project_.catalog,hit.projectileId);
     PendingAreaImpact shot;
@@ -1353,7 +1353,7 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
         // Projectiles always enter the future queue, even with a 0-tick
         // post-flight delay. Old instant Areas do not use that queue.
         if((ability.impactDelayTicks>0 || !ability.projectileId.empty()) &&
-           pendingAreas_.size()>=MaxPendingAreaImpacts)return false;
+           pendingAreaImpactCount()>=MaxPendingAreaImpacts)return false;
         const Unit* caster=find(casterId);
         PendingAreaImpact area;
         area.center={ground.x,0.f,ground.z};
