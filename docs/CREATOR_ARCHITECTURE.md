@@ -184,3 +184,25 @@ OpenGL renderer reuses its existing ringShader/VAO for cursor
 radius (valid/invalid colors) and delayed impact rings. The
 F6 diagnostics monitor displays pending impact count, Ability,
 center, radius and remaining seconds using read-only watch data.
+
+
+## F7 typed Projectile editor and F9 model overlay
+
+EditorSession::createCatalogObject creates original Projectile Arc
+or Bolt presets. EditorSession::setProjectileDefinition creates a
+candidate document, writes all gameplay/visual fields, validates
+the full catalog, and records one undo snapshot or rejects the
+edit atomically. CreatorWorkbench has bounded numeric inputs,
+a typed bool and RGB color picker, plus a Ground Ability
+Projectile dropdown and link navigation. Switching an Ability
+out of Ground targeting clears its Projectile link in the same
+transaction. DataCatalog::rename and RTSProject::catalogReferences
+understand Projectile -> Ability dependency edges.
+
+The runtime owns flight positions, contact rules and impact timing.
+main_entry_point_render_loop.cpp simply draws a procedural native
+Unit mesh at the watch position, and a short tinted GL_LINES trail.
+A 24-tick expanding hit ring reads the nonauthoritative impact
+flash watch. F6 inspector shows each pending area as
+PROJECTILE FLIGHT or IMPACT TIMER. All UI paths compile identically
+into Linux and Windows; no duplicated gameplay implementations.

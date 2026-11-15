@@ -192,3 +192,23 @@ delay counts down. Units entering/leaving the area before
 impact are affected/avoided accordingly. TAB pages to more
 skills. Try Ember Arc (F) or allied Repair Circle (J)
 in ground_impact_showcase.rtsproject.json.
+
+
+## Projectile Forge controls
+
+F7: create a Projectile Arc or Bolt entry, edit speed, arc,
+size, contact radius, collision and RGB color, then Apply
+projectile settings. Select a Ground Ability; its Projectile
+delivery dropdown chooses an authored Projectile ID or None.
+Use Edit projectile to jump to its catalog entry. Settings,
+reference selection and target-kind conversion are undoable.
+
+F9 in projects/projectile_forge_showcase.rtsproject.json:
+select a Ranger, press F to target arcing Aether Arc, J for
+the intercepting Pulse Bolt, or K for Repair Circle; click
+visible ground within range to fire. Colored projectiles fly
+through the 3D world with short trails and the orange target
+ring persists. Collision-enabled bolts can detonate when
+touching an eligible Unit before their destination. A teal
+ring indicates valid ground aim, red indicates invalid aim;
+RMB cancels. TAB cycles through additional Ability pages.

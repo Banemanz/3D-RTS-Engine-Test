@@ -344,3 +344,29 @@ overruns capacity fizzles; resources were spent at cast time.
 Native Windows/Linux CTests, replay parity and renderer screenshots
 validate this shared code. A delayed area telegraph is NOT yet a
 physical projectile mesh, collision model or actor animation.
+
+
+## Authored 3D projectiles and deterministic interception
+
+The engine/editor now support reusable **Projectile** catalog objects.
+F7 has original Arcing Spark and Intercepting Bolt presets; authors can
+adjust launch speed, parabolic arc, mesh color/size, contact radius and
+whether a projectile intercepts Units along its flight. Ground Abilities
+may reference a Projectile or keep the existing timer-only area impact.
+The same Effect/Behavior graph, costs, cooldowns and team filters remain
+authoritative. Projectiles are rendered as original procedural 3D meshes
+with a short trail and on-impact flash; no third-party art is included.
+
+Flight advances at 60 fixed simulation ticks/second. Time-to-target is
+ceil(XZ distance / speed * 60), minimum one tick, with the Ground
+Ability's impact_delay_ticks added **after** flight arrival. Optional
+swept cylinder contact against eligible living Units can detonate early.
+Ties resolve by first segment contact then stable Unit ID. Explosion
+effects still resolve all eligible Units in the authored area radius,
+with the existing capacity/atomicity limits. Pending projectile
+trajectories are included in deterministic replay checksums.
+
+Try projects/projectile_forge_showcase.rtsproject.json: Aether Arc
+(arcing delayed area blast), Pulse Bolt (direct-flight interception),
+and Repair Circle (legacy instant area Heal). Both Windows and Linux
+use the same C++17 project, native F7 editor and F9 renderer.

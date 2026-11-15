@@ -295,3 +295,23 @@ splash falloff, cone/line shapes, aura propagation, custom tech
 trees, graph wiring, general scripting libraries, asset import,
 terrain deformation and multiplayer. This is not a proprietary
 game content port or comprehensive proprietary editor clone.
+
+
+## Original projectile-delivery/data-editor vertical slice
+
+Added: Projectile data catalog with speed, arc, color, size,
+collision radius and optional swept Unit contact; typed
+Ground Ability -> Projectile links and safe rename/deletion;
+fixed-tick 3D flight and early intercepts; destination burst
+using existing area-targeting Effect graphs, status/periodic
+capacities and replay rules; F7 presets/inspector, F9
+procedural moving projectile/trail/impact flash and F6
+pending flight diagnostics. Windows/Linux CTest parity
+and a playable original scenario cover the implementation.
+
+Still missing for a modern flexible creator: separate weapons
+and projectile actor events, area falloff, homing, actual
+terrain-object collision, splash shapes, imported meshes,
+actor animations, graphics/sound events, tech and upgrades,
+general scripting functions and a true node-link data graph.
+These are generic engine capabilities, not copied game units.

@@ -253,3 +253,15 @@ The F6 live monitor now shows bounded pending Ground impacts:
 Ability ID, center XZ, radius and seconds until arrival,
 alongside existing variable/timed-effect/status diagnostics.
 The watch is read-only and never schedules gameplay itself.
+
+
+## Projectile/impact introspection in trigger diagnostics
+
+F6 ApplyEffect remains a Unit-subject action. Ground Ability
+projectile delivery uses that same authored Effect graph
+but is initiated through a player CastAbility command.
+F6's read-only impact watch now distinguishes airborne
+PROJECTILE FLIGHT from postflight IMPACT TIMER, displaying
+Ability name, target XZ center, radius and remaining time.
+The F6 preview does not move or collide projectiles; this
+work belongs exclusively to RTSSkirmish fixed simulation.

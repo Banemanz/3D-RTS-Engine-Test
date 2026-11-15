@@ -212,3 +212,40 @@ before applying any damage or scheduling. Delayed arrivals may
 fizzle without refund if later state is over capacity.
 Nonempty pending impact queues are hashed in stateDigest; reset
 clears them. Rendering only reads a bounded areaImpactWatch.
+
+
+## Projectile runtime, swept hits and render projections
+
+DataCatalog::compileProjectile returns a validated
+ProjectileDefinition (speed, arcHeight, visualScale, collisionRadius,
+collideUnits and RGB tint). A Ground Ability may reference it via a
+typed optional projectile catalog ID. Missing/wrong-type references
+or invalid fields fail map validation and prevent authoring commits.
+No renderer or OS-specific types enter the catalog or simulation.
+
+RTSSkirmish reuses PendingAreaImpact and its existing 128 job limit.
+Projectile-enabled jobs snapshot launch position, terrain destination,
+launch tick, flight tick count, color, collision/visual parameters and
+the original Effect/Ability/owner/team IDs. Travel is a fixed-step
+parabolic arc; the projectile's XY/Z position is reproducibly derived
+from launchTick and flightTicks. No wall clock, GPU physics or cursor
+is consulted. The destination impact triggers at flight arrival plus
+the authored postflight delay. The old nonprojectile path is unchanged.
+
+For intercepting projectiles, each simulation tick checks the swept
+XZ segment between consecutive projectile positions, coupled with the
+eligible Unit's vertical body interval. The earliest contact parameter
+wins; exact ties pick smaller Unit ID. An early contact recenters
+the area explosion on the hit Unit and applies the same bounded,
+capacity-preadmitted Effect area algorithm. A miss continues to its
+intended ground destination. Target selection uses current Unit
+positions after movement. Unit count and pending job limits remain
+bounded; no delayed hit charges resources again.
+
+stateDigest hashes extra launch/flight/collision fields only for
+projectile jobs and ignores purely decorative flashes/trails. The
+existing CastAbility command/tape format is unchanged. Headless
+read-only AreaImpactWatch now exposes in-flight position, trail start,
+visual scale, color, and arrival time; ImpactFlashWatch exposes
+short-lived render-only detonation circles. The renderer uses the
+existing native mesh/line shaders and the target-ring shader.

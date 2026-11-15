@@ -309,3 +309,32 @@ rts-delayed-area-impact-screenshot. The screenshot-only
 The Release workflow packages and validates the original
 ground_impact_showcase map on both OSes, checking actual
 native executable feature flags rather than metadata only.
+
+
+## Projectile CTests, native screenshots and Release bundles
+
+RTSProjectileRuntimeTests covers valid typed Projectile and
+Ground Ability references, instant-versus-delayed delivery,
+fixed-tick position/arc projection, owner/team impact behavior,
+per-cast resources, exact arrival, 3D swept early interception,
+out-of-area dodge, procedural hit-flash watch, replay roundtrip/
+tampering, projectile ID rename/deletion protection and invalid
+speed/arc/scale/contact/type fields. Writes a mandatory
+projectile_fingerprint.txt in the CTest working directory.
+
+RTSProjectileEditorTests creates Arc and Bolt presets with
+the headless EditorSession API, modifies all fields as one
+undoable action, checks invalid rollback, typed Ground Ability
+projectile links, undo/redo, rename, blocked deletion,
+Ground -> Self reference cleanup, and JSON roundtrip.
+
+Both CTests run Debug/Release (Release asserts enabled) on
+Windows and Linux. CI uploads and byte-compares the projectile
+replay fingerprint, plus uses Mesa/Xvfb and the real GL renderer
+to capture F7 Projectile inspector and an actual F9
+--smoke-cast-projectile flight. No fake flight positions are
+injected by screenshot modes. Both Release archives validate
+projects/projectile_forge_showcase.rtsproject.json using their
+own native RTSProjectTool and require executable flags
+RTS_FEATURE_AUTHORED_PROJECTILES=1 and
+RTS_FEATURE_PROJECTILE_INTERCEPTION=1.

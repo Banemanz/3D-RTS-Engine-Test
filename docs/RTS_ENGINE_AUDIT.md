@@ -142,3 +142,34 @@ immediate tick-1 cast or new trigger-spawned Unit must still
 be targetable. The orange in-world marker is a deterministic
 impact telegraph, not physical projectile collision or a
 render-side authority for gameplay.
+
+
+## Projectile fixed-tick pipeline and remaining architectural work
+
+ProjectileDefinition is now a reusable typed authored object,
+and optional Ground Ability projectile references are validated
+and protected by the catalog's dependency graph. CastAbility
+continues through source-0 command ordering and records its
+launch geometry/timing. The 128-slot pending-area queue owns
+flight and impact state; no independent render-side trajectory
+or hardcoded projectile Ability has been introduced.
+
+Projectile interpolation uses distance-based tick counts and
+a parabolic arc. Optional swept contact checks the per-tick
+flight segment against Unit XZ discs with Y body intervals,
+ordered by first contact then stable ID. This avoids obvious
+discrete projectile tunneling and provides deterministic
+early detonation, but **not yet** full 3D mesh/terrain collision
+or continuous moving-body time-of-impact (Unit positions are
+sampled after current-tick movement). Existing area-limit
+and atomic Effect admission still apply.
+
+An active projectile's launch/start/end, flight ticks, arc,
+collision parameters and other game-relevant state are hashed
+in replay digests, while decorative trails and flashes are
+excluded. Current contact candidates use a linear Unit scan
+per active shot: a spatial broadphase is the next performance
+optimization, provided index freshness is guaranteed after
+all Unit movement, spawns, and terrain modifications.
+Actor visual import, hit reactions, particle/sound events,
+homing steering, weapons and targeting remain future work.

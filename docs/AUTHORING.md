@@ -565,3 +565,32 @@ for Ember Arc or J for Repair Circle, then left-click visible
 terrain inside range. Right-click cancels. Teal/green radius
 means valid aim; red indicates invalid; orange denotes a pending
 area impact. Unit positions are checked on impact, not cast.
+
+
+## F7 Projectile object workflow
+
+Choose New catalog object > Projectile | Arcing spark or Projectile |
+Intercepting bolt. The selected Projectile opens grouped validated
+fields, committed as one undoable transaction:
+
+- speed: 0.5..100 world units per second.
+- arc_height: 0..24, the extra height at the midpoint of a flight.
+- visual_scale: 0.05..3, size of the procedural in-flight model.
+- collision_radius: 0.05..4, swept contact padding against Units.
+- collide_units: boolean; disabled travels to the target point.
+- tint: three normalized RGB components in [0,1].
+
+The Projectile itself is a reusable catalog entry, not hardwired into
+a Unit. Create an Ability with Target policy **Ground**, pick an
+Effect graph and select this object in the Projectile dropdown.
+Click Edit projectile to jump to the typed object. None reverts to
+the previous timer-based area scheduler. Renaming a Projectile
+rewrites the Ability reference; deletion is blocked while referenced.
+Converting an Ability from Ground to a non-Ground target removes
+its incompatible projectile reference atomically with undo support.
+
+Projectile travel consumes distance/speed, so the Ground Ability's
+impact_delay_ticks is an additional **postflight** hold. The
+Projectile Forge project demonstrates an arcing area blast,
+a swept-contact bolt, and a nonprojectile Repair Circle.
+Unit-targeted Ability casts remain direct for now.

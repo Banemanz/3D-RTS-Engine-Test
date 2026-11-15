@@ -146,3 +146,22 @@ The project verifier requires the map and these true binary
 features. Debug CI generates Windows/Linux ground replay
 fingerprints, plus authentic F7 and F9 Mesa OpenGL screenshots.
 Screenshots are not Windows executable download artifacts.
+
+
+## Projectile Forge native Windows/Linux package requirements
+
+Release build archives must include the original
+projects/projectile_forge_showcase.rtsproject.json and run
+RTSProjectTool --validate from inside each OS bundle.
+Native RTSCameraTerrain --features must advertise
+RTS_FEATURE_AUTHORED_PROJECTILES=1 and
+RTS_FEATURE_PROJECTILE_INTERCEPTION=1. The existing verifier
+rejects missing map files, absent flags, or wrong binary formats.
+Both package CTest suites include the projectile runtime and
+F7 authoring regressions.
+
+The separate Debug Tests+screenshots workflow records
+projectile_fingerprint.txt on Windows and Linux, rejects a
+byte mismatch in replay-parity, and captures native GL images
+of the Projectile inspector and a moving shot in play mode.
+Screenshots are not downloadable executables.

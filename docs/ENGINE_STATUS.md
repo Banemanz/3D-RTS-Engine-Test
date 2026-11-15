@@ -380,3 +380,25 @@ Still missing: true projectile actor trajectories, collision,
 hit reactions, visual/sound impact events, splash falloff, line/
 cone-shaped areas, network synchronization, more advanced AI
 Ability casting and data-driven actor/weapon construction.
+
+
+## Typed projectile/actor-delivery milestone
+
+Implemented: authored Projectile catalog object, two original F7
+presets, one-click grouped settings with validation/undo, Ground
+Ability typed Projectile link, safe rename/deletion and Ground
+target conversion, 60Hz flight quantized by speed, vertical
+parabolic arcs, optional swept Unit-cylinder interception,
+first-contact/Unit-ID stable tie breaks, explosion on contact
+or destination, deferred postflight impact delay, shared
+Effect/Behavior application and costs, state-digest replay hashing,
+native 3D procedural projectile/trail rendering and expanding
+impact flash, read-only F6 projectile watch, regression fixtures,
+real OpenGL screenshot and Windows/Linux packaging parity.
+
+Not yet complete: imported projectile models, actor-animation
+state machines, sounds, particle effects, terrain collisions
+midflight, moving/homing Unit-locked projectiles, networking,
+true missiles for the normal weapon system and general scene
+physics. The current renderer uses procedural geometry while
+the simulation owns all gameplay decisions.

@@ -1065,3 +1065,126 @@ Later docs-only commit should be checked separately before final claim.
    creator function libraries.
 5. Always maintain Windows/Linux native parity, one Draft
    PR, original IP content, and updated docs/handoff.
+
+
+## November 15 2026 — Data-authored projectiles, swept collision and F7 creator
+
+**Repo:** Banemanz/3D-RTS-Engine-Test. **Branch:**
+feat/rts-vertical-slice. Keep same original open Draft PR #1,
+do not merge or create a second PR. Prior fully green Ground
+Ability milestone: fe77c22c with Linux/Windows Debug and
+Release and mandatory replay parity. First integrated projectile
+milestone fac7d2159b75715dc16149402ade62bd3abe6f80 passed
+Windows/Linux Debug and replay parity, real OpenGL screenshots.
+Later cosmetic trail/F6 improvements committed to 9a490252;
+check latest Actions results before claiming it green.
+
+### Actual code modified
+
+- DataCatalog.hpp/.cpp adds ProjectileDefinition and
+  compileProjectile(catalog,id). Known fields: speed .5..100
+  world units/s; arc_height 0..24; visual_scale .05..3;
+  collision_radius .05..4; collide_units boolean; tint
+  RGB triple [0,1]. Strict typed references and validation.
+  AbilityDefinition.projectileId is optional on Ground
+  Abilities only. Non-Ground target with a nonempty reference
+  fails validation. DataCatalog::rename migrates
+  Projectile -> Ability .projectile local references and
+  RTSProject::catalogReferences prevents unsafe deletion.
+- RTSSkirmish.hpp/.cpp extends PendingAreaImpact (not a
+  separate queue) with optional projectile snapshots:
+  projectileId, launchPosition, destination, launchTick,
+  flightTicks, arcHeight, visualScale, tint, collisionRadius
+  and collideUnits. Flight duration =
+  max(1,ceil(XZ distance * 60 / speed)) ticks. Ground
+  impact_delay_ticks is **postflight delay** for projectile
+  Abilities; no-projectile existing delay stays unchanged.
+  Ground Ability CastAbility command embeds stable world
+  point and ID (no version changes). All collision-relevant
+  state hashes into stateDigest only for projectile jobs.
+  reset clears jobs and short-lived decorative flashes.
+- RTSSkirmish::projectilePositionAt(a,tick) interpolates
+  launcher->terrain destination with parabolic vertical
+  4*arcHeight*t*(1-t). updateAreaImpacts runs after Unit
+  movement/two-phase combat, checks swept XZ segments
+  against current eligible Unit position + Y cylinder
+  interval. Minimum segment contact t wins, with smaller
+  Unit ID as tie-breaker. Early contact centers explosion
+  on intercepted Unit, then applies existing capped
+  area-wide Effect/Behavior scheduler. A miss arrives at
+  destination. Max 128 live area/projectile jobs and
+  max 64 affected Units. New render-only impactFlashes_
+  expire 24 ticks; they do not contribute to game hashes.
+- areaImpactWatch returns live projectilePosition,
+  projectileTrailStart (3-tick path sample), scale, tint
+  and remaining impact ticks. New impactFlashWatch returns
+  bounded visual burst circles. Neither drives game rules.
+  main_entry_point_render_loop.cpp uses existing unitVAO,
+  unitShader, lineShader and lineVBO for colored procedural
+  3D projectile models plus short trails, and ringShader
+  for expanding green/amber success/fizzle flashes. F6
+  CreatorTriggerMonitor.hpp labels PROJECTILE FLIGHT
+  versus IMPACT TIMER. OpenGL state remains native/shared.
+- EditorSession.cpp/.hpp creates Projectile Arc/Bolt
+  presets, setProjectileDefinition groups all 6 fields
+  in one project-clone validated undoable transaction.
+  setAbilityTargetPolicy removes projectile when changing
+  from Ground to another target atomically.
+  CreatorWorkbench.hpp has typed Projectile editor,
+  RGB color selector, collision checkbox, Ground Ability
+  Projectile dropdown and linked-object navigation.
+- Playable original example:
+  projects/projectile_forge_showcase.rtsproject.json.
+  Aether Arc (arcing projectile, delayed enemy Damage +
+  tethered Behavior), Pulse Bolt (swept intercept explosion)
+  and Repair Circle (legacy Ground instant Ally healing).
+  Ranger loadout F/J/K + TAB page. No copied third-party
+  characters/assets/media.
+
+### New tests and CI parity
+
+- tests/projectile_runtime_tests.cpp: typed data,
+  launch/midflight position and apex, flight+postflight
+  impact timing, energy/minerals, enemy-team burst,
+  intercepting bolt early detonation, out-of-area dodge,
+  hit flashes, replay/tape JSON and tamper rejection,
+  renames/blocked deletion/invalid definitions; writes
+  projectile_fingerprint.txt.
+- tests/projectile_editor_tests.cpp: actual F7 Projectile
+  Arc/Bolt presets, grouped editing, undo/redo, invalid
+  rollback, typed Ability refs and rename/deletion,
+  Ground->Self cleanup, JSON roundtrip.
+- CMakeLists.txt registers both with enabled Release
+  assertions plus projectile_forge_showcase map validation.
+  .github/workflows/ci.yml includes new replay file
+  uploads and mandatory byte diff Windows/Linux, plus
+  rts-projectile-editor-screenshot and
+  rts-projectile-flight-screenshot (actual Mesa GL).
+  .github/workflows/build.yml checks packaged sample
+  on Windows/Linux native RTSProjectTool.
+  tools/verify_build_bundle.py requires sample and
+  binary --features flags RTS_FEATURE_AUTHORED_PROJECTILES
+  and RTS_FEATURE_PROJECTILE_INTERCEPTION.
+- First native GL captures visually inspected:
+  F7 Projectile inspector full fields and RGB; F9 projectile
+  in flight near orange impact marker, reduced Ranger
+  energy and native HUD, no crash. Previous turn local
+  preview /mnt/data/rts_projectiles_preview/,
+  verify exact files before linking in later turn.
+- Confirm current branch CI state before final; first
+  functional fac7d2159 Windows/Linux Debug and replay
+  checks fully green, further 9a490252 trail/monitor
+  improvement may have a later build.
+
+### Immediate future priorities
+
+1. Actor event pipeline for explicit on-launch/on-contact/
+   on-impact animation and sound/particles, original assets.
+2. Spatial broadphase for projectile collision without
+   stale index queries after spawn/teleport/cast changes.
+3. Real terrain/mesh collision, homing and Unit-targeted
+   projectile delivery, projectiles on normal weapons.
+4. Advanced creator node/link graphs, tech/upgrades,
+   actor asset import and trigger function libraries.
+5. Continue Win/Linux full build, replay parity, same
+   unmerged Draft PR #1, updating all docs/handoff.
