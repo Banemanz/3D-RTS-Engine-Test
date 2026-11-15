@@ -228,7 +228,7 @@ jobs:
           path: rts-weapon-f7.png
           if-no-files-found: error
       - name: Capture original Weapon-equipped gameplay
-        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-army --smoke-fixed-ticks --smoke-frames 110 --screenshot rts-weapon-play.ppm
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 110 --screenshot rts-weapon-play.ppm
       - name: Convert Weapon gameplay screenshot
         run: python3 tools/ppm_to_png.py rts-weapon-play.ppm rts-weapon-play.png
       - name: Upload real Weapon gameplay screenshot

@@ -395,3 +395,11 @@ checks require RTS_FEATURE_AUTHORED_WEAPONS=1 and
 RTS_FEATURE_ARMOR_PENETRATION=1 from the executable itself.
 Linux Mesa OpenGL smoke jobs capture the F7 Weapon inspector and the F9
 native game/HUD, not simulated UI images.
+
+### F9 single-unit Weapon HUD image
+
+The Weapon Forge gameplay screenshot smoke uses the native
+--smoke-select-ability-caster option to select precisely one
+armed Ranger, ensuring that the F9 detailed unit dossier
+shows PEN next to damage/armor rather than the group-selection grid.
+The run is fixed 60 Hz smoke, not a mocked interface.

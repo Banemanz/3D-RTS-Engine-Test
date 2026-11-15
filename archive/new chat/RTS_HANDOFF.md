@@ -1335,3 +1335,12 @@ not ballistic Projectile delivery. Next meaningful work:
 weapon/projectile link; contact/launch Actor events; multi-weapon and
 damage-class systems; tech upgrades, asset import, richer native GUI.
 No SC2 proprietary data/assets or names have been incorporated.
+
+### Screenshot QA correction
+
+The first Weapon Forge F9 smoke selected the whole army (group
+HUD), which could not visually confirm the new single-unit
+PEN stat. CI now selects exactly one ability-equipped Ranger via
+--smoke-select-ability-caster; this exercises the actual unit
+combat dossier, reuses the same runtime and does not change
+user input or regular gameplay.
