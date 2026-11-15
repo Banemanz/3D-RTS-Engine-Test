@@ -36,6 +36,7 @@ jobs:
             build/weapon_fingerprint.txt
             build/weapon_projectile_fingerprint.txt
             build/actor_cues_fingerprint.txt
+            build/requirement_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -219,6 +220,16 @@ jobs:
           name: rts-active-behavior-hud-screenshot
           path: rts-active-status.png
           if-no-files-found: error
+      - name: Capture real F7 Requirement graph inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id r_arc_gate --smoke-frames 85 --screenshot rts-requirement-f7.ppm
+      - name: Convert F7 Requirement screenshot
+        run: python3 tools/ppm_to_png.py rts-requirement-f7.ppm rts-requirement-f7.png
+      - name: Upload actual F7 Requirement graph inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-requirements-f7-screenshot
+          path: rts-requirement-f7.png
+          if-no-files-found: error
       - name: Capture actual F7 Actor event rule inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/actor_events_showcase.rtsproject.json --smoke-select-catalog-id ranger_actor --smoke-frames 85 --screenshot rts-actor-events-f7.ppm
       - name: Convert F7 Actor event screenshot
@@ -380,6 +391,7 @@ jobs:
             build/weapon_fingerprint.txt
             build/weapon_projectile_fingerprint.txt
             build/actor_cues_fingerprint.txt
+            build/requirement_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -412,3 +424,4 @@ jobs:
           diff -u fingerprints/linux/weapon_fingerprint.txt fingerprints/windows/weapon_fingerprint.txt
           diff -u fingerprints/linux/weapon_projectile_fingerprint.txt fingerprints/windows/weapon_projectile_fingerprint.txt
           diff -u fingerprints/linux/actor_cues_fingerprint.txt fingerprints/windows/actor_cues_fingerprint.txt
+          diff -u fingerprints/linux/requirement_fingerprint.txt fingerprints/windows/requirement_fingerprint.txt
