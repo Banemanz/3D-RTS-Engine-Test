@@ -658,3 +658,19 @@ penetration; nonprojectile Ability effects retain their own rules.
 In F7, open Creator | Data Navigator to inspect Depends on / Used by
 references, inherited links and search results. Click any object to
 open its editor. The navigator is read-only and does not edit map data.
+
+## Actor Events: typed presentation reactions
+
+Open F7 and select an Actor, or use the Actor | Event-driven visual
+creation preset. Add up to 12 rules triggered by Attack, Launch,
+Impact, Death, Cast, or Status; styles are Pulse, Ring and Beacon.
+Each rule specifies RGB tint, radius .25..12 world units, and
+duration 1..180 ticks (60Hz). Apply commits all rules as one
+validated undoable transaction. Derived Actors inherit or override
+the array; per-placement actor overrides also work.
+
+These visual responses never affect the authoritative simulation.
+F9 renders them from read-only cue snapshots; F6 shows the active
+events. The original Actor Event Laboratory shows projectile
+launch/impact cues without borrowing third-party content. Full
+schema and details: docs/ACTOR_EVENT_AUTHORING.md.

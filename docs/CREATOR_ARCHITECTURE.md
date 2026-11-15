@@ -244,3 +244,19 @@ for double-precision fields, avoiding binary serialization noise
 F7 property summary; raw stored picojson doubles, editable inputs
 and serialized project/replay values remain exactly unchanged.
 The catalog_value_preview CTest guards this presentation boundary.
+
+## Typed F7 Actor Event authoring controls
+
+Actors now have a specialized Inspector workspace for bounded visual
+event rules, with event and style combos, color inputs, duration,
+radius, add/remove, grouped Apply and Revert. The Actor | Event-driven
+visual creation preset provides an original starter cue. All project
+mutations pass through EditorSession::setActorCues, which validates
+the entire candidate project and writes ONE undo record on success.
+
+The same headless DataCatalog parser compiles cues during validation,
+simulation spawning and per-instance Actor resolution. F6 consumes
+a read-only live cue watch, and F9 displays original GL effects,
+neither of which can change combat. This is a foundational
+subeditor; full animation state/event term/message graph authoring
+is still missing.

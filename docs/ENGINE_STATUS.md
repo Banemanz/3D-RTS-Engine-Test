@@ -441,3 +441,19 @@ dependencies. The original Weapon Forge sample demonstrates this,
 with new headless editor/runtime tests, replay fingerprints and Linux
 OpenGL smoke captures. Remaining work includes homing, terrain mesh
 collision, Warheads, target filters and Actor audiovisual events.
+
+## Data-authored Actor Event presentation layer
+
+The engine now compiles Actor event arrays from inherited catalog
+fields and instance overrides, snapshots them when a Unit spawns,
+and publishes bounded ephemeral cue records from actual fixed-tick
+Attack, Projectile Launch/Impact, Death, Ability Cast and Behavior
+Apply events. F9 renders Pulse/Ring/Beacon styles; F6 inspects cues.
+All cues are ignored by authoritative replay hashes.
+
+A new headless test compares identical combat state digests with
+and without cue definitions every simulation tick. The original
+Actor Event Laboratory project and strict schema/editor tests make
+the feature portable across Windows/Linux builds. This remains
+a visual-cue foundation, not sound, animation, particles, or complete
+Galaxy Actor Events parity.

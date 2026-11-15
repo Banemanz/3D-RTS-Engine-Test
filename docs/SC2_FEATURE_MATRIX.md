@@ -350,3 +350,15 @@ Requirements, Upgrades, Movers, actor event term/message workflows,
 source layers, advanced asset import and editable multi-hop graphs.
 Do not confuse compatibility of the concept with parity of features.
 See docs/EDITOR_REFERENCE_RESEARCH.md for reference links.
+
+## Independent Actor Events foundation (November 15)
+
+Now present: authored event-driven Actor visual cues for six fixed-tick
+gameplay event kinds, three native procedural styles, strict
+validation, Actor inheritance and per-placement overrides, F7
+specialized subeditor, F6 live monitor, F9 rendering, and authoritative
+replay isolation. Galaxy Editor still offers far richer actor
+messages/terms, timelines, sounds, particles, animation controllers,
+validators, model attachment trees and specialized action catalogs.
+The current system is an original generic RTS creator implementation,
+not a recreation of those proprietary assets or scripts.

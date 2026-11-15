@@ -432,3 +432,18 @@ searchable jump navigation. It uses the same typed project catalog as
 gameplay and preserves unknown extension data. Windows/Linux tests
 verify combat, editor transactions and replay parity. Reference research
 is archived in docs/EDITOR_REFERENCE_RESEARCH.md.
+
+## November 15 continuation: event-driven Actor presentation
+
+The native engine/editor now supports authored Actor cues for real
+Attack, Launch, Impact, Death, Cast and Status events. F7 exposes
+grouped, validated Actor event rules for Pulse, Ring and Beacon effects,
+RGB color, radius and fixed-tick lifetime; creation, undo/redo and
+per-instance/inherited Actor settings are supported. F6 observes live
+events, and F9 displays original procedural GL effects.
+
+Actor cues are bounded presentation snapshots, NEVER authoritative
+damage or replay state. A new regression suite verifies identical
+gameplay digests with and without cues. The new Actor Event Laboratory
+project and Windows/Linux CI screenshots exercise real gameplay.
+See docs/ACTOR_EVENT_AUTHORING.md for schema and current limits.

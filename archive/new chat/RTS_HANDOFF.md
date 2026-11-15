@@ -1388,3 +1388,49 @@ The later RTSCatalogValuePreview.hpp helper formats numeric previews
 without rewriting any saved values or replay data. An independent
 Release-asserted CTest verifies rounding noise is hidden only in the
 editor display. See CI at the latest PR head.
+
+## November 15 2026 — Actor Event system continuation
+
+Keep ALL changes on the existing unmerged draft PR #1 for
+Banemanz/3D-RTS-Engine-Test, branch feat/rts-vertical-slice.
+No secondary PR, no merge. Parent head 18abb3c had 72/72
+Windows/Linux Release CTests and Debug/replay CI green.
+
+New commits:
+- 4a9bc3093e3d18a9011691a38fd6cb38e8567289:
+  typed RTSActorCue.hpp with Attack/Launch/Impact/Death/Cast/Status
+  and Pulse/Ring/Beacon, inherited Actor events validation and
+  ActorVisual cues. Unit.actorCues are snapshotted at spawn
+  including placement actor overrides; RTSSkirmish queues
+  maximum 256 ephemeral presentation events at fixed combat,
+  projectile, ability and death events. No replay hashing.
+- 7b4cb228e02a45465dd2cbbe7a352a4603968545:
+  F7 Actor event inspector (add/remove, tint, radius, duration,
+  event/style) and Actor | Event-driven visual creation preset,
+  transactional EditorSession::setActorCues, F6 cue watch,
+  native F9 Pulse/Ring/Beacon visual overlay.
+- 662b14c7d77c94682c498182bae28228961377ab:
+  runtime/editor Actor Event CTests, Actor Event Laboratory
+  sample map with authored effects, strict CI replay fingerprint
+  bytes, F7/F9 real GL screenshots, Windows/Linux packaged sample
+  validation, binary feature marker.
+- fef3a6874c4794ef513f75f378c4c594b3cf990f:
+  Instant/targeted Ability Effects also emit presentation-only
+  Impact cues; stronger runtime regression compares identical
+  gameplay with vs without visual events on EVERY tick, and
+  verifies actual Cast/Impact event output. Windows/Linux
+  Release 75/75 CTests passed at this commit.
+- Documentation milestone: docs/ACTOR_EVENT_AUTHORING.md plus
+  README, AUTHORING, ENGINE_STATUS, CREATOR_ARCHITECTURE,
+  TESTING, BUILD_ARTIFACTS, SC2_FEATURE_MATRIX, REPLAY_COMMANDS,
+  and this new chat handoff.
+
+Review latest GitHub Actions for Debug Windows/Linux replay parity,
+Release bundle checks and screenshot captures before declaring
+the final documentation head green.
+
+Future major passes: Actor action catalog and original audio/VFX
+assets, validators/requirements, tech upgrades, deeper graph/scene
+editor, data source layers, navigation footprints, projectile
+homing/terrain collision, multi-hit Warheads. Never copy Galaxy
+source, assets or third-party GPL implementations.

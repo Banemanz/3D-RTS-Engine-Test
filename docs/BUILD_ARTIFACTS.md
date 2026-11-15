@@ -186,3 +186,14 @@ Projectile and Navigator tests, and CI strictly compares new replay
 fingerprints across MSVC and GCC. Linux captures real OpenGL Weapon
 flight and F7 editor screenshots; those are test artifacts, not
 substitutes for downloadable executable bundles.
+
+## Actor Event native bundle contract
+
+Windows x64 and Linux x86_64 Release bundles include the original
+actor_events_showcase.rtsproject.json file and validate it with
+the packaged project utility. RTSCameraTerrain --features reports
+RTS_FEATURE_ACTOR_EVENT_CUES=1 and the bundle verifier checks that
+in the shipped executable. New CTests and strict Windows/Linux
+replay parity cover authored event rules and deterministic game
+isolation. Mesa screenshot artifacts show actual F7 and F9 output,
+not user-facing executable substitutes.

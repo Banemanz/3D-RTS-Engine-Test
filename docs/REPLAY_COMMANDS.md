@@ -162,3 +162,14 @@ only when such shots exist. A moving target can dodge a flight.
 Windows/Linux compare weapon_projectile_fingerprint.txt byte-for-byte,
 including a serialized replay roundtrip and tamper rejection.
 Old Weapon and other map fingerprints are preserved.
+
+## Actor Events are not replay data
+
+Actor cue snapshots are produced from fixed-tick gameplay but
+are deliberately absent from stateDigest and command tapes. They
+cannot change a player's orders or the results of combat, Abilities
+and triggers. No replay format update is necessary. The
+actor_event_runtime CTest checks these boundaries by simulating
+identical matches with and without cue rules and comparing the
+authoritative digest at every tick. actor_cues_fingerprint.txt is
+also byte-compared between Windows and Linux in CI.

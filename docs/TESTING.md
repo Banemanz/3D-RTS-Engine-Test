@@ -417,3 +417,20 @@ Release assertions remain on; Windows and Linux CI byte-compare
 weapon_projectile_fingerprint.txt. The native Mesa OpenGL screenshot
 pipeline captures F7 Weapon and gameplay Projectile flight.
 The packaged executable reports RTS_FEATURE_WEAPON_PROJECTILES=1.
+
+## Actor Event CTests and native screenshot acceptance
+
+actor_event_runtime verifies strict Actor cue schema, normal Attack
+and Projectile Launch/Impact events, Unit Death events, instance
+overrides, timed expiration, Ability Cast/Impact, replay roundtrip
+and tamper detection. It also verifies presentation never changes
+authoritative stateDigest on an identical 110-tick decorated versus
+unadorned combat sequence. actor_event_editor verifies F7 preset
+creation, grouped edits, rollback, Undo/Redo, inheritance and
+JSON persistence. actor_events_showcase is validated in CTest
+and the Windows/Linux packaged RTSProjectTool.
+
+The new actor_cues_fingerprint.txt is uploaded and byte-compared
+in replay parity CI. Native Linux OpenGL captures an F7 Actor event
+inspector and F9 live event gameplay screenshot. The Release
+bundle verifier requires RTS_FEATURE_ACTOR_EVENT_CUES=1.
