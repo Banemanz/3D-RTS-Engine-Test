@@ -34,6 +34,7 @@ jobs:
             build/projectile_fingerprint.txt
             build/area_shapes_fingerprint.txt
             build/weapon_fingerprint.txt
+            build/weapon_projectile_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -227,6 +228,16 @@ jobs:
           name: rts-weapon-f7-screenshot
           path: rts-weapon-f7.png
           if-no-files-found: error
+      - name: Capture genuine in-flight normal attack Projectile
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 35 --screenshot rts-weapon-projectile.ppm
+      - name: Convert normal attack Projectile screenshot
+        run: python3 tools/ppm_to_png.py rts-weapon-projectile.ppm rts-weapon-projectile.png
+      - name: Upload real Weapon Projectile flight screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-weapon-projectile-flight-screenshot
+          path: rts-weapon-projectile.png
+          if-no-files-found: error
       - name: Capture original Weapon-equipped gameplay
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 110 --screenshot rts-weapon-play.ppm
       - name: Convert Weapon gameplay screenshot
@@ -346,6 +357,7 @@ jobs:
             build/projectile_fingerprint.txt
             build/area_shapes_fingerprint.txt
             build/weapon_fingerprint.txt
+            build/weapon_projectile_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -376,3 +388,4 @@ jobs:
           diff -u fingerprints/linux/projectile_fingerprint.txt fingerprints/windows/projectile_fingerprint.txt
           diff -u fingerprints/linux/area_shapes_fingerprint.txt fingerprints/windows/area_shapes_fingerprint.txt
           diff -u fingerprints/linux/weapon_fingerprint.txt fingerprints/windows/weapon_fingerprint.txt
+          diff -u fingerprints/linux/weapon_projectile_fingerprint.txt fingerprints/windows/weapon_projectile_fingerprint.txt

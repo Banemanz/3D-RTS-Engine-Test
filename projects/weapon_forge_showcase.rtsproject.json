@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Frontier Weapon Forge",
-  "description": "Original standard-attack weapon creator lab. F7 inspect piercer_rifle and impact_maul; select a Unit to assign a reusable Weapon. F9 compare armor-piercing ranged attacks against heavy melee attackers and original Ability casts. Old maps without a weapon link use their original Unit attack stats.",
+  "description": "Original standard-attack weapon creator lab. F7 inspect piercer_rifle and impact_maul; select a Unit to assign a reusable Weapon. F9 compare armor-piercing ranged attacks against heavy melee attackers and original Ability casts. Old maps without a weapon link use their original Unit attack stats. New Tracer Bolt Projectile travels through the actual fixed-tick Weapon system; edit it from the Piercer Rifle's Projectile field. The target dummy near Ranger 1 shows live normal-attack flight without creating a separate scripted Ability.",
   "terrain": {
     "width": 49,
     "depth": 49,
@@ -268,7 +268,8 @@
         "damage": 11,
         "range": 7,
         "cooldown": 0.7,
-        "armor_piercing": 3
+        "armor_piercing": 3,
+        "projectile": "tracer_bolt"
       }
     },
     {
@@ -280,6 +281,37 @@
         "range": 1.85,
         "cooldown": 1.2,
         "armor_piercing": 5
+      }
+    },
+    {
+      "type": "Projectile",
+      "id": "tracer_bolt",
+      "fields": {
+        "name": "Tracer Bolt",
+        "speed": 7,
+        "arc_height": 0.35,
+        "visual_scale": 0.32,
+        "collision_radius": 0.4,
+        "collide_units": true,
+        "tint": [
+          0.25,
+          0.72,
+          1
+        ]
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "practice_dummy",
+      "parent": "rift_raider",
+      "fields": {
+        "name": "Practice Target",
+        "damage": 0,
+        "attack_range": 0,
+        "aggro_range": 0,
+        "move_speed": 0,
+        "max_hp": 300,
+        "armor": 7
       }
     }
   ],
@@ -604,6 +636,30 @@
       "owner": 1,
       "position": [
         -5,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "weapon_training_dummy",
+      "kind": "Unit",
+      "catalog": "practice_dummy",
+      "name": "Practice Target",
+      "owner": 1,
+      "position": [
+        -8,
         0,
         -4.5
       ],

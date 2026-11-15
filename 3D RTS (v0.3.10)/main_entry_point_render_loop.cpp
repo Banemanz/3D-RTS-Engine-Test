@@ -909,7 +909,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_PROJECTILE_INTERCEPTION=1\n"
                  <<"RTS_FEATURE_AREA_SHAPES=1\n"
                  <<"RTS_FEATURE_AUTHORED_WEAPONS=1\n"
-                 <<"RTS_FEATURE_ARMOR_PENETRATION=1\n";
+                 <<"RTS_FEATURE_ARMOR_PENETRATION=1\n"
+                 <<"RTS_FEATURE_WEAPON_PROJECTILES=1\n";
         return 0;
     }
     RTSCrashReporter::install();

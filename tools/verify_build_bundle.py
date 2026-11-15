@@ -126,6 +126,7 @@ def main() -> int:
         "RTS_FEATURE_AREA_SHAPES",
         "RTS_FEATURE_AUTHORED_WEAPONS",
         "RTS_FEATURE_ARMOR_PENETRATION",
+        "RTS_FEATURE_WEAPON_PROJECTILES",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:
