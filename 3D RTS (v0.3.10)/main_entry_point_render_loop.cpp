@@ -1008,6 +1008,7 @@ int main(int argc, char** argv) {
         if(techGraphSmoke && smokeFrames>0){
             CreatorTechGraph::visible=true;
             CreatorTechGraph::focusSelection=false;
+            CreatorTechGraph::suppressHoverTooltips=true;
             CreatorCatalogNavigator::visible=false;
             startDataEditor=true;
         }
@@ -1317,6 +1318,8 @@ int main(int argc, char** argv) {
         while (!glfwWindowShouldClose(window)) {
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
+            if(techGraphSmoke && smokeFrames>0)
+                ImGui::GetIO().MousePos=ImVec2(-10000.f,-10000.f);
             ImGui::NewFrame();
             if(stressEditor && smokeFrames>0)
                 exerciseEditorLifecycle(app,renderedFrames);

@@ -1726,3 +1726,14 @@ cursor moves to a safe corner, default F7 graph window size respects
 graph row counts, and NOT/ANY Bezier curves are properly dashed.
 Re-run Windows/Linux CI on the exact updated head, inspect the new F7
 screenshot and report only the checks that actually passed.
+
+### Second screenshot QA correction
+
+The first fix made the Technology Map more compact and dashed NOT/ANY
+connections, but the Xvfb screenshot still showed a hover tooltip:
+GLFW backend input updates override a one-time cursor reposition.
+The screenshot harness now sets ImGui mouse position invalid AFTER
+ImGui_ImplGlfw_NewFrame and BEFORE ImGui::NewFrame, and explicitly
+disables Technology Map hover tooltips only in `--smoke-tech-graph`.
+Normal interactive F7 hover remains unchanged. Verify the new native
+screenshot and Windows/Linux parity on the latest SHA.

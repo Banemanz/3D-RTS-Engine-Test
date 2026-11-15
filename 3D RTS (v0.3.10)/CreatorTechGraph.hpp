@@ -14,6 +14,7 @@
 namespace CreatorTechGraph {
 inline bool visible=false;
 inline bool focusSelection=false;
+inline bool suppressHoverTooltips=false; // deterministic screenshot harness only
 
 inline ImU32 edgeColor(RTSTechLinkKind kind){
     switch(kind){
@@ -179,7 +180,7 @@ void draw(App& app){
             ImGui::PushID(n.id.c_str());
             ImGui::SetCursorScreenPos(at);
             ImGui::InvisibleButton("node",ImVec2(BoxW,BoxH));
-            if(ImGui::IsItemHovered()){
+            if(!suppressHoverTooltips && ImGui::IsItemHovered()){
                 ImGui::BeginTooltip();
                 ImGui::Text("%s | %s",n.type.c_str(),n.id.c_str());
                 int count=0;
