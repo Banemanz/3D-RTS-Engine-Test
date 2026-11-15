@@ -1062,13 +1062,20 @@ int main(int argc, char** argv) {
                 throw std::invalid_argument("Unable to smoke-cast Ground Ability");
         }
         if(selectProducerForSmoke && smokeFrames>0) {
+            bool selected=false;
             for(auto& unit:app.game.units)if(unit.isAlive() && unit.ownerId==0 &&
-                unit.isStructure && app.game.trainableUnits(unit.id).size()>3) {
+                unit.isStructure &&
+                (app.game.trainableUnits(unit.id).size()>3 ||
+                 !app.game.researchableUpgrades(unit.id).empty())){
+                for(auto& other:app.game.units)other.isSelected=false;
                 unit.isSelected=true;
                 app.camera.focalPoint=unit.position;
                 app.camera.targetFocalPoint=unit.position;
+                selected=true;
                 break;
             }
+            if(!selected)throw std::invalid_argument(
+                "No authorable training/research producer in smoke project");
         }
         if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor ||
            (stressEditor && smokeFrames>0)) {
