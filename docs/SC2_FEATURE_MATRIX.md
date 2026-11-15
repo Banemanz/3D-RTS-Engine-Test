@@ -375,3 +375,14 @@ multi-caster evaluation, graphical drag-wire requirement editing,
 arbitrary unit class tests, or authored failure texts. This is an
 independent engine/editor capability and does not borrow Blizzard
 code or content.
+
+## Multi-level technology progress (November 15)
+
+Implemented a generic subset of public Galaxy/OpenRA research concepts:
+Upgrade catalogs, persistent owner levels, per-level cost and duration,
+Unit attack/armor bonuses, Caster-only Requirement tech prerequisites,
+UpgradeLevelAtLeast validators, producer research lists, F7 authoring,
+F9 commands, F6 progress and deterministic replay. Remaining gaps
+include per-field Upgrade operation lists, Show/Use tech distinctions,
+research multipliers, per-level varying cost tables, AI research,
+multi-owner authoring GUI, visual tech-tree map and advanced Actor media.

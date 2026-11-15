@@ -275,3 +275,14 @@ the Data Navigator exposes forward, reverse and inherited links.
 Both gameplay and editor share the same headless catalog compiler.
 This is a functional Boolean tree foundation, not yet a graphical
 drag-wire node canvas or the complete Galaxy Data Editor.
+
+## Typed F7 Upgrade inspector and F9 research cards
+
+CreatorWorkbench now exposes Upgrade max level, cost/time, per-level
+stat bonuses, exact Unit match and Requirement links. EditorSession
+commits all changes in one validated Undo/Redo transaction. The Unit
+inspector edits researchable_upgrades using typed array widgets and
+the Validator inspector adds UpgradeLevelAtLeast and a typed Upgrade
+picker. The F9 producer HUD shares its 3-slot/page training layout
+with Upgrade research commands; F6 reads a nonmutating progress watch.
+No duplicate Windows-only GUI implementation was introduced.

@@ -186,3 +186,14 @@ flags and stable owner Unit counts. No wall-clock or platform APIs
 participate. The runtime Requirement CTest writes
 requirement_fingerprint.txt, byte-compared in Linux and Windows CI,
 with JSON replay/tamper verification.
+
+## ResearchUpgrade replay and hash guarantees
+
+ResearchUpgrade is appended to the command enum and JSON name table,
+retaining older ordinal meanings. Player commands store a selected
+producer entity ID plus the Upgrade catalog ID, are validated at the
+fixed tick, and spend minerals only after passing max-level, type,
+busy-producer and Requirement checks. Canonical stateDigest includes
+nonempty research job states, completed owner technology levels
+and per-Unit tech modifiers. The new upgrade_research_fingerprint.txt
+must match byte-for-byte between Windows and Linux CI.

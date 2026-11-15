@@ -692,3 +692,14 @@ Only Caster predicates are valid for Ground or training gates.
 Missing and invalid IDs, duplicate children, cycles and excessive
 depth are rejected before project save. Existing unlinked objects
 remain playable. See docs/REQUIREMENT_AUTHORING.md for details.
+
+## Upgrade research workflows
+
+F7: create Upgrade | Attack research or Upgrade | Armor research,
+set max level 1..5, per-level cost/time and damage/armor, affected Unit
+and optional Requirement, then link it to a structure through its
+researchable_upgrades typed array. UpgradeLevelAtLeast Validators,
+wrapped inside Requirement graphs, provide real technology unlocks.
+F9: select a completed producer structure for paginated research cards.
+F6: inspect active research. All changes use validated Undo/Redo.
+Detailed schema: docs/TECHNOLOGY_RESEARCH.md.

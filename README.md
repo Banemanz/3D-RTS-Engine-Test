@@ -464,3 +464,15 @@ and a Worker training prerequisite. Windows/Linux Release and
 Debug CI validate it and byte-compare requirement_fingerprint.txt;
 F7 captures a native graph inspector screenshot. See
 docs/REQUIREMENT_AUTHORING.md for workflow, data schema and limits.
+
+## Authorable Upgrades and Research
+
+The native F7 editor now has original multi-level Upgrade catalogs,
+per-level mineral cost and fixed duration, typed Unit targets and
+reusable Requirement prerequisites. UpgradeLevelAtLeast Validators
+gate other research, Unit training and Abilities. F9 producer command
+cards issue authoritative ResearchUpgrade orders; F6 displays active
+progress. Completion modifies existing and future Unit attack/armor,
+while canceling research refunds the deposit. The original Technology
+Forge Laboratory demonstrates tech chains. See
+docs/TECHNOLOGY_RESEARCH.md for complete authoring and limitations.

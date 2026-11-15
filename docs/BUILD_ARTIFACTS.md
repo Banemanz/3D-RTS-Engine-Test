@@ -216,3 +216,12 @@ Release archives now explicitly ship the full original Actor Event
 and Validator/Requirement authoring manuals alongside the existing
 core documentation. The installed-bundle verifier fails when either
 manual is missing, rather than linking only to repository-side files.
+
+## Technology Forge in release bundles
+
+Both Linux and Windows Release bundles include the original
+technology_forge_showcase.rtsproject.json and the full original
+TECHNOLOGY_RESEARCH.md authoring manual. Packaged RTSProjectTool
+validates the sample and verify_build_bundle.py enforces the
+RTS_FEATURE_UPGRADE_RESEARCH=1 marker. Debug CI captures native
+F7/F9 research screenshots and strict Windows/Linux replay parity.

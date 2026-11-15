@@ -474,3 +474,14 @@ Ground/production links cannot inspect nonexistent targets.
 Legacy unlinked objects and replay command formats remain unchanged.
 F7 authoring, Data Navigator links, standalone Workshop map,
 portable regression CTests and native screenshots are integrated.
+
+## Persistent owner research and combat modifiers
+
+RTSUpgrades.hpp/.cpp adds strict Upgrade schemas and producer lists.
+RTSSkirmish applies ResearchUpgrade commands at deterministic ticks,
+serializes research against production, enforces prerequisites/costs/
+max levels, refunds cancel and destroyed producers, and propagates
+tech levels to existing and future Units. Temporary Behavior modifiers
+stay separate. Active jobs, completed levels and nonzero modifiers
+are authoritative replay state; older no-tech fingerprints remain.
+UpgradeLevelAtLeast integrates with previously authored Requirements.

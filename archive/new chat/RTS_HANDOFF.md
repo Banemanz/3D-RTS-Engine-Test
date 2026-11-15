@@ -1513,3 +1513,54 @@ Linux CI also captures three native F7 screenshots: nested Requirement
 graph, Validator predicate editor, and Ability linked Requirement.
 Check the latest head's CI before claiming this documentation branch
 green. No new PR or branch was created.
+
+## November 15 — Owner Upgrades, tech levels, and ResearchUpgrade
+
+Keep ALL work on existing open unmerged Draft PR #1 of
+Banemanz/3D-RTS-Engine-Test, branch feat/rts-vertical-slice.
+Earlier validated cc970a7 had 78/78 Windows/Linux CTests, parity.
+
+Implementation commits:
+1d8ca5f475e7c22999fc1a8fe519a7661cc7878f:
+RTSUpgrades typed schema, UpgradeLevelAtLeast Validator, appended
+ResearchUpgrade command, new Unit research modifier fields.
+5f90bfe382aa48459e4f9569853400fcd69fbfe2:
+RTSSkirmish per-owner research queue, cost/cancel/refund, level
+completion, stat propagation to existing/future Units, state hash.
+d35c55a40d192bd0f005ccc927c53d009d08b023:
+F7 typed references, rename/delete safety, presets, grouped editor.
+b5e716a7351540ea4f4d1ce81d11bbf6bdb624b0:
+Native F7 Upgrade, Unit researchable list, tech Validator and F9
+research command cards.
+724b009c8536e2db5fc11422dc6340e0c0c56ca5:
+Research runtime/editor headless tests and Release assertions.
+40d1ccbfb186af83dd109ae9b6b9510bf0178a2b:
+Technology Forge map, native F7/F9 CI captures, bundled sample,
+81/81 Windows/Linux Release CTests and all Debug+replay parity GREEN.
+a0b6aa9cb8db7a2393d4beac2018c49c7cdca80c:
+F6 read-only research watch/progress, scene-level research list ref
+rename and deletion guard, expanded tests.
+99806af6c2218fb9747fc8d681701098e1b1b4c2:
+Fixed --smoke-select-producer test harness: it used to select only
+buildings with more than three trainable Unit options, so the first
+Technology Forge F9 screenshot had NO selected structure. It now
+selects an actual producer with research options, fails clearly
+when none, and preserves legacy multi-page production smoke.
+This documentation commit: docs/TECHNOLOGY_RESEARCH.md, updated
+README, engine/editor, test, replay, feature matrix and handoff
+files; include the full manual in both platform packages.
+
+Verify exact latest head's Actions: Windows/Linux Release 81/81,
+packaged manual and sample, Debug replay fingerprint byte parity,
+native corrected F7/F9 screenshots. Keep SAME PR, no merge.
+
+Research references:
+https://staredit.net/topic/13227/
+https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/058_Data_Editor_Introduction/
+https://mapster.talv.space/galaxy/reference
+https://docs.openra.net/en/release/traits/
+
+Next major gaps: research-level field operation tables, tech Show vs
+Use, research AI, deeper F7 tree visualization, per-level cost scales,
+Actor animation/audio actions, resource + player tech overview, and
+native scene editor improvements. No proprietary content reused.

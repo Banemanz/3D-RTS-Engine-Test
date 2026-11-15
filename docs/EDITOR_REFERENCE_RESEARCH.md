@@ -88,3 +88,14 @@ remain incomplete, particularly scripted predicates, research and
 upgrade trees, field provenance and advanced graph editing. The
 new original schema and exact implementation limits are documented
 in docs/REQUIREMENT_AUTHORING.md.
+
+## Upgrade authoring reference follow-up
+
+Public Galaxy Editor tutorial materials illustrate Upgrade field
+operations, research levels and separate Show/Use Requirements;
+OpenRA documentation illustrates production prerequisites. The
+RTS project now independently implements reusable typed Upgrade
+catalogs, shared research command cards, owner level progression,
+combat modifiers and UpgradeLevelAtLeast Requirement gates.
+Full schema, boundaries and cited reference URLs are in
+docs/TECHNOLOGY_RESEARCH.md. No SC2 or GPL code/assets copied.

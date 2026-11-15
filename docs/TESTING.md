@@ -461,3 +461,17 @@ The Linux CI additionally captures the F7 Validator predicate inspector
 and the linked Ability Requirement field in the same original Workshop
 project, complementing the nested Requirement graph screenshot.
 These are actual GUI/software-GL frames, not separate mockup assets.
+
+## Research technology acceptance
+
+upgrade_runtime tests actual research order admission/refusal,
+owner level progression, per-level payment/timing, max-level cap,
+worker tech unlock, present/future Unit modifiers and mitigation,
+cancellation refund, typed schema rejection, replay roundtrip/tamper
+and read-only research snapshots. upgrade_editor exercises F7 presets,
+invalid rollback, Undo/Redo, typed Upgrade/Validator/Requirement links,
+inheritance, safe rename/deletion and placed producer research overrides.
+technology_forge_showcase is validated by CTest and installed project
+utilities on Windows/Linux. Total Release suite: 81 CTests per platform.
+Debug CI byte-compares upgrade_research_fingerprint.txt and captures
+native F7 Upgrade and F9 research-producer screenshots.
