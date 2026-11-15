@@ -36,6 +36,17 @@ void draw(App& app){
                 app.game.activeBehaviorCount());
     ImGui::Text("Pending area impacts/projectiles: %zu",
                 app.game.pendingAreaImpactCount());
+    ImGui::Text("Live actor visual cues: %zu",
+                app.game.activeActorCueCount());
+    if(app.game.activeActorCueCount()>0 &&
+       ImGui::TreeNode("##actorCues","Actor presentation events")){
+        for(const auto& cue:app.game.actorCueWatch(24))
+            ImGui::BulletText("%s / %s | unit %d | %.0f%% remaining",
+                rtsActorCueEventName(cue.event),
+                rtsActorCueStyleName(cue.style),cue.unitId,
+                double(cue.remainingFraction)*100.);
+        ImGui::TreePop();
+    }
     if(app.game.pendingAreaImpactCount()>0 &&
        ImGui::TreeNode("##pendingAreas","Ground impact watch")){
         for(const auto& a:app.game.areaImpactWatch(32))

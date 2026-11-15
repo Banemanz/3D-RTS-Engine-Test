@@ -106,6 +106,10 @@ public:
     bool setBehaviorDefinition(RTSProject& project,const BehaviorDefinition& values);
     bool setProjectileDefinition(RTSProject& project,const ProjectileDefinition& values);
     bool setWeaponDefinition(RTSProject& project,const WeaponDefinition& values);
+    // One undoable Actor event authoring transaction; strict typed schema
+    // validation applies equally in the headless project compiler.
+    bool setActorCues(RTSProject& project,
+                      const std::vector<RTSActorCueDefinition>& values);
     bool duplicateCatalogObject(RTSProject& project);
     bool beginCatalogRename(const RTSProject& project);
     bool finishCatalogRename(RTSProject& project);

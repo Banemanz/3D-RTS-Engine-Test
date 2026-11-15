@@ -173,6 +173,7 @@ void browser(App& app){
                 {"Ability","Any","Ability | Any unit target"},
                 {"Ability","Ground","Ability | Ground area impact"},
                 {"Actor","Visual","Actor | Visual"},
+                {"Actor","Events","Actor | Event-driven visual"},
                 {"Model","Procedural","Model | Procedural"},
                 {"Effect","Damage","Effect | Damage"},
                 {"Effect","Heal","Effect | Heal"},
@@ -329,6 +330,60 @@ void inspector(App& app){
                    modelLink->second.template is<std::string>() &&
                    navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
                     ImGui::End();return;
+                }
+                if(entry->type=="Actor"){
+                    ImGui::SeparatorText("Actor event rules | Presentation only");
+                    static std::string editingActorCues;
+                    static std::vector<RTSActorCueDefinition> draftCues;
+                    if(editingActorCues!=entry->id){
+                        draftCues=compileActorCues(project.catalog,entry->id);
+                        editingActorCues=entry->id;
+                    }
+                    ImGui::TextWrapped("Events react to actual fixed-tick gameplay. Their colors and shapes never change gameplay damage, collisions or replay outcomes.");
+                    ImGui::TextDisabled("%zu / 12 rules | 1..180 ticks at 60Hz",
+                                        draftCues.size());
+                    if(draftCues.size()<12 && ImGui::SmallButton("Add actor event"))
+                        draftCues.emplace_back();
+                    const char* events[]={"Attack","Launch","Impact","Death",
+                                          "Cast","Status"};
+                    const char* styles[]={"Pulse","Ring","Beacon"};
+                    for(std::size_t i=0;i<draftCues.size();++i){
+                        ImGui::PushID(static_cast<int>(i));
+                        auto& cue=draftCues[i];
+                        ImGui::SeparatorText(("Cue "+std::to_string(i+1)).c_str());
+                        int kind=static_cast<int>(cue.event);
+                        if(ImGui::Combo("On gameplay event",&kind,events,6))
+                            cue.event=static_cast<RTSActorCueEvent>(kind);
+                        int style=static_cast<int>(cue.style);
+                        if(ImGui::Combo("Visual style",&style,styles,3))
+                            cue.style=static_cast<RTSActorCueStyle>(style);
+                        float tint[3]={cue.tint.x,cue.tint.y,cue.tint.z};
+                        if(ImGui::ColorEdit3("Cue color",tint))
+                            cue.tint=Vec3(tint[0],tint[1],tint[2]);
+                        ImGui::InputFloat("Cue radius",&cue.radius,.25f,1.f,"%.2f");
+                        int duration=int(cue.durationTicks);
+                        if(ImGui::InputInt("Duration (ticks)",&duration,5,20))
+                            cue.durationTicks=static_cast<std::uint32_t>(
+                                std::max(0,duration));
+                        if(ImGui::SmallButton("Delete cue")){
+                            draftCues.erase(draftCues.begin()+
+                                static_cast<std::ptrdiff_t>(i));
+                            ImGui::PopID();
+                            break;
+                        }
+                        ImGui::PopID();
+                    }
+                    if(ImGui::Button("Apply actor events")){
+                        if(ed.setActorCues(project,draftCues)){
+                            refresh(app,true);editingActorCues.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Revert actor event draft"))
+                        draftCues=compileActorCues(project.catalog,entry->id);
+                    ImGui::TextDisabled("Radius .25..12 | Duplicate event types allowed");
+                    ImGui::Separator();
                 }
                 if(entry->type=="Weapon"){
                     ImGui::SeparatorText("Normal attack | Weapon catalog");

@@ -440,7 +440,7 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     picojson::value(1.0),picojson::value(1.0),picojson::value(1.0)
                 })}
             };
-        }else if(type=="Actor" && preset=="Visual"){
+        }else if(type=="Actor" && (preset=="Visual" || preset=="Events")){
             entry.id="new_actor";
             entry.fields={
                 {"tint",picojson::value(picojson::array{
@@ -448,6 +448,18 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                 })},
                 {"opacity",picojson::value(1.0)}
             };
+            if(preset=="Events"){
+                entry.fields["events"]=picojson::value(picojson::array{
+                    picojson::value(picojson::object{
+                        {"when",picojson::value("Attack")},
+                        {"style",picojson::value("Pulse")},
+                        {"tint",picojson::value(picojson::array{
+                            picojson::value(.2),picojson::value(.8),picojson::value(1.)})},
+                        {"radius",picojson::value(1.5)},
+                        {"duration_ticks",picojson::value(36.)}
+                    })
+                });
+            }
             for(const auto& object:project.catalog.entries())
                 if(object.type=="Model"){
                     entry.fields["model"]=picojson::value(object.id);
@@ -573,6 +585,42 @@ bool EditorSession::createCatalogObject(RTSProject& project,
         return true;
     }catch(const std::exception& e){
         message=std::string("CATALOG OBJECT REJECTED: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::setActorCues(
+    RTSProject& project,const std::vector<RTSActorCueDefinition>& values){
+    if(textEditing)return false;
+    const auto* actor=selected(project);
+    if(!actor || actor->type!="Actor")return false;
+    try{
+        RTSProject next=project;
+        picojson::array events;
+        events.reserve(values.size());
+        for(const auto& cue:values){
+            picojson::object item;
+            item["when"]=picojson::value(rtsActorCueEventName(cue.event));
+            item["style"]=picojson::value(rtsActorCueStyleName(cue.style));
+            item["tint"]=picojson::value(picojson::array{
+                picojson::value(double(cue.tint.x)),
+                picojson::value(double(cue.tint.y)),
+                picojson::value(double(cue.tint.z))});
+            item["radius"]=picojson::value(double(cue.radius));
+            item["duration_ticks"]=picojson::value(double(cue.durationTicks));
+            events.push_back(picojson::value(item));
+        }
+        if(!next.catalog.setField(actor->id,"events",picojson::value(events)))
+            throw std::invalid_argument("Cannot edit Actor event rules");
+        next.validate();
+        (void)parseTriggerRules(next);
+        if(next.toJson().serialize()==project.toJson().serialize())return false;
+        const std::string selectedId=actor->id;
+        remember(project);
+        project=std::move(next);
+        modified=true;message="ACTOR CUES SAVED: "+selectedId;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("INVALID ACTOR CUES: ")+e.what();
         return false;
     }
 }

@@ -910,7 +910,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_AREA_SHAPES=1\n"
                  <<"RTS_FEATURE_AUTHORED_WEAPONS=1\n"
                  <<"RTS_FEATURE_ARMOR_PENETRATION=1\n"
-                 <<"RTS_FEATURE_WEAPON_PROJECTILES=1\n";
+                 <<"RTS_FEATURE_WEAPON_PROJECTILES=1\n"
+                 <<"RTS_FEATURE_ACTOR_EVENT_CUES=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -1692,6 +1693,25 @@ int main(int argc, char** argv) {
                     previewShape(impact.center,impact.radius,impact.shape,
                         impact.shapeOrigin,impact.areaAngle,impact.areaWidth,
                         .98f,.60f,.16f,.85f);
+                // Actor cues are presentation snapshots of headless
+                // combat events. Never feed these rings back to gameplay.
+                for(const auto& cue:app.game.actorCueWatch(96)){
+                    if(!app.game.vision.visible(cue.position))continue;
+                    const float progress=1.f-cue.remainingFraction;
+                    float size=cue.radius;
+                    if(cue.style==RTSActorCueStyle::Pulse)
+                        size*=.55f+progress*.8f;
+                    if(cue.style==RTSActorCueStyle::Beacon){
+                        previewRing(cue.position,size*.32f,
+                            cue.tint.x,cue.tint.y,cue.tint.z,
+                            cue.remainingFraction*.65f);
+                        size*=1.15f;
+                    }
+                    previewRing(cue.position,size,
+                        cue.tint.x,cue.tint.y,cue.tint.z,
+                        cue.remainingFraction*
+                        (cue.style==RTSActorCueStyle::Ring?.42f:.31f));
+                }
                 for(const auto& hit:app.game.impactFlashWatch())
                     previewRing(hit.center,
                                 hit.radius*(1.08f+(1.f-hit.remainingFraction)*.32f),
