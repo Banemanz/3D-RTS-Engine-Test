@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "InstanceOverrides.hpp"
 #include "RTSFormation.hpp"
+#include "RTSProjectileCollision.hpp"
 #include "RTSAIPlanner.hpp"
 #include <algorithm>
 #include <cmath>
@@ -1222,26 +1223,17 @@ bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
     const auto candidates=spatial_.nearby(midpoint,searchRadius);
     double best=2.;
     int bestId=0;
-    // Collision uses a swept XZ disc and Y interval of the Unit's actual
-    // cylindrical volume. No tunneling across fast-projectile tick segments.
+    // Exact earliest contact on each segment against the Unit's expanded
+    // cylinder. Broadphase bounds are conservative even for scaled units.
     for(const auto index:candidates){
         const Unit& unit=units[index];
         if(!unit.isAlive())continue;
         if(area.team==AbilityAreaTeam::Enemy && unit.ownerId==area.owner)continue;
         if(area.team==AbilityAreaTeam::Ally && unit.ownerId!=area.owner)continue;
-        const double vx=double(unit.position.x)-previous.x;
-        const double vz=double(unit.position.z)-previous.z;
-        const double lengthXZSq=double(path.x)*path.x+
-                                double(path.z)*path.z;
-        const double t=lengthXZSq>1e-12?
-            std::clamp((vx*path.x+vz*path.z)/lengthXZSq,0.,1.):0.;
-        const Vec3 contact=previous+path*float(t);
-        const double dx=double(unit.position.x)-contact.x;
-        const double dz=double(unit.position.z)-contact.z;
-        const double reach=double(unit.radius)+area.collisionRadius;
-        if(dx*dx+dz*dz>reach*reach)continue;
-        if(contact.y<double(unit.position.y)-area.collisionRadius ||
-           contact.y>double(unit.position.y+unit.height)+area.collisionRadius)
+        double t=0.;
+        if(!sweptProjectileCylinder(previous,current,unit.position,
+                                   unit.radius,unit.height,
+                                   area.collisionRadius,t))
             continue;
         // Segment parameter first, Unit ID second. Iteration order of the
         // underlying unit vector can never determine which object intercepts.
