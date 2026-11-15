@@ -477,9 +477,11 @@ void DataCatalog::validate()const {
         if(e.type=="Ability")(void)compileAbility(*this,e.id);
         if(e.type=="Unit"){
             (void)unitAbilityIds(*this,e.id);
-            // Referenced Weapon validation must run even if the Unit is never
-            // spawned, so authored map errors cannot lurk in unused entries.
-            (void)unitFromCatalog(*this,e.id);
+            // Check the optional typed reference even on unused Unit catalog
+            // entries. Avoid recompiling every Unit's unrelated body/actor
+            // data during each F7 edit or changing legacy validation policy.
+            const auto weapon=stringField(fields,"weapon","");
+            if(!weapon.empty())(void)compileWeapon(*this,weapon);
         }
         if(reference && fields.count(reference)) {
             std::string id=stringField(fields,reference,"");
