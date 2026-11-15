@@ -1219,3 +1219,19 @@ these newest changes fully green.
    actor asset import and trigger function libraries.
 5. Continue Win/Linux full build, replay parity, same
    unmerged Draft PR #1, updating all docs/handoff.
+
+### November 15 refinement — Exact swept collision helper
+
+- Added RTSProjectileCollision.hpp pure geometry helper with
+  first-contact segment-vs-vertical-cylinder intersection:
+  XZ circle quadratic entry/exit intersected with a padded
+  Unit Y interval. Degenerate XZ path, vertical shot, grazing
+  circle tangent, starting inside, and overlap are handled.
+  Replaces inaccurate closest-point collision ordering.
+- Added tests/projectile_geometry_tests.cpp as
+  RTSProjectileGeometryTests in CMake; Release asserts stay
+  enabled. Covers large collider entered before nearer-center
+  small collider and projectile flying above shorter Units.
+- Retains existing stable first-contact / Unit-ID tie-break,
+  60Hz steps, spatial broadphase and no renderer authority.
+  Verify most recent CI runs after this refinement.

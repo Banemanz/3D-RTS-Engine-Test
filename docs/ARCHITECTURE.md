@@ -254,3 +254,17 @@ read-only AreaImpactWatch now exposes in-flight position, trail start,
 visual scale, color, and arrival time; ImpactFlashWatch exposes
 short-lived render-only detonation circles. The renderer uses the
 existing native mesh/line shaders and the target-ring shader.
+
+## Exact swept projectile geometry narrow phase
+
+RTSProjectileCollision.hpp is a small, dependency-light pure C++17
+geometry function. For each broadphase candidate it calculates the
+*first contact* interval of the projectile segment against the Unit's
+XZ circle (quadratic roots) and intersects that with the Unit's
+padded vertical Y slab. The earliest overlapping segment parameter
+wins (stable Unit-ID tie-break). Vertical/degenerate segments,
+starting inside a body, grazing contacts and scaled Unit radii
+are all handled explicitly. This replaces the less accurate
+closest-point approximation, which could choose the wrong
+victim when a large collider is entered before a nearby small one.
+The helper is reusable for later normal weapons and projectiles.

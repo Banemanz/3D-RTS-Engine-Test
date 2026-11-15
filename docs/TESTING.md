@@ -344,3 +344,13 @@ projects/projectile_forge_showcase.rtsproject.json using their
 own native RTSProjectTool and require executable flags
 RTS_FEATURE_AUTHORED_PROJECTILES=1 and
 RTS_FEATURE_PROJECTILE_INTERCEPTION=1.
+
+## Reusable swept projectile geometry CTest
+
+RTSProjectileGeometryTests directly exercises the standalone
+RTSProjectileCollision.hpp first-contact helper: XZ quadratic
+entry (not closest approach), vertical slab entry and rejection,
+grazing tangent, zero horizontal motion, degenerate segments,
+and a large collider entered before a smaller nearer-center
+collider. Release builds keep assertions enabled, as with the
+other engine and editor suites.

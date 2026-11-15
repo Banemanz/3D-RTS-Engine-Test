@@ -180,3 +180,17 @@ to avoid a stale-index correctness bug. That separate area-query
 optimization remains future work.
 Actor visual import, hit reactions, particle/sound events,
 homing steering, weapons and targeting remain future work.
+
+## First-contact collision precision
+
+The projectile narrow phase now uses RTSProjectileCollision.hpp
+rather than a nearest-center check. It intersects the inclusive
+swept segment's XZ-circle time interval with the Unit's vertical
+padded Y range. The first overlapping contact time is used for
+ordered interception; candidates are still bounded via the
+tick-fresh spatial broadphase. This handles tall arcs passing
+over units, zero-horizontal-motion segments, tangent contacts,
+and large scaled Units without incorrectly favoring the nearest
+center. It remains a static-volume query against the Unit
+position after movement for the tick, not full continuous
+moving-unit/collision-mesh physics.
