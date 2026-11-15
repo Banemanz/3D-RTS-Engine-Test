@@ -465,6 +465,45 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     entry.fields["model"]=picojson::value(object.id);
                     break;
                 }
+        }else if(type=="Validator"){
+            entry.id="new_validator";
+            if(preset!="Health" && preset!="Energy" && preset!="Status" &&
+               preset!="Structure" && preset!="UnitCount")return false;
+            const std::string kind=preset=="Health"?"HealthBelowPercent":
+                preset=="Energy"?"EnergyAtLeast":
+                preset=="Status"?"HasBehavior":
+                preset=="Structure"?"IsStructure":"OwnerUnitCountAtLeast";
+            entry.fields={{"kind",picojson::value(kind)},
+                          {"subject",picojson::value(
+                              preset=="Energy" || preset=="UnitCount"?
+                                  "Caster":"Target")},
+                          {"value",picojson::value(
+                              preset=="Health"?50.:preset=="Energy"?25.:1.)}};
+            if(preset=="Status"){
+                for(const auto& object:project.catalog.entries())
+                    if(object.type=="Behavior"){
+                        entry.fields["behavior"]=picojson::value(object.id);
+                        break;
+                    }
+                if(!entry.fields.count("behavior"))
+                    throw std::invalid_argument("Create a Behavior first");
+            }
+        }else if(type=="Requirement"){
+            entry.id="new_requirement";
+            if(preset!="Predicate" && preset!="All" &&
+               preset!="Any" && preset!="Not")return false;
+            entry.fields["kind"]=picojson::value(preset);
+            const std::string targetType=preset=="Predicate"?
+                "Validator":"Requirement";
+            std::string refId;
+            for(const auto& item:project.catalog.entries())
+                if(item.type==targetType){refId=item.id;break;}
+            if(refId.empty())throw std::invalid_argument(
+                "Create a "+targetType+" first");
+            if(preset=="Predicate")
+                entry.fields["validator"]=picojson::value(refId);
+            else entry.fields["children"]=picojson::value(
+                picojson::array{picojson::value(refId)});
         }else if(type=="Weapon"){
             if(preset!="Ranged" && preset!="Melee")return false;
             entry.id="new_weapon";
@@ -621,6 +660,59 @@ bool EditorSession::setActorCues(
         return true;
     }catch(const std::exception& e){
         message=std::string("INVALID ACTOR CUES: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::setValidatorDefinition(
+    RTSProject& project,const RTSValidatorDefinition& values){
+    if(textEditing)return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Validator" || current->id!=values.id)
+        return false;
+    try{
+        RTSProject candidate=project;
+        auto* item=candidate.catalog.find(values.id);
+        auto& f=item->fields;
+        f["kind"]=picojson::value(rtsValidatorKindName(values.kind));
+        f["subject"]=picojson::value(rtsValidatorSubjectName(values.subject));
+        f["value"]=picojson::value(double(values.value));
+        f["behavior"]=picojson::value(values.behaviorId);
+        f["unit"]=picojson::value(values.unitId);
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        if(candidate.toJson().serialize()==project.toJson().serialize())return false;
+        remember(project);project=std::move(candidate);
+        modified=true;message="VALIDATOR SAVED: "+values.id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("VALIDATOR REJECTED: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::setRequirementDefinition(
+    RTSProject& project,RTSRequirementKind kind,
+    const std::string& validatorId,const std::vector<std::string>& children){
+    if(textEditing)return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Requirement")return false;
+    try{
+        RTSProject candidate=project;
+        auto* item=candidate.catalog.find(current->id);
+        auto& f=item->fields;
+        f["kind"]=picojson::value(rtsRequirementKindName(kind));
+        f["validator"]=picojson::value(validatorId);
+        picojson::array refs;
+        for(const auto& child:children)refs.push_back(picojson::value(child));
+        f["children"]=picojson::value(refs);
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        if(candidate.toJson().serialize()==project.toJson().serialize())return false;
+        const std::string id=current->id;
+        remember(project);project=std::move(candidate);
+        modified=true;message="REQUIREMENT SAVED: "+id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("REQUIREMENT REJECTED: ")+e.what();
         return false;
     }
 }

@@ -405,6 +405,38 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                 refs.push_back(entry.id+".projectile");
         }
 
+        if(original->type=="Requirement" &&
+           (entry.type=="Ability" || entry.type=="Unit")){
+            const auto it=properties.find("requirement");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".requirement");
+        }
+        if(original->type=="Requirement" && entry.type=="Requirement"){
+            const auto it=properties.find("children");
+            if(it!=properties.end() && it->second.is<picojson::array>())
+                for(const auto& value:it->second.get<picojson::array>())
+                    if(value.is<std::string>() && value.get<std::string>()==id)
+                        refs.push_back(entry.id+".children");
+        }
+        if(original->type=="Validator" && entry.type=="Requirement"){
+            const auto it=properties.find("validator");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".validator");
+        }
+        if(original->type=="Behavior" && entry.type=="Validator"){
+            const auto it=properties.find("behavior");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".behavior");
+        }
+        if(original->type=="Unit" && entry.type=="Validator"){
+            const auto it=properties.find("unit");
+            if(it!=properties.end() && it->second.is<std::string>() &&
+               it->second.get<std::string>()==id)
+                refs.push_back(entry.id+".unit");
+        }
         if(original->type=="Behavior" && entry.type=="Effect"){
             const auto linked=properties.find("behavior");
             if(linked!=properties.end() && linked->second.is<std::string>() &&

@@ -129,6 +129,38 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Requirement" &&
+           (entry.type=="Unit" || entry.type=="Ability")){
+            auto field=entry.fields.find("requirement");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+        if(type=="Requirement" && entry.type=="Requirement"){
+            auto field=entry.fields.find("children");
+            if(field!=entry.fields.end() && field->second.is<picojson::array>())
+                for(auto& child:field->second.get<picojson::array>())
+                    if(child.is<std::string>() && child.get<std::string>()==oldId)
+                        child=picojson::value(newId);
+        }
+        if(type=="Validator" && entry.type=="Requirement"){
+            auto field=entry.fields.find("validator");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+        if(type=="Behavior" && entry.type=="Validator"){
+            auto field=entry.fields.find("behavior");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
+        if(type=="Unit" && entry.type=="Validator"){
+            auto field=entry.fields.find("unit");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
         if(type=="Unit" && entry.type=="Unit") {
             auto field=entry.fields.find("trainable_units");
             if(field!=entry.fields.end() && field->second.is<picojson::array>())

@@ -1,5 +1,6 @@
 #pragma once
 #include "RTSProject.hpp"
+#include "RTSRequirements.hpp"
 #include "TriggerTree.hpp"
 #include <cstddef>
 #include <deque>
@@ -106,6 +107,12 @@ public:
     bool setBehaviorDefinition(RTSProject& project,const BehaviorDefinition& values);
     bool setProjectileDefinition(RTSProject& project,const ProjectileDefinition& values);
     bool setWeaponDefinition(RTSProject& project,const WeaponDefinition& values);
+    bool setValidatorDefinition(RTSProject& project,
+                                const RTSValidatorDefinition& values);
+    bool setRequirementDefinition(RTSProject& project,
+                                 RTSRequirementKind kind,
+                                 const std::string& validatorId,
+                                 const std::vector<std::string>& children);
     // One undoable Actor event authoring transaction; strict typed schema
     // validation applies equally in the headless project compiler.
     bool setActorCues(RTSProject& project,
