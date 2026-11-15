@@ -46,6 +46,7 @@ def main() -> int:
         "docs/ACTOR_EVENT_AUTHORING.md",
         "docs/REQUIREMENT_AUTHORING.md",
         "docs/TECHNOLOGY_RESEARCH.md",
+        "docs/TECH_SHOW_USE.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
         "docs/TRIGGER_EDITOR.md",
@@ -136,6 +137,7 @@ def main() -> int:
         "RTS_FEATURE_ACTOR_EVENT_CUES",
         "RTS_FEATURE_REQUIREMENT_GRAPHS",
         "RTS_FEATURE_UPGRADE_RESEARCH",
+        "RTS_FEATURE_TECH_SHOW_USE",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

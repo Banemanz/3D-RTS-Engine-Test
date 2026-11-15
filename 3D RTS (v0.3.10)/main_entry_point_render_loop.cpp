@@ -922,7 +922,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_WEAPON_PROJECTILES=1\n"
                  <<"RTS_FEATURE_ACTOR_EVENT_CUES=1\n"
                  <<"RTS_FEATURE_REQUIREMENT_GRAPHS=1\n"
-                 <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n";
+                 <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n"
+                 <<"RTS_FEATURE_TECH_SHOW_USE=1\n";
         return 0;
     }
     RTSCrashReporter::install();
