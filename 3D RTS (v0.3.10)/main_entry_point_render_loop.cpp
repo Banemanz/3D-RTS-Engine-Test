@@ -946,6 +946,7 @@ int main(int argc, char** argv) {
     bool liveTriggerMonitorSmoke=false;
     std::string smokeTriggerId;
     std::string smokeCatalogId;
+    std::string smokeResearchUpgrade;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--smoke-frames" && i + 1 < argc)
@@ -959,6 +960,8 @@ int main(int argc, char** argv) {
         else if(arg == "--data-editor")startDataEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
+        else if(arg == "--smoke-research-upgrade" && i+1<argc)
+            smokeResearchUpgrade=argv[++i];
         else if(arg == "--smoke-select-ability-caster")selectAbilityCasterSmoke=true;
         else if(arg == "--smoke-cast-self-ability")castSelfAbilityForSmoke=true;
         else if(arg == "--smoke-cast-ground-ability")castGroundAbilityForSmoke=true;
@@ -1076,6 +1079,25 @@ int main(int argc, char** argv) {
             }
             if(!selected)throw std::invalid_argument(
                 "No authorable training/research producer in smoke project");
+        }
+        // Native screenshot integration check: submit an actual player
+        // ResearchUpgrade command and advance its authored fixed duration.
+        // No direct tech-state injection, renderer fakery or wall-clock sleep.
+        if(!smokeResearchUpgrade.empty() && smokeFrames>0){
+            if(!selectProducerForSmoke || app.game.selectedProducerId()<0)
+                throw std::invalid_argument(
+                    "Research smoke needs a selected production structure");
+            const auto upgrade=compileUpgrade(app.project.catalog,
+                                              smokeResearchUpgrade);
+            const int previous=app.game.upgradeLevel(0,smokeResearchUpgrade);
+            if(!app.game.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+                    Vec3{},-1,false,smokeResearchUpgrade))
+                throw std::invalid_argument("Unable to queue smoke ResearchUpgrade");
+            for(std::uint32_t tick=0;tick<=upgrade.researchTicks;++tick)
+                app.game.update(1.f/60.f);
+            if(app.game.upgradeLevel(0,smokeResearchUpgrade)!=previous+1)
+                throw std::invalid_argument(
+                    "Research smoke did not complete authored technology");
         }
         if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor ||
            (stressEditor && smokeFrames>0)) {

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Technology Forge Laboratory",
-  "description": "Original tech-tree and research authoring laboratory. F7 select frontier_tactics for multi-level damage/armor research and the tech prerequisites. Select the Command Center in F9: Worker training and two technology options share producer command cards. Completing Frontier Tactics unlocks Workers, the second Layered Plating research, and tech-gated Arc Lance.",
+  "description": "Original Galaxy-style Show versus Use technology laboratory. In F9, only Frontier Tactics is initially shown on a Command Center. Research level 1 to reveal Worker training, Layered Plating and Arc Lance (visible but Use-locked until their requirements pass). Research Frontier Tactics level 2 to unlock Workers and Layered Plating; level 3 hides Frontier Tactics when fully complete. F7 edit each Upgrade/Unit/Ability's independent Show and Use Requirement graph.",
   "terrain": {
     "width": 49,
     "depth": 49,
@@ -139,7 +139,8 @@
         "mineral_cost": 40,
         "is_worker": true,
         "build_time": 4.5,
-        "requirement": "r_has_tactics"
+        "requirement": "r_two_tactics",
+        "show_requirement": "r_has_tactics"
       }
     },
     {
@@ -247,7 +248,8 @@
         "cast_range": 13,
         "mineral_cost": 10,
         "energy_cost": 25,
-        "requirement": "r_arc_tech"
+        "requirement": "r_arc_tech",
+        "show_requirement": "r_has_tactics"
       }
     },
     {
@@ -375,7 +377,8 @@
         "research_ticks": 180,
         "damage_per_level": 3,
         "armor_per_level": 1,
-        "unit": "ranger"
+        "unit": "ranger",
+        "show_requirement": "r_not_max_tactics"
       }
     },
     {
@@ -389,7 +392,8 @@
         "damage_per_level": 0,
         "armor_per_level": 2,
         "unit": "worker",
-        "requirement": "r_has_tactics"
+        "requirement": "r_two_tactics",
+        "show_requirement": "r_has_tactics"
       }
     },
     {
@@ -418,6 +422,52 @@
         "children": [
           "r_arc_gate",
           "r_has_tactics"
+        ]
+      }
+    },
+    {
+      "id": "v_two_tactics",
+      "type": "Validator",
+      "fields": {
+        "kind": "UpgradeLevelAtLeast",
+        "subject": "Caster",
+        "value": 2,
+        "upgrade": "frontier_tactics"
+      }
+    },
+    {
+      "id": "r_two_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_two_tactics"
+      }
+    },
+    {
+      "id": "v_max_tactics",
+      "type": "Validator",
+      "fields": {
+        "kind": "UpgradeLevelAtLeast",
+        "subject": "Caster",
+        "value": 3,
+        "upgrade": "frontier_tactics"
+      }
+    },
+    {
+      "id": "r_max_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_max_tactics"
+      }
+    },
+    {
+      "id": "r_not_max_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Not",
+        "children": [
+          "r_max_tactics"
         ]
       }
     }
