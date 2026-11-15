@@ -37,6 +37,7 @@ jobs:
             build/weapon_projectile_fingerprint.txt
             build/actor_cues_fingerprint.txt
             build/requirement_fingerprint.txt
+            build/upgrade_research_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -219,6 +220,26 @@ jobs:
         with:
           name: rts-active-behavior-hud-screenshot
           path: rts-active-status.png
+          if-no-files-found: error
+      - name: Capture real F7 multi-level Upgrade inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/technology_forge_showcase.rtsproject.json --smoke-select-catalog-id frontier_tactics --smoke-frames 85 --screenshot rts-upgrade-f7.ppm
+      - name: Convert F7 Upgrade screenshot
+        run: python3 tools/ppm_to_png.py rts-upgrade-f7.ppm rts-upgrade-f7.png
+      - name: Upload real Upgrade editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-upgrade-authoring-f7-screenshot
+          path: rts-upgrade-f7.png
+          if-no-files-found: error
+      - name: Capture genuine F9 structure research command cards
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/technology_forge_showcase.rtsproject.json --smoke-select-producer --smoke-frames 50 --screenshot rts-research-f9.ppm
+      - name: Convert Research HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-research-f9.ppm rts-research-f9.png
+      - name: Upload live research command-card screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-upgrade-research-hud-f9-screenshot
+          path: rts-research-f9.png
           if-no-files-found: error
       - name: Capture real F7 Requirement graph inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id r_arc_gate --smoke-frames 85 --screenshot rts-requirement-f7.ppm
@@ -412,6 +433,7 @@ jobs:
             build/weapon_projectile_fingerprint.txt
             build/actor_cues_fingerprint.txt
             build/requirement_fingerprint.txt
+            build/upgrade_research_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -445,3 +467,4 @@ jobs:
           diff -u fingerprints/linux/weapon_projectile_fingerprint.txt fingerprints/windows/weapon_projectile_fingerprint.txt
           diff -u fingerprints/linux/actor_cues_fingerprint.txt fingerprints/windows/actor_cues_fingerprint.txt
           diff -u fingerprints/linux/requirement_fingerprint.txt fingerprints/windows/requirement_fingerprint.txt
+          diff -u fingerprints/linux/upgrade_research_fingerprint.txt fingerprints/windows/upgrade_research_fingerprint.txt

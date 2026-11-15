@@ -41,6 +41,7 @@ def main() -> int:
         "projects/weapon_forge_showcase.rtsproject.json",
         "projects/actor_events_showcase.rtsproject.json",
         "projects/requirements_workshop_showcase.rtsproject.json",
+        "projects/technology_forge_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/ACTOR_EVENT_AUTHORING.md",
         "docs/REQUIREMENT_AUTHORING.md",
@@ -133,6 +134,7 @@ def main() -> int:
         "RTS_FEATURE_WEAPON_PROJECTILES",
         "RTS_FEATURE_ACTOR_EVENT_CUES",
         "RTS_FEATURE_REQUIREMENT_GRAPHS",
+        "RTS_FEATURE_UPGRADE_RESEARCH",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:
