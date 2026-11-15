@@ -15,6 +15,7 @@ struct CombatHit {
     int targetId=-1;
     float rawDamage=0.f;
     std::string attackerName;
+    float armorPiercing=0.f;
 };
 
 class NavigationAgent3D {
@@ -105,7 +106,8 @@ public:
     void moveTo(const Vec3& destination, bool isAttackMove = false);
     void attackTarget(int enemyId);
     void holdPosition();
-    void takeDamage(float rawDamage, const std::string& attackerName);
+    void takeDamage(float rawDamage, const std::string& attackerName,
+                    float armorPiercing=0.f);
 
     void update(float deltaTime, std::vector<Unit>& allUnits, float mapBoundary,
                 const UnitSpatialIndex* spatial=nullptr,

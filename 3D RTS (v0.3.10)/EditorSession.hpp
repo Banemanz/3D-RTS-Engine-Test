@@ -105,6 +105,7 @@ public:
     // Commit a grouped Behavior inspector as one validated undo record.
     bool setBehaviorDefinition(RTSProject& project,const BehaviorDefinition& values);
     bool setProjectileDefinition(RTSProject& project,const ProjectileDefinition& values);
+    bool setWeaponDefinition(RTSProject& project,const WeaponDefinition& values);
     bool duplicateCatalogObject(RTSProject& project);
     bool beginCatalogRename(const RTSProject& project);
     bool finishCatalogRename(RTSProject& project);

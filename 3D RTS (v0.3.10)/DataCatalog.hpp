@@ -84,6 +84,18 @@ struct ProjectileDefinition {
 ProjectileDefinition compileProjectile(const DataCatalog& catalog,
                                        const std::string& id);
 
+// First-class reusable standard attack profiles. A Unit without a 'weapon'
+// reference retains its legacy damage/range/cooldown entirely unchanged.
+struct WeaponDefinition {
+    std::string id;
+    float damage=7.f;
+    float range=6.f;
+    float cooldown=.75f;     // seconds, same as legacy attack cooldown
+    float armorPiercing=0.f; // subtracts from target's nonnegative armor
+};
+WeaponDefinition compileWeapon(const DataCatalog& catalog,
+                               const std::string& id);
+
 // Abilities bind an authored Effect graph to a Unit command. Only the
 // data objects are stored in the map; cooldown clocks live in simulation.
 enum class AbilityTarget { Self, Ally, Enemy, Any, Ground };

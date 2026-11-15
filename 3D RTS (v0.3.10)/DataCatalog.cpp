@@ -89,6 +89,12 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Weapon" && entry.type=="Unit"){
+            auto field=entry.fields.find("weapon");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
         if(type=="Projectile" && entry.type=="Ability"){
             auto field=entry.fields.find("projectile");
             if(field!=entry.fields.end() && field->second.is<std::string>() &&
@@ -326,6 +332,25 @@ ProjectileDefinition compileProjectile(const DataCatalog& catalog,
         throw std::invalid_argument("Projectile tint must be RGB [0,1]: "+id);
     return p;
 }
+WeaponDefinition compileWeapon(const DataCatalog& catalog,
+                               const std::string& id){
+    const auto* entry=catalog.find(id);
+    if(!entry || entry->type!="Weapon")
+        throw std::invalid_argument("Missing Weapon catalog reference: "+id);
+    const auto fields=catalog.resolvedFields(id);
+    WeaponDefinition w;w.id=id;
+    auto field=[&](const char* key,double fallback,double lo,double hi){
+        const double n=numeric(fields,key,fallback);
+        if(n<lo || n>hi)
+            throw std::invalid_argument("Invalid Weapon "+std::string(key)+": "+id);
+        return static_cast<float>(n);
+    };
+    w.damage=field("damage",7.,0.,10000.);
+    w.range=field("range",6.,0.,128.);
+    w.cooldown=field("cooldown",.75,.05,60.);
+    w.armorPiercing=field("armor_piercing",0.,0.,1000.);
+    return w;
+}
 AbilityDefinition compileAbility(const DataCatalog& catalog,
                                  const std::string& id){
     const auto* entry=catalog.find(id);
@@ -445,11 +470,17 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Weapon")(void)compileWeapon(*this,e.id);
         if(e.type=="Projectile")(void)compileProjectile(*this,e.id);
         if(e.type=="Behavior")(void)compileBehavior(*this,e.id);
         if(e.type=="Effect")(void)compileEffect(*this,e.id);
         if(e.type=="Ability")(void)compileAbility(*this,e.id);
-        if(e.type=="Unit")(void)unitAbilityIds(*this,e.id);
+        if(e.type=="Unit"){
+            (void)unitAbilityIds(*this,e.id);
+            // Referenced Weapon validation must run even if the Unit is never
+            // spawned, so authored map errors cannot lurk in unused entries.
+            (void)unitFromCatalog(*this,e.id);
+        }
         if(reference && fields.count(reference)) {
             std::string id=stringField(fields,reference,"");
             const auto* linked=find(id);
@@ -607,6 +638,14 @@ UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id) {
     d.damage=float(numeric(f,"damage",d.damage));
     d.attack_range=float(numeric(f,"attack_range",d.attack_range));
     d.attack_cooldown=float(numeric(f,"attack_cooldown",d.attack_cooldown));
+    d.weaponId=stringField(f,"weapon","");
+    if(!d.weaponId.empty()){
+        const auto weapon=compileWeapon(catalog,d.weaponId);
+        d.damage=weapon.damage;
+        d.attack_range=weapon.range;
+        d.attack_cooldown=weapon.cooldown;
+        d.armor_piercing=weapon.armorPiercing;
+    }
     d.aggro_range=float(numeric(f,"aggro_range",d.aggro_range));
     d.sight_range=float(numeric(f,"sight_range",d.sight_range));
     d.move_speed=float(numeric(f,"move_speed",d.move_speed));

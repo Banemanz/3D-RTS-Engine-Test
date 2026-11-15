@@ -156,6 +156,8 @@ void browser(App& app){
                 {"Unit","Combat","Unit | Combat"},
                 {"Unit","Worker","Unit | Worker"},
                 {"Unit","Structure","Unit | Structure"},
+                {"Weapon","Ranged","Weapon | Ranged rifle"},
+                {"Weapon","Melee","Weapon | Melee blade"},
                 {"Projectile","Arc","Projectile | Arcing spark"},
                 {"Projectile","Bolt","Projectile | Intercepting bolt"},
                 {"Behavior","Fortify","Behavior | Armor shield"},
@@ -323,6 +325,33 @@ void inspector(App& app){
                    modelLink->second.template is<std::string>() &&
                    navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
                     ImGui::End();return;
+                }
+                if(entry->type=="Weapon"){
+                    ImGui::SeparatorText("Normal attack | Weapon catalog");
+                    static WeaponDefinition draft;
+                    static std::string editingWeapon;
+                    if(editingWeapon!=entry->id){
+                        draft=compileWeapon(project.catalog,entry->id);
+                        editingWeapon=entry->id;
+                    }
+                    ImGui::InputFloat("Attack damage",&draft.damage,.5f,2.f,"%.2f");
+                    ImGui::InputFloat("Attack reach",&draft.range,.25f,1.f,"%.2f");
+                    ImGui::InputFloat("Cooldown (seconds)",&draft.cooldown,.05f,.25f,"%.2f");
+                    ImGui::InputFloat("Armor penetration",&draft.armorPiercing,.5f,2.f,"%.2f");
+                    if(ImGui::Button("Apply weapon settings")){
+                        if(ed.setWeaponDefinition(project,draft)){
+                            refresh(app,true);editingWeapon.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Revert weapon"))
+                        draft=compileWeapon(project.catalog,entry->id);
+                    ImGui::TextDisabled("Damage 0..10000 | Reach 0..128");
+                    ImGui::TextDisabled("Cooldown .05..60s | Pierce 0..1000");
+                    ImGui::TextWrapped("Equip this reusable Weapon on a Unit. "
+                        "The profile controls ordinary attack damage, "
+                        "range, cooldown and mitigation; Ability damage stays separate.");
                 }
                 if(entry->type=="Projectile"){
                     ImGui::SeparatorText("Projectile delivery | Tick-driven");
@@ -500,6 +529,38 @@ void inspector(App& app){
                     ImGui::TextDisabled("Cooldown: ticks at 60Hz | Cast range: world units");
                 }
                 if(entry->type=="Unit"){
+                    ImGui::SeparatorText("Basic attack weapon");
+                    const auto linked=resolved.find("weapon");
+                    const std::string weaponId=linked!=resolved.end() &&
+                        linked->second.template is<std::string>()?
+                        linked->second.template get<std::string>():"";
+                    if(ImGui::BeginCombo("Equipped weapon",
+                                         weaponId.empty()?"Legacy unit stats":weaponId.c_str())){
+                        if(ImGui::Selectable("Legacy unit stats",weaponId.empty())){
+                            if(ed.setCatalogField(project,"weapon",
+                                                   picojson::value(std::string{}))){
+                                refresh(app,true);ImGui::EndCombo();ImGui::End();return;
+                            }
+                        }
+                        for(const auto& item:project.catalog.entries()){
+                            if(item.type!="Weapon")continue;
+                            if(ImGui::Selectable(item.id.c_str(),weaponId==item.id)){
+                                if(ed.setCatalogField(project,"weapon",
+                                                       picojson::value(item.id))){
+                                    refresh(app,true);ImGui::EndCombo();ImGui::End();return;
+                                }
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+                    if(!weaponId.empty() &&
+                       navigateCatalog(app,"Edit equipped weapon",weaponId)){
+                        ImGui::End();return;
+                    }
+                    const auto resolvedAttack=unitFromCatalog(project.catalog,entry->id);
+                    ImGui::TextDisabled("Damage %.2f | Reach %.2f | Cooldown %.2fs | Pierce %.2f",
+                        resolvedAttack.damage,resolvedAttack.attack_range,
+                        resolvedAttack.attack_cooldown,resolvedAttack.armor_piercing);
                     ImGui::SeparatorText("Ability loadout");
                     const auto abilities=resolved.find("abilities");
                     if(abilities==resolved.end()){

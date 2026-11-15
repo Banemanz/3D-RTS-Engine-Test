@@ -765,7 +765,8 @@ void RTSSkirmish::update(float dt) {
             return a.targetId!=b.targetId ? a.targetId<b.targetId : a.attackerId<b.attackerId;
         });
     for(const auto& hit:pendingHits)
-        if(Unit* target=find(hit.targetId))target->takeDamage(hit.rawDamage,hit.attackerName);
+        if(Unit* target=find(hit.targetId))
+            target->takeDamage(hit.rawDamage,hit.attackerName,hit.armorPiercing);
     // Delayed ground impact runs after movement/combat so moving out of the
     // radius matters, but before health/energy regeneration and periodic ticks.
     updateAreaImpacts();

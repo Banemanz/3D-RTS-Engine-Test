@@ -391,6 +391,12 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                     if(ref.is<std::string>() && ref.get<std::string>()==id)
                         refs.push_back(entry.id+".abilities");
         }
+        if(original->type=="Weapon" && entry.type=="Unit"){
+            const auto linked=properties.find("weapon");
+            if(linked!=properties.end() && linked->second.is<std::string>() &&
+               linked->second.get<std::string>()==id)
+                refs.push_back(entry.id+".weapon");
+        }
         if(original->type=="Projectile" && entry.type=="Ability"){
             const auto linked=properties.find("projectile");
             if(linked!=properties.end() && linked->second.is<std::string>() &&

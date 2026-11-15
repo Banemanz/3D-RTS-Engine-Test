@@ -453,6 +453,16 @@ bool EditorSession::createCatalogObject(RTSProject& project,
                     entry.fields["model"]=picojson::value(object.id);
                     break;
                 }
+        }else if(type=="Weapon"){
+            if(preset!="Ranged" && preset!="Melee")return false;
+            entry.id="new_weapon";
+            entry.fields={
+                {"name",picojson::value(preset=="Ranged"?"Pulse Rifle":"Impact Blade")},
+                {"damage",picojson::value(preset=="Ranged"?8.:12.)},
+                {"range",picojson::value(preset=="Ranged"?7.:1.6)},
+                {"cooldown",picojson::value(preset=="Ranged"?.8:1.2)},
+                {"armor_piercing",picojson::value(preset=="Ranged"?1.:2.)}
+            };
         }else if(type=="Projectile"){
             if(preset!="Arc" && preset!="Bolt")return false;
             entry.id="new_projectile";
@@ -563,6 +573,34 @@ bool EditorSession::createCatalogObject(RTSProject& project,
         return true;
     }catch(const std::exception& e){
         message=std::string("CATALOG OBJECT REJECTED: ")+e.what();
+        return false;
+    }
+}
+bool EditorSession::setWeaponDefinition(
+    RTSProject& project,const WeaponDefinition& values){
+    if(textEditing)return false;
+    const auto* current=selected(project);
+    if(!current || current->type!="Weapon" || current->id!=values.id)
+        return false;
+    try{
+        RTSProject candidate=project;
+        auto* weapon=candidate.catalog.find(values.id);
+        if(!weapon)throw std::invalid_argument("Missing Weapon");
+        auto& f=weapon->fields;
+        f["damage"]=picojson::value(double(values.damage));
+        f["range"]=picojson::value(double(values.range));
+        f["cooldown"]=picojson::value(double(values.cooldown));
+        f["armor_piercing"]=picojson::value(double(values.armorPiercing));
+        candidate.validate();(void)parseTriggerRules(candidate);
+        if(candidate.toJson().serialize()==project.toJson().serialize())
+            return false;
+        remember(project);
+        project=std::move(candidate);
+        modified=true;
+        message="WEAPON SETTINGS SAVED: "+values.id;
+        return true;
+    }catch(const std::exception& e){
+        message=std::string("WEAPON REJECTED: ")+e.what();
         return false;
     }
 }

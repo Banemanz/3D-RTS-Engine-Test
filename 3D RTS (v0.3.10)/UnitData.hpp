@@ -22,6 +22,8 @@ public:
     float energy_regen       = 0.0f; // energy/second; fixed simulation tick
     float armor              = 0.0f;
     float damage             = 6.0f;
+    std::string weaponId; // optional reusable Weapon catalog reference
+    float armor_piercing     = 0.0f; // normal attacks only
     float attack_range       = 6.0f;
     float attack_cooldown    = 0.85f;
     float aggro_range        = 11.0f;
