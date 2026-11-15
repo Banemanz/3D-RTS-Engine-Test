@@ -117,6 +117,66 @@ int main(){
     auto tampered=tape;tampered.commands[0].targetId=shooter;
     assert(!verifyRTSReplay(tampered,&why));
 
+    // Simulation and replay MUST be bit-for-bit identical with the same
+    // gameplay definitions but every Actor event cue removed. This verifies
+    // presentation state never silently enters authoritative game hashes.
+    RTSProject silent=project;
+    assert(silent.catalog.setField("ranger_actor","events",
+                                   picojson::value(picojson::array{})));
+    assert(silent.catalog.setField("rift_raider_actor","events",
+                                   picojson::value(picojson::array{})));
+    silent.validate();
+    RTSSkirmish vividGame,quietGame;
+    vividGame.loadProject(project);
+    quietGame.loadProject(silent);
+    int vividShooter=-1,quietShooter=-1;
+    for(const auto& u:vividGame.units)if(vividShooter<0 &&
+         u.ownerId==0 && u.catalogId=="ranger")vividShooter=u.id;
+    for(const auto& u:quietGame.units)if(quietShooter<0 &&
+         u.ownerId==0 && u.catalogId=="ranger")quietShooter=u.id;
+    const int vividTarget=findId(vividGame,"Cue Target");
+    const int quietTarget=findId(quietGame,"Cue Target");
+    assert(vividShooter==quietShooter && vividTarget==quietTarget);
+    for(auto& u:vividGame.units)u.isSelected=u.id==vividShooter;
+    for(auto& u:quietGame.units)u.isSelected=u.id==quietShooter;
+    assert(vividGame.stateDigest()==quietGame.stateDigest());
+    assert(vividGame.queuePlayerCommand(RTSCommandKind::Attack,{},vividTarget));
+    assert(quietGame.queuePlayerCommand(RTSCommandKind::Attack,{},quietTarget));
+    for(int tick=0;tick<110;++tick){
+        vividGame.update(1.f/60.f);
+        quietGame.update(1.f/60.f);
+        assert(vividGame.stateDigest()==quietGame.stateDigest());
+    }
+    assert(!vividGame.actorCueWatch().empty() ||
+           vividGame.activeActorCueCount()==0);
+    assert(quietGame.actorCueWatch().empty());
+
+    // Self-targeted Abilities produce both Cast and Impact presentations;
+    // they use precisely the same authoritative Effect pipeline.
+    RTSProject castProject=project;
+    CatalogEntry effect;effect.type="Effect";effect.id="cue_heal";
+    effect.fields={{"kind",picojson::value("Heal")},
+                   {"amount",picojson::value(5.)}};
+    assert(castProject.catalog.add(effect));
+    CatalogEntry ability;ability.type="Ability";ability.id="cue_cast";
+    ability.fields={{"effect",picojson::value("cue_heal")},
+                    {"target",picojson::value("Self")}};
+    assert(castProject.catalog.add(ability));
+    assert(castProject.catalog.setField("ranger","abilities",
+        picojson::value(picojson::array{picojson::value("cue_cast")})));
+    castProject.validate();
+    RTSSkirmish castGame;castGame.loadProject(castProject);
+    int castShooter=-1;
+    for(const auto& u:castGame.units)if(castShooter<0 &&
+         u.ownerId==0 && u.catalogId=="ranger")castShooter=u.id;
+    assert(castShooter>0);
+    for(auto& u:castGame.units)u.isSelected=u.id==castShooter;
+    assert(castGame.queuePlayerCommand(RTSCommandKind::CastAbility,{},-1,
+                                       false,"cue_cast"));
+    castGame.update(1.f/60.f);
+    assert(has(castGame,RTSActorCueEvent::Cast,castShooter));
+    assert(has(castGame,RTSActorCueEvent::Impact,castShooter));
+
     // Actor events may be overridden on a single placement without changing
     // any shared Actor definition or its authoritative unit's attack data.
     RTSProject overrideProject=project;

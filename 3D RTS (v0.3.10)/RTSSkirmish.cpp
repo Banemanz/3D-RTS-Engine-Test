@@ -1442,11 +1442,14 @@ bool RTSSkirmish::castAbility(int casterId,const std::string& abilityId,
         }
         if(ability.impactDelayTicks==0 && !area.projectile){
             if(!applyAreaEffect(area))return false;
+            emitActorCue(casterId,RTSActorCueEvent::Impact,area.center);
         }else pendingAreas_.push_back(std::move(area));
     }else{
         if(!canCastAbility(casterId,abilityId,targetId))return false;
         const int appliedTarget=ability.target==AbilityTarget::Self?casterId:targetId;
         if(!applyEffectForTrigger(ability.effect,appliedTarget))return false;
+        if(const Unit* target=find(appliedTarget))
+            emitActorCue(casterId,RTSActorCueEvent::Impact,target->position);
     }
     playerMinerals-=ability.mineralCost;
     if(Unit* caster=find(casterId))
