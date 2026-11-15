@@ -235,3 +235,12 @@ jump. This replaces guesswork in JSON and does not touch authoritative
 map data. The F7 Weapon editor also has typed Projectile delivery
 selection, with grouped undoable transactions. Additional references
 and the full specialized subeditor catalog remain incomplete.
+
+## Numeric F7 inspector preview polish
+
+RTSCatalogValuePreview.hpp renders human-readable decimal previews
+for double-precision fields, avoiding binary serialization noise
+(e.g. 0.69999999999999996 reads as 0.7). It affects only the
+F7 property summary; raw stored picojson doubles, editable inputs
+and serialized project/replay values remain exactly unchanged.
+The catalog_value_preview CTest guards this presentation boundary.

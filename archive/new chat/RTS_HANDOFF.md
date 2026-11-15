@@ -1381,3 +1381,10 @@ terrain mesh contact, salvos and Warhead chains, damage-type filters,
 Actor presentation events, Upgrades/Requirements/Validators, deeper
 typed node graphs, source layers, asset and model import. Check latest
 CI head; retain same branch, same Draft PR, one Windows/Linux code path.
+
+### F7 property-list display polish
+
+The later RTSCatalogValuePreview.hpp helper formats numeric previews
+without rewriting any saved values or replay data. An independent
+Release-asserted CTest verifies rounding noise is hidden only in the
+editor display. See CI at the latest PR head.

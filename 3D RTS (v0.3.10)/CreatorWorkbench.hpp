@@ -6,6 +6,7 @@
 #include "CreatorEffectGraphWidgets.hpp"
 #include "CreatorAreaShapePreview.hpp"
 #include "CreatorCatalogNavigator.hpp"
+#include "RTSCatalogValuePreview.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
@@ -737,7 +738,7 @@ void inspector(App& app){
                 for(std::size_t i=0;i<fields.size();++i){
                     const auto& name=fields[i];
                     const std::string display=(entry->fields.count(name)?"[LOCAL] ":"[INHERITED] ")+
-                                              name+" = "+resolved.at(name).serialize();
+                                              name+" = "+rtsFormatCatalogPreview(resolved.at(name));
                     if(ImGui::Selectable(display.c_str(),ed.selectedField==i)){
                         ed.selectedField=i;
                         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
