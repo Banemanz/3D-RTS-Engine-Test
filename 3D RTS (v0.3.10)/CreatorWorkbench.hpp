@@ -160,6 +160,15 @@ void browser(App& app){
                 {"Unit","Combat","Unit | Combat"},
                 {"Unit","Worker","Unit | Worker"},
                 {"Unit","Structure","Unit | Structure"},
+                {"Validator","Health","Validator | Health threshold"},
+                {"Validator","Energy","Validator | Energy threshold"},
+                {"Validator","Status","Validator | Status presence"},
+                {"Validator","Structure","Validator | Is structure"},
+                {"Validator","UnitCount","Validator | Owned unit count"},
+                {"Requirement","Predicate","Requirement | Single validator"},
+                {"Requirement","All","Requirement | All children"},
+                {"Requirement","Any","Requirement | Any child"},
+                {"Requirement","Not","Requirement | Negate child"},
                 {"Weapon","Ranged","Weapon | Ranged rifle"},
                 {"Weapon","Melee","Weapon | Melee blade"},
                 {"Projectile","Arc","Projectile | Arcing spark"},
@@ -385,6 +394,160 @@ void inspector(App& app){
                     ImGui::TextDisabled("Radius .25..12 | Duplicate event types allowed");
                     ImGui::Separator();
                 }
+                if(entry->type=="Validator"){
+                    ImGui::SeparatorText("Reusable Validator | Gameplay");
+                    static RTSValidatorDefinition draft;
+                    static std::string editingValidator;
+                    if(editingValidator!=entry->id){
+                        draft=compileValidator(project.catalog,entry->id);
+                        editingValidator=entry->id;
+                    }
+                    const char* kinds[]={"HealthBelowPercent","EnergyAtLeast",
+                        "HasBehavior","IsStructure","OwnerUnitCountAtLeast"};
+                    int kind=static_cast<int>(draft.kind);
+                    if(ImGui::Combo("Predicate kind",&kind,kinds,5))
+                        draft.kind=static_cast<RTSValidatorKind>(kind);
+                    const char* subjects[]={"Caster","Target"};
+                    int subject=static_cast<int>(draft.subject);
+                    if(ImGui::Combo("Read actor",&subject,subjects,2))
+                        draft.subject=static_cast<RTSValidatorSubject>(subject);
+                    if(draft.kind==RTSValidatorKind::HealthBelowPercent)
+                        ImGui::InputFloat("Below HP %",&draft.value,.5f,5.f,"%.1f");
+                    if(draft.kind==RTSValidatorKind::EnergyAtLeast)
+                        ImGui::InputFloat("Minimum energy",&draft.value,1.f,5.f,"%.1f");
+                    if(draft.kind==RTSValidatorKind::OwnerUnitCountAtLeast){
+                        ImGui::InputFloat("Minimum owned Units",&draft.value,1.f,5.f,"%.0f");
+                        const std::string current=draft.unitId.empty()?
+                            "All owned Units":draft.unitId;
+                        if(ImGui::BeginCombo("Count Unit class",current.c_str())){
+                            if(ImGui::Selectable("All owned Units",draft.unitId.empty()))
+                                draft.unitId.clear();
+                            for(const auto& choice:project.catalog.entries())
+                                if(choice.type=="Unit" &&
+                                   ImGui::Selectable(choice.id.c_str(),
+                                     draft.unitId==choice.id))
+                                    draft.unitId=choice.id;
+                            ImGui::EndCombo();
+                        }
+                    }
+                    if(draft.kind==RTSValidatorKind::HasBehavior){
+                        const std::string current=draft.behaviorId.empty()?
+                            "Choose a Behavior":draft.behaviorId;
+                        if(ImGui::BeginCombo("Active Behavior",current.c_str())){
+                            for(const auto& choice:project.catalog.entries())
+                                if(choice.type=="Behavior" &&
+                                   ImGui::Selectable(choice.id.c_str(),
+                                     draft.behaviorId==choice.id))
+                                    draft.behaviorId=choice.id;
+                            ImGui::EndCombo();
+                        }
+                        if(!draft.behaviorId.empty() &&
+                           navigateCatalog(app,"Edit Behavior",draft.behaviorId)){
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::TextWrapped("Caster tests the issuing Unit; Target tests the ability's selected Unit. Ground and training gates have no Target.");
+                    if(ImGui::Button("Apply Validator")){
+                        if(ed.setValidatorDefinition(project,draft)){
+                            refresh(app,true);editingValidator.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Revert Validator"))
+                        draft=compileValidator(project.catalog,entry->id);
+                    ImGui::TextDisabled("Typed, deterministic runtime conditions");
+                }
+                if(entry->type=="Requirement"){
+                    ImGui::SeparatorText("Requirement graph | Logic");
+                    static std::string editingRequirement;
+                    static int operation=0;
+                    static std::string validatorId;
+                    static std::vector<std::string> childIds;
+                    if(editingRequirement!=entry->id){
+                        const auto& properties=resolved;
+                        const auto findString=[&](const char* field)->std::string{
+                            auto it=properties.find(field);
+                            return it!=properties.end() &&
+                                it->second.template is<std::string>()?
+                                it->second.template get<std::string>():"";
+                        };
+                        const auto mode=findString("kind");
+                        operation=mode=="All"?1:mode=="Any"?2:mode=="Not"?3:0;
+                        validatorId=findString("validator");
+                        childIds.clear();
+                        const auto it=properties.find("children");
+                        if(it!=properties.end() &&
+                           it->second.template is<picojson::array>())
+                            for(const auto& child:it->second.template get<picojson::array>())
+                                if(child.template is<std::string>())
+                                    childIds.push_back(child.template get<std::string>());
+                        editingRequirement=entry->id;
+                    }
+                    const char* modes[]={"Predicate","All","Any","Not"};
+                    ImGui::Combo("Boolean operation",&operation,modes,4);
+                    if(operation==0){
+                        if(ImGui::BeginCombo("Predicate Validator",
+                            validatorId.empty()?"Choose Validator":validatorId.c_str())){
+                            for(const auto& choice:project.catalog.entries())
+                                if(choice.type=="Validator" &&
+                                   ImGui::Selectable(choice.id.c_str(),
+                                                     validatorId==choice.id))
+                                    validatorId=choice.id;
+                            ImGui::EndCombo();
+                        }
+                        if(!validatorId.empty() &&
+                           navigateCatalog(app,"Open Validator",validatorId)){
+                            ImGui::End();return;
+                        }
+                    }else{
+                        ImGui::TextDisabled("Nested Requirement children (%zu / %d)",
+                                           childIds.size(),operation==3?1:8);
+                        for(std::size_t i=0;i<childIds.size();++i){
+                            ImGui::PushID(static_cast<int>(i));
+                            const std::string id=childIds[i];
+                            if(navigateCatalog(app,"Child",id)){
+                                ImGui::PopID();ImGui::End();return;
+                            }
+                            ImGui::SameLine();
+                            if(ImGui::SmallButton("Remove")){
+                                childIds.erase(childIds.begin()+
+                                    static_cast<std::ptrdiff_t>(i));
+                                ImGui::PopID();break;
+                            }
+                            if(i>0){
+                                ImGui::SameLine();
+                                if(ImGui::SmallButton("Up"))
+                                    std::swap(childIds[i],childIds[i-1]);
+                            }
+                            ImGui::PopID();
+                        }
+                        if(childIds.size()<std::size_t(operation==3?1:8) &&
+                           ImGui::BeginCombo("Add graph child","Choose Requirement")){
+                            for(const auto& candidate:project.catalog.entries())
+                                if(candidate.type=="Requirement" &&
+                                   candidate.id!=entry->id &&
+                                   std::find(childIds.begin(),childIds.end(),
+                                             candidate.id)==childIds.end() &&
+                                   ImGui::Selectable(candidate.id.c_str()))
+                                    childIds.push_back(candidate.id);
+                            ImGui::EndCombo();
+                        }
+                        ImGui::TextWrapped("All: every child true. Any: one child true. Not: exactly one child, inverted. Cyclic/oversized graphs are rejected.");
+                    }
+                    if(ImGui::Button("Apply Requirement graph")){
+                        if(ed.setRequirementDefinition(project,
+                                static_cast<RTSRequirementKind>(operation),
+                                validatorId,childIds)){
+                            refresh(app,true);editingRequirement.clear();
+                            ImGui::End();return;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton("Discard graph draft"))
+                        editingRequirement.clear();
+                    ImGui::TextDisabled("8 levels | 8 children/node | 64 expanded nodes");
+                }
                 if(entry->type=="Weapon"){
                     ImGui::SeparatorText("Normal attack | Weapon catalog");
                     static WeaponDefinition draft;
@@ -486,6 +649,38 @@ void inspector(App& app){
                         draft=compileBehavior(project.catalog,entry->id);
                     }
                     ImGui::TextDisabled("Duration 1..36000 | Stacks 1..8 | Modifier cap is validated");
+                }
+                if(entry->type=="Ability" || entry->type=="Unit"){
+                    const auto it=resolved.find("requirement");
+                    const std::string required=it!=resolved.end() &&
+                        it->second.template is<std::string>()?
+                        it->second.template get<std::string>():"";
+                    ImGui::SeparatorText(entry->type=="Unit"?
+                        "Training Requirement":"Ability Requirement");
+                    if(ImGui::BeginCombo("Required graph",
+                            required.empty()?"None (unrestricted)":required.c_str())){
+                        if(ImGui::Selectable("None (unrestricted)",required.empty())){
+                            refresh(app,ed.setCatalogField(project,"requirement",
+                                picojson::value(std::string{})));
+                            ImGui::EndCombo();ImGui::End();return;
+                        }
+                        for(const auto& choice:project.catalog.entries())
+                            if(choice.type=="Requirement" &&
+                               ImGui::Selectable(choice.id.c_str(),
+                                                 required==choice.id)){
+                                refresh(app,ed.setCatalogField(project,"requirement",
+                                    picojson::value(choice.id)));
+                                ImGui::EndCombo();ImGui::End();return;
+                            }
+                        ImGui::EndCombo();
+                    }
+                    if(!required.empty() &&
+                       navigateCatalog(app,"Open required graph",required)){
+                        ImGui::End();return;
+                    }
+                    ImGui::TextDisabled(entry->type=="Unit"?
+                        "Checked by production queue admission":
+                        "Checked at actual cast target/ground admission");
                 }
                 if(entry->type=="Ability"){
                     const auto effectRef=resolved.find("effect");
