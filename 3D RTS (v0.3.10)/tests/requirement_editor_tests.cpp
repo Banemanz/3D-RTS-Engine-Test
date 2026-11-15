@@ -12,7 +12,8 @@ int main(){
     const std::string validator=editor.selected(p)->id;
     auto draft=compileValidator(p.catalog,validator);
     assert(draft.kind==RTSValidatorKind::HealthBelowPercent);
-    draft.subject=RTSValidatorSubject::Target;
+    // Training prerequisites have a Caster (producer), but no target.
+    draft.subject=RTSValidatorSubject::Caster;
     draft.value=27.f;
     assert(editor.setValidatorDefinition(p,draft));
     assert(compileValidator(p.catalog,validator).value==27.f);

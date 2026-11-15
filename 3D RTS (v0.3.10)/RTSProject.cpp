@@ -310,8 +310,10 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
     for(auto& placement:next.placements) {
         if(placement.catalogId==oldId)placement.catalogId=newId;
         // Preserve unrecognized mod fields and strings; only typed references migrate.
-        const char* section=type=="Actor"?"unit":(type=="Model"?"actor":nullptr);
-        const char* property=type=="Actor"?"actor":(type=="Model"?"model":nullptr);
+        const char* section=type=="Actor"?"unit":
+             type=="Model"?"actor":type=="Requirement"?"unit":nullptr;
+        const char* property=type=="Actor"?"actor":
+             type=="Model"?"model":type=="Requirement"?"requirement":nullptr;
         if(!section)continue;
         auto category=placement.overrides.find(section);
         if(category==placement.overrides.end() || !category->second.is<picojson::object>())continue;
@@ -467,9 +469,11 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
     for(const auto& placement:placements) {
         if(placement.catalogId==id)refs.push_back("placement "+placement.id);
         const char* section=original->type=="Actor"?"unit":
-            (original->type=="Model"?"actor":nullptr);
+            original->type=="Model"?"actor":
+            original->type=="Requirement"?"unit":nullptr;
         const char* property=original->type=="Actor"?"actor":
-            (original->type=="Model"?"model":nullptr);
+            original->type=="Model"?"model":
+            original->type=="Requirement"?"requirement":nullptr;
         if(!section)continue;
         auto category=placement.overrides.find(section);
         if(category==placement.overrides.end() ||

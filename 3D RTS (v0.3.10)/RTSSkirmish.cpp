@@ -1171,9 +1171,17 @@ bool RTSSkirmish::canPrepareAbility(int casterId,
     const auto options=unitAbilityIds(project_.catalog,caster->catalogId);
     if(std::find(options.begin(),options.end(),abilityId)==options.end())return false;
     const auto ability=compileAbility(project_.catalog,abilityId);
-    return abilityCooldownRemaining(casterId,abilityId)==0 &&
-           playerMinerals>=ability.mineralCost &&
-           caster->currentEnergy>=float(ability.energyCost);
+    if(abilityCooldownRemaining(casterId,abilityId)!=0 ||
+       playerMinerals<ability.mineralCost ||
+       caster->currentEnergy<float(ability.energyCost))return false;
+    // Self/Ground gates can be evaluated before choosing a target, so
+    // native UI availability and authoritative cast admission agree.
+    // Targeted abilities defer the predicate until target selection.
+    if(ability.target==AbilityTarget::Self)
+        return meetsRequirement(ability.requirementId,caster,caster);
+    if(ability.target==AbilityTarget::Ground)
+        return meetsRequirement(ability.requirementId,caster,nullptr);
+    return true;
 }
 Vec3 RTSSkirmish::projectilePositionAt(const PendingAreaImpact& area,
                                         std::uint64_t atTick){
