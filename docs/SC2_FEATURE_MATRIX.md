@@ -398,3 +398,12 @@ commands. Remaining gap from Galaxy: scripted per-player
 tech overrides, command card button replacement and custom
 failure tooltips, exhaustive tech-tree graphs and field-operation
 upgrade effects. No third-party/proprietary code reused.
+
+## Per-level authored technology (November 15)
+
+Implemented: up to five level-specific mineral costs, fixed research ticks,
+additive damage and armor gains, inherited table replacement/clear,
+F7 typed per-level editing, authoritative refund/refresh/replay and an
+original playable Technology Forge authoring example. Generalized
+field-operation tables, research AI, and tech-tree graph visualization
+remain future work.

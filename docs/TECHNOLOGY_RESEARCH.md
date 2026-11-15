@@ -181,3 +181,42 @@ false Show graph removes a command from native F9 pages; a failed
 Use graph leaves it displayed but disabled. Backend commands
 enforce both. Technology Forge now demonstrates multi-level
 reveal, unlock and max-level concealment. See docs/TECH_SHOW_USE.md.
+
+
+## Authored per-level progression table (November 15 follow-up)
+
+F7 now has **Customize individual levels** under an Upgrade's Research
+level progression. Each of up to five rows edits the price, duration,
+incremental damage and incremental armor separately, with the usual
+Apply/Revert and document-level undo/redo. The default remains uniform
+research for old projects. Toggle customization off to restore uniform
+values, including on a derived Upgrade with an inherited custom table.
+
+The optional `levels` array must contain **exactly `max_level` rows** when
+nonempty. Empty `levels: []` explicitly masks an inherited table.
+Each row is an object, with optional keys (missing keys inherit the
+Upgrade's uniform fields):
+
+```json
+"levels": [
+  {"mineral_cost": 45, "research_ticks": 180, "damage_bonus": 3, "armor_bonus": 1},
+  {"mineral_cost": 65, "research_ticks": 240, "damage_bonus": 4, "armor_bonus": 2},
+  {"mineral_cost": 90, "research_ticks": 300, "damage_bonus": 5, "armor_bonus": 3}
+]
+```
+
+Damage/armor values are **incremental gains granted when that level
+finishes**, not replacements or cumulative totals. In the example
+three completed levels grant 12 damage and 6 armor. Research admission
+checks the *next* level's mineral cost; the fixed-tick scheduler stores
+its duration and exact paid price, so cancellation refunds the actual
+charge. All completed bonuses apply to existing/future matching Units.
+Per-level bounds are unchanged: minerals 0..100000, ticks 1..36000,
+damage/armor 0..100; the existing per-Unit 1000 bonus clamp remains.
+
+`technology_forge_showcase.rtsproject.json` demonstrates real differing
+costs, durations and incremental gains. Assertions cover F7 transactions,
+inheritance, malformed arrays, both research levels, cancellation, state
+fingerprints, replay verification, and Windows/Linux builds. This is
+bounded additive stat authoring, not Galaxy's general field-operation
+scripting or multiplayer research synchronization.

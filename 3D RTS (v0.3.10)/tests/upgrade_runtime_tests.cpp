@@ -226,5 +226,82 @@ int main(){
     RTSSkirmish locked;locked.loadProject(bad);
     for(auto& u:locked.units)u.isSelected=u.id==locked.playerBaseId();
     assert(!locked.canResearchSelectedSlot(1));
-    std::cout<<"Owner research, upgraded physical combat, producer gating, future spawns, cancellation and replay passed\n";
+    // A level-specific table overrides the next level's price, duration
+    // and incremental stat gains without changing legacy upgrade behavior.
+    RTSProject stepped=fixture();
+    auto levelRow=[](double cost,double ticks,double damage,double armor){
+        return picojson::value(picojson::object{
+            {"mineral_cost",picojson::value(cost)},
+            {"research_ticks",picojson::value(ticks)},
+            {"damage_bonus",picojson::value(damage)},
+            {"armor_bonus",picojson::value(armor)}});
+    };
+    const picojson::array table{levelRow(13.,4.,2.,1.),
+                                levelRow(40.,10.,7.,3.)};
+    assert(stepped.catalog.setField("frontier_tactics","levels",
+                                    picojson::value(table)));
+    stepped.validate();
+    const auto parsed=compileUpgrade(stepped.catalog,"frontier_tactics");
+    assert(parsed.customLevels && parsed.levels.size()==2);
+    assert(parsed.levels[0].mineralCost==13 &&
+           parsed.levels[1].researchTicks==10 &&
+           parsed.levels[1].damageBonus==7.f);
+    const auto persisted=RTSProject::fromJson(stepped.toJson());
+    assert(compileUpgrade(persisted.catalog,"frontier_tactics").customLevels);
+    RTSSkirmish steppedGame;steppedGame.loadProject(persisted);
+    const int steppedBase=steppedGame.playerBaseId();
+    for(auto& u:steppedGame.units)u.isSelected=u.id==steppedBase;
+    const int startingMinerals=steppedGame.playerMinerals;
+    assert(steppedGame.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+        {},-1,false,"frontier_tactics"));
+    steppedGame.update(1.f/60.f);
+    assert(steppedGame.playerMinerals==startingMinerals-13);
+    assert(steppedGame.researchRemainingTicks(steppedBase)==4);
+    step(steppedGame,4);
+    assert(steppedGame.upgradeLevel(0,"frontier_tactics")==1);
+    assert(findUnit(steppedGame,"ranger")->upgradeDamageBonus==2.f);
+    assert(findUnit(steppedGame,"ranger")->upgradeArmorBonus==1.f);
+    out<<"table-1 "<<steppedGame.stateDigest()<<"\n";
+    // Cancel second-level research and refund the exact higher price.
+    assert(steppedGame.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+        {},-1,false,"frontier_tactics"));
+    steppedGame.update(1.f/60.f);
+    assert(steppedGame.playerMinerals==startingMinerals-53);
+    assert(steppedGame.researchRemainingTicks(steppedBase)==10);
+    assert(steppedGame.queuePlayerCommand(RTSCommandKind::CancelTraining));
+    steppedGame.update(1.f/60.f);
+    assert(steppedGame.playerMinerals==startingMinerals-13);
+    assert(steppedGame.upgradeLevel(0,"frontier_tactics")==1);
+    assert(steppedGame.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+        {},-1,false,"frontier_tactics"));
+    steppedGame.update(1.f/60.f);
+    step(steppedGame,10);
+    assert(steppedGame.upgradeLevel(0,"frontier_tactics")==2);
+    assert(findUnit(steppedGame,"ranger")->upgradeDamageBonus==9.f);
+    assert(findUnit(steppedGame,"ranger")->upgradeArmorBonus==4.f);
+    assert(steppedGame.playerMinerals==startingMinerals-53);
+    out<<"table-2 "<<steppedGame.stateDigest()<<"\n";
+    assert(verifyRTSReplay(steppedGame.replayTape(),&why));
+    auto invalidRows=stepped;
+    assert(invalidRows.catalog.setField("frontier_tactics","levels",
+                                       picojson::value(picojson::array{table[0]})));
+    assert(invalid(invalidRows)); // row count mismatch
+    invalidRows=stepped;
+    auto invalidTable=table;
+    invalidTable[1]=levelRow(40.,0.,7.,3.);
+    assert(invalidRows.catalog.setField("frontier_tactics","levels",
+                                       picojson::value(invalidTable)));
+    assert(invalid(invalidRows)); // zero duration
+    invalidRows=stepped;
+    invalidTable[1]=levelRow(-1.,10.,7.,3.);
+    assert(invalidRows.catalog.setField("frontier_tactics","levels",
+                                       picojson::value(invalidTable)));
+    assert(invalid(invalidRows)); // negative cost
+    invalidRows=stepped;
+    invalidTable[1]=levelRow(40.,10.,101.,3.);
+    assert(invalidRows.catalog.setField("frontier_tactics","levels",
+                                       picojson::value(invalidTable)));
+    assert(invalid(invalidRows)); // out-of-range stat
+    out.flush();assert(out.good());
+    std::cout<<"Owner research, per-level cost/time/stats, cancellation and replay passed\n";
 }

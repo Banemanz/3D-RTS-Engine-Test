@@ -6,6 +6,12 @@
 
 // Authored per-player research, distinct from ephemeral Actor/Behavior state.
 // Existing and future matching Units receive the same unlocked modifiers.
+struct RTSUpgradeLevel {
+    int mineralCost=100;
+    std::uint32_t researchTicks=180;
+    float damageBonus=0.f; // granted incrementally upon completing this level
+    float armorBonus=0.f;
+};
 struct RTSUpgradeDefinition {
     std::string id;
     std::string unitId;         // empty means all Unit catalog types

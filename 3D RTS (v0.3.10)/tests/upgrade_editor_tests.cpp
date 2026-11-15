@@ -92,5 +92,42 @@ int main(){
     assert(unitResearchIds(p.catalog,"command_center")[0]=="enhanced_blades");
     assert(ed.redo(p));
     assert(unitResearchIds(p.catalog,"command_center").empty());
-    std::cout<<"F7 Upgrade presets, stat edits, typed requirements, rename protection and Undo/Redo passed\n";
+    // Level table transactions: grouped undo, strict validation, inheritance
+    // and clearing an inherited table with a local empty override.
+    RTSProject levelsProject=RTSProject::defaults();
+    EditorSession levelsEditor;levelsEditor.panel=EditorSession::Panel::Data;
+    assert(levelsEditor.createCatalogObject(levelsProject,"Upgrade","Damage"));
+    const std::string customId=levelsEditor.selected(levelsProject)->id;
+    auto custom=compileUpgrade(levelsProject.catalog,customId);
+    assert(custom.levels.size()==3 && !custom.customLevels);
+    custom.customLevels=true;
+    custom.levels[0].mineralCost=20;
+    custom.levels[1].researchTicks=420;
+    custom.levels[2].damageBonus=5.f;
+    assert(levelsEditor.setUpgradeDefinition(levelsProject,custom));
+    const auto saved=levelsProject.toJson().serialize();
+    assert(compileUpgrade(levelsProject.catalog,customId).levels[1].researchTicks==420);
+    auto badCustom=custom;
+    badCustom.levels[0].researchTicks=0;
+    assert(!levelsEditor.setUpgradeDefinition(levelsProject,badCustom));
+    assert(levelsProject.toJson().serialize()==saved);
+    badCustom=custom;badCustom.levels.pop_back();
+    assert(!levelsEditor.setUpgradeDefinition(levelsProject,badCustom));
+    assert(levelsProject.toJson().serialize()==saved);
+    assert(levelsEditor.undo(levelsProject));
+    assert(!compileUpgrade(levelsProject.catalog,customId).customLevels);
+    assert(levelsEditor.redo(levelsProject));
+    assert(compileUpgrade(levelsProject.catalog,customId).customLevels);
+    assert(levelsProject.catalog.cloneDerived(customId,"derived_level_tech"));
+    assert(levelsEditor.selectCatalogId(levelsProject,"derived_level_tech"));
+    auto inherited=compileUpgrade(levelsProject.catalog,"derived_level_tech");
+    assert(inherited.customLevels && inherited.levels[0].mineralCost==20);
+    inherited.customLevels=false;
+    assert(levelsEditor.setUpgradeDefinition(levelsProject,inherited));
+    const auto uniform=compileUpgrade(levelsProject.catalog,"derived_level_tech");
+    assert(!uniform.customLevels && uniform.levels[0].mineralCost==uniform.mineralCost);
+    assert(compileUpgrade(levelsProject.catalog,customId).customLevels);
+    assert(levelsEditor.undo(levelsProject));
+    assert(compileUpgrade(levelsProject.catalog,"derived_level_tech").customLevels);
+    std::cout<<"F7 Upgrade table editing, inherited overrides and Undo/Redo passed\n";
 }

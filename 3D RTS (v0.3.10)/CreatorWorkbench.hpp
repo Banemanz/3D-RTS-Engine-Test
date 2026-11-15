@@ -405,7 +405,11 @@ void inspector(App& app){
                         draft=compileUpgrade(project.catalog,entry->id);
                         editingUpgrade=entry->id;
                     }
-                    ImGui::InputInt("Maximum research level",&draft.maxLevel);
+                    if(ImGui::InputInt("Maximum research level",&draft.maxLevel) &&
+                       draft.maxLevel>=1 && draft.maxLevel<=5)
+                        draft.levels.resize(static_cast<std::size_t>(draft.maxLevel),
+                            RTSUpgradeLevel{draft.mineralCost,draft.researchTicks,
+                                            draft.damagePerLevel,draft.armorPerLevel});
                     ImGui::InputInt("Minerals per level",&draft.mineralCost,10,50);
                     int ticks=int(draft.researchTicks);
                     if(ImGui::InputInt("Research time (ticks)",&ticks,30,60))
@@ -413,6 +417,32 @@ void inspector(App& app){
                             std::max(0,ticks));
                     ImGui::InputFloat("Damage / level",&draft.damagePerLevel,.5f,2.f,"%.2f");
                     ImGui::InputFloat("Armor / level",&draft.armorPerLevel,.5f,2.f,"%.2f");
+                    ImGui::SeparatorText("Research level progression");
+                    if(ImGui::Checkbox("Customize individual levels",&draft.customLevels) &&
+                       draft.customLevels && draft.maxLevel>=1 &&
+                       draft.maxLevel<=5)
+                        draft.levels.assign(static_cast<std::size_t>(draft.maxLevel),
+                            RTSUpgradeLevel{draft.mineralCost,draft.researchTicks,
+                                            draft.damagePerLevel,draft.armorPerLevel});
+                    if(draft.customLevels){
+                        ImGui::TextWrapped("Each row sets the cost, duration and incremental stat gain upon completing that level.");
+                        for(std::size_t i=0;i<draft.levels.size() && i<5;++i){
+                            ImGui::PushID(static_cast<int>(i));
+                            if(ImGui::TreeNodeEx("level",ImGuiTreeNodeFlags_DefaultOpen,
+                                                 "Level %d",static_cast<int>(i+1))){
+                                auto& row=draft.levels[i];
+                                ImGui::InputInt("Mineral cost",&row.mineralCost,10,50);
+                                int duration=static_cast<int>(row.researchTicks);
+                                if(ImGui::InputInt("Duration (ticks)",&duration,30,60))
+                                    row.researchTicks=static_cast<std::uint32_t>(
+                                        std::max(0,duration));
+                                ImGui::InputFloat("Damage gain",&row.damageBonus,.5f,2.f,"%.2f");
+                                ImGui::InputFloat("Armor gain",&row.armorBonus,.5f,2.f,"%.2f");
+                                ImGui::TreePop();
+                            }
+                            ImGui::PopID();
+                        }
+                    }
                     const std::string target=draft.unitId.empty()?
                         "All owned Unit types":draft.unitId;
                     if(ImGui::BeginCombo("Affected Unit class",target.c_str())){

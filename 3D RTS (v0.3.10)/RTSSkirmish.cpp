@@ -611,8 +611,11 @@ void RTSSkirmish::refreshUnitUpgradeStats(Unit& unit)const{
         if(research.second<=0 || research.first.first!=unit.ownerId)continue;
         const auto def=compileUpgrade(project_.catalog,research.first.second);
         if(!def.unitId.empty() && def.unitId!=unit.catalogId)continue;
-        damage+=def.damagePerLevel*float(research.second);
-        armor+=def.armorPerLevel*float(research.second);
+        const int completed=std::min(research.second,def.maxLevel);
+        for(int i=0;i<completed;++i){
+            damage+=def.levels[static_cast<std::size_t>(i)].damageBonus;
+            armor+=def.levels[static_cast<std::size_t>(i)].armorBonus;
+        }
     }
     unit.upgradeDamageBonus=std::clamp(damage,0.f,1000.f);
     unit.upgradeArmorBonus=std::clamp(armor,0.f,1000.f);
@@ -774,8 +777,9 @@ bool RTSSkirmish::canResearchAt(int producerId,
     if(std::find(available.begin(),available.end(),id)==available.end())
         return false;
     const auto upgrade=compileUpgrade(project_.catalog,id);
-    if(upgradeLevel(building->ownerId,id)>=upgrade.maxLevel ||
-       playerMinerals<upgrade.mineralCost ||
+    const int level=upgradeLevel(building->ownerId,id);
+    if(level>=upgrade.maxLevel ||
+       playerMinerals<upgrade.levels[static_cast<std::size_t>(level)].mineralCost ||
        !meetsRequirement(upgrade.requirementId,building,nullptr))return false;
     for(const auto& job:research_)
         if(job.buildingId==producerId ||
@@ -791,9 +795,11 @@ bool RTSSkirmish::queueResearchAt(int producerId,const std::string& id){
     const auto upgrade=compileUpgrade(project_.catalog,id);
     const Unit* producer=find(producerId);
     const int owner=producer->ownerId;
-    playerMinerals-=upgrade.mineralCost;
-    research_.push_back({producerId,owner,id,upgrade.mineralCost,
-        tick_,tick_+upgrade.researchTicks});
+    const auto& next=upgrade.levels[static_cast<std::size_t>(
+        upgradeLevel(owner,id))];
+    playerMinerals-=next.mineralCost;
+    research_.push_back({producerId,owner,id,next.mineralCost,
+        tick_,tick_+next.researchTicks});
     return true;
 }
 void RTSSkirmish::updateResearch(){

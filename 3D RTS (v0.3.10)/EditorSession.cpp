@@ -701,6 +701,20 @@ bool EditorSession::setUpgradeDefinition(
         fields["research_ticks"]=picojson::value(double(values.researchTicks));
         fields["damage_per_level"]=picojson::value(double(values.damagePerLevel));
         fields["armor_per_level"]=picojson::value(double(values.armorPerLevel));
+        picojson::array table;
+        if(values.customLevels){
+            if(values.maxLevel<1 || values.maxLevel>5 ||
+               values.levels.size()!=static_cast<std::size_t>(values.maxLevel))
+                throw std::invalid_argument("Level table must match max_level");
+            for(const auto& row:values.levels)
+                table.emplace_back(picojson::object{
+                    {"mineral_cost",picojson::value(double(row.mineralCost))},
+                    {"research_ticks",picojson::value(double(row.researchTicks))},
+                    {"damage_bonus",picojson::value(double(row.damageBonus))},
+                    {"armor_bonus",picojson::value(double(row.armorBonus))}});
+        }
+        // Empty array masks inherited custom levels without editing parent.
+        fields["levels"]=picojson::value(table);
         fields["unit"]=picojson::value(values.unitId);
         fields["requirement"]=picojson::value(values.requirementId);
         fields["show_requirement"]=picojson::value(values.showRequirementId);

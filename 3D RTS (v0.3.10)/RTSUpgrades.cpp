@@ -29,8 +29,8 @@ int integer(const picojson::object& fields,const char* key,int def,
         throw std::invalid_argument(std::string("Invalid Upgrade ")+key);
     return static_cast<int>(n);
 }
-float bonus(const picojson::object& fields,const char* key){
-    const double n=number(fields,key,0.);
+float bonus(const picojson::object& fields,const char* key,double fallback=0.){
+    const double n=number(fields,key,fallback);
     if(n<0. || n>100.)
         throw std::invalid_argument(std::string("Invalid Upgrade ")+key);
     return static_cast<float>(n);
@@ -50,6 +50,35 @@ RTSUpgradeDefinition compileUpgrade(const DataCatalog& catalog,
         integer(fields,"research_ticks",180,1,36000));
     d.damagePerLevel=bonus(fields,"damage_per_level");
     d.armorPerLevel=bonus(fields,"armor_per_level");
+    d.levels.assign(static_cast<std::size_t>(d.maxLevel),
+        RTSUpgradeLevel{d.mineralCost,d.researchTicks,
+                        d.damagePerLevel,d.armorPerLevel});
+    // An empty table explicitly restores uniform research, even on
+    // an inherited Upgrade with custom levels.
+    const auto table=fields.find("levels");
+    if(table!=fields.end()){
+        if(!table->second.is<picojson::array>())
+            throw std::invalid_argument("Upgrade levels must be an array: "+id);
+        const auto& rows=table->second.get<picojson::array>();
+        if(!rows.empty()){
+            if(rows.size()!=d.levels.size())
+                throw std::invalid_argument(
+                    "Upgrade levels must contain exactly max_level rows: "+id);
+            d.customLevels=true;
+            for(std::size_t i=0;i<rows.size();++i){
+                if(!rows[i].is<picojson::object>())
+                    throw std::invalid_argument("Upgrade level must be an object: "+id);
+                const auto& level=rows[i].get<picojson::object>();
+                auto& step=d.levels[i];
+                step.mineralCost=integer(level,"mineral_cost",d.mineralCost,0,100000);
+                step.researchTicks=static_cast<std::uint32_t>(
+                    integer(level,"research_ticks",
+                            static_cast<int>(d.researchTicks),1,36000));
+                step.damageBonus=bonus(level,"damage_bonus",d.damagePerLevel);
+                step.armorBonus=bonus(level,"armor_bonus",d.armorPerLevel);
+            }
+        }
+    }
     d.unitId=idField(fields,"unit");
     if(!d.unitId.empty()){
         const auto* unit=catalog.find(d.unitId);

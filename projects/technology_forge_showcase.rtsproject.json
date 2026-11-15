@@ -378,6 +378,11 @@
         "damage_per_level": 3,
         "armor_per_level": 1,
         "unit": "ranger",
+        "levels": [
+          {"mineral_cost": 45, "research_ticks": 180, "damage_bonus": 3, "armor_bonus": 1},
+          {"mineral_cost": 65, "research_ticks": 240, "damage_bonus": 4, "armor_bonus": 2},
+          {"mineral_cost": 90, "research_ticks": 300, "damage_bonus": 5, "armor_bonus": 3}
+        ],
         "show_requirement": "r_not_max_tactics"
       }
     },

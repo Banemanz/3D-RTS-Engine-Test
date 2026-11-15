@@ -1650,3 +1650,28 @@ research AI; after that improve native editor viewport,
 terrain/sculpt/pathing, assets/Actors and richer Galaxy-like
 trigger variables/conditions. No proprietary names/media
 or third-party GPL source copied.
+
+## November 15 — Per-level Upgrade progression tables
+
+Continue ONLY on existing unmerged Draft PR #1, branch
+`feat/rts-vertical-slice`. This pass adds **real** Upgrade `levels`
+rows (optional, length matches max_level; [] clears inheritance)
+with next-level cost/time and incremental attack/armor gains. Old
+catalogs retain their existing uniform semantics and replay fingerprints.
+F7 has a table toggle plus editable per-level controls, with atomic
+validation and undo. Research admission, timed completion, refunds
+and existing/future Unit bonuses use the per-level rows.
+Technology Forge includes three distinct original research levels.
+
+Tests: extended upgrade_runtime and upgrade_editor CTests, extra
+fingerprint rows in upgrade_research_fingerprint.txt for strict
+Windows/Linux byte parity, malformed data/undo/derived overrides and
+real replay. Existing F7 screenshot CI exercises the table in
+Technology Forge. Full schema/manual: docs/TECHNOLOGY_RESEARCH.md.
+
+Verify latest branch Actions including Windows/Linux optimized CTests,
+Debug replay parity and F7 screenshot before reporting a green revision.
+No new dependencies, copied code, or proprietary content.
+Next: generalized Upgrade field operation tables, technology overview
+graph, scalable creator UI, asset/animation pipeline, terrain layers,
+and data-driven AI research.
