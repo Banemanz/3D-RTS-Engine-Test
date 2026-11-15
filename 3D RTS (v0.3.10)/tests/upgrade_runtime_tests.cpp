@@ -1,0 +1,208 @@
+#include "RTSSkirmish.hpp"
+#include "RTSUpgrades.hpp"
+#include <cassert>
+#if defined(NDEBUG)
+#error "Upgrade tests must keep assertions enabled in Release"
+#endif
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+namespace {
+CatalogEntry upgrade(const char* id,double cost,double duration,
+                     double damage,double armor){
+    CatalogEntry e;e.id=id;e.type="Upgrade";
+    e.fields={{"name",picojson::value("Frontier Tactics")},
+              {"max_level",picojson::value(2.)},
+              {"mineral_cost",picojson::value(cost)},
+              {"research_ticks",picojson::value(duration)},
+              {"damage_per_level",picojson::value(damage)},
+              {"armor_per_level",picojson::value(armor)},
+              {"unit",picojson::value("ranger")}};
+    return e;
+}
+RTSProject fixture(){
+    RTSProject p=RTSProject::defaults();
+    p.metadata["enemy_ai_enabled"]=picojson::value(false);
+    p.metadata["enemy_spawn_interval"]=picojson::value(999.);
+    assert(p.catalog.add(upgrade("frontier_tactics",25.,6.,4.,2.)));
+    assert(p.catalog.setField("command_center","researchable_upgrades",
+        picojson::value(picojson::array{picojson::value("frontier_tactics")})));
+    // Derived enemy and player structures can explicitly opt out.
+    assert(p.catalog.setField("rift_bastion","researchable_upgrades",
+        picojson::value(picojson::array{})));
+    assert(p.catalog.setField("barracks","researchable_upgrades",
+        picojson::value(picojson::array{})));
+    CatalogEntry check;check.id="researched_tactics";check.type="Validator";
+    check.fields={{"kind",picojson::value("UpgradeLevelAtLeast")},
+                  {"subject",picojson::value("Caster")},
+                  {"value",picojson::value(1.)},
+                  {"upgrade",picojson::value("frontier_tactics")}};
+    assert(p.catalog.add(check));
+    CatalogEntry graph;graph.id="requires_tactics";graph.type="Requirement";
+    graph.fields={{"kind",picojson::value("Predicate")},
+                  {"validator",picojson::value("researched_tactics")}};
+    assert(p.catalog.add(graph));
+    assert(p.catalog.setField("worker","requirement",
+                              picojson::value("requires_tactics")));
+    p.validate();return p;
+}
+const Unit* findUnit(const RTSSkirmish& g,const char* catalog){
+    for(const auto& u:g.units)
+        if(u.isAlive() && u.catalogId==catalog && u.ownerId==0)return &u;
+    return nullptr;
+}
+bool invalid(const RTSProject& p){
+    try{p.validate();}catch(const std::invalid_argument&){return true;}
+    return false;
+}
+void step(RTSSkirmish& g,int n){
+    for(int i=0;i<n;++i)g.update(1.f/60.f);
+}
+}
+int main(){
+    RTSProject p=fixture();
+    const auto upgradeDefinition=compileUpgrade(p.catalog,"frontier_tactics");
+    assert(upgradeDefinition.maxLevel==2 && upgradeDefinition.researchTicks==6);
+    assert(upgradeDefinition.damagePerLevel==4.f);
+    assert(unitResearchIds(p.catalog,"command_center").size()==1);
+    assert(unitResearchIds(p.catalog,"rift_bastion").empty());
+    const auto roundtrip=RTSProject::fromJson(p.toJson());
+    assert(unitResearchIds(roundtrip.catalog,"command_center")[0]=="frontier_tactics");
+    RTSSkirmish game;game.loadProject(roundtrip);
+    const int base=game.playerBaseId();
+    assert(base>0);
+    for(auto& u:game.units)u.isSelected=u.id==base;
+    assert(game.selectedTrainableId(0)=="worker");
+    assert(game.selectedResearchableId(1)=="frontier_tactics");
+    assert(game.trainingPageCount()==1);
+    assert(game.upgradeLevel(0,"frontier_tactics")==0);
+    assert(!game.canQueueSelectedTrainingSlot(0)); // no tech
+    assert(game.canResearchSelectedSlot(1));
+    const Unit* initialRanger=findUnit(game,"ranger");
+    assert(initialRanger && initialRanger->upgradeDamageBonus==0.f);
+    std::ofstream out("upgrade_research_fingerprint.txt",
+                      std::ios::binary|std::ios::trunc);
+    assert(out.is_open());
+    out<<"0 "<<game.stateDigest()<<"\n";
+    const int minerals=game.playerMinerals;
+    assert(game.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,{},-1,false,
+                                   "frontier_tactics"));
+    game.update(1.f/60.f);
+    assert(game.playerMinerals==minerals-25);
+    assert(game.pendingProduction(base)==1);
+    assert(game.researchRemainingTicks(base)==6);
+    assert(!game.canResearchSelectedSlot(1));
+    assert(!game.canQueueSelectedTrainingSlot(0));
+    assert(game.upgradeLevel(0,"frontier_tactics")==0);
+    out<<"1 "<<game.stateDigest()<<"\n";
+    step(game,5);
+    assert(game.upgradeLevel(0,"frontier_tactics")==0);
+    step(game,1);
+    assert(game.pendingProduction(base)==0);
+    assert(game.upgradeLevel(0,"frontier_tactics")==1);
+    assert(game.canQueueSelectedTrainingSlot(0));
+    assert(game.canResearchSelectedSlot(1));
+    const Unit* ranger=findUnit(game,"ranger");
+    const Unit* worker=findUnit(game,"worker");
+    assert(ranger && std::fabs(ranger->upgradeDamageBonus-4.f)<.001f);
+    assert(std::fabs(ranger->upgradeArmorBonus-2.f)<.001f);
+    assert(worker && worker->upgradeArmorBonus==0.f);
+    out<<"7 "<<game.stateDigest()<<"\n";
+    assert(game.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,{},-1,false,
+                                   "frontier_tactics"));
+    step(game,7);
+    assert(game.upgradeLevel(0,"frontier_tactics")==2);
+    assert(!game.canResearchSelectedSlot(1)); // max level reached
+    assert(findUnit(game,"ranger")->upgradeDamageBonus==8.f);
+    assert(findUnit(game,"ranger")->upgradeArmorBonus==4.f);
+    out<<"14 "<<game.stateDigest()<<"\n";
+    step(game,65);
+    out<<"79 "<<game.stateDigest()<<"\n";
+    out.flush();assert(out.good());
+    std::string why;
+    const auto tape=game.replayTape();
+    assert(tape.commands.size()==2);
+    assert(tape.commands[0].kind==RTSCommandKind::ResearchUpgrade);
+    assert(verifyRTSReplay(tape,&why));
+    assert(verifyRTSReplay(RTSReplayTape::fromJson(tape.toJson()),&why));
+    auto corrupted=tape;
+    corrupted.commands[1].catalog="missing_tech";
+    assert(!verifyRTSReplay(corrupted,&why));
+
+    // A matching trigger-spawned Unit also inherits already-researched tech.
+    // This direct trigger helper is exercised *after* replay tape validation.
+    assert(game.spawnForTrigger("ranger",0,Vec3{4.f,0.f,7.f}));
+    int upgraded=0;
+    for(const auto& u:game.units)if(u.catalogId=="ranger" && u.ownerId==0){
+        assert(u.upgradeDamageBonus==8.f);
+        assert(u.upgradeArmorBonus==4.f);
+        ++upgraded;
+    }
+    assert(upgraded>1);
+    Unit* protectedUnit=nullptr;
+    for(auto& u:game.units)if(u.catalogId=="ranger" && u.ownerId==0){
+        protectedUnit=&u;break;
+    }
+    assert(protectedUnit);
+    const float beforeHp=protectedUnit->currentHp;
+    protectedUnit->takeDamage(15.f,"physical-test");
+    assert(std::fabs((beforeHp-protectedUnit->currentHp)-11.f)<.001f);
+    game.reset();
+    assert(game.upgradeLevel(0,"frontier_tactics")==0);
+    assert(findUnit(game,"ranger")->upgradeDamageBonus==0.f);
+
+    // Cancellation refunds exactly once; destroyed producers do not grant
+    // their unfinished research, and both are replay-recorded commands.
+    RTSSkirmish cancelled;cancelled.loadProject(p);
+    const int cancelledBase=cancelled.playerBaseId();
+    for(auto& u:cancelled.units)u.isSelected=u.id==cancelledBase;
+    const int wallet=cancelled.playerMinerals;
+    assert(cancelled.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,{},-1,
+                                       false,"frontier_tactics"));
+    cancelled.update(1.f/60.f);
+    assert(cancelled.playerMinerals==wallet-25);
+    assert(cancelled.queuePlayerCommand(RTSCommandKind::CancelTraining));
+    cancelled.update(1.f/60.f);
+    assert(cancelled.pendingProduction(cancelledBase)==0);
+    assert(cancelled.playerMinerals==wallet);
+    step(cancelled,12);
+    assert(cancelled.upgradeLevel(0,"frontier_tactics")==0);
+    assert(verifyRTSReplay(cancelled.replayTape(),&why));
+
+    // Invalid catalog schema/typed refs must be rejected, including
+    // nonintegral researched levels and Target-only prerequisites.
+    for(const std::pair<const char*,double>& field:std::vector<
+          std::pair<const char*,double>>{{"max_level",0.},
+                                        {"max_level",2.5},
+                                        {"research_ticks",0.},
+                                        {"research_ticks",36001.},
+                                        {"mineral_cost",-1.},
+                                        {"damage_per_level",101.}}){
+        auto bad=p;
+        assert(bad.catalog.setField("frontier_tactics",field.first,
+                                    picojson::value(field.second)));
+        assert(invalid(bad));
+    }
+    auto bad=p;
+    assert(bad.catalog.setField("frontier_tactics","unit",
+                                picojson::value("no_unit")));
+    assert(invalid(bad));
+    bad=p;
+    assert(bad.catalog.setField("command_center","researchable_upgrades",
+        picojson::value(picojson::array{picojson::value("frontier_tactics"),
+                                       picojson::value("frontier_tactics")})));
+    assert(invalid(bad));
+    bad=p;
+    assert(bad.catalog.setField("researched_tactics","value",
+                                picojson::value(1.5)));
+    assert(invalid(bad));
+    bad=p;
+    assert(bad.catalog.setField("frontier_tactics","requirement",
+                                picojson::value("requires_tactics")));
+    bad.validate(); // self-locked tech is authorable but cannot be started
+    RTSSkirmish locked;locked.loadProject(bad);
+    for(auto& u:locked.units)u.isSelected=u.id==locked.playerBaseId();
+    assert(!locked.canResearchSelectedSlot(1));
+    std::cout<<"Owner research, upgraded physical combat, producer gating, future spawns, cancellation and replay passed\n";
+}
