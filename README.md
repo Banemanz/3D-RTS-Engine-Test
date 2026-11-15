@@ -486,3 +486,19 @@ visible entries. Raw gameplay commands cannot bypass hidden conditions.
 The updated Technology Forge map demonstrates reveal at research level
 1, unlock at level 2, and removal of a completed tech at level 3.
 See docs/TECH_SHOW_USE.md.
+
+
+## Creator Technology Map and headless tech dependency export
+
+The F7 Data Editor now provides **View → Technology dependency map**, a
+dockable original graph of producing Units, research Upgrades, gated Units,
+and Abilities. Lines distinguish training, research, equipment, stat targets,
+and nested Show/Use Requirement references (including NOT/ANY context).
+Clicking a node navigates to its normal validated F7 inspector; the map
+does not invent or rewrite gameplay rules. The shared headless projection
+also exports safe deterministic Graphviz DOT:
+
+`RTSProjectTool --tech-graph projects/technology_forge_showcase.rtsproject.json`
+
+See [Technology Map](docs/TECH_TREE_MAP.md). Native CI screenshots and
+a Windows/Linux test+packaging parity gate exercise the same source.

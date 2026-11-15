@@ -923,7 +923,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_ACTOR_EVENT_CUES=1\n"
                  <<"RTS_FEATURE_REQUIREMENT_GRAPHS=1\n"
                  <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n"
-                 <<"RTS_FEATURE_TECH_SHOW_USE=1\n";
+                 <<"RTS_FEATURE_TECH_SHOW_USE=1\n"
+                 <<"RTS_FEATURE_TECH_DEPENDENCY_MAP=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -945,6 +946,7 @@ int main(int argc, char** argv) {
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
     bool liveTriggerMonitorSmoke=false;
+    bool techGraphSmoke=false;
     std::string smokeTriggerId;
     std::string smokeCatalogId;
     std::string smokeResearchUpgrade;
@@ -972,6 +974,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
         else if(arg == "--smoke-live-trigger-monitor")liveTriggerMonitorSmoke=true;
+        else if(arg == "--smoke-tech-graph")techGraphSmoke=true;
         else if(arg == "--smoke-select-trigger-id" && i+1<argc)
             smokeTriggerId=argv[++i];
         else if(arg == "--smoke-select-catalog-id" && i+1<argc)
@@ -1002,6 +1005,12 @@ int main(int argc, char** argv) {
         app.reloadFromProject();
         if((triggerMonitorSmoke || liveTriggerMonitorSmoke) && smokeFrames>0)
             app.triggerTraceVisible=true;
+        if(techGraphSmoke && smokeFrames>0){
+            CreatorTechGraph::visible=true;
+            CreatorTechGraph::focusSelection=false;
+            CreatorCatalogNavigator::visible=false;
+            startDataEditor=true;
+        }
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
         if(selectAbilityCasterSmoke && smokeFrames>0){

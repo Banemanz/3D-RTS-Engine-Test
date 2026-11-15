@@ -109,3 +109,22 @@ hide-if-unavailable modifier. Independent C++ implementations
 now support the conceptual distinction on Upgrades, trained
 Units and Abilities, including true raw command admission.
 Exact schema and limitations: docs/TECH_SHOW_USE.md.
+
+
+## Native technology dependency projection (November 15)
+
+The Technology Map draws on the *design patterns* of the public
+StarCraft II Data Editor (typed catalogs and Requirement graphs) and
+OpenRA's explicit production prerequisites, without importing code,
+assets, proprietary text or widget implementations. The authored
+Show/Use and Any/Not expression semantics are kept intact by treating
+graph arrows as references rather than universal boolean conclusions.
+The independent C++ implementation and native F7 screenshot are
+documented in `docs/TECH_TREE_MAP.md`.
+
+- Galaxy catalog reference:
+  https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/058_Data_Editor_Introduction/
+- Galaxy Tech Tree scripting reference:
+  https://mapster.talv.space/galaxy/reference
+- OpenRA Buildable/Prerequisite trait docs:
+  https://docs.openra.net/en/playtest/traits/

@@ -489,3 +489,17 @@ navigation, safe rename/deletion, placed Unit Show override
 migration and persistence. Native CI captures initial F9 cards,
 the real level-1 post-research F9 state, and F7 Upgrade editing.
 These run alongside all existing Windows/Linux Release tests.
+
+
+## Technology graph projection and native screenshot
+
+`RTSTechGraphTests` validates the real Technology Forge map: researcher
+producer links, Upgrade stat targets, inherited typed references, Show vs
+Use thresholds, NOT/ANY branches, negated self-gates, stable column
+layout, deterministic serialization/DOT export, unknown custom field
+isolation and escaping malicious labels. `tech_graph_cli` checks the
+packaged headless Graphviz output path. Both optimized Release and Debug
+CTest preserve assertions. Linux's real OpenGL screenshot job runs
+`--data-editor --smoke-tech-graph --smoke-select-catalog-id frontier_tactics`,
+and Windows CI builds the same GUI with no platform-specific fork.
+The graph is read-only; replay fingerprints remain unchanged.

@@ -6,6 +6,7 @@
 #include "CreatorEffectGraphWidgets.hpp"
 #include "CreatorAreaShapePreview.hpp"
 #include "CreatorCatalogNavigator.hpp"
+#include "CreatorTechGraph.hpp"
 #include "RTSCatalogValuePreview.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
@@ -66,6 +67,8 @@ void toolbar(App& app) {
             ImGui::MenuItem("Playtest trigger monitor",nullptr,&app.triggerTraceVisible);
             ImGui::MenuItem("Data relationship navigator",nullptr,
                             &CreatorCatalogNavigator::visible);
+            ImGui::MenuItem("Technology dependency map",nullptr,
+                            &CreatorTechGraph::visible);
             ImGui::Separator();
             ImGui::TextDisabled("Creator GUI: docking enabled");
             ImGui::TextDisabled("Drag panel title bars to dock/float");
@@ -1342,5 +1345,6 @@ void draw(App& app){
     browser(app);
     inspector(app);
     CreatorCatalogNavigator::draw(app);
+    CreatorTechGraph::draw(app);
 }
 } // namespace CreatorWorkbench

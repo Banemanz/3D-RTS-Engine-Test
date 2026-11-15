@@ -1675,3 +1675,41 @@ No new dependencies, copied code, or proprietary content.
 Next: generalized Upgrade field operation tables, technology overview
 graph, scalable creator UI, asset/animation pipeline, terrain layers,
 and data-driven AI research.
+
+
+## November 15 evening continuation — Technology Map graph and CLI
+
+**Only** original open/unmerged Draft PR #1,
+`feat/rts-vertical-slice`. Prior verified head `c62dda4` had
+83/83 Windows/Linux Release tests plus replay parity, native F7 screens.
+
+New headless graph commit `372bbb2`: `RTSTechGraph.hpp` projects
+typed links from RTSCatalogNavigator and compiled nested Requirements:
+producing Units -> research Upgrades, Unit training, Unit Abilities,
+Upgrade modifier target Units, plus Show/Use references to
+UpgradeLevelAtLeast / OwnerUnitCountAtLeast predicate sources.
+Retains nested NOT/ANY provenance, records unvisualized non-tech
+predicates, sorts nodes/edges deterministically, caps 512 nodes and
+2048 links, supports self gates, and never mutates project or
+simulation/replay. Includes tests and `RTSProjectTool --tech-graph`
+Graphviz DOT export. Initial CI had one test failure: an ability-equipped
+Worker was incorrectly marked as a producer; this pass fixes that
+classification (only Train and Research create producer nodes).
+No code or assets copied from proprietary/GPL projects.
+
+GUI follow-up adds `CreatorTechGraph.hpp`, a dockable F7 Technology
+Map under View; click-to-inspect, Focus selected, colored typed edges,
+Show/Use/NOT/ANY labels, hover ref diagnostics, clipboard DOT copy.
+Includes `--smoke-tech-graph` real Linux OpenGL CI artifact, new
+`docs/TECH_TREE_MAP.md` manual installed in Windows/Linux releases,
+and enforced binary feature `RTS_FEATURE_TECH_DEPENDENCY_MAP=1`.
+The old ImGui adapter remains only a presentation surface; do not claim
+the native widget system has Galaxy parity. Gameplay code/simulation
+hashes are unchanged. See docs/TECH_TREE_MAP.md for boundaries.
+
+After push: verify the exact current HEAD Release 85/85 Windows/Linux
+CTests, packaged manuals/feature marker, Debug tests and parity, and
+the real F7 screenshot. Fix issues on the SAME PR without merging.
+Next: deeper true engine AI research orders, ability/trigger debugging,
+technology explanations, asset import/Actor animations, terrain layers,
+native editor widget tree/scene gizmos.

@@ -297,3 +297,16 @@ command-card layout derives both membership and enabled state
 from the authoritative simulation rather than duplicating rules
 inside the renderer. Empty-but-capable producers retain empty
 production slots, not nonproducer fallback commands.
+
+
+## Technology graph: editor projection over real engine data
+
+`RTSTechGraph.hpp` composes the existing typed Catalog Navigator edges,
+compiled Requirements/Validators and Upgrade definitions into a bounded
+headless technology reference graph. It never mutates projects or redefines
+simulation admission. `CreatorTechGraph.hpp` is the platform-shared
+ImGui adapter providing a dockable graphical map, clickable catalog nodes,
+focused one-hop navigation, hover diagnostics, NOT/ANY/Show/Use styling
+and clipboard DOT export. `RTSProjectTool --tech-graph` uses the same model.
+See `docs/TECH_TREE_MAP.md`. Full independent/native creator widget parity
+is still incomplete; no additional UI library was introduced.

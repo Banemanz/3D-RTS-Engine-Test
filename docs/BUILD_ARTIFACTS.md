@@ -235,3 +235,15 @@ Technology Forge still validates through native packaged
 RTSProjectTool. Cross-platform Debug CI compares
 tech_visibility_fingerprint.txt and uploads actual before/
 after research HUD screenshot artifacts.
+
+
+## Technology Map packaging and native screenshot gate
+
+The cross-platform bundles now include `docs/TECH_TREE_MAP.md` and
+`RTSProjectTool --tech-graph`, and self-report
+`RTS_FEATURE_TECH_DEPENDENCY_MAP=1`. The verifier enforces the manual and
+feature in both native executables. Debug Linux Mesa/Xvfb captures F7 using
+`--data-editor --smoke-tech-graph --project
+projects/technology_forge_showcase.rtsproject.json` and uploads the actual
+`rts-technology-map-f7-screenshot` artifact. A real headless graph test
+and CLI DOT CTest run under optimized Windows/Linux builds as well.

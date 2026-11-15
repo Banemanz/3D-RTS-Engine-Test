@@ -252,6 +252,16 @@ jobs:
           name: rts-tech-show-use-f9-screenshot
           path: rts-research-unlocked-f9.png
           if-no-files-found: error
+      - name: Capture native Technology Map dependency graph
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-tech-graph --project projects/technology_forge_showcase.rtsproject.json --smoke-select-catalog-id frontier_tactics --smoke-frames 85 --screenshot rts-technology-map.ppm
+      - name: Convert Technology Map capture
+        run: python3 tools/ppm_to_png.py rts-technology-map.ppm rts-technology-map.png
+      - name: Upload actual F7 Technology Map
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-technology-map-f7-screenshot
+          path: rts-technology-map.png
+          if-no-files-found: error
       - name: Capture real F7 Requirement graph inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id r_arc_gate --smoke-frames 85 --screenshot rts-requirement-f7.ppm
       - name: Convert F7 Requirement screenshot

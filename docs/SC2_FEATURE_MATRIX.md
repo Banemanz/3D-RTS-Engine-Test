@@ -407,3 +407,15 @@ F7 typed per-level editing, authoritative refund/refresh/replay and an
 original playable Technology Forge authoring example. Generalized
 field-operation tables, research AI, and tech-tree graph visualization
 remain future work.
+
+
+## Technology reference visualization (November 15)
+
+Implemented a separate, usable F7 dockable technology graph with four
+semantic columns, click-through navigation, source-aware Show/Use gates,
+NOT/ANY provenance, producer/upgrade/unit/ability links, inheritance,
+stat-target links, bounded layout, deterministic DOT CLI export, and
+real OpenGL screenshot tests on the original engine. This is an original
+dependency *reference* visualization rather than a Boolean-expression
+solver, graph-wiring editor, generalized Upgrade operation system, or
+Galaxy Editor feature parity.

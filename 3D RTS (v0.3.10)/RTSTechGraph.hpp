@@ -91,7 +91,9 @@ inline RTSTechGraph rtsBuildTechGraph(const RTSProject& project){
         else if(edge.field=="abilities")kind=RTSTechLinkKind::Equip;
         else continue;
         addLink({edge.from,edge.to,"",kind});
-        if(nodes.count(edge.from))nodes[edge.from].producer=true;
+        // A Unit equipping an Ability does not make it a producer.
+        if(kind!=RTSTechLinkKind::Equip && nodes.count(edge.from))
+            nodes[edge.from].producer=true;
     }
     // A fixed target Unit in an Upgrade definition is a modifier target,
     // not a technology gate. Display it separately from Show/Use.

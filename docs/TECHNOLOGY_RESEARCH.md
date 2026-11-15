@@ -220,3 +220,15 @@ inheritance, malformed arrays, both research levels, cancellation, state
 fingerprints, replay verification, and Windows/Linux builds. This is
 bounded additive stat authoring, not Galaxy's general field-operation
 scripting or multiplayer research synchronization.
+
+
+## Technology dependency visualizer
+
+Open the F7 Data Editor's **View → Technology dependency map** to inspect
+real typed producer/research relationships and Show/Use Requirement references,
+including NOT/ANY branches and research levels. Select nodes to jump to
+the standard editor inspector. The map does not simplify arbitrary Boolean
+Requirements into guaranteed prerequisites; non-tech predicates remain in
+the Requirement editor and are counted separately. The same engine-neutral
+graph projects to Graphviz DOT via `RTSProjectTool --tech-graph path`.
+See [Technology Map](TECH_TREE_MAP.md).
