@@ -1211,14 +1211,21 @@ bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
     const Vec3 previous=projectilePositionAt(area,tick_-1);
     const Vec3 current=projectilePositionAt(area,tick_);
     const Vec3 path=current-previous;
-    const double lengthSq=double(path.x)*path.x+
-                          double(path.y)*path.y+
-                          double(path.z)*path.z;
+    // Only this phase may use spatial buckets: the fixed tick rebuilt
+    // them before Unit updates and incrementally moved each live Unit.
+    // Ground casts can run earlier in applyCommand, so their admission
+    // deliberately keeps the full-list fallback.
+    const float lengthXZ=path.lengthXZ();
+    const Vec3 midpoint=previous+path*.5f;
+    const float searchRadius=lengthXZ*.5f+
+        spatial_.maxEntityRadius()+area.collisionRadius;
+    const auto candidates=spatial_.nearby(midpoint,searchRadius);
     double best=2.;
     int bestId=0;
     // Collision uses a swept XZ disc and Y interval of the Unit's actual
     // cylindrical volume. No tunneling across fast-projectile tick segments.
-    for(const auto& unit:units){
+    for(const auto index:candidates){
+        const Unit& unit=units[index];
         if(!unit.isAlive())continue;
         if(area.team==AbilityAreaTeam::Enemy && unit.ownerId==area.owner)continue;
         if(area.team==AbilityAreaTeam::Ally && unit.ownerId!=area.owner)continue;
@@ -1243,7 +1250,6 @@ bool RTSSkirmish::detectProjectileCollision(PendingAreaImpact& area){
             best=t;bestId=unit.id;
         }
     }
-    (void)lengthSq;
     if(bestId<=0)return false;
     const Unit* hit=find(bestId);
     if(!hit)return false;

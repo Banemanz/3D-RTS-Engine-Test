@@ -19,12 +19,14 @@ public:
     Unit* byId(std::vector<Unit>& units,int id) const;
     const Unit* byId(const std::vector<Unit>& units,int id) const;
     float maxStructureRadius()const { return largestStructure_; }
+    float maxEntityRadius()const { return largestEntityRadius_; }
     std::size_t activeCount()const { return living_; }
 private:
     static std::uint64_t key(int x,int z);
     std::pair<int,int> coords(const Vec3& pos) const;
     float cellSize_=8.f;
     float largestStructure_=0.f;
+    float largestEntityRadius_=0.f;
     std::size_t living_=0;
     std::unordered_map<std::uint64_t,std::vector<std::size_t>> buckets_;
     std::unordered_map<int,std::size_t> ids_;

@@ -18,12 +18,13 @@ void UnitSpatialIndex::rebuild(const std::vector<Unit>& units) {
     buckets_.clear();ids_.clear();
     buckets_.reserve(units.size()/3+8);
     ids_.reserve(units.size());
-    largestStructure_=0.f;living_=0;
+    largestStructure_=0.f;largestEntityRadius_=0.f;living_=0;
     for(std::size_t i=0;i<units.size();++i) {
         const auto& u=units[i];
         ids_[u.id]=i;
         if(!u.isAlive())continue;
         ++living_;
+        largestEntityRadius_=std::max(largestEntityRadius_,u.radius);
         if(u.isStructure)largestStructure_=std::max(largestStructure_,u.radius);
         const auto cell=coords(u.position);
         buckets_[key(cell.first,cell.second)].push_back(i);
