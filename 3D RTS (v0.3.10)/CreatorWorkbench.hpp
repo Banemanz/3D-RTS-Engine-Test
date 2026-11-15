@@ -5,6 +5,7 @@
 #include "CreatorReferenceWidgets.hpp"
 #include "CreatorEffectGraphWidgets.hpp"
 #include "CreatorAreaShapePreview.hpp"
+#include "CreatorCatalogNavigator.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
@@ -62,6 +63,8 @@ void toolbar(App& app) {
                 app.saveReplay();
             ImGui::Separator();
             ImGui::MenuItem("Playtest trigger monitor",nullptr,&app.triggerTraceVisible);
+            ImGui::MenuItem("Data relationship navigator",nullptr,
+                            &CreatorCatalogNavigator::visible);
             ImGui::Separator();
             ImGui::TextDisabled("Creator GUI: docking enabled");
             ImGui::TextDisabled("Drag panel title bars to dock/float");
@@ -923,5 +926,6 @@ void draw(App& app){
                                  ImGuiDockNodeFlags_PassthruCentralNode);
     browser(app);
     inspector(app);
+    CreatorCatalogNavigator::draw(app);
 }
 } // namespace CreatorWorkbench
