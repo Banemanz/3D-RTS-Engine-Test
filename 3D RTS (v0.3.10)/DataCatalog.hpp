@@ -70,6 +70,19 @@ BehaviorDefinition compileBehavior(const DataCatalog& catalog,
 std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
                                             const std::string& id);
 
+// Reusable gameplay projectile data; no asset- or OS-specific code here.
+struct ProjectileDefinition {
+    std::string id;
+    float speed=12.f;             // world units/sec, tick quantized
+    float arcHeight=1.f;          // vertical parabola at midpoint
+    float visualScale=.3f;
+    float collisionRadius=.35f;
+    bool collideUnits=false;     // swept 3D contact triggers early impact
+    Vec3 tint{1.f,.6f,.2f};     // procedural actor tint; authored, not sprites
+};
+ProjectileDefinition compileProjectile(const DataCatalog& catalog,
+                                       const std::string& id);
+
 // Abilities bind an authored Effect graph to a Unit command. Only the
 // data objects are stored in the map; cooldown clocks live in simulation.
 enum class AbilityTarget { Self, Ally, Enemy, Any, Ground };
@@ -87,6 +100,7 @@ struct AbilityDefinition {
     float areaRadius=0.f; // Ground only: 0.5..24 world units
     AbilityAreaTeam areaTeam=AbilityAreaTeam::Enemy;
     std::uint32_t impactDelayTicks=0; // Ground only: 0..300 ticks at 60Hz
+    std::string projectileId; // optional typed Projectile reference for Ground
 };
 AbilityDefinition compileAbility(const DataCatalog& catalog,
                                  const std::string& id);

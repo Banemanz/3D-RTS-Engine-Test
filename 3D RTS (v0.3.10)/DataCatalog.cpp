@@ -89,6 +89,12 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Projectile" && entry.type=="Ability"){
+            auto field=entry.fields.find("projectile");
+            if(field!=entry.fields.end() && field->second.is<std::string>() &&
+               field->second.get<std::string>()==oldId)
+                field->second=picojson::value(newId);
+        }
         if(type=="Behavior" && entry.type=="Effect"){
             auto field=entry.fields.find("behavior");
             if(field!=entry.fields.end() && field->second.is<std::string>() &&
@@ -289,6 +295,37 @@ std::vector<EffectOperation> compileEffect(const DataCatalog& catalog,
     collectEffect(catalog,id,stack,output,visits);
     return output;
 }
+ProjectileDefinition compileProjectile(const DataCatalog& catalog,
+                                       const std::string& id){
+    const auto* entry=catalog.find(id);
+    if(!entry || entry->type!="Projectile")
+        throw std::invalid_argument("Missing Projectile catalog reference: "+id);
+    const auto fields=catalog.resolvedFields(id);
+    auto value=[&](const char* field,double fallback,double lo,double hi){
+        const double x=numeric(fields,field,fallback);
+        if(x<lo || x>hi)
+            throw std::invalid_argument("Invalid Projectile "+std::string(field)+": "+id);
+        return static_cast<float>(x);
+    };
+    ProjectileDefinition p;
+    p.id=id;
+    p.speed=value("speed",12.,.5,100.);
+    p.arcHeight=value("arc_height",1.,0.,24.);
+    p.visualScale=value("visual_scale",.3,.05,3.);
+    p.collisionRadius=value("collision_radius",.35,.05,4.);
+    const auto collision=fields.find("collide_units");
+    if(collision!=fields.end()){
+        if(!collision->second.is<bool>())
+            throw std::invalid_argument("Projectile collide_units must be bool: "+id);
+        p.collideUnits=collision->second.get<bool>();
+    }
+    p.tint=vec3Field(fields,"tint",{1.f,.6f,.2f});
+    if(p.tint.x<0.f || p.tint.x>1.f ||
+       p.tint.y<0.f || p.tint.y>1.f ||
+       p.tint.z<0.f || p.tint.z>1.f)
+        throw std::invalid_argument("Projectile tint must be RGB [0,1]: "+id);
+    return p;
+}
 AbilityDefinition compileAbility(const DataCatalog& catalog,
                                  const std::string& id){
     const auto* entry=catalog.find(id);
@@ -325,6 +362,9 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
     ability.castRange=static_cast<float>(range);
     ability.mineralCost=static_cast<int>(minerals);
     ability.energyCost=static_cast<int>(energy);
+    if(ability.target!=AbilityTarget::Ground &&
+       !stringField(fields,"projectile","").empty())
+        throw std::invalid_argument("Projectile reference requires Ground Ability: "+id);
     if(ability.target==AbilityTarget::Ground){
         const double radius=numeric(fields,"area_radius",3.);
         const double delay=numeric(fields,"impact_delay_ticks",0.);
@@ -333,6 +373,9 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
            std::floor(delay)!=delay || delay<0 || delay>300)
             throw std::invalid_argument("Invalid Ground area radius/impact delay: "+id);
         ability.areaRadius=static_cast<float>(radius);
+        ability.projectileId=stringField(fields,"projectile","");
+        if(!ability.projectileId.empty())
+            (void)compileProjectile(catalog,ability.projectileId);
         ability.impactDelayTicks=static_cast<std::uint32_t>(delay);
         if(team=="Enemy")ability.areaTeam=AbilityAreaTeam::Enemy;
         else if(team=="Ally")ability.areaTeam=AbilityAreaTeam::Ally;
@@ -390,6 +433,7 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Projectile")(void)compileProjectile(*this,e.id);
         if(e.type=="Behavior")(void)compileBehavior(*this,e.id);
         if(e.type=="Effect")(void)compileEffect(*this,e.id);
         if(e.type=="Ability")(void)compileAbility(*this,e.id);
