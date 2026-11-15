@@ -38,6 +38,7 @@ jobs:
             build/actor_cues_fingerprint.txt
             build/requirement_fingerprint.txt
             build/upgrade_research_fingerprint.txt
+            build/tech_visibility_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -444,6 +445,7 @@ jobs:
             build/actor_cues_fingerprint.txt
             build/requirement_fingerprint.txt
             build/upgrade_research_fingerprint.txt
+            build/tech_visibility_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -478,3 +480,4 @@ jobs:
           diff -u fingerprints/linux/actor_cues_fingerprint.txt fingerprints/windows/actor_cues_fingerprint.txt
           diff -u fingerprints/linux/requirement_fingerprint.txt fingerprints/windows/requirement_fingerprint.txt
           diff -u fingerprints/linux/upgrade_research_fingerprint.txt fingerprints/windows/upgrade_research_fingerprint.txt
+          diff -u fingerprints/linux/tech_visibility_fingerprint.txt fingerprints/windows/tech_visibility_fingerprint.txt
