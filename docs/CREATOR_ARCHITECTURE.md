@@ -286,3 +286,14 @@ the Validator inspector adds UpgradeLevelAtLeast and a typed Upgrade
 picker. The F9 producer HUD shares its 3-slot/page training layout
 with Upgrade research commands; F6 reads a nonmutating progress watch.
 No duplicate Windows-only GUI implementation was introduced.
+
+## F7/F9 Show/Use integration
+
+Upgrade typed authoring supports two independent Requirement links,
+committed atomically through EditorSession. Unit and Ability
+inspectors have Show graph selectors plus existing Use selectors.
+The Data Navigator indexes the separate graph edges. The F9
+command-card layout derives both membership and enabled state
+from the authoritative simulation rather than duplicating rules
+inside the renderer. Empty-but-capable producers retain empty
+production slots, not nonproducer fallback commands.

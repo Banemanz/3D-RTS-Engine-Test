@@ -476,3 +476,13 @@ progress. Completion modifies existing and future Unit attack/armor,
 while canceling research refunds the deposit. The original Technology
 Forge Laboratory demonstrates tech chains. See
 docs/TECHNOLOGY_RESEARCH.md for complete authoring and limitations.
+
+## Show versus Use technology permissions
+
+F7 now authors independent Show and Use Requirement graphs on Upgrades,
+Unit training and Abilities. False Show hides the command; failed Use
+leaves it visible but disabled. F9 producer/ability pages pack only
+visible entries. Raw gameplay commands cannot bypass hidden conditions.
+The updated Technology Forge map demonstrates reveal at research level
+1, unlock at level 2, and removal of a completed tech at level 3.
+See docs/TECH_SHOW_USE.md.

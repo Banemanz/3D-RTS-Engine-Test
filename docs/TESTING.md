@@ -475,3 +475,17 @@ technology_forge_showcase is validated by CTest and installed project
 utilities on Windows/Linux. Total Release suite: 81 CTests per platform.
 Debug CI byte-compares upgrade_research_fingerprint.txt and captures
 native F7 Upgrade and F9 research-producer screenshots.
+
+## Show/Use test matrix (83 Release tests)
+
+tech_visibility_runtime checks hidden, locked and available
+Unit/Upgrade/Ability commands, real tech level advancement,
+rejected raw orders, cost protection, old implicit Unit training,
+all-options-hidden producer cards, scoped graph rejection,
+JSON replay roundtrip/tamper, and determinism fingerprints.
+tech_visibility_editor checks atomic Upgrade Show/Use changes,
+invalid rollback, Undo/Redo, typed reverse references, graph
+navigation, safe rename/deletion, placed Unit Show override
+migration and persistence. Native CI captures initial F9 cards,
+the real level-1 post-research F9 state, and F7 Upgrade editing.
+These run alongside all existing Windows/Linux Release tests.

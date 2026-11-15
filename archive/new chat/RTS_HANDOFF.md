@@ -1574,3 +1574,79 @@ name with a compact level suffix (e.g. FRONTI 1/3) or MAX prefix.
 upgrade_runtime checks all three button states (locked, enabled,
 max-level) headlessly across Windows/Linux; native F9 screenshot CI
 verifies the actual layout. Recheck final green head before reporting.
+
+## November 15 continuation — Show versus Use milestone
+
+Repository: Banemanz/3D-RTS-Engine-Test. Continue only on
+existing OPEN UNMERGED DRAFT PR #1, branch feat/rts-vertical-slice.
+Do not open another PR or merge. Previous verified head
+17cd5fbedcebb0b2b00db76f77be70a7b3a6a947 passed 81/81
+Windows/Linux CTests and Debug replay parity.
+
+New commits on same branch:
+- d126454f768bc1ee5524852d57b7cabff2b49bcb:
+  new optional Caster-only show_requirement fields on Upgrade,
+  Ability and Unit. Live RTSSkirmish filters selected producer
+  Unit training, owner research and caster ability choices.
+  Existing requirement remains Use. Backend TrainCatalog,
+  ResearchUpgrade and CastAbility admission rejects hidden
+  commands. Default old catalogs unchanged.
+- eccf222d24b2a66b43db4504af4b375fe9df2561:
+  F7 Upgrade Show/Use typed dropdowns, Unit/Ability Show
+  selectors, transactional edit, typed graph reference rename,
+  deletion and navigator edges, scene Unit override links.
+- fa8ee9007f54b901a72de555f86cc9c88415b48c:
+  new tech_visibility_runtime CTest: real hidden/locked/
+  enabled tech progression, direct raw commands, Ability
+  availability, resource safety, JSON replay/tamper.
+- 0d7188da5bf118d7db1bf6d234f9b299d780c07b:
+  Technology Forge sample reauthored to show reveal after
+  Frontier Tactics level 1, Use unlock after level 2, and
+  concealment at max level 3 via Not(r_max_tactics).
+  Added real fixed-tick ResearchUpgrade screenshot smoke,
+  native initial/after-level-1 F9 artifact.
+- 1d662468dc5e50a9288a89dfacb81ee3b525253f:
+  new tech_visibility_editor CTest; Undo/Redo, invalid graph
+  scope and broken refs, rename/delete and placement
+  override migration, plus strict Windows/Linux
+  tech_visibility_fingerprint.txt parity.
+- 25eadd536305453b9ec6ab9ae6d16fe29a65e14e:
+  fixed all-options-hidden producer command cards leaking
+  old Build/Ranger/Worker choices, including the legacy
+  implicit training fallback. Added actual HUD regressions.
+  VERIFIED at commit 25eadd: 83/83 CTests passed on
+  both Windows and Linux (run 43757985287);
+  Debug and parity matrices (43757985322 and
+  43757990670) all passed, including real GL screenshots.
+- 632c1c7efad83510e44482a46150c9f803fc1b72:
+  full original docs/TECH_SHOW_USE.md manual added to
+  Windows/Linux bundle install and verifier, new executable
+  feature flag RTS_FEATURE_TECH_SHOW_USE=1.
+- This documentation commit updates README and docs on
+  authoring, architecture, testing, replay, feature matrix
+  and handoff.
+
+Screenshots downloaded and visually inspected under
+/mnt/data/rts_show_use_preview on this session, but do NOT
+assume paths persist across new sessions. They include
+initial F9 only FRONTI 1/3, post-real-research F9 Worker
+disabled + FRONTI 2/3 enabled + Layered Plating disabled,
+and F7 typed Upgrade authoring. Cross-platform game has
+unchanged core OpenGL renderer.
+
+REFERENCE concepts, no copied code/media:
+https://www.bluetracker.gg/wow/topic/us-en/2674992430-sc-ii-editor-qa-archive/
+https://docs.openra.net/en/release/traits/
+https://mapster.talv.space/galaxy/reference
+
+Before claiming exact newest head green, check latest
+Windows/Linux Release 83/83 CTests, Debug state digest byte
+parity, native F7 and F9 screenshot CI, packaged manual and
+feature markers. If broken, FIX in SAME draft PR #1.
+
+Next candidates: better HUD locked/hidden descriptions,
+Upgrade field-operation table, technology overview and
+research AI; after that improve native editor viewport,
+terrain/sculpt/pathing, assets/Actors and richer Galaxy-like
+trigger variables/conditions. No proprietary names/media
+or third-party GPL source copied.

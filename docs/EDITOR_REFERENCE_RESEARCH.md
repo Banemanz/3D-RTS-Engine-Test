@@ -99,3 +99,13 @@ catalogs, shared research command cards, owner level progression,
 combat modifiers and UpgradeLevelAtLeast Requirement gates.
 Full schema, boundaries and cited reference URLs are in
 docs/TECHNOLOGY_RESEARCH.md. No SC2 or GPL code/assets copied.
+
+## Galaxy/OpenRA Show vs Use reference comparison
+
+Public archived StarCraft II Editor Q&A documents separate
+Requirement Show and Use sections to control visibility and
+availability. OpenRA's Buildable prerequisites document a
+hide-if-unavailable modifier. Independent C++ implementations
+now support the conceptual distinction on Upgrades, trained
+Units and Abilities, including true raw command admission.
+Exact schema and limitations: docs/TECH_SHOW_USE.md.

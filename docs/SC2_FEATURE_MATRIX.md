@@ -386,3 +386,15 @@ F9 commands, F6 progress and deterministic replay. Remaining gaps
 include per-field Upgrade operation lists, Show/Use tech distinctions,
 research multipliers, per-level varying cost tables, AI research,
 multi-owner authoring GUI, visual tech-tree map and advanced Actor media.
+
+## Requirement visibility versus admission
+
+Implemented: independent Show and Use graph references for trained
+Unit entries, Ability loadouts and research Upgrades. Caster-only
+Show decides palette membership; Use decides action eligibility.
+Supports nested graphs, inherited data, typed rename/delete,
+dynamic owner UpgradeLevelAtLeast checks, and rejected direct
+commands. Remaining gap from Galaxy: scripted per-player
+tech overrides, command card button replacement and custom
+failure tooltips, exhaustive tech-tree graphs and field-operation
+upgrade effects. No third-party/proprietary code reused.

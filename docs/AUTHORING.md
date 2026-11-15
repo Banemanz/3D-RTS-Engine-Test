@@ -703,3 +703,13 @@ wrapped inside Requirement graphs, provide real technology unlocks.
 F9: select a completed producer structure for paginated research cards.
 F6: inspect active research. All changes use validated Undo/Redo.
 Detailed schema: docs/TECHNOLOGY_RESEARCH.md.
+
+## Independent command Show and Use requirements
+
+In F7, the Upgrade inspector exposes Show tech when and Use tech when.
+Unit and Ability inspectors expose Show command when alongside their
+Required graph (Use). Caster-scoped Show graphs control whether
+commands appear; Use gates control whether shown commands are
+executable, including targeted Abilities. Hidden options do not
+occupy production pages and cannot be invoked by direct commands.
+See docs/TECH_SHOW_USE.md for complete schema and examples.

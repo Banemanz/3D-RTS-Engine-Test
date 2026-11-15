@@ -485,3 +485,14 @@ tech levels to existing and future Units. Temporary Behavior modifiers
 stay separate. Active jobs, completed levels and nonzero modifiers
 are authoritative replay state; older no-tech fingerprints remain.
 UpgradeLevelAtLeast integrates with previously authored Requirements.
+
+## Live tech Show/Use policies
+
+Upgrade, Unit training and Ability catalogs accept independent
+Caster-only show_requirement graphs and existing Use requirement
+graphs. The fixed-tick simulation filters native producer/ability
+choices and enforces visibility during actual admission. All-hidden
+producer card states show disabled EMPTY slots rather than generic
+fallback Build/Ranger/Worker options; implicit legacy training
+lists follow the same gate. Typed references, rename/deletion,
+Undo/Redo, project tests and replay parity are covered.

@@ -171,3 +171,13 @@ Relevant public documentation (research only, no imported source):
 - https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/058_Data_Editor_Introduction/
 - https://mapster.talv.space/galaxy/reference
 - https://docs.openra.net/en/release/traits/
+
+## Extension: separate technology Show and Use graphs
+
+Upgrade entries now have optional show_requirement (Caster-only
+visibility) in addition to requirement (existing Use/admission).
+Unit training and Ability catalogs support both fields too. A
+false Show graph removes a command from native F9 pages; a failed
+Use graph leaves it displayed but disabled. Backend commands
+enforce both. Technology Forge now demonstrates multi-level
+reveal, unlock and max-level concealment. See docs/TECH_SHOW_USE.md.

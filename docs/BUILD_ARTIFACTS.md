@@ -225,3 +225,13 @@ TECHNOLOGY_RESEARCH.md authoring manual. Packaged RTSProjectTool
 validates the sample and verify_build_bundle.py enforces the
 RTS_FEATURE_UPGRADE_RESEARCH=1 marker. Debug CI captures native
 F7/F9 research screenshots and strict Windows/Linux replay parity.
+
+## Technology Show/Use reference and feature in releases
+
+Both release archives now install docs/TECH_SHOW_USE.md. The
+bundle verifier requires it and the feature flag
+RTS_FEATURE_TECH_SHOW_USE=1 in RTSCameraTerrain --features.
+Technology Forge still validates through native packaged
+RTSProjectTool. Cross-platform Debug CI compares
+tech_visibility_fingerprint.txt and uploads actual before/
+after research HUD screenshot artifacts.

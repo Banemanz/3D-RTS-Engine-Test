@@ -197,3 +197,14 @@ busy-producer and Requirement checks. Canonical stateDigest includes
 nonempty research job states, completed owner technology levels
 and per-Unit tech modifiers. The new upgrade_research_fingerprint.txt
 must match byte-for-byte between Windows and Linux CI.
+
+## Show/Use authoritative replay protection
+
+ResearchUpgrade, TrainCatalog, legacy Worker/Ranger training and
+CastAbility orders enforce the same Show visibility gates as the
+native command HUD. Failed Show or Use conditions reject the
+command deterministically without consuming costs. Page indices
+and dynamic visibility are never stored in command tapes; only
+stable Unit and catalog IDs are. The new regression writes
+tech_visibility_fingerprint.txt for strict byte parity between
+Windows and Linux Debug CI.
