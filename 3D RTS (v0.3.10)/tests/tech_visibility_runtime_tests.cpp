@@ -200,6 +200,37 @@ int main(){
     changed.commands[1].catalog="advanced_tech";
     assert(!verifyRTSReplay(changed,&diagnostic));
 
+    // All commands hidden: still a real producer, but NO legacy
+    // Build/Train button should leak through the fallback command card.
+    {
+        auto concealed=p;
+        assert(concealed.catalog.setField("open_tech","show_requirement",
+                                          picojson::value("r_open")));
+        assert(concealed.catalog.setField("gate_tech","show_requirement",
+                                          picojson::value("r_open")));
+        concealed.validate();
+        RTSSkirmish hidden;hidden.loadProject(concealed);
+        selectOnly(hidden,hidden.playerBaseId());
+        assert(hidden.selectedProducerHasCatalog());
+        assert(hidden.trainingPageCount()==0);
+        assert(hidden.trainableUnits(hidden.playerBaseId()).empty());
+        assert(hidden.researchableUpgrades(hidden.playerBaseId()).empty());
+        const auto hiddenCards=hud.buttons(hidden);
+        for(int i=3;i<6;++i){
+            assert(hiddenCards[static_cast<std::size_t>(i)].title=="EMPTY");
+            assert(!hiddenCards[static_cast<std::size_t>(i)].enabled);
+        }
+        // Legacy implicit trainable_units fallback also respects Show.
+        auto legacy=concealed;
+        auto* baseEntry=legacy.catalog.find("command_center");
+        assert(baseEntry);
+        baseEntry->fields.erase("trainable_units");
+        legacy.validate();
+        RTSSkirmish old;old.loadProject(legacy);
+        selectOnly(old,old.playerBaseId());
+        assert(old.selectedProducerHasCatalog());
+        assert(old.trainableUnits(old.playerBaseId()).empty());
+    }
     // Target-scoped Show graphs can never describe a producer or command
     // visibility, and invalid authoring must be caught by project.validate.
     addValidator(p,"v_target","open_tech","Target");

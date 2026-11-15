@@ -1331,8 +1331,7 @@ int main(int argc, char** argv) {
             if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
             if (justPressed(GLFW_KEY_V, app.keyV)) app.command(HUDCommand::CancelQueue);
             if (justPressed(GLFW_KEY_A, app.keyA)) app.command(HUDCommand::AttackMove);
-            const bool producerSelected=app.game.selectedProducerId()>=0 &&
-                                        app.game.trainingPageCount()>0;
+            const bool producerSelected=app.game.selectedProducerHasCatalog();
             if (justPressed(GLFW_KEY_B, app.keyB))
                 app.command(producerSelected?HUDCommand::TrainSlot0:HUDCommand::Build);
             if (justPressed(GLFW_KEY_T, app.keyT))

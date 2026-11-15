@@ -91,6 +91,9 @@ public:
     // Per-building, inherited Unit catalog trainable_units lists, 0..12 entries.
     std::vector<std::string> trainableUnits(int buildingId) const;
     int selectedProducerId() const;
+    // Raw authored producer capability, independent of current Show gates.
+    // Hides legacy fallback command buttons even if every entry is concealed.
+    bool selectedProducerHasCatalog()const;
     int trainingPage() const;
     int trainingPageCount() const;
     bool nextTrainingPage();

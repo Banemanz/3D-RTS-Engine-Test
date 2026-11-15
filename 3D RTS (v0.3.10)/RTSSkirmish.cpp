@@ -546,26 +546,30 @@ std::vector<std::string> RTSSkirmish::trainableUnits(int buildingId) const {
     if(!producer || !producer->isAlive() || !producer->isStructure ||
        producer->ownerId!=0)return {};
     const auto fields=project_.catalog.resolvedFields(producer->catalogId);
-    auto f=fields.find("trainable_units");
+    const auto f=fields.find("trainable_units");
+    std::vector<std::string> authored;
     if(f!=fields.end()) {
-        std::vector<std::string> ids;
-        if(!f->second.is<picojson::array>())return ids; // project validator reports this
-        for(const auto& candidate:f->second.get<picojson::array>()){
-            if(!candidate.is<std::string>())continue;
-            const auto& id=candidate.get<std::string>();
-            const auto fields=project_.catalog.resolvedFields(id);
-            const auto it=fields.find("show_requirement");
-            if(it!=fields.end() && it->second.is<std::string>() &&
-               !meetsRequirement(it->second.get<std::string>(),producer,nullptr))
-                continue;
-            ids.push_back(id);
-        }
-        return ids;
+        if(!f->second.is<picojson::array>())return {}; // catalog validation
+        for(const auto& candidate:f->second.get<picojson::array>())
+            if(candidate.is<std::string>())
+                authored.push_back(candidate.get<std::string>());
+    }else{
+        // Older projects had implicit base/barracks choices. They must
+        // participate in the SAME Show filtering as authored arrays.
+        if(producer->catalogId==playerBaseCatalog_)authored.push_back(workerId_);
+        else if(producer->catalogId==barracksId_)authored.push_back(rangerId_);
     }
-    // Backward compatibility for projects saved before trainable_units existed.
-    if(producer->catalogId==playerBaseCatalog_)return {workerId_};
-    if(producer->catalogId==barracksId_)return {rangerId_};
-    return {};
+    std::vector<std::string> visible;
+    visible.reserve(authored.size());
+    for(const auto& id:authored){
+        const auto item=project_.catalog.resolvedFields(id);
+        const auto it=item.find("show_requirement");
+        if(it!=item.end() && it->second.is<std::string>() &&
+           !meetsRequirement(it->second.get<std::string>(),producer,nullptr))
+            continue;
+        visible.push_back(id);
+    }
+    return visible;
 }
 std::vector<std::string> RTSSkirmish::researchableUpgrades(
     int producerId)const{
@@ -620,6 +624,21 @@ int RTSSkirmish::selectedProducerId() const {
         selected=unit.id;
     }
     return selected;
+}
+bool RTSSkirmish::selectedProducerHasCatalog()const{
+    const int id=selectedProducerId();
+    if(id<0)return false;
+    const Unit* building=find(id);
+    if(!building || building->catalogId.empty())return false;
+    const auto fields=project_.catalog.resolvedFields(building->catalogId);
+    const auto trains=fields.find("trainable_units");
+    const bool trainOptions=trains==fields.end()?
+        (building->catalogId==playerBaseCatalog_ ||
+         building->catalogId==barracksId_):
+        (trains->second.is<picojson::array>() &&
+         !trains->second.get<picojson::array>().empty());
+    return trainOptions ||
+           !unitResearchIds(project_.catalog,building->catalogId).empty();
 }
 int RTSSkirmish::trainingPageCount() const {
     const int producer=selectedProducerId();

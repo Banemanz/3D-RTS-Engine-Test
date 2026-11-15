@@ -96,7 +96,7 @@ public:
         }
         const bool live=game.result==MatchResult::Playing;
         const bool supply=game.supplyUsed<game.supplyCap;
-        const bool producer=game.selectedProducerId()>=0 && game.trainingPageCount()>0;
+        const bool producer=game.selectedProducerHasCatalog();
         const bool paged=producer && game.trainingPageCount()>1;
         const bool abilityPaged=!producer && selected==1 && game.abilityPageCount()>1;
         const std::array<HUDCommand,12> types={
