@@ -137,3 +137,16 @@ CTest suite and byte-compared between Windows/MSVC and Linux/GCC.
 Tests verify launch, midflight trajectory, delayed arrival,
 contact interception, moving victims, replay JSON roundtrip
 and coordinate-tamper rejection.
+
+## Replayable cone and line ground impacts
+
+Ground CastAbility commands remain identical in replay format:
+they capture a world point, explicit caster ID and Ability ID.
+Shape parameters resolve from the versioned project snapshot.
+For future pending Cone and Line impacts the simulation state
+digest now includes shape type, cast-time caster origin, cone
+angle and line width. Legacy Circle hashes remain unchanged.
+The target set is chosen at impact, with stable numeric Unit-ID
+sorting; the target orientation does not recompute from any
+Unit movement after casting. The dedicated area_shapes_fingerprint
+fixture is compared between the Windows and Linux CTest runners.

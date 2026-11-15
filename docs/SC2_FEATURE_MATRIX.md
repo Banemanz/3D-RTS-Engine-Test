@@ -315,3 +315,16 @@ terrain-object collision, splash shapes, imported meshes,
 actor animations, graphics/sound events, tech and upgrades,
 general scripting functions and a true node-link data graph.
 These are generic engine capabilities, not copied game units.
+
+## Original area search shapes — November 15
+
+New: Circle, Cone and Line Ground Ability searches; typed
+cone opening and line strip width; editor inheritance,
+validation and grouped undo; fixed-tick impact-time target
+filter; native OpenGL outline and F6 live monitor; original
+playable sample and cross-platform replay/parity tests.
+These are generic independently written RTS abilities rather
+than Blizzard scripting or content. Advanced filters, terrain
+occlusion, collision-volume overlaps, explicit shape orientation
+policies, falloff, actor VFX events, arbitrary node graphs and
+a fully in-house dockable data editor are still outstanding.

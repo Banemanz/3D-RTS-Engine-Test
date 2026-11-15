@@ -1235,3 +1235,49 @@ these newest changes fully green.
 - Retains existing stable first-contact / Unit-ID tie-break,
   60Hz steps, spatial broadphase and no renderer authority.
   Verify most recent CI runs after this refinement.
+
+## November 15 2026 continuation — Authored Cone and Line Ground Abilities
+
+Keep development on Banemanz/3D-RTS-Engine-Test draft PR #1,
+branch feat/rts-vertical-slice. Do not merge or create another PR.
+Previous handoff at HEAD 76b6e3a had projectile/first-contact
+collision. New changes on the **same PR**:
+- 7a383a172e4233c0e0dd6a6b123426d08f5c5eee
+  adds RTSAreaShape.hpp with pure Circle/Cone/Line geometry;
+  data schema fields area_shape (default Circle), area_angle
+  10..170 degrees, area_width .25..12; RTSSkirmish pending
+  shape/origin and fixed-tick impact filtering; F7 typed
+  edit/undo, F9 native outline, F6 monitoring.
+- ebf3097eaf1bd2e6c6f5e770de00e6fff417bb50
+  adds three full CTests (geometry, runtime/replay,
+  editor transactions), original Area Shape Laboratory
+  project, feature flags and packaged sample checks,
+  Linux/Windows byte-diff replay fingerprint, real
+  F7/F9 Mesa OpenGL screenshot jobs.
+- This follow-up fixes the geometry test's false expectation
+  of exactly-on-45-degree tangent inclusion. Both MSVC and
+  GCC can round tan(pi/4) just below one, so the test now
+  checks a point strictly inside and strictly outside.
+  The simulation runtime itself was correct: the prior
+  Linux CI had 64/65 tests passing, with 1 failed
+  geometry boundary assertion; Windows prior Release
+  failed the same assertion. The full runtime and F7
+  editor integration CTests passed on Linux.
+- Because the initial CI runs failed, VERIFY follow-up
+  push CI (Release Windows+Linux and Debug/replay parity,
+  and screenshot outputs) before claiming clean status.
+  CI runs accessible at GitHub Actions on PR #1.
+- Areas are centered on clicked point and face away
+  from cast-time caster position; target centers are
+  sampled on impact. Noncircle pending area state hashed
+  for replay. Existing Circle behavior remains unchanged.
+  Event actor pipeline, movement collision overlap,
+  directional policy, real VFX, a fully native creator UI
+  and advanced Galaxy-style catalog/graph/trigger breadth
+  are not yet implemented. Continue original IP and one
+  shared C++ implementation with build parity.
+
+Next: check all CI results first; fix any errors,
+inspect real F7/F9 screenshots, then grow actor events,
+weapons, tech/upgrades, asset import and native editor UI.
+Keep handoff and feature matrix updated.

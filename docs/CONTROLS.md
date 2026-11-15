@@ -212,3 +212,17 @@ ring persists. Collision-enabled bolts can detonate when
 touching an eligible Unit before their destination. A teal
 ring indicates valid ground aim, red indicates invalid aim;
 RMB cancels. TAB cycles through additional Ability pages.
+
+## Area Shape Laboratory — F7 and F9
+
+Open projects/area_shapes_showcase.rtsproject.json.
+In F7, select fan_surge or rail_line to edit Search shape,
+Cone angle or Line width, Area radius, team and impact delay.
+Press Apply ground settings to commit one undoable edit.
+In F9, select a Ranger. F aims the Fan Surge cone, J aims
+the Rail Line rectangle; K aims the inherited Repair Circle.
+The colored reticle previews the active area search and
+any delayed pending impacts stay visible as outlines.
+Aim direction is from the caster toward the clicked point,
+with the wedge or strip extending farther from that point.
+RMB cancels a targeting action. F6 impact watch labels shapes.

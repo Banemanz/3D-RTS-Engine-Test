@@ -208,3 +208,18 @@ A 24-tick expanding hit ring reads the nonauthoritative impact
 flash watch. F6 inspector shows each pending area as
 PROJECTILE FLIGHT or IMPACT TIMER. All UI paths compile identically
 into Linux and Windows; no duplicated gameplay implementations.
+
+## Shared simulation/search-shape primitive (November 15)
+
+RTSAreaShape.hpp is a renderer-free pure geometry module shared
+by fixed-step Area Effect target filtering and F9 visualization.
+It introduces Circle, Cone and Line, with a deterministic +X
+fallback for coincident caster/ground points. Compiled
+AbilityDefinition fields are validated through DataCatalog,
+authored in F7 through EditorSession's transaction boundary,
+and serialized by the existing project format without a
+schema-version bump. The pending impact stores its own caster
+origin so the world does not refer to mutable GUI selection or
+later Unit facing. No new UI library or external RTS code was
+imported. The more elaborate editor remains on its temporary
+Dear ImGui adapter; in-house docking is still unfinished.

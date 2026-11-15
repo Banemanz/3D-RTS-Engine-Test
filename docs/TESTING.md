@@ -354,3 +354,26 @@ grazing tangent, zero horizontal motion, degenerate segments,
 and a large collider entered before a smaller nearer-center
 collider. Release builds keep assertions enabled, as with the
 other engine and editor suites.
+
+## Cross-platform area shape acceptance (November 15)
+
+The new headless area_shape_geometry test covers circle fallback,
+cone angular front/side rejection, line rectangle bounds,
+rotated facing, coincident orientation and rendered outlines.
+area_shape_runtime covers fixed 60 Hz casts, delayed impacts,
+team filtering, moving targets, serialized replay roundtrip,
+tampered replay rejection and invalid schema inputs.
+area_shape_editor exercises F7 grouped transactions, invalid
+rollback, derived-object inheritance and undo/redo.
+The geometry boundary fixture deliberately uses an epsilon
+inside/outside 45 degrees to avoid unstable tan(pi/4) rounding
+on MSVC versus GCC.
+
+Release keeps assertions enabled for all three tests.
+The area_shapes_fingerprint.txt recorded by the runtime test is
+byte-compared across Windows and Linux in mandatory replay-parity.
+CI also runs two actual Mesa OpenGL screenshots (F7 inspector and
+F9 cone telegraph) and validates area_shapes_showcase in headless
+and packaged executables. Both bundled binaries must report
+RTS_FEATURE_AREA_SHAPES=1. Check current CI run before claiming
+the new milestone fully green.

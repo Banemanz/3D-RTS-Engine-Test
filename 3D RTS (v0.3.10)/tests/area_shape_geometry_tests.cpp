@@ -16,7 +16,10 @@ int main(){
     assert(inside(S::Cone,3.,1.,5.,0.,4.,60.));
     assert(!inside(S::Cone,1.,2.,5.,0.,4.,60.));
     assert(!inside(S::Cone,-1.,0.,5.,0.,4.,60.));
-    assert(inside(S::Cone,2.,2.,5.,0.,4.,90.));
+    // Avoid relying on an exact floating-point boundary: tan(pi/4)
+    // can land just below 1 on both MSVC and GCC libm.
+    assert(inside(S::Cone,2.,1.9,5.,0.,4.,90.));
+    assert(!inside(S::Cone,2.,2.1,5.,0.,4.,90.));
     assert(inside(S::Cone,0.,3.,0.,10.,4.,60.));
     assert(!inside(S::Cone,3.,0.,0.,10.,4.,60.));
     assert(inside(S::Line,4.,1.,10.,0.,4.,90.,2.));

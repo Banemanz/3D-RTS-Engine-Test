@@ -403,3 +403,17 @@ midflight, moving/homing Unit-locked projectiles, networking,
 true missiles for the normal weapon system and general scene
 physics. The current renderer uses procedural geometry while
 the simulation owns all gameplay decisions.
+
+## Circle, cone, and line area geometry (November 15)
+
+Runtime Ground Abilities now compile a search shape instead
+of assuming every area is circular. Cone uses a bounded sector;
+Line uses a forward rectangular strip. The caster-to-impact
+direction is captured on command execution, while affected
+Unit centers resolve at impact. Stable ID sorting, 64-target
+atomic admission, team filters, Effect/Behavior rules and
+replay recording remain on the same existing engine path.
+Pending noncircular shape properties participate in the
+authoritative replay state digest. F7 typed inputs, F6 read-only
+monitor, F9 native preview and an original sample map are
+wired end to end on shared Windows/Linux code.

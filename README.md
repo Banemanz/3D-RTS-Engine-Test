@@ -375,3 +375,18 @@ Try projects/projectile_forge_showcase.rtsproject.json: Aether Arc
 (arcing delayed area blast), Pulse Bolt (direct-flight interception),
 and Repair Circle (legacy instant area Heal). Both Windows and Linux
 use the same C++17 project, native F7 editor and F9 renderer.
+
+## Data-authored cone and line area search (November 15)
+
+Ground Abilities now provide **Circle**, **Cone**, and **Line** targeting.
+F7 exposes the shape selector and angle/width controls as validated,
+undoable project properties. The F9 native OpenGL overlay previews
+the corresponding shape while aiming, and F6 identifies pending
+shaped attacks. Targets are resolved inside the existing 60 Hz
+simulation, using cast-time facing and target positions at impact.
+Older projects continue to use unchanged circular search semantics.
+
+The new original Area Shape Laboratory example is
+projects/area_shapes_showcase.rtsproject.json. F7 edit Fan Surge
+and Rail Line; F9 select the Ranger and cast each to compare their
+impact volumes. Windows and Linux compile the same runtime and editor.

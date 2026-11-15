@@ -594,3 +594,21 @@ impact_delay_ticks is an additional **postflight** hold. The
 Projectile Forge project demonstrates an arcing area blast,
 a swept-contact bolt, and a nonprojectile Repair Circle.
 Unit-targeted Ability casts remain direct for now.
+
+## F7 searchable Ground Ability shapes (November 15)
+
+Use the **Search shape** dropdown on any Ground Ability to select
+Circle, Cone or Line, and apply as one validated undoable edit.
+Cone uses area_angle (opening 10..170 degrees) and the radius
+as its maximum forward reach. Line uses area_width (0.25..12
+world units) to make a rectangular strip of length area_radius.
+Both use the ground impact point as their origin and face
+**away from the caster**, using caster position at cast time.
+Legacy Circle searches ignore these extra controls.
+
+The live game evaluates Unit center positions at impact, not when
+a delayed spell is queued; enemies can dodge by moving outside
+the authored shape. F7 supports inherited catalog overrides,
+F6 shows the pending shape, and F9 renders a read-only outline.
+The original area_shapes_showcase.rtsproject.json gives Fan Surge,
+Rail Line, and the older Repair Circle in one playable project.
