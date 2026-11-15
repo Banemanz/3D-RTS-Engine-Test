@@ -78,6 +78,7 @@ Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
     Unit& u=units.back();
     u.ownerId=owner;u.isStructure=structure;u.isWorker=worker;
     u.catalogId=catalogId;
+    refreshUnitUpgradeStats(u);
     if(!catalogId.empty()) {
         auto fields=project_.catalog.resolvedFields(catalogId);
         auto actor=fields.find("actor");
@@ -114,6 +115,7 @@ void RTSSkirmish::reset() {
     aiInputMode_=AIInputMode::Live;
     units.clear();minerals.clear();routes_.clear();queued_.clear();jobs_.clear();rallyPoints_.clear();
     releasedSupply_.clear();production_.clear();construction_.clear();
+    research_.clear();upgradeLevels_.clear();
     periodicEffects_.clear();
     behaviors_.clear();
     pendingAreas_.clear();
@@ -268,12 +270,23 @@ bool RTSSkirmish::setRallyPoint(const Vec3& destination) {
 int RTSSkirmish::pendingProduction(int buildingId)const {
     int count=0;
     for(const auto& p:production_)if(p.buildingId==buildingId)++count;
+    for(const auto& job:research_)if(job.buildingId==buildingId)++count;
     return count;
 }
 float RTSSkirmish::productionProgress(int buildingId) const {
     for(const auto& p:production_)if(p.buildingId==buildingId)
         return p.totalTime>0.f?std::clamp(1.f-p.remaining/p.totalTime,0.f,1.f):1.f;
+    for(const auto& job:research_)if(job.buildingId==buildingId){
+        const double duration=double(job.finishTick-job.startTick);
+        return duration>0.?float(std::clamp(
+            double(tick_-job.startTick)/duration,0.,1.)):1.f;
+    }
     return -1.f;
+}
+std::uint64_t RTSSkirmish::researchRemainingTicks(int buildingId)const{
+    for(const auto& job:research_)if(job.buildingId==buildingId)
+        return tick_>=job.finishTick?0:job.finishTick-tick_;
+    return 0;
 }
 bool RTSSkirmish::cancelSelectedProduction() {
     if(!applyingCommand_)replayValid_=false;
@@ -288,6 +301,12 @@ bool RTSSkirmish::cancelSelectedProduction() {
             production_.erase(it);
             return true;
         }
+        for(auto it=research_.begin();it!=research_.end();++it)
+            if(it->buildingId==u.id){
+                playerMinerals+=it->paidMinerals;
+                research_.erase(it);
+                return true;
+            }
     }
     return false;
 }
@@ -525,6 +544,31 @@ std::vector<std::string> RTSSkirmish::trainableUnits(int buildingId) const {
     if(producer->catalogId==barracksId_)return {rangerId_};
     return {};
 }
+std::vector<std::string> RTSSkirmish::researchableUpgrades(
+    int producerId)const{
+    const Unit* producer=find(producerId);
+    if(!producer || !producer->isAlive() || !producer->isStructure ||
+       producer->ownerId!=0 || producer->catalogId.empty())return {};
+    return unitResearchIds(project_.catalog,producer->catalogId);
+}
+int RTSSkirmish::upgradeLevel(int owner,const std::string& upgradeId)const{
+    const auto it=upgradeLevels_.find({owner,upgradeId});
+    return it==upgradeLevels_.end()?0:it->second;
+}
+void RTSSkirmish::refreshUnitUpgradeStats(Unit& unit)const{
+    // Fixed catalog iteration, exact typed Unit matching and bounded totals;
+    // do not mutate UnitData or temporary Behavior modifiers.
+    float damage=0.f,armor=0.f;
+    for(const auto& research:upgradeLevels_){
+        if(research.second<=0 || research.first.first!=unit.ownerId)continue;
+        const auto def=compileUpgrade(project_.catalog,research.first.second);
+        if(!def.unitId.empty() && def.unitId!=unit.catalogId)continue;
+        damage+=def.damagePerLevel*float(research.second);
+        armor+=def.armorPerLevel*float(research.second);
+    }
+    unit.upgradeDamageBonus=std::clamp(damage,0.f,1000.f);
+    unit.upgradeArmorBonus=std::clamp(armor,0.f,1000.f);
+}
 int RTSSkirmish::selectedProducerId() const {
     int selected=-1;
     for(const auto& unit:units)if(unit.isSelected && unit.isAlive() && unit.ownerId==0) {
@@ -536,7 +580,8 @@ int RTSSkirmish::selectedProducerId() const {
 int RTSSkirmish::trainingPageCount() const {
     const int producer=selectedProducerId();
     if(producer<0)return 0;
-    const auto count=trainableUnits(producer).size();
+    const auto count=trainableUnits(producer).size()+
+                     researchableUpgrades(producer).size();
     return count==0?0:int((count+2)/3);
 }
 int RTSSkirmish::trainingPage() const {
@@ -555,6 +600,22 @@ std::string RTSSkirmish::selectedTrainableId(int slot) const {
     auto choices=trainableUnits(producer);
     const std::size_t index=std::size_t(trainingPage()*3+slot);
     return index<choices.size()?choices[index]:"";
+}
+std::string RTSSkirmish::selectedResearchableId(int slot)const{
+    if(slot<0 || slot>=3)return {};
+    const int producer=selectedProducerId();
+    if(producer<0)return {};
+    const auto unitsList=trainableUnits(producer);
+    const auto researchList=researchableUpgrades(producer);
+    const std::size_t index=std::size_t(trainingPage()*3+slot);
+    if(index<unitsList.size())return {};
+    const std::size_t offset=index-unitsList.size();
+    return offset<researchList.size()?researchList[offset]:std::string{};
+}
+bool RTSSkirmish::canResearchSelectedSlot(int slot)const{
+    const int producer=selectedProducerId();
+    const auto id=selectedResearchableId(slot);
+    return producer>=0 && !id.empty() && canResearchAt(producer,id);
 }
 bool RTSSkirmish::meetsRequirement(const std::string& id,const Unit* caster,
                                    const Unit* target)const{
@@ -591,6 +652,9 @@ bool RTSSkirmish::evaluateRequirement(const RTSRequirementDefinition& node,
         case RTSValidatorKind::OwnerUnitCountAtLeast:
             return countUnitsForTrigger(subject->ownerId,rule.unitId)>=
                    static_cast<int>(rule.value);
+        case RTSValidatorKind::UpgradeLevelAtLeast:
+            return upgradeLevel(subject->ownerId,rule.upgradeId)>=
+                   static_cast<int>(rule.value);
     }
     return false;
 }
@@ -599,6 +663,7 @@ bool RTSSkirmish::canQueueAt(int id,const std::string& unitId) const {
     if(result!=MatchResult::Playing || !building || !building->isAlive() ||
        !building->isStructure || building->ownerId!=0 ||
        construction_.count(id)>0)return false;
+    if(researchRemainingTicks(id)>0)return false;
     auto choices=trainableUnits(id);
     if(std::find(choices.begin(),choices.end(),unitId)==choices.end())return false;
     const auto trainFields=project_.catalog.resolvedFields(unitId);
@@ -634,6 +699,60 @@ bool RTSSkirmish::queueSelectedTrainingSlot(int slot) {
     if(!applyingCommand_)replayValid_=false;
     if(!canQueueSelectedTrainingSlot(slot))return false;
     return queueAt(selectedProducerId(),selectedTrainableId(slot));
+}
+bool RTSSkirmish::canResearchAt(int producerId,
+                               const std::string& id)const{
+    const Unit* building=find(producerId);
+    if(result!=MatchResult::Playing || !building || !building->isAlive() ||
+       !building->isStructure || building->ownerId!=0 ||
+       construction_.count(producerId)>0 ||
+       research_.size()>=MaxResearchJobs)return false;
+    const auto available=researchableUpgrades(producerId);
+    if(std::find(available.begin(),available.end(),id)==available.end())
+        return false;
+    const auto upgrade=compileUpgrade(project_.catalog,id);
+    if(upgradeLevel(building->ownerId,id)>=upgrade.maxLevel ||
+       playerMinerals<upgrade.mineralCost ||
+       !meetsRequirement(upgrade.requirementId,building,nullptr))return false;
+    for(const auto& job:research_)
+        if(job.buildingId==producerId ||
+           (job.ownerId==building->ownerId && job.upgradeId==id))
+            return false;
+    // One shared productive timeline per structure (research vs training).
+    for(const auto& job:production_)
+        if(job.buildingId==producerId)return false;
+    return true;
+}
+bool RTSSkirmish::queueResearchAt(int producerId,const std::string& id){
+    if(!canResearchAt(producerId,id))return false;
+    const auto upgrade=compileUpgrade(project_.catalog,id);
+    const Unit* producer=find(producerId);
+    const int owner=producer->ownerId;
+    playerMinerals-=upgrade.mineralCost;
+    research_.push_back({producerId,owner,id,upgrade.mineralCost,
+        tick_,tick_+upgrade.researchTicks});
+    return true;
+}
+void RTSSkirmish::updateResearch(){
+    for(auto it=research_.begin();it!=research_.end();){
+        const Unit* producer=find(it->buildingId);
+        if(!producer || !producer->isAlive() ||
+           producer->ownerId!=it->ownerId){
+            // The completed technology belongs only to its owner; canceled
+            // or destroyed producers refund research as with unit training.
+            if(it->ownerId==0)playerMinerals+=it->paidMinerals;
+            it=research_.erase(it);
+            continue;
+        }
+        if(tick_<it->finishTick){++it;continue;}
+        const auto def=compileUpgrade(project_.catalog,it->upgradeId);
+        const auto key=std::make_pair(it->ownerId,it->upgradeId);
+        int& level=upgradeLevels_[key];
+        level=std::min(def.maxLevel,level+1);
+        for(auto& unit:units)
+            if(unit.ownerId==it->ownerId)refreshUnitUpgradeStats(unit);
+        it=research_.erase(it);
+    }
 }
 bool RTSSkirmish::queueRanger() {
     if(!applyingCommand_)replayValid_=false;
@@ -890,6 +1009,7 @@ void RTSSkirmish::update(float dt) {
     updateGathering(dt);
     if(occupancyDirty_) {rebuildNavigation();occupancyDirty_=false;}
     updateProduction(dt);
+    updateResearch();
     for(auto it=rallyPoints_.begin();it!=rallyPoints_.end();) {
         const Unit* building=find(it->first);
         if(!building || !building->isAlive())it=rallyPoints_.erase(it);
@@ -1594,6 +1714,11 @@ bool RTSSkirmish::applyCommand(const RTSCommand& command){
             result=buildBarracks(command.point);break;
         case RTSCommandKind::Rally:
             result=setRallyPoint(command.point);break;
+        case RTSCommandKind::ResearchUpgrade: {
+            const int producer=selectedProducerId();
+            result=producer>0 && queueResearchAt(producer,command.catalog);
+            break;
+        }
         case RTSCommandKind::TrainCatalog: {
             const int producer=selectedProducerId();
             result=producer>0 && queueAt(producer,command.catalog);
@@ -1678,6 +1803,11 @@ std::string RTSSkirmish::stateDigest()const{
         hash.signedNumber(u->id);hash.signedNumber(u->ownerId);
         hash.text(u->catalogId);hash.boolean(u->isStructure);
         hash.boolean(u->isWorker);hash.scalar(u->currentHp);
+        if(u->upgradeDamageBonus!=0.f || u->upgradeArmorBonus!=0.f){
+            hash.text("unit_upgrade_modifiers");
+            hash.scalar(u->upgradeDamageBonus);
+            hash.scalar(u->upgradeArmorBonus);
+        }
         if(u->data.max_energy>0.f)hash.scalar(u->currentEnergy);
         hash.point(u->position);hash.scalar(u->facingYawRad);
         hash.signedNumber(static_cast<int>(u->state));
@@ -1785,6 +1915,27 @@ std::string RTSSkirmish::stateDigest()const{
         hash.signedNumber(p.buildingId);hash.text(p.catalogId);
         hash.scalar(p.remaining);hash.signedNumber(p.reservedSupply);
         hash.signedNumber(p.paidMinerals);hash.scalar(p.totalTime);
+    }
+    if(!research_.empty()){
+        hash.text("pending_research");
+        hash.number(research_.size());
+        for(const auto& job:research_){
+            hash.signedNumber(job.buildingId);
+            hash.signedNumber(job.ownerId);
+            hash.text(job.upgradeId);
+            hash.signedNumber(job.paidMinerals);
+            hash.number(job.startTick);
+            hash.number(job.finishTick);
+        }
+    }
+    if(!upgradeLevels_.empty()){
+        hash.text("owner_upgrade_levels");
+        hash.number(upgradeLevels_.size());
+        for(const auto& pair:upgradeLevels_){
+            hash.signedNumber(pair.first.first);
+            hash.text(pair.first.second);
+            hash.signedNumber(pair.second);
+        }
     }
     std::vector<int> constructionIds;
     for(const auto& p:construction_)constructionIds.push_back(p.first);

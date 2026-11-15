@@ -7,6 +7,7 @@
 #include "TriggerEngine.hpp"
 #include "RTSCommandStream.hpp"
 #include "RTSRequirements.hpp"
+#include "RTSUpgrades.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -96,6 +97,13 @@ public:
     std::string selectedTrainableId(int slot) const;
     bool canQueueSelectedTrainingSlot(int slot) const;
     bool queueSelectedTrainingSlot(int slot);
+    // Research shares the existing paginated producer command cards, without
+    // rewriting TrainCatalog or the semantics of legacy training slots.
+    std::vector<std::string> researchableUpgrades(int producerId)const;
+    std::string selectedResearchableId(int slot)const;
+    bool canResearchSelectedSlot(int slot)const;
+    int upgradeLevel(int owner,const std::string& upgradeId)const;
+    std::uint64_t researchRemainingTicks(int buildingId)const;
     std::string statusLine() const;
     int activeWorkerCount() const;
     int completedBarracksCount() const;
@@ -330,6 +338,17 @@ private:
     std::map<int, WorkerJob> jobs_; // deterministic shared mineral contention
     std::unordered_map<int, float> construction_;
     std::vector<Production> production_;
+    struct ResearchJob {
+        int buildingId=-1;
+        int ownerId=0;
+        std::string upgradeId;
+        int paidMinerals=0;
+        std::uint64_t startTick=0,finishTick=0;
+    };
+    static constexpr std::size_t MaxResearchJobs=64;
+    std::vector<ResearchJob> research_;
+    // Stable owner/Upgrade key order is part of authoritative replay hashes.
+    std::map<std::pair<int,std::string>,int> upgradeLevels_;
     std::unordered_map<int,Vec3> rallyPoints_;
 
     Unit* find(int id);
@@ -340,6 +359,10 @@ private:
     void advanceRoutes();
     void updateGathering(float dt);
     void updateProduction(float dt);
+    void updateResearch();
+    bool canResearchAt(int producerId,const std::string& id)const;
+    bool queueResearchAt(int producerId,const std::string& id);
+    void refreshUnitUpgradeStats(Unit& unit)const;
     bool findProductionSpawn(const Unit& producer,const UnitData& type,Vec3& out) const;
     void updateEnemy(float dt);
     void planAIOrders();
