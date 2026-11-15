@@ -9,7 +9,7 @@
 // extension fields on catalog objects remain preserved by DataCatalog.
 enum class RTSValidatorKind {
     HealthBelowPercent, EnergyAtLeast, HasBehavior, IsStructure,
-    OwnerUnitCountAtLeast
+    OwnerUnitCountAtLeast, UpgradeLevelAtLeast
 };
 enum class RTSValidatorSubject { Caster, Target };
 struct RTSValidatorDefinition {
@@ -19,6 +19,7 @@ struct RTSValidatorDefinition {
     float value=50.f;
     std::string behaviorId;
     std::string unitId;
+    std::string upgradeId;
 };
 RTSValidatorDefinition compileValidator(const DataCatalog& catalog,
                                         const std::string& id);

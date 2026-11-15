@@ -10,10 +10,10 @@
 #include <utility>
 
 namespace {
-constexpr std::array<const char*,15> names{{
+constexpr std::array<const char*,16> names{{
     "Move","AttackMove","Patrol","Gather","Attack","Stop","Hold",
     "Build","Rally","TrainCatalog","TrainRanger","TrainWorker",
-    "CancelTraining","Context","CastAbility"
+    "CancelTraining","Context","CastAbility","ResearchUpgrade"
 }};
 std::uint64_t integer(const picojson::object& object,const char* key,
                       std::uint64_t minimum,std::uint64_t maximum) {
@@ -68,7 +68,8 @@ void validateRTSCommand(const RTSCommand& c){
        !std::isfinite(c.point.z) || std::fabs(c.point.x)>100000.f ||
        std::fabs(c.point.z)>100000.f)
         throw std::invalid_argument("Invalid command parameters");
-    if(c.kind==RTSCommandKind::CastAbility &&
+    if((c.kind==RTSCommandKind::CastAbility ||
+        c.kind==RTSCommandKind::ResearchUpgrade) &&
        (c.catalog.empty() || c.units.empty() || c.append))
         throw std::invalid_argument("Ability command requires a catalog ID, caster, and no queue append");
     // Internal AI has one explicitly authorized action. This prevents

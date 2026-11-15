@@ -144,7 +144,8 @@ void Unit::takeDamage(float rawDamage, const std::string& attackerName,
     // A Weapon's penetration affects only attack hits, not damage Effects.
     // Armor gained from Behaviors participates in the same mitigation.
     const float effectiveArmor=std::max(0.f,
-        data.armor+behaviorArmorBonus-std::max(0.f,armorPiercing));
+        data.armor+behaviorArmorBonus+upgradeArmorBonus-
+            std::max(0.f,armorPiercing));
     float mitigated = std::max(1.0f, rawDamage-effectiveArmor);
     currentHp = std::max(0.0f, currentHp - mitigated);
 
@@ -408,9 +409,9 @@ void Unit::updateCombatStateMachine(float deltaTime,std::vector<Unit>& allUnits,
                 attackFlashTimer = 0.14f;
                 lastAttackTargetPos = target->position + Vec3(0.0f, target->height * 0.55f, 0.0f);
                 if(pendingHits)pendingHits->push_back({id,target->id,
-                    std::max(0.f,data.damage+behaviorDamageBonus),instanceName,
+                    std::max(0.f,data.damage+behaviorDamageBonus+upgradeDamageBonus),instanceName,
                     data.armor_piercing,data.projectileId});
-                else target->takeDamage(std::max(0.f,data.damage+behaviorDamageBonus),
+                else target->takeDamage(std::max(0.f,data.damage+behaviorDamageBonus+upgradeDamageBonus),
                                             instanceName,data.armor_piercing);
             }
             break;

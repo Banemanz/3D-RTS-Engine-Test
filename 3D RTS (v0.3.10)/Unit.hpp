@@ -82,6 +82,8 @@ public:
     // stays immutable, so expiration restores baseline stats exactly.
     float behaviorArmorBonus = 0.f;
     float behaviorDamageBonus = 0.f;
+    float upgradeDamageBonus = 0.f;
+    float upgradeArmorBonus = 0.f;
     float behaviorSpeedFactor = 1.f;
     bool isSelected = false;
 

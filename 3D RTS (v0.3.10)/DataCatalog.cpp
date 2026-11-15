@@ -1,5 +1,6 @@
 #include "DataCatalog.hpp"
 #include "RTSRequirements.hpp"
+#include "RTSUpgrades.hpp"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -513,6 +514,7 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Upgrade")(void)compileUpgrade(*this,e.id);
         if(e.type=="Validator")(void)compileValidator(*this,e.id);
         if(e.type=="Requirement")(void)compileRequirement(*this,e.id);
         if(e.type=="Actor")(void)compileActorCues(*this,e.id);
@@ -523,6 +525,7 @@ void DataCatalog::validate()const {
         if(e.type=="Ability")(void)compileAbility(*this,e.id);
         if(e.type=="Unit"){
             (void)unitAbilityIds(*this,e.id);
+            (void)unitResearchIds(*this,e.id);
             // Check the optional typed reference even on unused Unit catalog
             // entries. Avoid recompiling every Unit's unrelated body/actor
             // data during each F7 edit or changing legacy validation policy.

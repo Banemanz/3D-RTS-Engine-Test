@@ -76,6 +76,7 @@ const char* rtsValidatorKindName(RTSValidatorKind kind){
         case RTSValidatorKind::HasBehavior:return "HasBehavior";
         case RTSValidatorKind::IsStructure:return "IsStructure";
         case RTSValidatorKind::OwnerUnitCountAtLeast:return "OwnerUnitCountAtLeast";
+        case RTSValidatorKind::UpgradeLevelAtLeast:return "UpgradeLevelAtLeast";
     }
     return "";
 }
@@ -101,7 +102,7 @@ RTSValidatorDefinition compileValidator(const DataCatalog& catalog,
     const std::string kind=str(fields,"kind","HealthBelowPercent");
     const std::string subject=str(fields,"subject","Caster");
     bool matched=false;
-    for(int i=0;i<5;++i){
+    for(int i=0;i<6;++i){
         const auto value=static_cast<RTSValidatorKind>(i);
         if(kind==rtsValidatorKindName(value)){out.kind=value;matched=true;break;}
     }
@@ -111,15 +112,19 @@ RTSValidatorDefinition compileValidator(const DataCatalog& catalog,
     else throw std::invalid_argument("Unsupported Validator subject: "+subject);
     if(out.kind==RTSValidatorKind::HealthBelowPercent ||
        out.kind==RTSValidatorKind::EnergyAtLeast ||
-       out.kind==RTSValidatorKind::OwnerUnitCountAtLeast){
+       out.kind==RTSValidatorKind::OwnerUnitCountAtLeast ||
+       out.kind==RTSValidatorKind::UpgradeLevelAtLeast){
         const double amount=numeric(fields,"value",
             out.kind==RTSValidatorKind::HealthBelowPercent?50.:
             out.kind==RTSValidatorKind::EnergyAtLeast?25.:1.);
-        const double minimum=out.kind==RTSValidatorKind::OwnerUnitCountAtLeast?1.:0.;
+        const double minimum=out.kind==RTSValidatorKind::OwnerUnitCountAtLeast ||
+                             out.kind==RTSValidatorKind::UpgradeLevelAtLeast?1.:0.;
         const double maximum=out.kind==RTSValidatorKind::HealthBelowPercent?100.:
-                             out.kind==RTSValidatorKind::EnergyAtLeast?10000.:4000.;
+                             out.kind==RTSValidatorKind::EnergyAtLeast?10000.:
+                             out.kind==RTSValidatorKind::UpgradeLevelAtLeast?5.:4000.;
         if(amount<minimum || amount>maximum ||
-           (out.kind==RTSValidatorKind::OwnerUnitCountAtLeast &&
+           ((out.kind==RTSValidatorKind::OwnerUnitCountAtLeast ||
+             out.kind==RTSValidatorKind::UpgradeLevelAtLeast) &&
             std::floor(amount)!=amount))
             throw std::invalid_argument("Invalid Validator value: "+id);
         out.value=static_cast<float>(amount);
@@ -130,6 +135,14 @@ RTSValidatorDefinition compileValidator(const DataCatalog& catalog,
            catalog.find(out.behaviorId)->type!="Behavior")
             throw std::invalid_argument("Validator needs a Behavior: "+id);
         (void)compileBehavior(catalog,out.behaviorId);
+    }
+    if(out.kind==RTSValidatorKind::UpgradeLevelAtLeast){
+        out.upgradeId=str(fields,"upgrade");
+        const auto* upgrade=catalog.find(out.upgradeId);
+        if(out.upgradeId.empty() || !upgrade || upgrade->type!="Upgrade")
+            throw std::invalid_argument("Validator needs an Upgrade: "+id);
+        // Do not compile the Upgrade here: its Requirement may link back
+        // through this Validator. Each Upgrade is validated separately.
     }
     if(out.kind==RTSValidatorKind::OwnerUnitCountAtLeast){
         out.unitId=str(fields,"unit");
