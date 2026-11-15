@@ -43,6 +43,9 @@ RTSProject fixture(){
     RTSProject p=RTSProject::defaults();
     p.metadata["enemy_ai_enabled"]=picojson::value(false);
     p.metadata["enemy_spawn_interval"]=picojson::value(999.);
+    // Baseline Ranger defaults to no energy; grant it a deterministic
+    // 100-point pool to exercise an actual caster EnergyAtLeast gate.
+    assert(p.catalog.setField("ranger","max_energy",picojson::value(100.)));
     assert(p.catalog.add(validator("target_hurt","HealthBelowPercent","Target",50.)));
     assert(p.catalog.add(validator("caster_energy","EnergyAtLeast","Caster",1.)));
     assert(p.catalog.add(validator("target_structure","IsStructure","Target",1.)));
