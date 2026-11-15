@@ -458,6 +458,11 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
         else throw std::invalid_argument("Invalid Ground area team filter: "+id);
         if(ability.castRange<.5f)
             throw std::invalid_argument("Ground Ability requires a nonzero cast_range: "+id);
+        if(!ability.requirementId.empty() &&
+           rtsRequirementUsesTarget(
+                compileRequirement(catalog,ability.requirementId)))
+            throw std::invalid_argument(
+                "Ground Ability Requirement cannot inspect Target: "+id);
     }
     return ability;
 }
@@ -524,7 +529,12 @@ void DataCatalog::validate()const {
             const auto weapon=stringField(fields,"weapon","");
             if(!weapon.empty())(void)compileWeapon(*this,weapon);
             const auto required=stringField(fields,"requirement","");
-            if(!required.empty())(void)compileRequirement(*this,required);
+            if(!required.empty()){
+                const auto compiled=compileRequirement(*this,required);
+                if(rtsRequirementUsesTarget(compiled))
+                    throw std::invalid_argument(
+                        "Unit training Requirement cannot inspect Target: "+e.id);
+            }
         }
         if(reference && fields.count(reference)) {
             std::string id=stringField(fields,reference,"");

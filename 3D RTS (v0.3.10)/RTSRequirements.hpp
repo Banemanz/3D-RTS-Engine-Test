@@ -32,6 +32,9 @@ struct RTSRequirementDefinition {
 };
 RTSRequirementDefinition compileRequirement(const DataCatalog& catalog,
                                             const std::string& id);
+// A Target-scoped predicate has no well-defined context for ground casts or
+// production, even if wrapped in Not/Any; reject such links at authoring time.
+bool rtsRequirementUsesTarget(const RTSRequirementDefinition& node);
 const char* rtsValidatorKindName(RTSValidatorKind kind);
 const char* rtsValidatorSubjectName(RTSValidatorSubject subject);
 const char* rtsRequirementKindName(RTSRequirementKind kind);

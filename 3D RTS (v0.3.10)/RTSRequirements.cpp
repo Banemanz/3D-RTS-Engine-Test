@@ -139,6 +139,13 @@ RTSValidatorDefinition compileValidator(const DataCatalog& catalog,
     }
     return out;
 }
+bool rtsRequirementUsesTarget(const RTSRequirementDefinition& node){
+    if(node.kind==RTSRequirementKind::Predicate)
+        return node.predicate.subject==RTSValidatorSubject::Target;
+    for(const auto& child:node.children)
+        if(rtsRequirementUsesTarget(child))return true;
+    return false;
+}
 RTSRequirementDefinition compileRequirement(const DataCatalog& catalog,
                                             const std::string& id){
     std::vector<std::string> stack;
