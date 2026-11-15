@@ -25,6 +25,17 @@ struct HUDButton {
     HUDRect bounds{};
     bool enabled=false;
 };
+// 5x7 BitmapHUD advances 6 * pixelSize per glyph. Keep every authored
+// research/ability label inside the single-column button frame rather than
+// relying on a hardcoded guess about name lengths at each resolution.
+inline float rtsCommandTitlePixelSize(const HUDButton& button,bool compact){
+    const float preferred=compact?1.45f:
+        button.command==HUDCommand::AttackMove?1.60f:1.70f;
+    if(button.title.empty())return preferred;
+    const float fitted=(button.bounds.w-12.f)/
+        (6.f*static_cast<float>(button.title.size()));
+    return std::clamp(fitted,.75f,preferred);
+}
 class RTSHUDLayout {
 public:
     explicit RTSHUDLayout(int w,int h):width(std::max(w,1)),height(std::max(h,1)){

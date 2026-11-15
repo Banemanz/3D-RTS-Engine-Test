@@ -201,8 +201,7 @@ public:
                  active?.63f:button.enabled?.59f:.19f,
                  active?.27f:button.enabled?.62f:.22f);
             const bool compact=b.h<33.f;
-            const float titleSize=compact?1.45f:
-                                  button.command==HUDCommand::AttackMove?1.60f:1.70f;
+            const float titleSize=rtsCommandTitlePixelSize(button,compact);
             text(b.x+7,b.y+(compact?6.f:7.f),titleSize,
                  button.title,button.enabled?.88f:.40f,
                  button.enabled?.92f:.47f,button.enabled?.92f:.50f);

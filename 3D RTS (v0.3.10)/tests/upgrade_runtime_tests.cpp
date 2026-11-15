@@ -81,6 +81,13 @@ int main(){
     auto buttons=hud.buttons(game);
     assert(!buttons[3].enabled && buttons[3].title=="WORKER");
     assert(buttons[4].enabled && buttons[4].title=="FRONTI 1/2");
+    // Verify the exact native bitmap-font advance fits research cards
+    // in BOTH standard and compact button layouts.
+    for(const auto& item:buttons){
+        const bool compact=item.bounds.h<33.f;
+        const float pixel=rtsCommandTitlePixelSize(item,compact);
+        assert(item.title.size()*6.f*pixel<=item.bounds.w-12.f+.01f);
+    }
     assert(game.upgradeLevel(0,"frontier_tactics")==0);
     assert(!game.canQueueSelectedTrainingSlot(0)); // no tech
     assert(game.canResearchSelectedSlot(1));
