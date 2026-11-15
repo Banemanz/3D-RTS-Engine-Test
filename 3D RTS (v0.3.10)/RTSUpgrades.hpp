@@ -9,7 +9,8 @@
 struct RTSUpgradeDefinition {
     std::string id;
     std::string unitId;         // empty means all Unit catalog types
-    std::string requirementId;  // Caster-only prerequisite
+    std::string requirementId;  // Use: Caster-only prerequisite
+    std::string showRequirementId; // Show: optional Caster-only visibility gate
     int maxLevel=1;             // 1..5
     int mineralCost=100;        // per level
     std::uint32_t researchTicks=180;

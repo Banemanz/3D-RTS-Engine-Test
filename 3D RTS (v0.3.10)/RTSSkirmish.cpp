@@ -550,8 +550,16 @@ std::vector<std::string> RTSSkirmish::trainableUnits(int buildingId) const {
     if(f!=fields.end()) {
         std::vector<std::string> ids;
         if(!f->second.is<picojson::array>())return ids; // project validator reports this
-        for(const auto& candidate:f->second.get<picojson::array>())
-            if(candidate.is<std::string>())ids.push_back(candidate.get<std::string>());
+        for(const auto& candidate:f->second.get<picojson::array>()){
+            if(!candidate.is<std::string>())continue;
+            const auto& id=candidate.get<std::string>();
+            const auto fields=project_.catalog.resolvedFields(id);
+            const auto it=fields.find("show_requirement");
+            if(it!=fields.end() && it->second.is<std::string>() &&
+               !meetsRequirement(it->second.get<std::string>(),producer,nullptr))
+                continue;
+            ids.push_back(id);
+        }
         return ids;
     }
     // Backward compatibility for projects saved before trainable_units existed.
@@ -564,7 +572,28 @@ std::vector<std::string> RTSSkirmish::researchableUpgrades(
     const Unit* producer=find(producerId);
     if(!producer || !producer->isAlive() || !producer->isStructure ||
        producer->ownerId!=0 || producer->catalogId.empty())return {};
-    return unitResearchIds(project_.catalog,producer->catalogId);
+    const auto ids=unitResearchIds(project_.catalog,producer->catalogId);
+    std::vector<std::string> visible;
+    visible.reserve(ids.size());
+    for(const auto& id:ids){
+        const auto upgrade=compileUpgrade(project_.catalog,id);
+        if(meetsRequirement(upgrade.showRequirementId,producer,nullptr))
+            visible.push_back(id);
+    }
+    return visible;
+}
+std::vector<std::string> RTSSkirmish::visibleAbilities(int casterId)const{
+    const Unit* caster=find(casterId);
+    if(!caster || !caster->isAlive() || caster->catalogId.empty())return {};
+    const auto ids=unitAbilityIds(project_.catalog,caster->catalogId);
+    std::vector<std::string> visible;
+    visible.reserve(ids.size());
+    for(const auto& id:ids){
+        const auto ability=compileAbility(project_.catalog,id);
+        if(meetsRequirement(ability.showRequirementId,caster,nullptr))
+            visible.push_back(id);
+    }
+    return visible;
 }
 int RTSSkirmish::upgradeLevel(int owner,const std::string& upgradeId)const{
     const auto it=upgradeLevels_.find({owner,upgradeId});
@@ -1269,7 +1298,7 @@ int RTSSkirmish::abilityPageCount()const{
         caster=&u;
     }
     if(!caster || caster->catalogId.empty())return 0;
-    const auto abilities=unitAbilityIds(project_.catalog,caster->catalogId);
+    const auto abilities=visibleAbilities(caster->id);
     return static_cast<int>((abilities.size()+2)/3);
 }
 bool RTSSkirmish::nextAbilityPage(){
@@ -1286,7 +1315,7 @@ std::string RTSSkirmish::selectedAbilityId(int slot) const {
         caster=&u;
     }
     if(!caster || caster->catalogId.empty())return "";
-    const auto abilities=unitAbilityIds(project_.catalog,caster->catalogId);
+    const auto abilities=visibleAbilities(caster->id);
     const int page=abilityPage_%std::max(1,static_cast<int>((abilities.size()+2)/3));
     const std::size_t index=static_cast<std::size_t>(page*3+slot);
     return index<abilities.size()?abilities[index]:"";
@@ -1303,7 +1332,7 @@ bool RTSSkirmish::canPrepareAbility(int casterId,
     const Unit* caster=find(casterId);
     if(!caster || !caster->isAlive() || caster->ownerId!=0 ||
        caster->catalogId.empty())return false;
-    const auto options=unitAbilityIds(project_.catalog,caster->catalogId);
+    const auto options=visibleAbilities(casterId);
     if(std::find(options.begin(),options.end(),abilityId)==options.end())return false;
     const auto ability=compileAbility(project_.catalog,abilityId);
     if(abilityCooldownRemaining(casterId,abilityId)!=0 ||

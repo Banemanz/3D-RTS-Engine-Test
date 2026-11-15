@@ -423,6 +423,13 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
     ability.requirementId=stringField(fields,"requirement","");
     if(!ability.requirementId.empty())
         (void)compileRequirement(catalog,ability.requirementId);
+    ability.showRequirementId=stringField(fields,"show_requirement","");
+    if(!ability.showRequirementId.empty()){
+        const auto graph=compileRequirement(catalog,ability.showRequirementId);
+        if(rtsRequirementUsesTarget(graph))
+            throw std::invalid_argument(
+                "Ability Show Requirement cannot inspect Target: "+id);
+    }
     ability.effect=stringField(fields,"effect","");
     if(ability.effect.empty())
         throw std::invalid_argument("Ability requires an Effect: "+id);
@@ -556,6 +563,13 @@ void DataCatalog::validate()const {
             // data during each F7 edit or changing legacy validation policy.
             const auto weapon=stringField(fields,"weapon","");
             if(!weapon.empty())(void)compileWeapon(*this,weapon);
+            const auto show=stringField(fields,"show_requirement","");
+            if(!show.empty()){
+                const auto graph=compileRequirement(*this,show);
+                if(rtsRequirementUsesTarget(graph))
+                    throw std::invalid_argument(
+                        "Unit Show Requirement cannot inspect Target: "+e.id);
+            }
             const auto required=stringField(fields,"requirement","");
             if(!required.empty()){
                 const auto compiled=compileRequirement(*this,required);

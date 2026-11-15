@@ -100,6 +100,7 @@ public:
     // Research shares the existing paginated producer command cards, without
     // rewriting TrainCatalog or the semantics of legacy training slots.
     std::vector<std::string> researchableUpgrades(int producerId)const;
+    std::vector<std::string> visibleAbilities(int casterId)const;
     std::string selectedResearchableId(int slot)const;
     bool canResearchSelectedSlot(int slot)const;
     int upgradeLevel(int owner,const std::string& upgradeId)const;

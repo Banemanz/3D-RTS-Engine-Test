@@ -57,11 +57,15 @@ RTSUpgradeDefinition compileUpgrade(const DataCatalog& catalog,
             throw std::invalid_argument("Upgrade unit target must be Unit: "+id);
     }
     d.requirementId=idField(fields,"requirement");
-    if(!d.requirementId.empty()){
-        const auto graph=compileRequirement(catalog,d.requirementId);
+    d.showRequirementId=idField(fields,"show_requirement");
+    for(const auto& link:{std::make_pair(d.requirementId,"Use"),
+                          std::make_pair(d.showRequirementId,"Show")}){
+        if(link.first.empty())continue;
+        const auto graph=compileRequirement(catalog,link.first);
         if(rtsRequirementUsesTarget(graph))
             throw std::invalid_argument(
-                "Research Requirement cannot inspect Target: "+id);
+                "Research "+std::string(link.second)+
+                " Requirement cannot inspect Target: "+id);
     }
     return d;
 }
