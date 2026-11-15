@@ -61,10 +61,27 @@ int main(){
            link.inherited)inherited=true;
     }
     assert(backward && inherited);
+    // A placed Unit can override its own training gate. Project-level
+    // reference protection and rename must follow this typed override.
+    ProjectPlacement placed;
+    placed.id="gated_instance";placed.kind="Unit";
+    placed.catalogId="ranger";placed.owner=0;
+    placed.name="Gated Ranger";placed.position={0.f,0.f,0.f};
+    placed.overrides["unit"]=picojson::value(picojson::object{
+        {"requirement",picojson::value(root)}});
+    p.placements.push_back(placed);
+    p.validate();
     std::string why;
+    const auto uses=p.catalogReferences(root);
+    bool hasInstance=false;
+    for(const auto& use:uses)
+        if(use=="placement gated_instance.unit.requirement")hasInstance=true;
+    assert(hasInstance);
     assert(!p.removeCatalogObject(root,&why));
     assert(why.find("requirement")!=std::string::npos);
     assert(p.renameCatalogObject(root,"renamed_gate"));
+    assert(p.placements.back().overrides.at("unit").get<picojson::object>()
+           .at("requirement").get<std::string>()=="renamed_gate");
     auto fields=p.catalog.resolvedFields("ranger");
     assert(fields.at("requirement").get<std::string>()=="renamed_gate");
     assert(p.renameCatalogObject(validator,"renamed_health"));

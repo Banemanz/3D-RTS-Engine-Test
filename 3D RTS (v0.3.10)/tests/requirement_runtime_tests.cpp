@@ -174,6 +174,54 @@ int main(){
     unavailable.update(1.f/60.f);
     assert(unavailable.playerMinerals==before);
 
+    // Status-scoped Validators are backed by authoritative Behavior state,
+    // not the Actor presentation cue log.
+    RTSProject statusProject=p;
+    CatalogEntry status;status.id="status_token";status.type="Behavior";
+    status.fields={{"duration_ticks",picojson::value(25.)},
+                   {"max_stacks",picojson::value(1.)}};
+    assert(statusProject.catalog.add(status));
+    CatalogEntry effect;effect.id="grant_status";effect.type="Effect";
+    effect.fields={{"kind",picojson::value("ApplyBehavior")},
+                   {"behavior",picojson::value("status_token")}};
+    assert(statusProject.catalog.add(effect));
+    CatalogEntry apply;apply.id="equip_status";apply.type="Ability";
+    apply.fields={{"target",picojson::value("Self")},
+                  {"effect",picojson::value("grant_status")}};
+    assert(statusProject.catalog.add(apply));
+    CatalogEntry gated;gated.id="status_repair";gated.type="Ability";
+    gated.fields={{"target",picojson::value("Self")},
+                  {"effect",picojson::value("restorative_pulse")},
+                  {"requirement",picojson::value("r_status")}};
+    assert(statusProject.catalog.add(gated));
+    CatalogEntry statusValidator;statusValidator.id="v_status";statusValidator.type="Validator";
+    statusValidator.fields={{"kind",picojson::value("HasBehavior")},
+                            {"subject",picojson::value("Caster")},
+                            {"behavior",picojson::value("status_token")}};
+    assert(statusProject.catalog.add(statusValidator));
+    assert(statusProject.catalog.add(predicate("r_status","v_status")));
+    assert(statusProject.catalog.setField("ranger","abilities",
+        picojson::value(picojson::array{picojson::value("equip_status"),
+                                      picojson::value("status_repair")})));
+    statusProject.validate();
+    RTSSkirmish statusGame;statusGame.loadProject(statusProject);
+    int statusCaster=-1;
+    for(auto& u:statusGame.units)if(statusCaster<0 &&
+       u.catalogId=="ranger" && u.ownerId==0){
+        statusCaster=u.id;u.isSelected=true;
+    }
+    assert(statusCaster>0);
+    assert(!statusGame.canPrepareAbility(statusCaster,"status_repair"));
+    assert(statusGame.queuePlayerCommand(RTSCommandKind::CastAbility,{},-1,
+                                         false,"equip_status"));
+    statusGame.update(1.f/60.f);
+    assert(statusGame.unitBehaviorStacks(statusCaster,"status_token")==1);
+    assert(statusGame.canPrepareAbility(statusCaster,"status_repair"));
+    assert(statusGame.canCastAbility(statusCaster,"status_repair",-1));
+    for(int tick=0;tick<26;++tick)statusGame.update(1.f/60.f);
+    assert(statusGame.unitBehaviorStacks(statusCaster,"status_token")==0);
+    assert(!statusGame.canCastAbility(statusCaster,"status_repair",-1));
+
     // Target-only gates cannot be used for ground-targeted Abilities or
     // production (no target exists), including when nested under Not/Any.
     auto ground=p;
