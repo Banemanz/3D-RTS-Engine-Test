@@ -1,4 +1,5 @@
 #include "RTSSkirmish.hpp"
+#include "RTSRequirements.hpp"
 #include <iomanip>
 #include <cstdint>
 #include "InstanceOverrides.hpp"
@@ -555,6 +556,44 @@ std::string RTSSkirmish::selectedTrainableId(int slot) const {
     const std::size_t index=std::size_t(trainingPage()*3+slot);
     return index<choices.size()?choices[index]:"";
 }
+bool RTSSkirmish::meetsRequirement(const std::string& id,const Unit* caster,
+                                   const Unit* target)const{
+    return id.empty() || evaluateRequirement(
+        compileRequirement(project_.catalog,id),caster,target);
+}
+bool RTSSkirmish::evaluateRequirement(const RTSRequirementDefinition& node,
+                                      const Unit* caster,const Unit* target)const{
+    switch(node.kind){
+        case RTSRequirementKind::All:
+            for(const auto& child:node.children)
+                if(!evaluateRequirement(child,caster,target))return false;
+            return true;
+        case RTSRequirementKind::Any:
+            for(const auto& child:node.children)
+                if(evaluateRequirement(child,caster,target))return true;
+            return false;
+        case RTSRequirementKind::Not:
+            return !evaluateRequirement(node.children.front(),caster,target);
+        case RTSRequirementKind::Predicate:break;
+    }
+    const auto& rule=node.predicate;
+    const Unit* subject=rule.subject==RTSValidatorSubject::Caster?caster:target;
+    if(!subject || !subject->isAlive())return false;
+    switch(rule.kind){
+        case RTSValidatorKind::HealthBelowPercent:
+            return double(subject->currentHp)*100. <
+                   double(subject->data.max_hp)*double(rule.value);
+        case RTSValidatorKind::EnergyAtLeast:
+            return subject->currentEnergy>=rule.value;
+        case RTSValidatorKind::HasBehavior:
+            return behaviors_.find({subject->id,rule.behaviorId})!=behaviors_.end();
+        case RTSValidatorKind::IsStructure:return subject->isStructure;
+        case RTSValidatorKind::OwnerUnitCountAtLeast:
+            return countUnitsForTrigger(subject->ownerId,rule.unitId)>=
+                   static_cast<int>(rule.value);
+    }
+    return false;
+}
 bool RTSSkirmish::canQueueAt(int id,const std::string& unitId) const {
     const Unit* building=find(id);
     if(result!=MatchResult::Playing || !building || !building->isAlive() ||
@@ -562,6 +601,13 @@ bool RTSSkirmish::canQueueAt(int id,const std::string& unitId) const {
        construction_.count(id)>0)return false;
     auto choices=trainableUnits(id);
     if(std::find(choices.begin(),choices.end(),unitId)==choices.end())return false;
+    const auto trainFields=project_.catalog.resolvedFields(unitId);
+    const auto requirement=trainFields.find("requirement");
+    if(requirement!=trainFields.end()){
+        if(!requirement->second.is<std::string>())return false;
+        if(!meetsRequirement(requirement->second.get<std::string>(),building,nullptr))
+            return false;
+    }
     const UnitData data=unitFromCatalog(project_.catalog,unitId);
     if(playerMinerals<data.mineral_cost ||
        supplyUsed+data.supply_cost>supplyCap)return false;
@@ -1195,7 +1241,8 @@ bool RTSSkirmish::canCastAbilityAt(int casterId,
     if(!caster || !std::isfinite(ground.x) || !std::isfinite(ground.z) ||
        !project_.terrain.insideWorld(ground.x,ground.z) ||
        !vision.visible(ground))return false;
-    return (ground-caster->position).lengthXZ()<=ability.castRange;
+    return (ground-caster->position).lengthXZ()<=ability.castRange &&
+           meetsRequirement(ability.requirementId,caster,nullptr);
 }
 bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
                                 int targetId)const{
@@ -1203,7 +1250,8 @@ bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
     const Unit* caster=find(casterId);
     const auto ability=compileAbility(project_.catalog,abilityId);
     if(ability.target==AbilityTarget::Self)
-        return targetId==-1 || targetId==casterId;
+        return (targetId==-1 || targetId==casterId) &&
+               meetsRequirement(ability.requirementId,caster,caster);
     if(ability.target==AbilityTarget::Ground)return false;
     const Unit* target=find(targetId);
     if(!target || !target->isAlive())return false;
@@ -1213,7 +1261,8 @@ bool RTSSkirmish::canCastAbility(int casterId,const std::string& abilityId,
         return false;
     if(target->ownerId!=caster->ownerId && !vision.visible(target->position))
         return false;
-    return (target->position-caster->position).lengthXZ()<=ability.castRange;
+    return (target->position-caster->position).lengthXZ()<=ability.castRange &&
+           meetsRequirement(ability.requirementId,caster,target);
 }
 bool RTSSkirmish::applyAreaEffect(const PendingAreaImpact& area){
     // The target set is based on unit positions at the *impact* tick.

@@ -1,4 +1,5 @@
 #include "DataCatalog.hpp"
+#include "RTSRequirements.hpp"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -361,6 +362,9 @@ AbilityDefinition compileAbility(const DataCatalog& catalog,
     const auto fields=catalog.resolvedFields(id);
     AbilityDefinition ability;
     ability.id=id;
+    ability.requirementId=stringField(fields,"requirement","");
+    if(!ability.requirementId.empty())
+        (void)compileRequirement(catalog,ability.requirementId);
     ability.effect=stringField(fields,"effect","");
     if(ability.effect.empty())
         throw std::invalid_argument("Ability requires an Effect: "+id);
@@ -472,6 +476,8 @@ void DataCatalog::validate()const {
         auto fields=resolvedFields(e.id);
         const char* reference = e.type=="Unit"?"actor":(e.type=="Actor"?"model":nullptr);
         const char* type = e.type=="Unit"?"Actor":"Model";
+        if(e.type=="Validator")(void)compileValidator(*this,e.id);
+        if(e.type=="Requirement")(void)compileRequirement(*this,e.id);
         if(e.type=="Actor")(void)compileActorCues(*this,e.id);
         if(e.type=="Weapon")(void)compileWeapon(*this,e.id);
         if(e.type=="Projectile")(void)compileProjectile(*this,e.id);
@@ -485,6 +491,8 @@ void DataCatalog::validate()const {
             // data during each F7 edit or changing legacy validation policy.
             const auto weapon=stringField(fields,"weapon","");
             if(!weapon.empty())(void)compileWeapon(*this,weapon);
+            const auto required=stringField(fields,"requirement","");
+            if(!required.empty())(void)compileRequirement(*this,required);
         }
         if(reference && fields.count(reference)) {
             std::string id=stringField(fields,reference,"");

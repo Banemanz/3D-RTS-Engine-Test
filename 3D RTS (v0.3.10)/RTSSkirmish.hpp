@@ -6,6 +6,7 @@
 #include "RTSProject.hpp"
 #include "TriggerEngine.hpp"
 #include "RTSCommandStream.hpp"
+#include "RTSRequirements.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -264,6 +265,12 @@ private:
     static constexpr std::size_t MaxPendingAreaImpacts=128;
     static constexpr std::size_t MaxPendingWeaponShots=512;
     std::vector<PendingAreaImpact> pendingAreas_;
+    // Pure bounded evaluation of a compiled Requirement graph using only
+    // authoritative Unit/Behavior/owner counts. Caller checks target policy.
+    bool meetsRequirement(const std::string& id,const Unit* caster,
+                          const Unit* target)const;
+    bool evaluateRequirement(const RTSRequirementDefinition& node,
+                             const Unit* caster,const Unit* target)const;
     bool castAbility(int casterId,const std::string& abilityId,
                      int targetId,const Vec3& ground);
     bool applyAreaEffect(const PendingAreaImpact& area);

@@ -119,6 +119,7 @@ struct AbilityDefinition {
     AbilityAreaTeam areaTeam=AbilityAreaTeam::Enemy;
     std::uint32_t impactDelayTicks=0; // Ground only: 0..300 ticks at 60Hz
     std::string projectileId; // optional typed Projectile reference for Ground
+    std::string requirementId; // optional reusable logic/validator graph gate
 };
 AbilityDefinition compileAbility(const DataCatalog& catalog,
                                  const std::string& id);
