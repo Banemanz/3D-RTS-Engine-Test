@@ -195,8 +195,10 @@ the full catalog, and records one undo snapshot or rejects the
 edit atomically. CreatorWorkbench has bounded numeric inputs,
 a typed bool and RGB color picker, plus a Ground Ability
 Projectile dropdown and link navigation. Switching an Ability
-out of Ground targeting clears its Projectile link in the same
-transaction. DataCatalog::rename and RTSProject::catalogReferences
+out of Ground targeting writes an explicit empty Projectile
+override in the same transaction, so inherited Ground Ability
+children can switch to Self/Ally/Enemy without retaining an
+invalid inherited Projectile link. The parent remains unchanged. DataCatalog::rename and RTSProject::catalogReferences
 understand Projectile -> Ability dependency edges.
 
 The runtime owns flight positions, contact rules and impact timing.

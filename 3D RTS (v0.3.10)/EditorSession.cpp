@@ -615,7 +615,11 @@ bool EditorSession::setAbilityTargetPolicy(
         if(it!=fields.end() && it->second.is<std::string>() &&
            it->second.get<std::string>()==target)return false;
         ability->fields["target"]=picojson::value(target);
-        if(target!="Ground")ability->fields.erase("projectile");
+        // The Ability may inherit a Projectile from its parent. A local
+        // empty-string override is required to neutralize that inherited
+        // reference when the target type stops supporting projectiles.
+        if(target!="Ground")
+            ability->fields["projectile"]=picojson::value(std::string{});
         const auto priorRange=fields.find("cast_range");
         const double range=priorRange!=fields.end() &&
             priorRange->second.is<double>()?priorRange->second.get<double>():0.;

@@ -1133,8 +1133,13 @@ these newest changes fully green.
 - EditorSession.cpp/.hpp creates Projectile Arc/Bolt
   presets, setProjectileDefinition groups all 6 fields
   in one project-clone validated undoable transaction.
-  setAbilityTargetPolicy removes projectile when changing
-  from Ground to another target atomically.
+  setAbilityTargetPolicy writes an explicit empty local
+  Projectile override when changing Ground->another target.
+  This is essential for derived Abilities that inherit a
+  parent Projectile; erasing the field would reveal an
+  invalid inherited Projectile reference. Regression now
+  covers Ground derived child->Self, undo, redo, and
+  unchanged Ground parent.
   CreatorWorkbench.hpp has typed Projectile editor,
   RGB color selector, collision checkbox, Ground Ability
   Projectile dropdown and linked-object navigation.

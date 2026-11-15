@@ -80,6 +80,22 @@ int main(){
                                   picojson::value(std::string("bolt_renamed"))));
     assert(compileAbility(p.catalog,groundId).projectileId=="bolt_renamed");
 
+    // Inherited Projectile reference must be *overridden*, not erased.
+    // Changing the derived target cannot modify the original parent.
+    assert(p.catalog.cloneDerived(groundId,"derived_ground_skill"));
+    p.validate();
+    assert(editor.selectCatalogId(p,"derived_ground_skill"));
+    assert(editor.setAbilityTargetPolicy(p,"Self"));
+    assert(compileAbility(p.catalog,"derived_ground_skill").target==
+           AbilityTarget::Self);
+    assert(compileAbility(p.catalog,"derived_ground_skill").projectileId.empty());
+    assert(compileAbility(p.catalog,groundId).projectileId=="bolt_renamed");
+    assert(editor.undo(p));
+    assert(compileAbility(p.catalog,"derived_ground_skill").projectileId==
+           "bolt_renamed");
+    assert(editor.redo(p));
+    assert(compileAbility(p.catalog,"derived_ground_skill").projectileId.empty());
+
     auto broken=p;
     assert(broken.catalog.setField("bolt_renamed","tint",
         picojson::value(picojson::array{
