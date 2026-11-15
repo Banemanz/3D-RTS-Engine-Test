@@ -454,3 +454,10 @@ Linux/GCC and Windows/MSVC, runs
 native F7 Requirement editor capture under xvfb/Mesa, and verifies
 RTS_FEATURE_REQUIREMENT_GRAPHS=1 in packaged binary metadata.
 All Release assertions remain active.
+
+### Native Requirement authoring visual checks
+
+The Linux CI additionally captures the F7 Validator predicate inspector
+and the linked Ability Requirement field in the same original Workshop
+project, complementing the nested Requirement graph screenshot.
+These are actual GUI/software-GL frames, not separate mockup assets.

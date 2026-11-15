@@ -1504,3 +1504,12 @@ target selector/weapon validators, tech visibility vs admission,
 per-rule failure text, more validator kinds, true node graph GUI,
 advanced visual actor assets/sounds, modeling/terrain improvements.
 No copied SC2 or GPL source.
+
+### Packaged authoring and screenshot QA follow-up
+
+The Actor Event and Requirement authoring manuals now ship in both
+Windows and Linux Release bundles, enforced by verify_build_bundle.py.
+Linux CI also captures three native F7 screenshots: nested Requirement
+graph, Validator predicate editor, and Ability linked Requirement.
+Check the latest head's CI before claiming this documentation branch
+green. No new PR or branch was created.

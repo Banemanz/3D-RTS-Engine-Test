@@ -230,6 +230,26 @@ jobs:
           name: rts-requirements-f7-screenshot
           path: rts-requirement-f7.png
           if-no-files-found: error
+      - name: Capture actual F7 Validator predicate inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id v_target_wounded --smoke-frames 85 --screenshot rts-validator-f7.ppm
+      - name: Convert F7 Validator screenshot
+        run: python3 tools/ppm_to_png.py rts-validator-f7.ppm rts-validator-f7.png
+      - name: Upload actual F7 Validator inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-validator-f7-screenshot
+          path: rts-validator-f7.png
+          if-no-files-found: error
+      - name: Capture F7 Ability's typed Requirement field
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id arc_lance --smoke-frames 85 --screenshot rts-requirement-ability-f7.ppm
+      - name: Convert linked Ability inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-requirement-ability-f7.ppm rts-requirement-ability-f7.png
+      - name: Upload actual Ability to Requirement F7 screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-requirement-ability-link-f7-screenshot
+          path: rts-requirement-ability-f7.png
+          if-no-files-found: error
       - name: Capture actual F7 Actor event rule inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/actor_events_showcase.rtsproject.json --smoke-select-catalog-id ranger_actor --smoke-frames 85 --screenshot rts-actor-events-f7.ppm
       - name: Convert F7 Actor event screenshot
