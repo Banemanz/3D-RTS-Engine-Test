@@ -1176,6 +1176,14 @@ these newest changes fully green.
   rts-projectile-editor-screenshot and
   rts-projectile-flight-screenshot and
   rts-projectile-impact-screenshot (actual Mesa GL).
+  Important screenshot QA fix: --smoke-frames counts render
+  frames, NOT fixed simulation ticks. New opt-in
+  --smoke-fixed-ticks drives exactly one 60Hz simulation
+  step per rendered frame in smoke mode; projectile flight
+  capture at 75 ticks and impact-flash capture at 107 ticks
+  now show reproducible authoritative game states instead
+  of being machine-speed dependent. Normal gameplay is
+  entirely unchanged.
   .github/workflows/build.yml checks packaged sample
   on Windows/Linux native RTSProjectTool.
   tools/verify_build_bundle.py requires sample and

@@ -923,6 +923,7 @@ int main(int argc, char** argv) {
     bool castSelfAbilityForSmoke=false;
     bool castGroundAbilityForSmoke=false;
     bool castProjectileForSmoke=false;
+    bool fixedTickSmoke=false;
     bool stressEditor=false;
     bool pauseMenuSmoke=false;
     bool triggerMonitorSmoke=false;
@@ -946,6 +947,7 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-cast-self-ability")castSelfAbilityForSmoke=true;
         else if(arg == "--smoke-cast-ground-ability")castGroundAbilityForSmoke=true;
         else if(arg == "--smoke-cast-projectile")castProjectileForSmoke=true;
+        else if(arg == "--smoke-fixed-ticks")fixedTickSmoke=true;
         else if(arg == "--editor-stress-smoke")stressEditor=true;
         else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
@@ -1335,7 +1337,11 @@ int main(int argc, char** argv) {
             if(!app.editor.textEditing && !app.pauseMenu)
                 app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
             if(app.editor.panel==EditorSession::Panel::Play && !app.pauseMenu) {
-                accumulator += deltaTime;
+                // CI-only deterministic playtest: one fixed 60Hz simulation
+                // step per rendered frame. Actual game/editor timing remains
+                // wall-clock driven unless --smoke-fixed-ticks is explicit.
+                accumulator += fixedTickSmoke && smokeFrames>0?
+                               fixedStep:deltaTime;
                 int steps = 0;
                 while (accumulator >= fixedStep && steps < 8) {
                     try{

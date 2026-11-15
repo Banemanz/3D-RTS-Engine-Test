@@ -334,7 +334,11 @@ Windows and Linux. CI uploads and byte-compares the projectile
 replay fingerprint, plus uses Mesa/Xvfb and the real GL renderer
 to capture F7 Projectile inspector, an actual F9
 --smoke-cast-projectile flight and a later-frame
-rts-projectile-impact-screenshot showing genuine hit feedback. No fake flight positions are
+rts-projectile-impact-screenshot showing genuine hit feedback.
+The opt-in --smoke-fixed-ticks flag advances exactly one 60Hz
+simulation step per rendered smoke frame. It prevents software
+renderer speed from shifting the captured state; it never
+changes normal real-time gameplay or nonplay editor timing. No fake flight positions are
 injected by screenshot modes. Both Release archives validate
 projects/projectile_forge_showcase.rtsproject.json using their
 own native RTSProjectTool and require executable flags
