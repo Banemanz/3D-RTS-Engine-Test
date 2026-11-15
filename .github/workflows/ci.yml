@@ -33,6 +33,7 @@ jobs:
             build/ground_area_fingerprint.txt
             build/projectile_fingerprint.txt
             build/area_shapes_fingerprint.txt
+            build/weapon_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -216,6 +217,26 @@ jobs:
           name: rts-active-behavior-hud-screenshot
           path: rts-active-status.png
           if-no-files-found: error
+      - name: Capture reusable Weapon F7 inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-catalog-id piercer_rifle --smoke-frames 90 --screenshot rts-weapon-f7.ppm
+      - name: Convert Weapon inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-weapon-f7.ppm rts-weapon-f7.png
+      - name: Upload real F7 Weapon screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-weapon-f7-screenshot
+          path: rts-weapon-f7.png
+          if-no-files-found: error
+      - name: Capture original Weapon-equipped gameplay
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-army --smoke-fixed-ticks --smoke-frames 110 --screenshot rts-weapon-play.ppm
+      - name: Convert Weapon gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-weapon-play.ppm rts-weapon-play.png
+      - name: Upload real Weapon gameplay screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-weapon-gameplay-screenshot
+          path: rts-weapon-play.png
+          if-no-files-found: error
       - name: Capture F7 Cone authoring inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/area_shapes_showcase.rtsproject.json --smoke-select-catalog-id fan_surge --smoke-frames 70 --screenshot rts-shapes-editor.ppm
       - name: Convert area shape editor screenshot
@@ -324,6 +345,7 @@ jobs:
             build/ground_area_fingerprint.txt
             build/projectile_fingerprint.txt
             build/area_shapes_fingerprint.txt
+            build/weapon_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -353,3 +375,4 @@ jobs:
           diff -u fingerprints/linux/ground_area_fingerprint.txt fingerprints/windows/ground_area_fingerprint.txt
           diff -u fingerprints/linux/projectile_fingerprint.txt fingerprints/windows/projectile_fingerprint.txt
           diff -u fingerprints/linux/area_shapes_fingerprint.txt fingerprints/windows/area_shapes_fingerprint.txt
+          diff -u fingerprints/linux/weapon_fingerprint.txt fingerprints/windows/weapon_fingerprint.txt

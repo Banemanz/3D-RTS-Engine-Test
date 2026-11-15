@@ -38,6 +38,7 @@ def main() -> int:
         "projects/ground_impact_showcase.rtsproject.json",
         "projects/projectile_forge_showcase.rtsproject.json",
         "projects/area_shapes_showcase.rtsproject.json",
+        "projects/weapon_forge_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
@@ -123,6 +124,8 @@ def main() -> int:
         "RTS_FEATURE_AUTHORED_PROJECTILES",
         "RTS_FEATURE_PROJECTILE_INTERCEPTION",
         "RTS_FEATURE_AREA_SHAPES",
+        "RTS_FEATURE_AUTHORED_WEAPONS",
+        "RTS_FEATURE_ARMOR_PENETRATION",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:
