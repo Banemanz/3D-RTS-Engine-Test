@@ -22,6 +22,8 @@ struct RTSUpgradeDefinition {
     std::uint32_t researchTicks=180;
     float damagePerLevel=0.f;   // normal attacks only
     float armorPerLevel=0.f;    // all physical damage
+    bool customLevels=false; // false retains uniform legacy research
+    std::vector<RTSUpgradeLevel> levels; // always maxLevel entries, 0-based
 };
 RTSUpgradeDefinition compileUpgrade(const DataCatalog& catalog,
                                     const std::string& id);
