@@ -255,6 +255,16 @@ jobs:
           name: rts-projectile-flight-screenshot
           path: rts-projectile-flight.png
           if-no-files-found: error
+      - name: Capture actual projectile arrival and area impact flash
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/projectile_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-projectile --smoke-frames 107 --screenshot rts-projectile-impact.ppm
+      - name: Convert projectile impact screenshot
+        run: python3 tools/ppm_to_png.py rts-projectile-impact.ppm rts-projectile-impact.png
+      - name: Upload projectile impact feedback
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-projectile-impact-screenshot
+          path: rts-projectile-impact.png
+          if-no-files-found: error
       - name: Stress editor lifecycle across terrain, scene, triggers and data
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
       - name: Smoke test object and region scene editor
