@@ -32,19 +32,37 @@ inline ImU32 nodeFill(const RTSTechNode& n){
     if(n.producer)return IM_COL32(49,65,85,245);
     return IM_COL32(47,55,68,245);
 }
+inline ImVec2 cubicPoint(ImVec2 a,ImVec2 b,ImVec2 c,ImVec2 d,float t){
+    const float u=1.f-t;
+    return ImVec2(u*u*u*a.x+3.f*u*u*t*b.x+3.f*u*t*t*c.x+t*t*t*d.x,
+                  u*u*u*a.y+3.f*u*u*t*b.y+3.f*u*t*t*c.y+t*t*t*d.y);
+}
+inline void drawTechCurve(ImDrawList* draw,ImVec2 a,ImVec2 b,ImVec2 c,
+                          ImVec2 d,ImU32 color,bool dashed){
+    if(!dashed){
+        draw->AddBezierCubic(a,b,c,d,color,2.f);
+        return;
+    }
+    // Show negation/disjunction as actual dashes, not just a thin solid line.
+    for(int i=0;i<40;++i)if((i/3)%2==0)
+        draw->AddLine(cubicPoint(a,b,c,d,float(i)/40.f),
+                      cubicPoint(a,b,c,d,float(i+1)/40.f),color,1.7f);
+}
 template<class App>
 void draw(App& app){
     if(!visible || app.editor.panel!=EditorSession::Panel::Data)return;
+    const auto graph=rtsBuildTechGraph(app.project);
+    int maxRows=0;
+    for(int rows:graph.rowCount)maxRows=std::max(maxRows,rows);
     const auto screen=ImGui::GetIO().DisplaySize;
     const float left=std::min(350.f,screen.x*.27f);
     ImGui::SetNextWindowPos(ImVec2(left,60.f),ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(std::max(560.f,screen.x-left-24.f),
-                                   std::max(360.f,screen.y-100.f)),
-                             ImGuiCond_FirstUseEver);
+        std::max(360.f,std::min(screen.y-100.f,240.f+94.f*maxRows))),
+        ImGuiCond_FirstUseEver);
     if(!ImGui::Begin("Creator | Technology Map",&visible)){
         ImGui::End();return;
     }
-    const auto graph=rtsBuildTechGraph(app.project);
     const auto* selected=app.editor.selected(app.project);
     const std::string focus=selected?selected->id:"";
     std::set<std::string> shown;
@@ -83,8 +101,6 @@ void draw(App& app){
     constexpr float ColPitch=237.f,RowPitch=94.f,BoxW=202.f,BoxH=66.f;
     constexpr float PadX=24.f,PadY=44.f;
     const char* headers[4]={"PRODUCERS","RESEARCH","UNITS","ABILITIES"};
-    int maxRows=0;
-    for(int rows:graph.rowCount)maxRows=std::max(maxRows,rows);
     const ImVec2 fullSize(PadX*2+ColPitch*3+BoxW,
                           PadY*2+RowPitch*std::max(maxRows,1));
     if(ImGui::BeginChild("##technology_canvas",ImVec2(0.f,0.f),
@@ -114,14 +130,16 @@ void draw(App& app){
             if(edge.from==edge.to){
                 const ImVec2 start(a.x-23.f,a.y-BoxH*.5f);
                 const ImVec2 end(a.x-60.f,a.y-BoxH*.5f);
-                drawList->AddBezierCubic(start,ImVec2(start.x+15.f,start.y-34.f),
-                    ImVec2(end.x-5.f,end.y-34.f),end,col,1.8f);
+                drawTechCurve(drawList,start,ImVec2(start.x+15.f,start.y-34.f),
+                    ImVec2(end.x-5.f,end.y-34.f),end,col,
+                    edge.negated || edge.anyBranch);
             }else{
                 const float delta=std::max(42.f,std::abs(b.x-a.x)*.38f);
                 const bool reverse=b.x<=a.x;
                 const ImVec2 cp1(a.x+(reverse?32.f:delta),a.y-(reverse?36.f:0.f));
                 const ImVec2 cp2(b.x-(reverse?32.f:delta),b.y-(reverse?36.f:0.f));
-                drawList->AddBezierCubic(a,cp1,cp2,b,col,edge.negated?1.4f:2.f);
+                drawTechCurve(drawList,a,cp1,cp2,b,col,
+                              edge.negated || edge.anyBranch);
             }
             if(edge.kind==RTSTechLinkKind::Show ||
                edge.kind==RTSTechLinkKind::Use){

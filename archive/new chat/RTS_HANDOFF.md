@@ -1713,3 +1713,16 @@ the real F7 screenshot. Fix issues on the SAME PR without merging.
 Next: deeper true engine AI research orders, ability/trigger debugging,
 technology explanations, asset import/Actor animations, terrain layers,
 native editor widget tree/scene gizmos.
+
+### Technology Map native screenshot QA
+
+At `e25b791`, Linux/Windows Release compiled and Linux 85/85 CTests
+passed; the real F7 screenshot rendered a navigable graph. Reviewing
+the actual image revealed the default Xvfb cursor hovering a node and
+obscuring links with a tooltip, excess window height on small graphs,
+and an inaccurate description of lines as "dashed" when NOT/ANY had
+only been drawn thinner. Follow-up corrects all three: smoke-only
+cursor moves to a safe corner, default F7 graph window size respects
+graph row counts, and NOT/ANY Bezier curves are properly dashed.
+Re-run Windows/Linux CI on the exact updated head, inspect the new F7
+screenshot and report only the checks that actually passed.

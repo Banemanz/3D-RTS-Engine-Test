@@ -1187,6 +1187,11 @@ int main(int argc, char** argv) {
         glfwSetMouseButtonCallback(window, mouseButtonCallback);
         glfwSetKeyCallback(window,editorKeyCallback);
         glfwSetCharCallback(window,characterCallback);
+        // Screenshot-only cursor placement: default Xvfb cursor coordinates
+        // can hover a graph node and obscure the captured UI with a tooltip.
+        if(techGraphSmoke && smokeFrames>0)
+            glfwSetCursorPos(window,double(app.windowWidth-12),
+                             double(app.windowHeight-12));
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
