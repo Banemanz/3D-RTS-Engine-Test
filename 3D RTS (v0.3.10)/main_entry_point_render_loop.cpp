@@ -970,7 +970,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_UI_FRAME_HIERARCHY=1\n"
                  <<"RTS_FEATURE_UI_TRIGGER_EVENTS=1\n"
                  <<"RTS_FEATURE_UI_VARIABLE_BINDINGS=1\n"
-                 <<"RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1\n";
+                 <<"RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1\n"
+                 <<"RTS_FEATURE_UI_WRAPPED_LAYOUT=1\n";
         return 0;
     }
     RTSCrashReporter::install();

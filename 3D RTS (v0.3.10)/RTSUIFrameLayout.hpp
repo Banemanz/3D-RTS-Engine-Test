@@ -47,6 +47,8 @@ inline std::vector<RTSUIResolvedFrame> rtsResolveUIFrames(
     // The cursor belongs to each Panel ID (not global order). Nested flow
     // containers have independent cursors and stable author-defined order.
     std::map<std::string,float> flowCursor;
+    struct WrapCursor { float x=0.f,y=0.f,rowHeight=0.f; bool occupied=false; };
+    std::map<std::string,WrapCursor> wrapCursor;
     for(const auto& f:frames){
         HUDRect base=root,clip=root;
         int depth=0;
@@ -70,24 +72,45 @@ inline std::vector<RTSUIResolvedFrame> rtsResolveUIFrames(
         if(parent && parent->source.layout!="Free"){
             const auto& config=parent->source;
             const float padding=config.layoutPadding;
-            const float cursor=flowCursor[f.parent];
-            if(config.layout=="StackColumn"){
-                if(f.stretchCrossAxis)
-                    width=std::clamp(base.w-2.f*padding,24.f,650.f);
-                x+=padding+f.x;
-                y+=padding+cursor+f.y;
-            }else{ // StackRow
+            if(config.layout=="WrapRow"){
+                // Visible children pack in stable order; F6-hidden siblings
+                // reserve no width, height or gap. Fine nudges are visual.
                 if(f.stretchCrossAxis)
                     height=std::clamp(base.h-2.f*padding,20.f,400.f);
-                x+=padding+cursor+f.x;
-                y+=padding+f.y;
+                auto& cursor=wrapCursor[f.parent];
+                const float available=std::max(1.f,base.w-2.f*padding);
+                if(shown && cursor.occupied &&
+                   cursor.x+width>available+.001f){
+                    cursor.x=0.f;
+                    cursor.y+=cursor.rowHeight+config.layoutGap;
+                    cursor.rowHeight=0.f;
+                    cursor.occupied=false;
+                }
+                x+=padding+cursor.x+f.x;
+                y+=padding+cursor.y+f.y;
+                if(shown){
+                    cursor.x+=width+config.layoutGap;
+                    cursor.rowHeight=std::max(cursor.rowHeight,height);
+                    cursor.occupied=true;
+                }
+            }else{
+                const float cursor=flowCursor[f.parent];
+                if(config.layout=="StackColumn"){
+                    if(f.stretchCrossAxis)
+                        width=std::clamp(base.w-2.f*padding,24.f,650.f);
+                    x+=padding+f.x;
+                    y+=padding+cursor+f.y;
+                }else{ // StackRow
+                    if(f.stretchCrossAxis)
+                        height=std::clamp(base.h-2.f*padding,20.f,400.f);
+                    x+=padding+cursor+f.x;
+                    y+=padding+f.y;
+                }
+                if(shown)
+                    flowCursor[f.parent]+=(
+                        config.layout=="StackColumn"?height:width)+
+                        config.layoutGap;
             }
-            // Hidden siblings are excluded from the flow; F6 variable
-            // changes therefore reflow text, hit boxes and draw together.
-            if(shown)
-                flowCursor[f.parent]+=(
-                    config.layout=="StackColumn"?height:width)+
-                    config.layoutGap;
         }else{
             // Leave every Free-layout coordinate byte-for-byte compatible
             // with the existing five-anchor authoring math.

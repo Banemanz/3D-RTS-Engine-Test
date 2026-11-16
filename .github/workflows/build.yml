@@ -103,6 +103,7 @@ jobs:
           ./RTSProjectTool --validate projects/ui_trigger_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/ui_variable_dashboard_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/ui_responsive_layout_showcase.rtsproject.json
+          ./RTSProjectTool --validate projects/ui_wrapped_layout_showcase.rtsproject.json
 
       - name: Validate bundled maps with bundled project utility (Windows)
         if: runner.os == 'Windows'
@@ -130,6 +131,7 @@ jobs:
           .\RTSProjectTool.exe --validate projects/ui_trigger_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/ui_variable_dashboard_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/ui_responsive_layout_showcase.rtsproject.json
+          .\RTSProjectTool.exe --validate projects/ui_wrapped_layout_showcase.rtsproject.json
 
       - name: Smoke test the packaged Linux editor with software OpenGL
         if: runner.os == 'Linux'

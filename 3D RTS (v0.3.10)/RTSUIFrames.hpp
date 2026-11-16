@@ -49,7 +49,7 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
     const char* bindings[]={"None","Minerals","Supply","Workers",
                              "Selected","SelectedHealth","Message","Ticks","Variable"};
     const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase","Trigger"};
-    const char* layouts[]={"Free","StackRow","StackColumn"};
+    const char* layouts[]={"Free","StackRow","StackColumn","WrapRow"};
     std::set<std::string> previous;
     for(const auto& f:frames){
         if(f.id.empty()||f.id.size()>48)
@@ -86,7 +86,7 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
             throw std::invalid_argument("ui_frames: unknown kind/anchor/palette/binding/action: "+f.id);
         if(f.kind!="Button" && f.action!="None")
             throw std::invalid_argument("ui_frames: only Buttons may bind actions: "+f.id);
-        if(!rtsUIFrameChoice(f.layout,layouts,3) ||
+        if(!rtsUIFrameChoice(f.layout,layouts,4) ||
            (f.kind!="Panel" && f.layout!="Free"))
             throw std::invalid_argument("ui_frames: only Panels may define a layout: "+f.id);
         if(f.stretchCrossAxis){

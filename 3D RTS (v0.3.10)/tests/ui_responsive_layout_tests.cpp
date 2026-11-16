@@ -202,6 +202,79 @@ int main(int argc,char** argv){
     assert(authored.toJson().serialize()==original);
     assert(editor.redo(authored));
     assert(rtsUIFramesFromProject(authored)[0].layoutGap==12.f);
+
+    // WrapRow is a live layout, not only a serialized string. F6 hiding
+    // removes a row slot and a real recorded event can reflow its siblings.
+    auto wrapping=frames;
+    frame(wrapping,"command_strip").layout="WrapRow";
+    frame(wrapping,"command_strip").width=270.f;
+    frame(wrapping,"command_strip").height=134.f;
+    frame(wrapping,"worker_button").visibleVariable="signal_count";
+    frame(wrapping,"worker_button").visibleAtLeast=1;
+    rtsValidateUIFrames(wrapping);
+    RTSSkirmish wrapGame;wrapGame.loadProject(project);
+    for(const auto wh:std::vector<std::pair<int,int>>{
+            {640,480},{800,600},{1280,720},{1920,1080}}){
+        const auto initial=rtsResolveUIFrames(wrapping,wh.first,wh.second,&wrapGame);
+        const auto& army=get(initial,"army_button");
+        const auto& base=get(initial,"focus_base");
+        assert(!get(initial,"worker_button").visible);
+        assert(close(base.bounds.x,army.bounds.x+army.bounds.w+9.f));
+        assert(close(base.bounds.y,army.bounds.y));
+    }
+    assert(wrapGame.queueUIFrameClick("event_button"));
+    wrapGame.update(1.f/60.f);
+    assert(wrapGame.triggerDiagnostics().variables().at("signal_count")==1);
+    const auto wrapped=rtsResolveUIFrames(wrapping,1280,720,&wrapGame);
+    const auto& armyWrap=get(wrapped,"army_button");
+    const auto& workerWrap=get(wrapped,"worker_button");
+    const auto& baseWrap=get(wrapped,"focus_base");
+    assert(workerWrap.visible);
+    assert(close(workerWrap.bounds.x,armyWrap.bounds.x+armyWrap.bounds.w+9.f));
+    assert(close(baseWrap.bounds.x,armyWrap.bounds.x));
+    assert(close(baseWrap.bounds.y,armyWrap.bounds.y+armyWrap.bounds.h+9.f));
+    assert(rtsUIFrameHit(wrapped,workerWrap.bounds.x+5,
+                         workerWrap.bounds.y+5).frameId=="worker_button");
+    assert(rtsUIFrameHit(wrapped,baseWrap.bounds.x+5,
+                         baseWrap.bounds.y+5).action=="FocusBase");
+    auto tallWrap=wrapping;
+    frame(tallWrap,"worker_button").height=60.f;
+    const auto tall=rtsResolveUIFrames(tallWrap,1280,720,&wrapGame);
+    assert(close(get(tall,"focus_base").bounds.y,
+                 get(tall,"worker_button").bounds.y+60.f+9.f));
+    auto narrowWrap=wrapping;
+    frame(narrowWrap,"command_strip").width=150.f;
+    frame(narrowWrap,"command_strip").height=58.f;
+    const auto narrow=rtsResolveUIFrames(narrowWrap,1280,720,&wrapGame);
+    const auto& outside=get(narrow,"worker_button");
+    assert(close(outside.clipped.h,0.f));
+    assert(rtsUIFrameHit(narrow,outside.bounds.x+5.,
+                         outside.bounds.y+5.).frameId!="worker_button");
+    auto badWrap=wrapping;
+    frame(badWrap,"army_button").layout="WrapRow";
+    assert(invalidFrames(badWrap));
+    RTSProject withWrap=project;
+    withWrap.metadata["ui_frames"]=rtsUIFramesToJson(wrapping);
+    withWrap.validate();
+    RTSSkirmish baseline,onlyLayout;
+    baseline.loadProject(project);onlyLayout.loadProject(withWrap);
+    assert(baseline.queueUIFrameClick("event_button"));
+    assert(onlyLayout.queueUIFrameClick("event_button"));
+    for(int tick=0;tick<120;++tick){
+        baseline.update(1.f/60.f);onlyLayout.update(1.f/60.f);
+        assert(baseline.stateDigest()==onlyLayout.stateDigest());
+    }
+    EditorSession wrapEditor;wrapEditor.panel=EditorSession::Panel::Interface;
+    RTSProject wrappedAuthored=withWrap;
+    auto alteredWrap=wrapping;
+    frame(alteredWrap,"command_strip").layoutGap=12.f;
+    assert(wrapEditor.setUIFrames(wrappedAuthored,alteredWrap));
+    assert(wrapEditor.undo(wrappedAuthored));
+    assert(rtsUIFramesToJson(rtsUIFramesFromProject(wrappedAuthored)).serialize()==
+           rtsUIFramesToJson(wrapping).serialize());
+    assert(wrapEditor.redo(wrappedAuthored));
+    auto finalWrap=rtsUIFramesFromProject(wrappedAuthored);
+    assert(frame(finalWrap,"command_strip").layoutGap==12.f);
     std::cout<<"Responsive F10 UI row/column layout: stable anchoring, "
                 "hidden-sibling reflow, stretch and clip, real click geometry, "
                 "strict schema, undo, state digest and replay passed\n";

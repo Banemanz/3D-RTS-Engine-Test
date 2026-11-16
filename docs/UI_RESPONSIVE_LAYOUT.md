@@ -153,3 +153,21 @@ without taking proprietary Blizzard code or interface artwork.
 ## Screenshot validation and final signal-label polish
 
 The first exact-feature Linux native F10 capture displayed the selected StackColumn Panel, the separate StackRow command strip, and visible layout/resize controls at **150% editor UI scale**. The actual F9 screenshot after a recorded F6-triggered SEND SIGNAL click displayed the ACK label in the stack and live BEACON CHARGE/BEACONS values, while the rest of the RTS HUD and world remained functional. QA found that the decorative prefix `STATUS` unnecessarily shortened the dynamically supplied message in the sample. The fixture now leaves the Message-binding prefix empty so it can display the complete `BEACON SIGNAL RECEIVED` text. A regression assertion verifies the actual message binding, not a hardcoded visual placeholder. The real screenshots are captured as artifacts on the latest commit.
+
+
+## Wrapped row layout (November 16)
+
+A fourth F10 Panel mode, **WrapRow**, packs visible children left-to-right
+until the available inner width is exhausted. The next row begins after
+the tallest visible sibling plus the configured gap. Hidden F6-variable
+widgets occupy no width or height. Direct child Width determines packing;
+X/Y remain optional fine nudges. Oversized content and hits stay clipped
+to parent rectangles. Free, StackRow and StackColumn are unchanged.
+
+The original `projects/ui_wrapped_layout_showcase.rtsproject.json`
+shows a 270px-wide toolbar. Army and Base initially fit in one row.
+A replay-safe SEND SIGNAL click shows Workers between them, pushing Base
+to the next row. F10 preview, F9 draw and hit-testing share one resolver.
+The existing responsive CTest now checks this new mode at four viewport
+sizes, live F6 reflow, tallest-row spacing, clipping, undo/redo and fixed
+tick authoritative state isolation.

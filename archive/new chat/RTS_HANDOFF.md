@@ -2493,3 +2493,20 @@ newest screenshot; do not describe the older screenshot as latest.
 Feature commit `0e8969e854cfe28a619c7bbb5feab81cfd1e46ce` is **FULLY GREEN**: **93/93 CTests on Windows and Linux Release**, both native bundles validated (Linux 47 files), bundled `Responsive Command Panels - Flow UI Studio` sample validated, both Windows/Linux Debug suites passed and strict `ui_responsive_fingerprint.txt` replay parity passed. Workflow runs: 43970638260 (Release), 43970638284 (Debug) and 43970647798 (independent Debug/screenshot coverage). Real downloaded and examined Linux Mesa/Xvfb screenshots `rts-ui-responsive-f10-screenshot` (1239x892 native second OS window at 150% creator scaling) and `rts-ui-responsive-f9-screenshot` (1280x720 real game) show the selected StackColumn Panel and StackRow strip, visible F6-driven ACK and live charge/count, and functional in-house HUD. No black/fake graphics. F10's right inspector is scrollable for more gap/padding controls at high DPI.
 
 Visual QA found the sample dynamic Message label still had a decorative `STATUS` prefix, truncating the F6 `BEACON SIGNAL RECEIVED` text in F9. Final follow-up clears that optional prefix and adds a CTest assertion that displayed dynamic message equals actual triggerMessage. **Recheck the next exact-HEAD Windows/Linux 93/93, debug parity and screenshots; do not claim new commit green from previous one.** Same original Draft PR #1; do not merge.
+
+
+## November 16 — F10 WrapRow follow-up
+
+Keep all work on the same OPEN UNMERGED Draft PR #1 branch
+`feat/rts-vertical-slice`. Adds Panel-only `WrapRow` in the
+validated F10 schema, shared F9/F10/input geometry and editor selector.
+Visible children pack per-panel by width and rows advance by max visible
+child height; hidden F6 widgets collapse. Original new sample
+`projects/ui_wrapped_layout_showcase.rtsproject.json` dynamically
+reveals Workers after a real replay-safe SEND SIGNAL UI event, thereby
+wrapping Base to row two. Expanded `RTSUIResponsiveTests` checks four
+resolutions, live reflow, clip/hits, max-row height, invalid metadata,
+undo/redo and 120-tick state isolation. Both OS Release bundles validate
+the sample and `RTS_FEATURE_UI_WRAPPED_LAYOUT=1` marker. Verify
+Windows/Linux Release, Debug, replay and native screenshots at exact HEAD.
+Do not merge or create a parallel PR.

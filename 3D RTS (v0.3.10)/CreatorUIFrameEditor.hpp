@@ -424,9 +424,9 @@ void draw(App& app){
             if(f.kind=="Panel"){
                 if(ImGui::CollapsingHeader("Responsive child layout",
                                            ImGuiTreeNodeFlags_DefaultOpen)){
-                    const char* layouts[]={"Free","StackColumn","StackRow"};
+                    const char* layouts[]={"Free","StackColumn","StackRow","WrapRow"};
                     const std::string before=f.layout;
-                    combo("Arrange direct children",f.layout,layouts,3);
+                    combo("Arrange direct children",f.layout,layouts,4);
                     if(before!=f.layout && f.layout=="Free"){
                         for(auto& child:draft)if(child.parent==f.id)
                             child.stretchCrossAxis=false;
@@ -448,7 +448,9 @@ void draw(App& app){
                             }
                             dirty=true;
                         }
-                        ImGui::TextWrapped("Children flow in list order. Hidden children collapse their space. Child X/Y remain fine-offset nudges; anchors do not control stacked children.");
+                        ImGui::TextWrapped(f.layout=="WrapRow"?
+                            "WrapRow fills rows with visible children, wraps when inner width is exhausted and advances after the tallest child. Hidden children leave no gaps.":
+                            "Children flow in list order. Hidden children collapse their space. Child X/Y remain fine-offset nudges; anchors do not control stacked children.");
                     }else{
                         ImGui::TextDisabled("Children keep independent anchors and offsets.");
                     }
@@ -463,7 +465,7 @@ void draw(App& app){
                         draft[static_cast<std::size_t>(parentIndex)].layout.c_str());
                     if(ImGui::Checkbox("Stretch across parent",&f.stretchCrossAxis))
                         dirty=true;
-                    ImGui::TextWrapped("Placement comes from the parent flow. X/Y nudge this child; Width or Height controls its primary-axis extent.");
+                    ImGui::TextWrapped("Parent flow owns placement. X/Y nudge the frame; WrapRow uses Width for packing and Height for row spacing.");
                 }else if(f.stretchCrossAxis){
                     f.stretchCrossAxis=false;dirty=true;
                 }
