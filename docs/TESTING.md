@@ -536,3 +536,21 @@ F10's secondary OS-native module canvas and the actual F9 gameplay
 HUD using the same authored map, not a synthetic image. Both platform
 bundles include the sample/manual and expose the feature marker.
 The existing deterministic replay parity gate remains in place.
+
+
+## Custom nested UI frame regression
+
+`RTSUIFrameTests` loads the genuine UI Frame Studio map and asserts:
+10 original nested frames and stable IDs, parent-first schema,
+anchor positions and hit rectangles at 640×480, 800×600, 1280×720
+and 1920×1080, child/ancestor clipping, topmost click-safe
+Button commands, live text/health/supply bindings, malformed and
+unknown schema rejection, unique IDs, bounds/depth restrictions,
+EditorSession atomic Apply/Undo/Redo and clear/reset.
+Default maps have no custom UI and keep classic HUD geometry.
+Optimized assertions are retained on both Windows and Linux.
+CI additionally screenshots actual F10 editor + F9 nested UI
+on Mesa software OpenGL using project
+`projects/ui_frame_studio_showcase.rtsproject.json`. The F10
+capture must be from a real native GLFW secondary OS window and
+rejects blank frames. No new replay command source is added.

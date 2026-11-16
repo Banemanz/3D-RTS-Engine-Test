@@ -44,6 +44,7 @@ def main() -> int:
         "projects/technology_forge_showcase.rtsproject.json",
         "projects/ai_research_showcase.rtsproject.json",
         "projects/interface_studio_showcase.rtsproject.json",
+        "projects/ui_frame_studio_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/ACTOR_EVENT_AUTHORING.md",
         "docs/REQUIREMENT_AUTHORING.md",
@@ -53,6 +54,7 @@ def main() -> int:
         "docs/AI_RESEARCH.md",
         "docs/CREATOR_WINDOWS_ACCESSIBILITY.md",
         "docs/INTERFACE_EDITOR.md",
+        "docs/UI_FRAME_HIERARCHY.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
         "docs/TRIGGER_EDITOR.md",
@@ -149,6 +151,7 @@ def main() -> int:
         "RTS_FEATURE_CREATOR_MODULE_WINDOWS",
         "RTS_FEATURE_CREATOR_DPI_SCALING",
         "RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR",
+        "RTS_FEATURE_UI_FRAME_HIERARCHY",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

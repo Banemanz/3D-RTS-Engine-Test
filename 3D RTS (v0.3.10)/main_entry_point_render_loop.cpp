@@ -459,6 +459,25 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
     if(state->editor.panel==EditorSession::Panel::Play) {
+        // Authored UI frames are the TOPMOST clickable overlays. Their hit
+        // geometry comes from the same pure model used by their OpenGL draw
+        // pass and F10 preview, so buttons cannot create world orders.
+        const auto overlay=rtsUIFrameHit(
+            rtsResolveUIFrames(rtsUIFramesFromProject(state->project),
+                               state->windowWidth,state->windowHeight),
+            mouseX,mouseY);
+        if(overlay.consumed){
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+                if(overlay.action=="SelectArmy")state->command(HUDCommand::SelectArmy);
+                else if(overlay.action=="SelectWorkers")
+                    state->command(HUDCommand::SelectWorkers);
+                else if(overlay.action=="FocusBase")
+                    state->command(HUDCommand::FocusBase);
+            }
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE)
+                state->selectionManager.isDragging=false;
+            return;
+        }
         RTSHUDLayout hud(state->windowWidth,state->windowHeight,
                          RTSHUDProfile::fromProject(state->project));
         if(hud.consumes(mouseX,mouseY)){
@@ -943,7 +962,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_AI_RESEARCH=1\n"
                  <<"RTS_FEATURE_CREATOR_MODULE_WINDOWS=1\n"
                  <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n"
-                 <<"RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1\n";
+                 <<"RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1\n"
+                 <<"RTS_FEATURE_UI_FRAME_HIERARCHY=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -970,6 +990,7 @@ int main(int argc, char** argv) {
     bool aiResearchSmoke=false;
     bool aiResearchPlaySmoke=false;
     bool moduleWindowsSmoke=false;
+    bool uiFramesSmoke=false;
     double smokeUiScale=0.;
     std::string smokeTriggerId;
     std::string smokeCatalogId;
@@ -1002,6 +1023,11 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-tech-graph")techGraphSmoke=true;
         else if(arg == "--smoke-ai-research")aiResearchSmoke=true;
         else if(arg == "--smoke-ai-research-play")aiResearchPlaySmoke=true;
+        else if(arg == "--smoke-ui-frames"){
+            uiFramesSmoke=true;
+            moduleWindowsSmoke=true;
+            startInterfaceEditor=true;
+        }
         else if(arg == "--smoke-module-windows"){
             moduleWindowsSmoke=true;
             startDataEditor=true;
@@ -1045,6 +1071,8 @@ int main(int argc, char** argv) {
         }
         app.recoverAutosave();
         app.reloadFromProject();
+        if(uiFramesSmoke && smokeFrames>0)
+            CreatorInterfaceEditor::requestFrameTab=true;
         if((triggerMonitorSmoke || liveTriggerMonitorSmoke) && smokeFrames>0)
             app.triggerTraceVisible=true;
         if(techGraphSmoke && smokeFrames>0){

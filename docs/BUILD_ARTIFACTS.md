@@ -269,3 +269,18 @@ includes `interface_editor` with assertion retention and real gameplay
 hit-test/presentation geometry checks. Linux screenshot CI captures
 the actual native F10 OS module and F9 gameplay from the same project.
 No new runtime library, font file or GPU-specific dependency.
+
+
+## Nested UI Frame Studio packaging
+
+Both native Windows/Linux release distributions now include
+`projects/ui_frame_studio_showcase.rtsproject.json`,
+`docs/UI_FRAME_HIERARCHY.md` and the compiled
+`RTS_FEATURE_UI_FRAME_HIERARCHY=1` marker. Both bundled
+RTSProjectTool executables validate the sample; the release bundle
+verifier checks the project, manual and native feature. New
+`RTSUIFrameTests` runs on both platforms with assertions active in
+Release and covers project authoring/serialization, geometric
+hierarchy/clipping/hit-testing and live bindings. Linux Mesa/Xvfb
+captures real F10 secondary-native-window and F9 game screenshots,
+plus existing cross-platform deterministic replay parity.

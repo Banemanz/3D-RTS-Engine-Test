@@ -3,6 +3,7 @@
 #include "RTSRequirements.hpp"
 #include "RTSUpgrades.hpp"
 #include "RTSHUDProfile.hpp"
+#include "RTSUIFrames.hpp"
 #include "TriggerTree.hpp"
 #include <cstddef>
 #include <deque>
@@ -83,6 +84,9 @@ public:
                               const picojson::value& value);
     // One atomic undoable transaction for authored live-game HUD geometry.
     bool setHUDProfile(RTSProject& project,const RTSHUDProfile& profile);
+    // Atomic authoring for an entire bounded frame hierarchy; no widget
+    // bypasses project validation, replays or the undo timeline.
+    bool setUIFrames(RTSProject& project,const std::vector<RTSUIFrame>& frames);
     void beginCatalogSearch();
     void clearCatalogSearch(const RTSProject& project);
     bool finishCatalogSearch(const RTSProject& project);

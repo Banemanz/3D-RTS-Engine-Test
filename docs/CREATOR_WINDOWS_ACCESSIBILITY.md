@@ -209,3 +209,16 @@ horizontally scrollable Scope/Field/Value table with per-field filtering,
 inherited/local tint distinction and wrapped long values. This prevents
 a single `[INHERITED] long_field = long JSON` label from disappearing
 at larger DPI/text settings.
+
+
+## Custom UI frame tree and large-text controls
+
+The F10 workspace now includes a separate Custom UI frames tab with
+a model-backed visual hierarchy, explicitly labeled high-contrast
+properties and resolution previews. UI designer fonts/controls still
+use View → Appearance scaling (85–250% plus active monitor DPI),
+separate from the game-space frame offsets and dimensions being
+authored. Frame properties include exact numeric offsets, parent
+reference, anchoring, palette, text/binding and click action; the
+hierarchy remains scrollable at large text sizes. No new bundled fonts
+or platform-specific UI branch. See docs/UI_FRAME_HIERARCHY.md.

@@ -2058,3 +2058,81 @@ that monitor size, while default 150% detached windows on 1050p
 use ample area. Future work: collapsible inspector sections and
 independent in-game widget/skin frames rather than overselling this
 bounded HUD layout designer as complete Galaxy UI authoring.
+
+
+## November 16 continuation — original nested UI frame authoring
+
+**PR constraints:** Continue ONLY original open, unmerged Draft PR #1,
+branch `feat/rts-vertical-slice`; do not merge, retarget or create new PR.
+Baseline verified head `7e41cde5deaac958b5d331577a454817edc381ad`
+had **88/88 Release CTests on Windows/Linux**, both Debug suites,
+strict replay parity, packaged native executable verifiers, and actual
+F10 native desktop screenshot (labeled sliders at 125% zoom) and F9
+custom built-in HUD screenshot. Prior PR body fully updated.
+
+**This new work:** the F10 Interface Editor now goes beyond its
+five fixed HUD rectangles via a **Custom UI frames tab**, and can
+author original Panel, Label, Button and Bar elements nested under
+parent Panels with TopLeft/TopRight/BottomLeft/BottomRight/Center
+relative anchors, offset positions, palette and bounds. The bounded
+project schema in `RTSUIFrames.hpp` is optional
+`metadata.ui_frames`: <=32 frames, <=6 nesting levels, unique
+ASCII IDs, printable-ASCII text, bounded offsets/dimensions, strict
+parent-first references and whitelisted binding/action enums.
+Project loading/validation and F10 Apply use the same parser.
+`EditorSession::setUIFrames` snapshots a single undoable project
+transaction, rejects malformed hierarchies and rolls back safely.
+
+**Actual engine integration:**
+`RTSUIFrameLayout.hpp` resolves rooted/nested rectangles, ancestor
+clipping, last/topmost hit tests, live text and progress values
+(Minerals, Supply, Workers, Selected, SelectedHealth, Message, Ticks).
+`RTSHUD.hpp` renders the ORIGINAL blue/teal/cobalt/slate/amber
+panel colors, borders, bitmap text and live bars in the playable F9
+world using the exact same pure resolved rects. 
+`main_entry_point_render_loop.cpp` intercepts clicks on interactive
+custom UI before existing HUD or world actions and maps only safe
+Button actions to existing `HUDCommand::SelectArmy`,
+`SelectWorkers`, `FocusBase`. Labels/Bars pass through by default,
+Panels can consume otherwise dangerous world clicks, parent clips
+apply to both drawing and input. No arbitrary script injection.
+Legacy projects without ui_frames are unchanged.
+
+**Editor:** `CreatorUIFrameEditor.hpp`, included in F10
+`CreatorInterfaceEditor.hpp` with two tabs ("Native HUD panels",
+"Custom UI frames"). Custom pane has parent hierarchy, clicks/drag
+on a multi-resolution canvas, exact offsets/dimensions, anchors,
+palette, text/binding/action, Add/duplicate/delete subtree,
+Apply/Discard/Clear; authoring drafts are not auto-applied.
+`--smoke-ui-frames` selects Custom tab for screenshot and requires
+an actual detached native GLFW OS viewport through existing smoke
+machinery. 125% user-interface scaling and native module separation
+remain supported.
+
+**Original fixture:** `projects/ui_frame_studio_showcase.rtsproject.json`
+based on prior Interface Studio map has 10 anchored/nested widgets:
+mission_console top-right, header, dynamic bank/supply, selected health
+bar, two clickable command buttons, nested footer/status, and a
+root base-focus button. `RTSUIFrameTests` verifies legacy opt-out,
+cross-size 640×480/800×600/1280×720/1920×1080 coordinates,
+nested clipping/hits, dynamic bindings, whitelist validation,
+malformed data, undo/redo and clear. CMake CTest with Release
+assertions, both OS native packages verify feature marker
+`RTS_FEATURE_UI_FRAME_HIERARCHY=1`, sample/manual, bundled tool validation.
+Linux OpenGL CI captures **real F10 custom UI frames** native window
+and actual F9 nested UI. Full manual
+`docs/UI_FRAME_HIERARCHY.md`, README, tests, matrix,
+architecture and other docs updated.
+
+**Important:** This is not complete Galaxy UI Editor parity. No
+free-form user-defined script callbacks, custom texture imports,
+portrait/media frames, lists, localization, per-player bindings
+or generalized trigger dispatch. Next large milestone should add
+typed UI-click trigger events and additional widget types, plus
+game-native high DPI text/font scaling (not only the creator GUI).
+
+**MUST validate latest new commit:** Before claiming green, run
+Windows/Linux Release/Debug 89 CTests, check bundled project
+validation, replay fingerprint parity, and download/inspect real
+F10/F9 images. Fix MSVC/GCC build differences or layout/UI issues
+on SAME PR, update PR body with exact SHA and action links.

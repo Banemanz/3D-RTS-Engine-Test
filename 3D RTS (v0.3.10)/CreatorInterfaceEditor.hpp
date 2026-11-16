@@ -2,6 +2,7 @@
 #include "EditorSession.hpp"
 #include "RTSHUDLayout.hpp"
 #include "RTSHUDProfile.hpp"
+#include "CreatorUIFrameEditor.hpp"
 #include "imgui.h"
 #include <algorithm>
 #include <array>
@@ -14,6 +15,7 @@
 // no proprietary Galaxy assets, XML, shaders or imported UI sprites.
 namespace CreatorInterfaceEditor {
 inline int previewResolution=0;
+inline bool requestFrameTab=false;
 inline int selectedPanel=0;
 inline constexpr std::array<const char*,5> panelNames={{
     "Minimap","Command grid","Selection dossier","Bottom panel","Resource strip"
@@ -47,8 +49,11 @@ void draw(App& app){
         "INTERFACE DESIGNER  /  Native gameplay HUD");
     ImGui::SameLine();
     ImGui::TextDisabled("%s",dirty?"UNAPPLIED PREVIEW":"PROJECT LAYOUT");
-    ImGui::TextWrapped("Select an element in the preview or the property list. Drag the minimap or command grid to alter its edge inset, the bottom panel to change its height, and the resource bar to move its top edge. Apply commits one validated undoable map edit.");
+    ImGui::TextWrapped("Author the classic HUD panels or build a nested, anchored custom UI frame hierarchy. Both are real in-game UI, not mock editor visuals.");
     ImGui::Separator();
+    if(!ImGui::BeginTabBar("##InterfaceToolTabs"))return;
+    if(ImGui::BeginTabItem("Native HUD panels")){
+    ImGui::TextWrapped("Select and drag the minimap, command grid, bottom strip or resource bar; Apply records one validated layout edit.");
     const char* views[]={"Desktop 1280 x 720","Full HD 1920 x 1080",
                         "Compact 800 x 600"};
     if(ImGui::BeginCombo("Preview screen",views[previewResolution])){
@@ -224,5 +229,15 @@ void draw(App& app){
     ImGui::SeparatorText("Engine connection");
     ImGui::TextWrapped("Apply commits one project-wide undo step. F9 and the packaged game use these authored rectangles for both rendering and hit testing. This is the first gameplay-HUD layout designer, not yet a complete freeform widget/skin scripting system.");
     if(!app.editor.message.empty())ImGui::TextWrapped("%s",app.editor.message.c_str());
+    ImGui::EndTabItem();
+    }
+    const auto flags=requestFrameTab?ImGuiTabItemFlags_SetSelected:
+                                     ImGuiTabItemFlags_None;
+    if(ImGui::BeginTabItem("Custom UI frames",nullptr,flags)){
+        CreatorUIFrameEditor::draw(app);
+        ImGui::EndTabItem();
+    }
+    requestFrameTab=false;
+    ImGui::EndTabBar();
 }
 }

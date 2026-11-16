@@ -1,5 +1,6 @@
 #pragma once
 #include "RTSHUDLayout.hpp"
+#include "RTSUIFrameLayout.hpp"
 #include "RTSCamera.hpp"
 #include "BitmapHUD.hpp"
 #include <algorithm>
@@ -31,6 +32,54 @@ class RTSHUD {
     static std::string shortText(std::string s,size_t max){
         if(s.size()>max)s=s.substr(0,max>3?max-3:0)+"...";
         return s;
+    }
+    void drawAuthoredFrames(const RTSSkirmish& game,const RTSProject& project)const{
+        const auto frames=rtsResolveUIFrames(rtsUIFramesFromProject(project),w_,h_);
+        const auto drawClipped=[&](const HUDRect& source,const HUDRect& clip,
+                                   float r,float g,float b,float a){
+            const auto visible=rtsUIRectIntersect(source,clip);
+            if(visible.w>0.f && visible.h>0.f)
+                rect(visible.x,visible.y,visible.w,visible.h,r,g,b,a);
+        };
+        for(const auto& f:frames){
+            if(f.clipped.w<1.f || f.clipped.h<1.f)continue;
+            const auto palette=rtsUIFrameColor(f.source.palette);
+            const bool label=f.source.kind=="Label";
+            if(!label){
+                drawClipped(f.bounds,f.clipped,
+                    palette.r,palette.g,palette.b,.96f);
+                const float border=2.f;
+                drawClipped({f.bounds.x,f.bounds.y,f.bounds.w,border},
+                    f.clipped,.23f,.66f,.78f,1.f);
+                drawClipped({f.bounds.x,f.bounds.y+f.bounds.h-border,
+                             f.bounds.w,border},f.clipped,.10f,.37f,.49f,1.f);
+                drawClipped({f.bounds.x,f.bounds.y,border,f.bounds.h},
+                    f.clipped,.19f,.47f,.61f,1.f);
+                drawClipped({f.bounds.x+f.bounds.w-border,f.bounds.y,
+                             border,f.bounds.h},f.clipped,.19f,.47f,.61f,1.f);
+            }
+            if(f.source.kind=="Bar"){
+                const float ratio=rtsUIFrameBarRatio(f.source,game);
+                drawClipped({f.bounds.x+4.f,f.bounds.y+4.f,
+                             std::max(0.f,(f.bounds.w-8.f)*ratio),
+                             f.bounds.h-8.f},
+                            f.clipped,.19f,.78f,.73f,.93f);
+            }
+            const std::string line=rtsUIFrameText(f.source,game);
+            if(line.empty())continue;
+            const float fontSize=std::min(2.1f,
+                std::max(.85f,(f.bounds.h-12.f)/9.f));
+            const float left=std::max(f.bounds.x,f.clipped.x)+6.f;
+            const float right=std::min(f.bounds.x+f.bounds.w,
+                                        f.clipped.x+f.clipped.w)-6.f;
+            const float space=right-left;
+            if(space<20.f)continue;
+            const std::size_t chars=static_cast<std::size_t>(
+                std::max(1.f,space/(6.f*fontSize)));
+            text(left,std::max(f.bounds.y,f.clipped.y)+
+                std::max(2.f,(f.clipped.h-7.f*fontSize)*.5f),
+                fontSize,shortText(line,chars),.92f,.97f,1.f);
+        }
     }
 public:
     RTSHUD(GLuint shader,GLuint vao,GLuint vbo,const RTSHUDLayout& layout):
@@ -208,6 +257,9 @@ public:
             if(!compact)
                 text(b.x+7,b.y+b.h-13,1.35f,button.hotkey,.61f,.78f,.81f);
         }
+        // Custom author frames are drawn over the classic HUD, using the
+        // same pure frame geometry as click dispatch and F10 preview.
+        drawAuthoredFrames(game,project);
         if(!notice.empty() || !game.triggerMessage.empty()){
             std::string message=notice.empty()?game.triggerMessage:notice;
             rect(float(w_)*.23f,55,float(w_)*.54f,36,.045f,.080f,.105f,.91f);

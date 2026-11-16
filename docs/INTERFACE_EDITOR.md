@@ -124,3 +124,17 @@ using a full-width ImGui slider with its label to the right hid
 now render each **label above its slider**, with a full-width precise
 value and no clipped name. The preview help line wraps rather than
 running off the column. This also improves 175–250% accessibility.
+
+
+## Custom nested frames extension
+
+In addition to the original bounded five-panel HUD designer, F10 now
+has a **Custom UI frames** tab for up to 32 original nested
+Panel/Label/Button/Bar elements. A separate pure C++ hierarchy
+supports named parents, five anchor positions, clipping, live
+Minerals/Supply/Workers/Selected/Health/Message/Ticks values and
+three whitelisted interactive commands. The actual native HUD
+renderer and mouse input use the same resolved rectangles.
+Apply/Undo/Redo follow the existing validated EditorSession project
+history. For the schema, restrictions, action safety, samples and
+tests, see [Custom UI Frame Hierarchy](UI_FRAME_HIERARCHY.md).

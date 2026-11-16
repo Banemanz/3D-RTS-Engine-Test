@@ -339,3 +339,22 @@ presentation/use consistency, while `RTSInterfaceEditorTests` covers
 metadata bounds, geometric hit regions and undo/redo. See
 docs/INTERFACE_EDITOR.md. This is not a complete arbitrary frame/skin
 UI scripting engine.
+
+
+## Original authorable nested UI frames
+
+The dedicated F10 Custom UI frames tab is backed by a headless
+`RTSUIFrames.hpp` schema: at most 32 original Panel/Label/Button/Bar
+elements with bounded, unique IDs, parent-first hierarchy (depth <=6),
+five relative anchors, palette, bounded pixel geometry, live bindings
+and whitelisted actions. `RTSUIFrameLayout.hpp` resolves child
+rectangles and nested clips exactly once per caller; both
+`RTSHUD::drawAuthoredFrames` and `mouseButtonCallback` use the SAME
+geometry and topmost hit semantics. The only accepted button actions
+reuse existing HUD commands (SelectArmy/SelectWorkers/FocusBase),
+preventing direct simulation mutation or arbitrary scripting.
+`EditorSession::setUIFrames` is a validated, one-step undo transaction;
+default projects are unchanged. `CreatorUIFrameEditor.hpp` supplies
+the native draggable, DPI-aware preview/hierarchy and inspectors
+without moving editing logic into the GL renderer. See
+docs/UI_FRAME_HIERARCHY.md and headless `RTSUIFrameTests`.

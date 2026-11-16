@@ -128,3 +128,22 @@ documented in `docs/TECH_TREE_MAP.md`.
   https://mapster.talv.space/galaxy/reference
 - OpenRA Buildable/Prerequisite trait docs:
   https://docs.openra.net/en/playtest/traits/
+
+
+## Galaxy UI frame/dialog comparison (November 16)
+
+Public Galaxy dialog documentation and native references distinguish
+framed parent dialogs, dialog controls, relative anchor/offset
+positions and UI events. See:
+- https://mapster.talv.space/galaxy/reference
+- https://s2editor-guides.readthedocs.io/New_Tutorials/03_Trigger_Editor/043_Dialogs/
+- https://s2editor-guides.readthedocs.io/New_Tutorials/03_Trigger_Editor/049_UI_Events/
+
+RTS Creator uses those ideas **only for capability direction**:
+original `ui_frames` project metadata (Panel/Label/Button/Bar),
+bounded parent-first hierarchy/anchor math and clipped native
+OpenGL rendering/input. Unlike Galaxy's broader dialog trigger
+support, only whitelisted native actions are exposed; arbitrary
+trigger callback routing and image/skin/frame import are future
+separate milestones. No Blizzard XML, names, icons or licensed
+third-party implementation was copied.

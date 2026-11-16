@@ -1,5 +1,6 @@
 #include "RTSProject.hpp"
 #include "RTSHUDProfile.hpp"
+#include "RTSUIFrames.hpp"
 #include "RTSAIResearchPolicy.hpp"
 #include "InstanceOverrides.hpp"
 #include "TriggerDefinition.hpp"
@@ -258,6 +259,7 @@ void RTSProject::validate() const {
     // Project-local HUD geometry must pass strict checks before packaging.
     // Default project metadata intentionally leaves the classic layout.
     (void)RTSHUDProfile::fromProject(*this);
+    (void)rtsUIFramesFromProject(*this);
     // Any game-facing data object must be valid before we allow project saves.
     for(const auto& e:catalog.entries()) {
         if(e.type=="Unit") {

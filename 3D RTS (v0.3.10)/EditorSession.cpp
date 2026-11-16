@@ -264,6 +264,33 @@ bool EditorSession::selectCatalogId(const RTSProject& project,const std::string&
     }
     return false;
 }
+bool EditorSession::setUIFrames(RTSProject& project,
+                                const std::vector<RTSUIFrame>& frames){
+    if(textEditing)return false;
+    picojson::value next;
+    try{next=rtsUIFramesToJson(frames);}
+    catch(const std::exception& e){
+        message=std::string("INVALID UI FRAMES: ")+e.what();
+        return false;
+    }
+    const auto old=project.metadata.find("ui_frames");
+    if((frames.empty() && old==project.metadata.end()) ||
+       (old!=project.metadata.end() && old->second.serialize()==next.serialize()))
+        return false;
+    const RTSProject before=project;
+    if(frames.empty())project.metadata.erase("ui_frames");
+    else project.metadata["ui_frames"]=next;
+    try{project.validate();}
+    catch(const std::exception& e){
+        project=before;
+        message=std::string("INVALID UI FRAMES: ")+e.what();
+        return false;
+    }
+    remember(before);
+    modified=true;
+    message="GAME UI FRAME HIERARCHY UPDATED";
+    return true;
+}
 bool EditorSession::setHUDProfile(RTSProject& project,const RTSHUDProfile& profile){
     if(textEditing)return false;
     try{profile.validate();}

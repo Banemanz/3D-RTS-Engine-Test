@@ -273,6 +273,26 @@ jobs:
           name: rts-ai-research-play-screenshot
           path: rts-ai-research-play.png
           if-no-files-found: error
+      - name: Capture custom hierarchical F10 UI frame editor at 125 percent
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-ui-scale 1.25 --project projects/ui_frame_studio_showcase.rtsproject.json --smoke-select-army --smoke-frames 95 --screenshot rts-ui-frames-f10.ppm
+      - name: Convert authored UI frame hierarchy editor screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-frames-f10.ppm rts-ui-frames-f10.png
+      - name: Upload genuine F10 nested UI frame editor
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-frames-f10-screenshot
+          path: rts-ui-frames-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 game with nested live UI and actionable buttons
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_frame_studio_showcase.rtsproject.json --smoke-select-army --smoke-frames 95 --screenshot rts-ui-frames-f9.ppm
+      - name: Convert gameplay nested UI screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-frames-f9.ppm rts-ui-frames-f9.png
+      - name: Upload actual F9 custom authored UI
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-frames-f9-screenshot
+          path: rts-ui-frames-f9.png
+          if-no-files-found: error
       - name: Capture actual F10 Interface Editor as a native OS window
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
       - name: Convert native F10 Interface Editor screenshot

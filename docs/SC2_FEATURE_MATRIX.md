@@ -443,3 +443,19 @@ list now uses resizable, searchable, wrapped Scope/Field/Value rows
 instead of unreadable long concatenated strings, supporting the
 high-contrast and 150–250% creator scales. This is **not** full
 Galaxy UI Editor frame/skin/dialog trigger parity.
+
+
+## Nested UI panel/label/button/progress authoring
+
+F10 has a new native, separate-workspace **Custom UI frames** tool
+with parent/child Panels, Labels, Buttons and Bars, TopLeft/TopRight/
+BottomLeft/BottomRight/Center anchors, bounded positioning,
+five original color palettes, dynamic game bindings and safe
+whitelisted interactive controls. The actual playable F9 HUD and
+mouse routing consume matching clipped coordinates, with strict
+project validation and undoable authoring. Linux OpenGL screenshots
+and Windows/Linux CTests validate the workflow. This advances toward
+the conceptual structure of Galaxy Dialog panels / UI events, but is
+**not complete Galaxy UI Editor parity**: no arbitrary buttons/scripts,
+XML skin loading, trigger click events, text localization or custom
+texture pipelines yet. See docs/UI_FRAME_HIERARCHY.md.

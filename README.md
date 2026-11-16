@@ -529,3 +529,23 @@ Old projects retain their exact default layout. The new sample
 bundles. F7's resolved-property inspector now has a searchable,
 resizable Scope / Field / Value table with wrapped text and clear
 local/inherited indicators, designed to work at 150–250% UI scaling.
+
+
+## F10 Custom UI frame hierarchy (November 16)
+
+The native **F10 Interface Editor → Custom UI frames** tab now builds
+real in-game UI elements from scratch: nested Panels, Labels, Buttons
+and live-value Bars with five parent/screen anchors and original
+Navy/Teal/Cobalt/Amber/Slate styles. Drag frames on a schematic
+multi-resolution preview, edit exact offsets/sizes, configure live
+Minerals/Supply/Workers/Selected/Health/Message/Ticks bindings and
+button actions, or move frames within a bounded parent hierarchy.
+Apply commits one validated undo step; Discard, subtree deletion and
+clear are included. Both the **native F9 renderer and actual mouse
+handling** share the same hierarchical coordinate/clipping engine;
+allowed buttons reuse existing SelectArmy, SelectWorkers and FocusBase
+commands, and no arbitrary script execution is permitted. Original
+sample: [UI Frame Studio](projects/ui_frame_studio_showcase.rtsproject.json)
+and full [UI Frames manual](docs/UI_FRAME_HIERARCHY.md). Windows/Linux
+native bundles, headless geometry/serialization/undo regression tests,
+and genuine F10/F9 screenshots cover this original engine/editor pass.
