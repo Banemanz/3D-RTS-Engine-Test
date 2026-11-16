@@ -2255,3 +2255,20 @@ The fix explicitly combines source edits in all three:
 bundle, real OpenGL F10/F9 images and replay fingerprint; do not claim
 success from the earlier red CI.** All work remains on original
 unmerged Draft PR #1.
+
+
+### Second UI trigger test correction — account for real opponent orders
+
+At `820aa1ed715e16c932798ff3d8392fe991ecd567`,
+Linux Debug `ui_trigger` passed its F6 event setup, fixed tick
+reward, repeated clicks and 16-event cap, then failed line 114
+on a **test-only incorrect assumption**:
+`tape.commands.size()==22`. The game is an actual active RTS,
+so the authoritative replay also records automatic enemy AI
+Attack/Research orders alongside the 22 recorded UI clicks.
+The corrected test counts exactly 22 **UIFrameClick** inputs,
+without assuming the replay tape contains no AI commands.
+Other test conditions and the strict cross-OS replay
+verification remain unchanged. Follow-up must re-run Release
+90/90, Debug screenshot/parity and inspect actual images before
+calling HEAD green.

@@ -43,9 +43,6 @@ int main(int argc,char** argv){
     assert(!rtsUIFrameHit(layout,300.,160.).consumed);
     RTSProject invalid=project;
     auto invalidFrames=frames;
-    invalidFrames.back().action="Trigger"; // Label can't run a script
-    invalid.metadata["ui_frames"]=rtsUIFramesToJson(frames); // keep original while validating
-    invalidFrames=frames;
     invalidFrames[10].consumeInput=false;
     bool threw=false;
     try{(void)rtsUIFramesToJson(invalidFrames);}
@@ -111,7 +108,8 @@ int main(int argc,char** argv){
     assert(game.simulationTick()==120);
     auto tape=game.replayTape();
     assert(tape.version==2);
-    assert(tape.commands.size()==22); // 1 + 1 + 20 (including four rejected)
+    // Autonomous enemy Attack/Research commands share the replay tape;
+    // only compare the 22 actual UI click inputs, not all AI traffic.
     int clickCount=0;
     for(const auto& c:tape.commands){
         if(c.kind!=RTSCommandKind::UIFrameClick)continue;
