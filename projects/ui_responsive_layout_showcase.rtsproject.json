@@ -684,7 +684,7 @@
         "y": 0,
         "width": 260,
         "height": 29,
-        "text": "STATUS",
+        "text": "",
         "binding": "Message",
         "action": "None",
         "palette": "Slate",

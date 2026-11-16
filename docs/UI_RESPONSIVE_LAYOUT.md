@@ -148,3 +148,8 @@ preferences. Future work can add cross-axis alignment, actual text
 measurement, min/max constraints, zoom/scalable native bitmap font,
 more widget types, keyboard focus and usable asset spritesheets
 without taking proprietary Blizzard code or interface artwork.
+
+
+## Screenshot validation and final signal-label polish
+
+The first exact-feature Linux native F10 capture displayed the selected StackColumn Panel, the separate StackRow command strip, and visible layout/resize controls at **150% editor UI scale**. The actual F9 screenshot after a recorded F6-triggered SEND SIGNAL click displayed the ACK label in the stack and live BEACON CHARGE/BEACONS values, while the rest of the RTS HUD and world remained functional. QA found that the decorative prefix `STATUS` unnecessarily shortened the dynamically supplied message in the sample. The fixture now leaves the Message-binding prefix empty so it can display the complete `BEACON SIGNAL RECEIVED` text. A regression assertion verifies the actual message binding, not a hardcoded visual placeholder. The real screenshots are captured as artifacts on the latest commit.

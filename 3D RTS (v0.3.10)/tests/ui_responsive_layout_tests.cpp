@@ -107,6 +107,9 @@ int main(int argc,char** argv){
     assert(game.queueUIFrameClick("event_button"));
     game.update(1.f/60.f);
     assert(game.triggerDiagnostics().variables().at("signal_count")==1);
+    assert(game.triggerMessage=="BEACON SIGNAL RECEIVED");
+    assert(rtsUIFrameText(frame(frames,"signal_status"),game)==
+           game.triggerMessage);
     const auto after=rtsResolveUIFrames(frames,1280,720,&game);
     const auto& ack=get(after,"signal_ack");
     const auto& counter=get(after,"signal_counter");
