@@ -357,6 +357,26 @@ jobs:
           name: rts-ui-responsive-f9-screenshot
           path: rts-ui-responsive-f9.png
           if-no-files-found: error
+      - name: Capture real F10 wrapped toolbar designer at 150 percent
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame command_strip --smoke-ui-scale 1.50 --project projects/ui_wrapped_layout_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-wrapped-f10.ppm
+      - name: Convert wrapped toolbar F10 screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-wrapped-f10.ppm rts-ui-wrapped-f10.png
+      - name: Upload actual native F10 WrapRow editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-wrapped-f10-screenshot
+          path: rts-ui-wrapped-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 wrapped buttons after recorded F6 signal
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_wrapped_layout_showcase.rtsproject.json --smoke-ui-trigger --smoke-frames 95 --screenshot rts-ui-wrapped-f9.ppm
+      - name: Convert wrapped toolbar F9 screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-wrapped-f9.ppm rts-ui-wrapped-f9.png
+      - name: Upload actual native F9 WrapRow HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-wrapped-f9-screenshot
+          path: rts-ui-wrapped-f9.png
+          if-no-files-found: error
       - name: Capture actual F10 Interface Editor as a native OS window
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
       - name: Convert native F10 Interface Editor screenshot
