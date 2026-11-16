@@ -283,6 +283,26 @@ jobs:
           name: rts-technology-map-f7-screenshot
           path: rts-technology-map.png
           if-no-files-found: error
+      - name: Capture separated native Data Editor OS window at 150% scale
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-module-windows --smoke-ui-scale 1.50 --project projects/ai_research_showcase.rtsproject.json --smoke-select-catalog-id raider_doctrine --smoke-frames 95 --screenshot rts-module-150.ppm
+      - name: Convert genuine detached module window framebuffer
+        run: python3 tools/ppm_to_png.py rts-module-150.ppm rts-module-150.png
+      - name: Upload separately rendered native Data Editor OS window
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-native-module-window-dpi150-screenshot
+          path: rts-module-150.png
+          if-no-files-found: error
+      - name: Capture large-font 175 percent Data Editor accessibility view
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-ui-scale 1.75 --project projects/technology_forge_showcase.rtsproject.json --smoke-select-catalog-id frontier_tactics --smoke-frames 80 --screenshot rts-data-dpi175.ppm
+      - name: Convert large-font Data Editor view
+        run: python3 tools/ppm_to_png.py rts-data-dpi175.ppm rts-data-dpi175.png
+      - name: Upload actual Data Editor at 175 percent scale
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-data-editor-dpi175-screenshot
+          path: rts-data-dpi175.png
+          if-no-files-found: error
       - name: Capture real F7 Requirement graph inspector
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id r_arc_gate --smoke-frames 85 --screenshot rts-requirement-f7.ppm
       - name: Convert F7 Requirement screenshot

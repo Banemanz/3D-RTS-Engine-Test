@@ -42,6 +42,10 @@ if(BUILD_TESTING)
              "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_defense_showcase.rtsproject.json")
     add_executable(RTSAIResearchTests tests/ai_research_tests.cpp)
     target_link_libraries(RTSAIResearchTests PRIVATE RTSSimulation)
+    add_executable(RTSCreatorUISettingsTests tests/creator_ui_settings_tests.cpp)
+    target_include_directories(RTSCreatorUISettingsTests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME creator_ui_settings COMMAND RTSCreatorUISettingsTests)
     add_test(NAME ai_research COMMAND RTSAIResearchTests
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_research_showcase.rtsproject.json")
     add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
@@ -384,6 +388,7 @@ install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECH_SHOW_USE.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECH_TREE_MAP.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AI_RESEARCH.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_WINDOWS_ACCESSIBILITY.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/SC2_FEATURE_MATRIX.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/BUILD_ARTIFACTS.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_ARCHITECTURE.md"

@@ -8,6 +8,7 @@
 #include "CreatorCatalogNavigator.hpp"
 #include "CreatorTechGraph.hpp"
 #include "CreatorAIResearch.hpp"
+#include "CreatorUISettings.hpp"
 #include "RTSCatalogValuePreview.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
@@ -21,6 +22,8 @@
 // map serialization, simulation, and undoable authoring stay headless C++.
 // This same workspace is compiled into Windows and Linux native binaries.
 namespace CreatorWorkbench {
+inline bool modulePane=false;
+inline void endPane(){if(modulePane)ImGui::EndChild();else ImGui::End();}
 template<class App>
 void refresh(App& app,bool changed) {
     if(!changed)return;
@@ -77,12 +80,46 @@ void toolbar(App& app) {
             ImGui::TextDisabled("Drag panel title bars to dock/float");
             ImGui::EndMenu();
         }
+        if(ImGui::BeginMenu("Appearance")){
+            auto& prefs=app.uiSettings;
+            bool changed=false;
+            float value=static_cast<float>(prefs.uiScale);
+            ImGui::SetNextItemWidth(240.f);
+            if(ImGui::SliderFloat("UI scale",&value,.85f,2.50f,"%.2fx")){
+                prefs.uiScale=std::round(double(value)*100.)/100.;
+                changed=true;
+            }
+            ImGui::TextDisabled("Manual: %.0f%% | effective: %.0f%%",
+                prefs.uiScale*100.,app.uiEffectiveScale*100.f);
+            const double presets[]={1.,1.25,1.50,1.75,2.,2.5};
+            const char* names[]={"100%","125%","150%","175%","200%","250%"};
+            for(int i=0;i<6;++i){
+                if(i%3!=0)ImGui::SameLine();
+                if(ImGui::SmallButton(names[i])){
+                    prefs.uiScale=presets[i];changed=true;
+                }
+            }
+            changed|=ImGui::Checkbox("Follow OS / monitor DPI",
+                                     &prefs.followSystemDpi);
+            changed|=ImGui::Checkbox("Enhanced text contrast",
+                                     &prefs.enhancedContrast);
+            changed|=ImGui::Checkbox("Separate editor modules",
+                                     &prefs.separateModules);
+            ImGui::Separator();
+            if(ImGui::MenuItem("Reset editor appearance")){
+                prefs=CreatorUISettings{};changed=true;
+            }
+            ImGui::TextWrapped("Text and controls are resized together. These preferences are per-user, never saved into a map.");
+            if(changed)app.uiSettingsDirty=true;
+            ImGui::EndMenu();
+        }
         ImGui::Separator();
         const EditorSession::Panel tabs[]={
             EditorSession::Panel::Play,EditorSession::Panel::Terrain,
             EditorSession::Panel::Data,EditorSession::Panel::Triggers,
             EditorSession::Panel::Scene};
         const char* names[]={"PLAY","TERRAIN","DATA","TRIGGERS","SCENE"};
+        if(ImGui::GetContentRegionAvail().x>565.f)
         for(int i=0;i<5;++i){
             ImGui::PushID(i);
             if(ImGui::SmallButton(names[i]))choosePanel(app,tabs[i]);
@@ -93,7 +130,9 @@ void toolbar(App& app) {
         if(ed.modified)ImGui::TextColored(ImVec4(1.f,.72f,.29f,1.f),"UNSAVED");
         else ImGui::TextColored(ImVec4(.45f,.82f,.65f,1.f),"SAVED");
         ImGui::SameLine();
-        ImGui::TextDisabled("| %s",RTS_SOURCE_COMMIT);
+        const std::string shortCommit=std::string(RTS_SOURCE_COMMIT).substr(0,8);
+        if(ImGui::GetContentRegionAvail().x>120.f)
+            ImGui::TextDisabled("| %s",shortCommit.c_str());
         ImGui::EndMainMenuBar();
     }
 }
@@ -102,9 +141,18 @@ void browser(App& app){
     auto& ed=app.editor;
     const auto& p=app.project;
     const auto w=ImGui::GetIO().DisplaySize;
-    ImGui::SetNextWindowPos(ImVec2(12.f,50.f),ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300.f,std::max(330.f,w.y-76.f)),ImGuiCond_FirstUseEver);
-    if(!ImGui::Begin("Creator | Browser")){ImGui::End();return;}
+    if(modulePane){
+        if(!ImGui::BeginChild("##moduleBrowser",ImVec2(0,0),
+                              ImGuiChildFlags_Borders)){ImGui::EndChild();return;}
+        ImGui::TextDisabled("NAVIGATOR");
+        ImGui::Separator();
+    }else{
+        const float unit=ImGui::GetFontSize()/16.5f;
+        ImGui::SetNextWindowPos(ImVec2(12.f*unit,50.f*unit),ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300.f*unit,
+            std::max(330.f*unit,w.y-76.f*unit)),ImGuiCond_FirstUseEver);
+        if(!ImGui::Begin("Creator | Browser")){ImGui::End();return;}
+    }
     if(ed.panel==EditorSession::Panel::Terrain){
         ImGui::SeparatorText("Terrain brush");
         const EditorSession::Tool tools[]={
@@ -272,7 +320,7 @@ void browser(App& app){
         }
         ImGui::EndChild();
     }
-    ImGui::End();
+    endPane();
 }
 template<class App>
 bool navigateCatalog(App& app,const char* role,const std::string& id) {
@@ -294,13 +342,20 @@ void inspector(App& app){
         ed.panel==EditorSession::Panel::Data?
             (CreatorAIResearch::visible ? 360.f :
              std::clamp(w.x*.40f,400.f,540.f)):360.f;
-    ImGui::SetNextWindowPos(
-        ImVec2(std::max(320.f,w.x-inspectorWidth-15.f),50.f),
-        ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(
-        ImVec2(inspectorWidth,std::max(330.f,w.y-76.f)),
-        ImGuiCond_FirstUseEver);
-    if(!ImGui::Begin("Creator | Inspector")){ImGui::End();return;}
+    if(modulePane){
+        if(!ImGui::BeginChild("##moduleInspector",ImVec2(0,0),
+                              ImGuiChildFlags_Borders)){ImGui::EndChild();return;}
+        ImGui::TextDisabled("PROPERTIES / DETAILS");
+    }else{
+        const float unit=ImGui::GetFontSize()/16.5f;
+        ImGui::SetNextWindowPos(
+            ImVec2(std::max(320.f*unit,w.x-inspectorWidth*unit-15.f*unit),
+                   50.f*unit),ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(
+            ImVec2(inspectorWidth*unit,std::max(330.f*unit,w.y-76.f*unit)),
+            ImGuiCond_FirstUseEver);
+        if(!ImGui::Begin("Creator | Inspector")){endPane();return;}
+    }
     ImGui::TextDisabled("PROJECT  %s",project.name.c_str());
     ImGui::TextDisabled("MAP  %d x %d",project.terrain.width(),project.terrain.depth());
     ImGui::Separator();
@@ -327,14 +382,14 @@ void inspector(App& app){
                 ImGui::SameLine();
                 if(ImGui::Button("Remove object")){
                     refresh(app,ed.deleteCatalogObject(project));
-                    ImGui::End();return; // deleted catalog entry invalidates pointers
+                    endPane();return; // deleted catalog entry invalidates pointers
                 }
                 // SC2-style object explorer: links are typed, inherited,
                 // actionable, and resolved through the headless project data.
                 const auto resolved=project.catalog.resolvedFields(entry->id);
                 ImGui::SeparatorText("Object links");
                 if(!entry->parent.empty() && navigateCatalog(app,"Parent",entry->parent)){
-                    ImGui::End();return;
+                    endPane();return;
                 }
                 // Explicit branches keep MSVC/GCC template name lookup
                 // identical (nested captures of templated App can diverge).
@@ -342,13 +397,13 @@ void inspector(App& app){
                 if(entry->type=="Unit" && actorLink!=resolved.end() &&
                    actorLink->second.template is<std::string>() &&
                    navigateCatalog(app,"Actor",actorLink->second.template get<std::string>())){
-                    ImGui::End();return;
+                    endPane();return;
                 }
                 const auto modelLink=resolved.find("model");
                 if(entry->type=="Actor" && modelLink!=resolved.end() &&
                    modelLink->second.template is<std::string>() &&
                    navigateCatalog(app,"Model",modelLink->second.template get<std::string>())){
-                    ImGui::End();return;
+                    endPane();return;
                 }
                 if(entry->type=="Actor"){
                     ImGui::SeparatorText("Actor event rules | Presentation only");
@@ -395,7 +450,7 @@ void inspector(App& app){
                     if(ImGui::Button("Apply actor events")){
                         if(ed.setActorCues(project,draftCues)){
                             refresh(app,true);editingActorCues.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -476,7 +531,7 @@ void inspector(App& app){
                     }
                     if(!draft.showRequirementId.empty() &&
                        navigateCatalog(app,"Open Show graph",draft.showRequirementId)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     const std::string req=draft.requirementId.empty()?
                         "None (unrestricted)":draft.requirementId;
@@ -493,13 +548,13 @@ void inspector(App& app){
                     }
                     if(!draft.requirementId.empty() &&
                        navigateCatalog(app,"Open tech prerequisite",draft.requirementId)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     ImGui::TextWrapped("Show Requirement hides a command until its Caster rule passes. Use Requirement leaves it visible but disabled until its prerequisite passes. Completion affects present and future owned Units.");
                     if(ImGui::Button("Apply Upgrade research")){
                         if(ed.setUpgradeDefinition(project,draft)){
                             refresh(app,true);editingUpgrade.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -544,7 +599,7 @@ void inspector(App& app){
                         }
                         if(!draft.upgradeId.empty() &&
                            navigateCatalog(app,"Open Upgrade",draft.upgradeId)){
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     if(draft.kind==RTSValidatorKind::OwnerUnitCountAtLeast){
@@ -575,14 +630,14 @@ void inspector(App& app){
                         }
                         if(!draft.behaviorId.empty() &&
                            navigateCatalog(app,"Edit Behavior",draft.behaviorId)){
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::TextWrapped("Caster tests the issuing Unit; Target tests the ability's selected Unit. Ground and training gates have no Target.");
                     if(ImGui::Button("Apply Validator")){
                         if(ed.setValidatorDefinition(project,draft)){
                             refresh(app,true);editingValidator.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -630,7 +685,7 @@ void inspector(App& app){
                         }
                         if(!validatorId.empty() &&
                            navigateCatalog(app,"Open Validator",validatorId)){
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }else{
                         ImGui::TextDisabled("Nested Requirement children (%zu / %d)",
@@ -639,7 +694,7 @@ void inspector(App& app){
                             ImGui::PushID(static_cast<int>(i));
                             const std::string id=childIds[i];
                             if(navigateCatalog(app,"Child",id)){
-                                ImGui::PopID();ImGui::End();return;
+                                ImGui::PopID();endPane();return;
                             }
                             ImGui::SameLine();
                             if(ImGui::SmallButton("Remove")){
@@ -672,7 +727,7 @@ void inspector(App& app){
                                 static_cast<RTSRequirementKind>(operation),
                                 validatorId,childIds)){
                             refresh(app,true);editingRequirement.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -705,13 +760,13 @@ void inspector(App& app){
                     }
                     if(!draft.projectileId.empty() &&
                        navigateCatalog(app,"Edit delivery Projectile",draft.projectileId)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     ImGui::TextWrapped("Projectile attacks use fixed-tick swept contact; targets may dodge. Intercept units on flight is configured in the linked Projectile.");
                     if(ImGui::Button("Apply weapon settings")){
                         if(ed.setWeaponDefinition(project,draft)){
                             refresh(app,true);editingWeapon.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -742,7 +797,7 @@ void inspector(App& app){
                     if(ImGui::Button("Apply projectile settings")){
                         if(ed.setProjectileDefinition(project,draft)){
                             refresh(app,true);editingProjectile.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -773,7 +828,7 @@ void inspector(App& app){
                         if(ed.setBehaviorDefinition(project,draft)){
                             refresh(app,true);
                             draftObject.clear();
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }
                     ImGui::SameLine();
@@ -794,7 +849,7 @@ void inspector(App& app){
                         if(ImGui::Selectable("None (unrestricted)",required.empty())){
                             refresh(app,ed.setCatalogField(project,"requirement",
                                 picojson::value(std::string{})));
-                            ImGui::EndCombo();ImGui::End();return;
+                            ImGui::EndCombo();endPane();return;
                         }
                         for(const auto& choice:project.catalog.entries())
                             if(choice.type=="Requirement" &&
@@ -802,13 +857,13 @@ void inspector(App& app){
                                                  required==choice.id)){
                                 refresh(app,ed.setCatalogField(project,"requirement",
                                     picojson::value(choice.id)));
-                                ImGui::EndCombo();ImGui::End();return;
+                                ImGui::EndCombo();endPane();return;
                             }
                         ImGui::EndCombo();
                     }
                     if(!required.empty() &&
                        navigateCatalog(app,"Open required graph",required)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     ImGui::TextDisabled(entry->type=="Unit"?
                         "Checked by production queue admission":
@@ -823,7 +878,7 @@ void inspector(App& app){
                         if(ImGui::Selectable("Always visible",showReq.empty())){
                             refresh(app,ed.setCatalogField(project,
                                 "show_requirement",picojson::value(std::string{})));
-                            ImGui::EndCombo();ImGui::End();return;
+                            ImGui::EndCombo();endPane();return;
                         }
                         for(const auto& candidate:project.catalog.entries())
                             if(candidate.type=="Requirement" &&
@@ -831,13 +886,13 @@ void inspector(App& app){
                                                  candidate.id==showReq)){
                                 refresh(app,ed.setCatalogField(project,
                                     "show_requirement",picojson::value(candidate.id)));
-                                ImGui::EndCombo();ImGui::End();return;
+                                ImGui::EndCombo();endPane();return;
                             }
                         ImGui::EndCombo();
                     }
                     if(!showReq.empty() &&
                        navigateCatalog(app,"Open Show graph",showReq)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     ImGui::TextWrapped("Show hides commands entirely until its Caster-only graph passes. Use leaves visible commands disabled until the live prerequisite passes.");
                 }
@@ -846,7 +901,7 @@ void inspector(App& app){
                     if(effectRef!=resolved.end() &&
                        effectRef->second.template is<std::string>() &&
                        navigateCatalog(app,"Effect",effectRef->second.template get<std::string>())){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     const auto target=resolved.find("target");
                     const std::string current=target!=resolved.end() &&
@@ -856,7 +911,7 @@ void inspector(App& app){
                         for(const char* kind:{"Self","Ally","Enemy","Any","Ground"}){
                             if(ImGui::Selectable(kind,kind==current) && kind!=current){
                                 refresh(app,ed.setAbilityTargetPolicy(project,kind));
-                                ImGui::EndCombo();ImGui::End();return;
+                                ImGui::EndCombo();endPane();return;
                             }
                         }
                         ImGui::EndCombo();
@@ -867,7 +922,7 @@ void inspector(App& app){
                                ImGui::Selectable(option.id.c_str())){
                                 refresh(app,ed.setCatalogField(project,"effect",
                                     picojson::value(option.id)));
-                                ImGui::EndCombo();ImGui::End();return;
+                                ImGui::EndCombo();endPane();return;
                             }
                         ImGui::EndCombo();
                     }
@@ -881,7 +936,7 @@ void inspector(App& app){
                                                  defined.projectileId.empty())){
                                 refresh(app,ed.setCatalogField(project,"projectile",
                                           picojson::value(std::string{})));
-                                ImGui::EndCombo();ImGui::End();return;
+                                ImGui::EndCombo();endPane();return;
                             }
                             for(const auto& candidate:project.catalog.entries()){
                                 if(candidate.type!="Projectile")continue;
@@ -889,14 +944,14 @@ void inspector(App& app){
                                      candidate.id==defined.projectileId)){
                                     refresh(app,ed.setCatalogField(project,
                                           "projectile",picojson::value(candidate.id)));
-                                    ImGui::EndCombo();ImGui::End();return;
+                                    ImGui::EndCombo();endPane();return;
                                 }
                             }
                             ImGui::EndCombo();
                         }
                         if(!defined.projectileId.empty() &&
                            navigateCatalog(app,"Edit projectile",defined.projectileId)){
-                            ImGui::End();return;
+                            endPane();return;
                         }
                         ImGui::TextWrapped(defined.projectileId.empty()?
                             "No projectile: delay counts directly from cast.":
@@ -932,7 +987,7 @@ void inspector(App& app){
                                     shapes[std::clamp(shape,0,2)],angle,width)){
                                 refresh(app,true);
                                 editingAbility.clear();
-                                ImGui::End();return;
+                                endPane();return;
                             }
                         }
                         ImGui::SameLine();
@@ -968,7 +1023,7 @@ void inspector(App& app){
                         if(ImGui::Selectable("Legacy unit stats",weaponId.empty())){
                             if(ed.setCatalogField(project,"weapon",
                                                    picojson::value(std::string{}))){
-                                refresh(app,true);ImGui::EndCombo();ImGui::End();return;
+                                refresh(app,true);ImGui::EndCombo();endPane();return;
                             }
                         }
                         for(const auto& item:project.catalog.entries()){
@@ -976,7 +1031,7 @@ void inspector(App& app){
                             if(ImGui::Selectable(item.id.c_str(),weaponId==item.id)){
                                 if(ed.setCatalogField(project,"weapon",
                                                        picojson::value(item.id))){
-                                    refresh(app,true);ImGui::EndCombo();ImGui::End();return;
+                                    refresh(app,true);ImGui::EndCombo();endPane();return;
                                 }
                             }
                         }
@@ -984,7 +1039,7 @@ void inspector(App& app){
                     }
                     if(!weaponId.empty() &&
                        navigateCatalog(app,"Edit equipped weapon",weaponId)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     const auto resolvedAttack=unitFromCatalog(project.catalog,entry->id);
                     ImGui::TextDisabled("Damage %.2f | Reach %.2f | Cooldown %.2fs | Pierce %.2f",
@@ -996,11 +1051,11 @@ void inspector(App& app){
                         if(ImGui::SmallButton("Enable ability slots")){
                             refresh(app,ed.setCatalogField(project,"abilities",
                                 picojson::value(picojson::array{})));
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }else if(CreatorReferenceWidgets::draw(
                         app,entry->id,"abilities",abilities->second)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     auto researchable=resolved.find("researchable_upgrades");
                     if(researchable==resolved.end()){
@@ -1008,18 +1063,18 @@ void inspector(App& app){
                             refresh(app,ed.setCatalogField(project,
                                 "researchable_upgrades",
                                 picojson::value(picojson::array{})));
-                            ImGui::End();return;
+                            endPane();return;
                         }
                     }else if(CreatorReferenceWidgets::draw(
                         app,entry->id,"researchable_upgrades",researchable->second)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     auto training=resolved.find("trainable_units");
                     if(training!=resolved.end() && training->second.template is<picojson::array>()){
                         for(const auto& value:training->second.template get<picojson::array>()){
                             if(value.template is<std::string>() &&
                                navigateCatalog(app,"Trains",value.template get<std::string>())){
-                                ImGui::End();return;
+                                endPane();return;
                             }
                         }
                     }
@@ -1036,7 +1091,7 @@ void inspector(App& app){
                             if(ImGui::Selectable(kind,kind==currentKind) &&
                                kind!=currentKind){
                                 refresh(app,ed.convertEffectKind(project,kind));
-                                ImGui::EndCombo();ImGui::End();return;
+                                ImGui::EndCombo();endPane();return;
                             }
                         }
                         ImGui::EndCombo();
@@ -1047,7 +1102,7 @@ void inspector(App& app){
                             linked->second.template is<std::string>()?
                             linked->second.template get<std::string>():"(unlinked)";
                         if(navigateCatalog(app,"Status Behavior",selected)){
-                            ImGui::End();return;
+                            endPane();return;
                         }
                         if(ImGui::BeginCombo("Status reference",selected.c_str())){
                             for(const auto& candidate:project.catalog.entries())
@@ -1056,7 +1111,7 @@ void inspector(App& app){
                                                       candidate.id==selected)){
                                     refresh(app,ed.setCatalogField(project,"behavior",
                                         picojson::value(candidate.id)));
-                                    ImGui::EndCombo();ImGui::End();return;
+                                    ImGui::EndCombo();endPane();return;
                                 }
                             ImGui::EndCombo();
                         }
@@ -1075,7 +1130,7 @@ void inspector(App& app){
                         project.catalog,entry->id);
                     if(!clicked.empty() && clicked!=entry->id &&
                        ed.selectCatalogId(project,clicked)){
-                        ImGui::End();return;
+                        endPane();return;
                     }
                     const auto kind=resolved.find("kind");
                     if(kind!=resolved.end() &&
@@ -1092,7 +1147,7 @@ void inspector(App& app){
                                 ImGui::PushID(static_cast<int>(i));
                                 const std::string refId=children[i].template get<std::string>();
                                 if(navigateCatalog(app,"Open effect",refId)){
-                                    ImGui::PopID();ImGui::End();return;
+                                    ImGui::PopID();endPane();return;
                                 }
                                 if(i>0){
                                     ImGui::SameLine();
@@ -1101,7 +1156,7 @@ void inspector(App& app){
                                         std::swap(changed[i],changed[i-1]);
                                         refresh(app,ed.setCatalogField(project,"children",
                                             picojson::value(changed)));
-                                        ImGui::PopID();ImGui::End();return;
+                                        ImGui::PopID();endPane();return;
                                     }
                                 }
                                 if(i+1<children.size()){
@@ -1111,7 +1166,7 @@ void inspector(App& app){
                                         std::swap(changed[i],changed[i+1]);
                                         refresh(app,ed.setCatalogField(project,"children",
                                             picojson::value(changed)));
-                                        ImGui::PopID();ImGui::End();return;
+                                        ImGui::PopID();endPane();return;
                                     }
                                 }
                                 if(children.size()>1){
@@ -1121,7 +1176,7 @@ void inspector(App& app){
                                         changed.erase(changed.begin()+static_cast<std::ptrdiff_t>(i));
                                         refresh(app,ed.setCatalogField(project,"children",
                                             picojson::value(changed)));
-                                        ImGui::PopID();ImGui::End();return;
+                                        ImGui::PopID();endPane();return;
                                     }
                                 }
                                 ImGui::PopID();
@@ -1135,7 +1190,7 @@ void inspector(App& app){
                                             changed.emplace_back(candidate.id);
                                             refresh(app,ed.setCatalogField(project,"children",
                                                 picojson::value(changed)));
-                                            ImGui::EndCombo();ImGui::End();return;
+                                            ImGui::EndCombo();endPane();return;
                                         }
                                     }
                                 ImGui::EndCombo();
@@ -1210,7 +1265,7 @@ void inspector(App& app){
                             ((entry->type=="Unit" && field=="trainable_units") ||
                              (entry->type=="Effect" && field=="children"))){
                             if(CreatorReferenceWidgets::draw(app,entry->id,field,found->second)){
-                                ImGui::End();return;
+                                endPane();return;
                             }
                         }else ImGui::TextDisabled("Array/object: edit as JSON");
                     }
@@ -1235,22 +1290,22 @@ void inspector(App& app){
                ImGui::SmallButton("Open linked catalog entry")){
                 ed.panel=EditorSession::Panel::Data;
                 ed.selectCatalogId(project,copy.catalogId);
-                ImGui::End();return;
+                endPane();return;
             }
             ImGui::Text("Owner: %d",copy.owner);
             if(ImGui::Button("Switch owner")){
                 refresh(app,ed.toggleSelectedOwner(project));
-                ImGui::End();return;
+                endPane();return;
             }
             ImGui::SameLine();
             if(ImGui::Button("Duplicate")){
                 refresh(app,ed.duplicateSelectedPlacement(project));
-                ImGui::End();return;
+                endPane();return;
             }
             ImGui::SameLine();
             if(ImGui::Button("Delete")){
                 refresh(app,ed.deleteSelectedPlacement(project));
-                ImGui::End();return;
+                endPane();return;
             }
             // Edit drafts persist across frames. ImGui deliberately rejects
             // EnterReturnsTrue for numeric InputScalar (Debug builds assert);
@@ -1334,21 +1389,80 @@ void inspector(App& app){
         ImGui::SeparatorText("Messages");
         ImGui::TextWrapped("%s",ed.message.c_str());
     }
+    endPane();
+}
+template<class App>
+void moduleWorkspace(App& app){
+    auto& ed=app.editor;
+    const auto* viewport=ImGui::GetMainViewport();
+    const float scale=ImGui::GetFontSize()/16.5f;
+    // Unique window IDs preserve the geometry for each editor module.
+    const std::string title=std::string(creatorModuleTitle(
+        static_cast<int>(ed.panel)))+"###creator_module_"+
+        std::to_string(static_cast<int>(ed.panel));
+    const ImVec2 area=viewport->Size;
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->Pos.x+app.moduleStartOffset.x,
+               viewport->Pos.y+app.moduleStartOffset.y),
+        ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(
+        ImVec2(std::min(area.x*.89f,std::max(710.f*scale,area.x*.73f)),
+               std::max(355.f*scale,area.y-100.f*scale)),
+        ImGuiCond_FirstUseEver);
+    bool open=true;
+    const bool body=ImGui::Begin(title.c_str(),&open,
+        ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoDocking);
+    if(body){
+        ImGui::TextColored(ImVec4(.48f,.83f,.96f,1.f),"CREATOR  /  %s",
+            creatorModuleTitle(static_cast<int>(ed.panel)));
+        ImGui::SameLine();
+        if(ImGui::SmallButton("Save"))app.saveProject();
+        ImGui::SameLine();
+        if(ImGui::SmallButton("Undo"))refresh(app,ed.undo(app.project));
+        ImGui::SameLine();
+        if(ImGui::SmallButton("Redo"))refresh(app,ed.redo(app.project));
+        ImGui::SameLine();
+        if(ImGui::SmallButton("Back to Playtest"))
+            choosePanel(app,EditorSession::Panel::Play);
+        ImGui::Separator();
+        const ImGuiTableFlags flags=ImGuiTableFlags_Resizable|
+            ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchProp;
+        if(ed.panel!=EditorSession::Panel::Play &&
+           ImGui::BeginTable("##creatorModuleGrid",2,flags,
+                             ImVec2(0,ImGui::GetContentRegionAvail().y))){
+            ImGui::TableSetupColumn("Navigator",
+                ImGuiTableColumnFlags_WidthFixed,315.f*scale);
+            ImGui::TableSetupColumn("Properties",ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableNextRow();
+            modulePane=true;
+            ImGui::TableSetColumnIndex(0);
+            browser(app);
+            ImGui::TableSetColumnIndex(1);
+            inspector(app);
+            modulePane=false;
+            ImGui::EndTable();
+        }
+    }
     ImGui::End();
+    if(!open)choosePanel(app,EditorSession::Panel::Play);
 }
 template<class App>
 void draw(App& app){
-    if(app.pauseMenu)return; // Native pause UI owns the entire overlay/input.
+    if(app.pauseMenu)return;
     toolbar(app);
     CreatorTriggerMonitor::draw(app);
     CreatorAIResearch::draw(app);
     if(app.editor.panel==EditorSession::Panel::Play)return;
-    // The center is a pass-through 3D viewport. Panels can dock around it
-    // without forcing world clicks to be interpreted as GUI input.
-    ImGui::DockSpaceOverViewport(0,ImGui::GetMainViewport(),
-                                 ImGuiDockNodeFlags_PassthruCentralNode);
-    browser(app);
-    inspector(app);
+    if(app.uiSettings.separateModules){
+        // Drag the title bar outside the game viewport for an independent
+        // native GLFW/OS window; the project/controller stays shared.
+        moduleWorkspace(app);
+    }else{
+        ImGui::DockSpaceOverViewport(0,ImGui::GetMainViewport(),
+                                     ImGuiDockNodeFlags_PassthruCentralNode);
+        browser(app);
+        inspector(app);
+    }
     CreatorCatalogNavigator::draw(app);
     CreatorTechGraph::draw(app);
 }

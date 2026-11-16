@@ -424,3 +424,8 @@ Galaxy Editor feature parity.
 ## Enemy technology macro-policy (November 16)
 
 The original RTS engine now supports opt-in enemy research planning through shared immutable commands, owner-isolated resources, deterministic prioritized legal upgrades, actual timing/Show/Use requirements and level buffs. The dockable F7 opponent policy editor provides undoable priority reorder, live reference navigation and a producer wiring warning. Play mode shows research progress. Sample data and Windows/Linux replay parity tests are included. This is not a clone of Galaxy AI actions nor a complete resource-gathering/macro-economy system; see docs/AI_RESEARCH.md.
+
+
+## Galaxy-inspired separated editor modules and accessible presentation
+
+F5 Terrain, F6 Triggers, F7 Data and F8 Scene now use individually titled module windows, two-pane resizable Navigator/Properties, independent saved geometry and drag-out native OS multi-viewports on desktop. The existing authoring model, headless data rules, Play/F9 and Windows/Linux feature parity remain intact. Native editor GUI scale runs at 85–250% atop user/system monitor DPI, with on-disk per-user preferences, a blue/teal palette and optional high-contrast text. This matches Galaxy's conceptual *module separation*, **not** fully implemented Galaxy GUI/UI Editor, cutscene editor, simultaneous active document controllers or importer parity. Read docs/CREATOR_WINDOWS_ACCESSIBILITY.md.

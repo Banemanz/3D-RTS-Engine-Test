@@ -518,3 +518,8 @@ writes `ai_research_fingerprint.txt`, which the CI replay-parity job
 byte-compares between Linux and Windows. The Linux GL CI additionally
 records genuine F7 policy editor and F9 research monitor screenshots,
 while Release bundle verification checks the manual/sample/executable.
+
+
+## Creator module and visual accessibility regressions
+
+`RTSCreatorUISettingsTests` validates readable default settings, scale bounds (85–250%), OS-DPI multiplication / safe 400% cap, separate-module/contrast preferences, JSON and filesystem roundtrip/overwrite, invalid/corrupt/oversized settings handling and stable module titles. The Linux OpenGL CI starts an extended virtual desktop, launches `RTSCameraTerrain --data-editor --smoke-module-windows --smoke-ui-scale 1.50`, **requires a secondary ImGui native platform viewport**, and reads the detached window's real GL framebuffer. Another capture uses 175% scale in single-viewport mode. Release verification and Windows CTest build the same creator and settings code. Neither test mutates the project/replay schema.

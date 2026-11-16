@@ -19,6 +19,7 @@
 #include "InstanceOverrides.hpp"
 #include "EditorSession.hpp"
 #include "CreatorWorkbench.hpp"
+#include "CreatorUIRuntime.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -45,6 +46,13 @@ struct AppState {
     std::string notice;
     float noticeSeconds=0;
     std::string projectPath="projects/working.rtsproject.json";
+    std::filesystem::path uiSettingsPath=CreatorUISettings::userConfigPath();
+    CreatorUISettings uiSettings=CreatorUISettings::load(uiSettingsPath);
+    bool uiSettingsDirty=false;
+    float uiEffectiveScale=1.f;
+    // Workspace launch offsets are relative to the game window. Module
+    // windows retain independently persisted Dear ImGui positions afterward.
+    ImVec2 moduleStartOffset={32.f,65.f};
     bool mouseStroke=false;
     bool pauseMenu=false;
     NativeUI::FocusList pauseFocus;
@@ -925,7 +933,9 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n"
                  <<"RTS_FEATURE_TECH_SHOW_USE=1\n"
                  <<"RTS_FEATURE_TECH_DEPENDENCY_MAP=1\n"
-                 <<"RTS_FEATURE_AI_RESEARCH=1\n";
+                 <<"RTS_FEATURE_AI_RESEARCH=1\n"
+                 <<"RTS_FEATURE_CREATOR_MODULE_WINDOWS=1\n"
+                 <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -950,6 +960,8 @@ int main(int argc, char** argv) {
     bool techGraphSmoke=false;
     bool aiResearchSmoke=false;
     bool aiResearchPlaySmoke=false;
+    bool moduleWindowsSmoke=false;
+    double smokeUiScale=0.;
     std::string smokeTriggerId;
     std::string smokeCatalogId;
     std::string smokeResearchUpgrade;
@@ -980,6 +992,12 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-tech-graph")techGraphSmoke=true;
         else if(arg == "--smoke-ai-research")aiResearchSmoke=true;
         else if(arg == "--smoke-ai-research-play")aiResearchPlaySmoke=true;
+        else if(arg == "--smoke-module-windows"){
+            moduleWindowsSmoke=true;
+            startDataEditor=true;
+        }
+        else if(arg == "--smoke-ui-scale" && i+1<argc)
+            smokeUiScale=std::atof(argv[++i]);
         else if(arg == "--smoke-select-trigger-id" && i+1<argc)
             smokeTriggerId=argv[++i];
         else if(arg == "--smoke-select-catalog-id" && i+1<argc)
@@ -1000,6 +1018,15 @@ int main(int argc, char** argv) {
 #endif
 
         AppState app;
+        if(smokeFrames>0 && smokeUiScale>0.){
+            // Test-only: do not persist accessibility settings from CI.
+            app.uiSettings.uiScale=smokeUiScale;
+            (void)app.uiSettings.effective(1.);
+        }
+        if(moduleWindowsSmoke && smokeFrames>0){
+            app.uiSettings.separateModules=true;
+            app.moduleStartOffset=ImVec2(1300.f,65.f);
+        }
         if(!inputProjectPath.empty()) {
             app.project.loadFile(inputProjectPath);
             app.projectPath=inputProjectPath;
@@ -1214,14 +1241,23 @@ int main(int argc, char** argv) {
         // Earlier CI smokes save imgui.ini and otherwise override our
         // FirstUseEver panel geometry; normal creator sessions still
         // persist custom docking and window sizes as before.
-        if(smokeFrames>0 && (aiResearchSmoke || aiResearchPlaySmoke))
+        if(smokeFrames>0 &&
+           (aiResearchSmoke || aiResearchPlaySmoke || moduleWindowsSmoke))
             io.IniFilename=nullptr;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        ImGui::StyleColorsDark();
+        // Desktop editor modules can leave the game window and become
+        // independent native GLFW/OS windows. Classic CI screenshots are
+        // deliberately single-viewport; a separate test exercises the
+        // actual multi-viewport path on Xvfb.
+        if(smokeFrames<=0 || moduleWindowsSmoke)
+            io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         // Init after game callbacks; the official GLFW backend chains them.
         ImGui_ImplGlfw_InitForOpenGL(window,true);
         ImGui_ImplOpenGL3_Init("#version 330");
+        CreatorUIRuntime creatorUi;
+        creatorUi.initialize(app.uiSettings,window);
+        app.uiEffectiveScale=creatorUi.scale();
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
@@ -1335,6 +1371,15 @@ int main(int argc, char** argv) {
         double lastAutosave=lastTime;
 
         while (!glfwWindowShouldClose(window)) {
+            // Rebuild crisp fonts and all item padding from the same BASE
+            // theme when user scale or the active monitor DPI changes.
+            creatorUi.apply(app.uiSettings,CreatorUIRuntime::windowDpi(window));
+            app.uiEffectiveScale=creatorUi.scale();
+            if(app.uiSettingsDirty){
+                if(smokeFrames<=0 && !app.uiSettings.save(app.uiSettingsPath))
+                    app.editor.message="COULD NOT SAVE UI PREFERENCES";
+                app.uiSettingsDirty=false;
+            }
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             if(techGraphSmoke && smokeFrames>0)
@@ -1949,6 +1994,15 @@ int main(int argc, char** argv) {
             CreatorWorkbench::draw(app);
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            if(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable){
+                // Secondary OS windows have their own shared OpenGL context.
+                // ALWAYS restore the game's primary context before terrain,
+                // HUD or screenshot work; no rendering state may leak.
+                GLFWwindow* previousContext=glfwGetCurrentContext();
+                ImGui::UpdatePlatformWindows();
+                ImGui::RenderPlatformWindowsDefault();
+                glfwMakeContextCurrent(previousContext);
+            }
             if(app.pauseMenu && app.editor.panel==EditorSession::Panel::Play){
                 double mx=-1.,my=-1.;
                 glfwGetCursorPos(window,&mx,&my);
@@ -1962,17 +2016,42 @@ int main(int argc, char** argv) {
             glEnable(GL_DEPTH_TEST);
 
             if (smokeFrames > 0 && ++renderedFrames >= smokeFrames) {
-                if (!screenshotPath.empty() && app.framebufferWidth > 0 && app.framebufferHeight > 0) {
-                    const int width = app.framebufferWidth, height = app.framebufferHeight;
-                    std::vector<unsigned char> pixels(static_cast<size_t>(width)*height*3);
+                if(!screenshotPath.empty()){
+                    GLFWwindow* capture=window;
+                    if(moduleWindowsSmoke){
+                        // Require a REAL platform/GLFW viewport, not a
+                        // simulated panel inside the game framebuffer.
+                        for(const ImGuiViewport* viewport:
+                                ImGui::GetPlatformIO().Viewports)
+                            if(viewport->ID!=ImGui::GetMainViewport()->ID &&
+                               viewport->PlatformHandle){
+                                capture=static_cast<GLFWwindow*>(
+                                    viewport->PlatformHandle);
+                                break;
+                            }
+                        if(capture==window)
+                            throw std::runtime_error(
+                                "Native module smoke did not create an OS viewport");
+                    }
+                    int width=0,height=0;
+                    glfwGetFramebufferSize(capture,&width,&height);
+                    if(width<=0 || height<=0 || width>8192 || height>8192)
+                        throw std::runtime_error("Invalid module screenshot dimensions");
+                    glfwMakeContextCurrent(capture);
+                    glReadBuffer(moduleWindowsSmoke?GL_FRONT:GL_BACK);
+                    std::vector<unsigned char> pixels(
+                        static_cast<size_t>(width)*height*3);
                     glPixelStorei(GL_PACK_ALIGNMENT,1);
                     glReadPixels(0,0,width,height,GL_RGB,GL_UNSIGNED_BYTE,pixels.data());
                     std::ofstream out(screenshotPath,std::ios::binary);
                     out<<"P6\n"<<width<<" "<<height<<"\n255\n";
                     for(int y=height-1;y>=0;--y)
-                        out.write(reinterpret_cast<const char*>(pixels.data()+static_cast<size_t>(y)*width*3),
-                                  static_cast<std::streamsize>(width*3));
-                    if(!out)std::cerr<<"Failed to save screenshot: "<<screenshotPath<<"\n";
+                        out.write(reinterpret_cast<const char*>(
+                            pixels.data()+static_cast<size_t>(y)*width*3),
+                            static_cast<std::streamsize>(width*3));
+                    if(!out)throw std::runtime_error(
+                        "Failed to save native editor screenshot: "+screenshotPath);
+                    glfwMakeContextCurrent(window);
                 }
                 glfwSetWindowShouldClose(window,true);
             }

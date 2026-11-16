@@ -50,6 +50,7 @@ def main() -> int:
         "docs/TECH_SHOW_USE.md",
         "docs/TECH_TREE_MAP.md",
         "docs/AI_RESEARCH.md",
+        "docs/CREATOR_WINDOWS_ACCESSIBILITY.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
         "docs/TRIGGER_EDITOR.md",
@@ -143,6 +144,8 @@ def main() -> int:
         "RTS_FEATURE_TECH_SHOW_USE",
         "RTS_FEATURE_TECH_DEPENDENCY_MAP",
         "RTS_FEATURE_AI_RESEARCH",
+        "RTS_FEATURE_CREATOR_MODULE_WINDOWS",
+        "RTS_FEATURE_CREATOR_DPI_SCALING",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

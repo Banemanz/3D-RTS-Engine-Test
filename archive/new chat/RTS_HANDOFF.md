@@ -1833,3 +1833,60 @@ creating the first ImGui frame. This ensures deterministic fresh
 screenshot geometry while preserving normal users' persisted docking,
 floating window sizes and positions. Recheck F7 no overlap and F9
 compact HUD, exact Windows/Linux CI after commit.
+
+
+## November 16 — Galaxy-inspired module windows and accessible DPI UI
+
+User explicitly requests **separate native windows/workspaces** for the
+editor's various Galaxy-inspired modules (rather than one huge property
+overlay), while preserving the blue-on-blue aesthetic and adding strong
+DPI/UI scaling for eye comfort. Previous fully verified head was
+`3ad82ca59e81a0867c982311b2e7ab4bf12f648c`, 86/86 Windows/Linux
+Release CTests, Debug state parity and F7/F9 OpenGL screenshots green,
+on the SAME unmerged Draft PR #1 `feat/rts-vertical-slice`.
+
+This pass creates `CreatorUISettings.hpp` (headless per-user
+appearance settings, validated JSON under LOCALAPPDATA/XDG, 85–250%
+manual scale, OS DPI following, enhanced contrast, separated modules)
+and `CreatorUIRuntime.hpp` (original navy/blue/teal palette, system
+sans fonts where installed with built-in fallback, DPI-sensitive font
+atlas rebuilds and idempotent style sizing). No bundled font files.
+
+`CreatorWorkbench.hpp` upgrades F5 Terrain, F6 Triggers, F7 Data,
+F8 Scene from two root floating overlays to individually titled
+native-docking module windows (distinct persistence IDs) containing
+an adjustable Navigator/Properties split and Save/Undo/Redo commands.
+Old floating layout remains a preference toggle. Regular desktop
+builds enable Dear ImGui docking ViewportsEnable and call
+UpdatePlatformWindows / RenderPlatformWindowsDefault with primary
+OpenGL context restoration, allowing the module to be dragged beyond
+the game window into its own **real OS window** on both Windows/Linux.
+Existing EditorSession controller, project transactions, World viewport,
+Play HUD and replay remain shared and unchanged. Only ONE primary module
+is active at a time; no claim to complete SC2 UI Editor parity.
+View -> Appearance exposes scale presets 100/125/150/175/200/250,
+monitor DPI, contrast and multi-window toggle; restores settings from
+per-user path, never writes into maps.
+
+`RTSCreatorUISettingsTests` + CMake CTest exercise scale clamp, config
+persistence, corrupt-file recovery, module names. Both distro bundles
+ship `docs/CREATOR_WINDOWS_ACCESSIBILITY.md`, verify feature markers
+RTS_FEATURE_CREATOR_MODULE_WINDOWS and RTS_FEATURE_CREATOR_DPI_SCALING.
+New real Linux OpenGL CI smoke `--smoke-module-windows --smoke-ui-scale
+1.50` on a 2600x1050 Xvfb screen requires actual secondary native
+GLFW platform viewport and screenshots its framebuffer. Another
+`--smoke-ui-scale 1.75` screenshot verifies accessible text.
+
+References used as conceptual inspiration only:
+https://s2editor-guides.readthedocs.io/New_Tutorials/01_Introduction/003_Navigating_the_Interface/
+https://s2editor-guides.readthedocs.io/New_Tutorials/03_Trigger_Editor/033_Trigger_Editor_Interface/
+https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
+https://www.glfw.org/docs/latest/window.html
+No proprietary/GPL source/assets were copied.
+
+**Next:** commit on SAME DRAFT PR, check Windows/Linux compile, optimize
+CTests, isolated OS native module screenshot, 175% font size and
+cross-OS replay parity; fix any crashes in same branch. Need inspect
+generated images and check mouse/text controls. If user wants Galaxy
+UI Editor parity later, implement actual authorable in-game HUD
+components/anchors rather than claiming this module shell does it.

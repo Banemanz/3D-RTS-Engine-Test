@@ -252,3 +252,8 @@ and CLI DOT CTest run under optimized Windows/Linux builds as well.
 ## Opponent Research Academy packaging
 
 Both native bundles include `projects/ai_research_showcase.rtsproject.json`, `docs/AI_RESEARCH.md` and report `RTS_FEATURE_AI_RESEARCH=1` from the compiled EXE. The packaging verifier and bundled CLI validate the sample on Windows/Linux. CTest includes `ai_research` and the Debug replay state parity gate compares `ai_research_fingerprint.txt`. Linux software-OpenGL screenshots capture the actual F7 AI priority editor and F9 budget/levels monitor. No additional runtime dependencies or platform-specific feature forks were introduced.
+
+
+## Desktop module windows and creator DPI feature gate
+
+Both release executables report `RTS_FEATURE_CREATOR_MODULE_WINDOWS=1` and `RTS_FEATURE_CREATOR_DPI_SCALING=1`. Both distributions ship docs/CREATOR_WINDOWS_ACCESSIBILITY.md and the bundle verifier checks the flags and manual. The same pinned docking-enabled GLFW/OpenGL3 GUI backend is built on both platforms; no separate Windows-only editor DLL. The Linux Debug CI runs a genuine **second native GLFW window** on Xvfb and captures its own GL framebuffer at 150% creator UI scale; an independent 175% single-window F7 screenshot checks large-font layout. Unit tests exercise JSON preference bounds, DPI arithmetic and malformed-file safety.
