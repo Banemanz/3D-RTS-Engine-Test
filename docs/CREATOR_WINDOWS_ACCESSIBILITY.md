@@ -146,3 +146,16 @@ GUI code, with optimized CTests and release bundle verification.
   safe palette options.
 - Continue game engine, multiplayer-safe economy, asset import,
   animations, and rendering/editor parity on the **same draft PR**.
+
+
+### Large-type layout ergonomics (post-screenshot review)
+
+The Data relationship navigator is now closed by default in the new
+module layout; it remains available from **View → Data relationship
+navigator**. This prevents a third floating pane from covering large
+property controls. The module fills most of the available primary
+window on first use. Navigator/Properties columns keep legible
+minimum widths and show a **horizontal scrollbar** when 175–250% text
+sizing exceeds one monitor. Top title and action buttons are on
+separate rows instead of risking clipped controls at high DPI.
+User-sized/docked windows still override first-use defaults.

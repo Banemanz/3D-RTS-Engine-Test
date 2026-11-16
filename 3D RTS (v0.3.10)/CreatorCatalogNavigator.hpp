@@ -11,7 +11,7 @@
 // Galaxy-style navigation *in concept* only: an original visual projection
 // of this project's typed references, with no borrowed UI assets or code.
 namespace CreatorCatalogNavigator {
-inline bool visible=true;
+inline bool visible=false; // optional relationship browser; avoid obscuring new module windows
 template<class App>
 void draw(App& app){
     if(!visible || app.editor.panel!=EditorSession::Panel::Data)return;

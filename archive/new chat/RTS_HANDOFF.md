@@ -1913,3 +1913,21 @@ is an integration bug, not visual verification. Next fix:
   unchanged. CI must now prove visible actual module framebuffer.
 - A fresh exact-HEAD cross-platform Release+Debug CI and real
   screenshot inspection are required before declaring success.
+
+
+### Large-text screenshot review (175% mode)
+
+At `b43b545`, real 175% F7 native screenshot was legible (blue
+palette, crisp ~29px sans glyphs) but showed `Creator | Data Navigator`
+floating on top of the new Data Editor and the module toolbar clipped
+at right edge. Immediate followup makes Data Navigator **opt-in**
+(`CreatorCatalogNavigator::visible=false`, View menu toggle retained),
+module default width fill most available screen, module header
+buttons on a separate line and resizable two-column table acquire
+horizontal scrollbar / minimum inner width at very large text scales.
+Do not claim screenshot QA passed until exact-new-head image inspected.
+
+True secondary OS screenshot at b43/cca7 was actually black even
+though native viewport count check succeeded. `13c48b9` changes
+final-frame platform swap logic to read GL_BACK before swap, and
+requires >10% nonblack pixels; recheck outcome and handle failures.

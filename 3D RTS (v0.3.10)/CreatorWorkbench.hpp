@@ -1406,7 +1406,7 @@ void moduleWorkspace(App& app){
                viewport->Pos.y+app.moduleStartOffset.y),
         ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(
-        ImVec2(std::min(area.x*.89f,std::max(710.f*scale,area.x*.73f)),
+        ImVec2(std::max(420.f,area.x-28.f*scale),
                std::max(355.f*scale,area.y-100.f*scale)),
         ImGuiCond_FirstUseEver);
     // Pinned ImGui docking exposes per-window NoAutoMerge: even while
@@ -1425,7 +1425,7 @@ void moduleWorkspace(App& app){
     if(body){
         ImGui::TextColored(ImVec4(.48f,.83f,.96f,1.f),"CREATOR  /  %s",
             creatorModuleTitle(static_cast<int>(ed.panel)));
-        ImGui::SameLine();
+        ImGui::Separator();
         if(ImGui::SmallButton("Save"))app.saveProject();
         ImGui::SameLine();
         if(ImGui::SmallButton("Undo"))refresh(app,ed.undo(app.project));
@@ -1448,10 +1448,16 @@ void moduleWorkspace(App& app){
         }
         ImGui::Separator();
         const ImGuiTableFlags flags=ImGuiTableFlags_Resizable|
-            ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchProp;
+            ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchProp|
+            ImGuiTableFlags_ScrollX;
+        const ImVec2 remaining=ImGui::GetContentRegionAvail();
+        // At 175-250% zoom, columns must grow and SCROLL instead of
+        // clipping property values to 40px. Normal zoom fills the width.
+        const float desired=(315.f+470.f+20.f)*scale;
+        const float innerWidth=desired>remaining.x?desired:0.f;
         if(ed.panel!=EditorSession::Panel::Play &&
            ImGui::BeginTable("##creatorModuleGrid",2,flags,
-                             ImVec2(0,ImGui::GetContentRegionAvail().y))){
+                             ImVec2(0,remaining.y),innerWidth)){
             ImGui::TableSetupColumn("Navigator",
                 ImGuiTableColumnFlags_WidthFixed,315.f*scale);
             ImGui::TableSetupColumn("Properties",ImGuiTableColumnFlags_WidthStretch);
