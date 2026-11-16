@@ -134,10 +134,16 @@ int main(int argc,char** argv){
     bad=command;bad.point.x=1.f;assert(invalidCommand(bad));
     bad=command;bad.catalog.clear();assert(invalidCommand(bad));
     bad=command;bad.catalog="../evil";assert(invalidCommand(bad));
-    // UI-only authoring never alters the initial authoritative world.
+    // UI appearance changes cannot alter the authoritative world.
+    // Keep EXACTLY the same trigger graph: rule IDs/fired flags and
+    // counters are intentionally included in replay state hashes.
     RTSProject baseline=project;
-    baseline.extensions.erase("triggers");
-    baseline.metadata.erase("ui_frames");
+    auto restyled=rtsUIFramesFromProject(baseline);
+    restyled[10].x+=12.f;
+    restyled[10].palette="Teal";
+    restyled[11].text="COSMETIC STATUS";
+    baseline.metadata["ui_frames"]=rtsUIFramesToJson(restyled);
+    baseline.validate();
     RTSSkirmish original;original.loadProject(baseline);
     RTSSkirmish authored;authored.loadProject(project);
     assert(original.stateDigest()==authored.stateDigest());

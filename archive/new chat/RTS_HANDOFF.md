@@ -2272,3 +2272,20 @@ Other test conditions and the strict cross-OS replay
 verification remain unchanged. Follow-up must re-run Release
 90/90, Debug screenshot/parity and inspect actual images before
 calling HEAD green.
+
+
+### UI visual-isolation test corrected to preserve trigger state
+
+At `d3da74673c3237d40c3d890d272e66f2496ae23e` the
+90th CTest passed recorded click counts and replay checks, then
+failed a test asserting initial state digests match with and without
+the authored trigger rule. This assumption was wrong by design:
+`RTSSkirmish::stateDigest` intentionally hashes each trigger's rule
+ID, Fired/Executions/Blocked counters as authoritative replay state.
+Removing the rule necessarily changes the initial hash. Fixed
+the test to preserve the identical F6 trigger graph and Button
+ID/action, but change **only UI geometry, color and label text**;
+world digests then must match at initialization and after 60
+fixed ticks. This preserves strong replay integrity AND verifies
+visual-only metadata cannot alter gameplay. Re-run new exact-head
+Windows/Linux Release/Debug 90 CTests, replay parity, F10/F9 images.
