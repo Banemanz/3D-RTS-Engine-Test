@@ -2442,3 +2442,15 @@ tests, both Debug suites, cross-platform replay fingerprint and
 new native F10 screenshot. Keep everything on the SAME original
 open unmerged Draft PR #1 branch `feat/rts-vertical-slice`,
 do not claim this is complete Galaxy UI scripting or asset parity.
+
+
+### Win32 macro collision in F10 resize hit testing
+
+The precision editor commit `f349d6ec50397ad36e61beb67ff59b8bb22c4105`
+compiled and ran Linux Debug GUI CTests but the Windows Release
+native application failed in CreatorUIFrameEditor.hpp at
+`const float near`: Windows headers define legacy `near` as a macro,
+so MSVC saw `const float =...` and emitted C2513/C2059.
+The subsequent fix renames the local `near` variable to
+`hitTolerance` with identical resize-handle behavior. Do not
+claim Windows/Linux parity until final exact-HEAD builds succeed.

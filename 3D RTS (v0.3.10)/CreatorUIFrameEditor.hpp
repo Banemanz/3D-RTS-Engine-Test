@@ -276,9 +276,11 @@ void draw(App& app){
             if(found>=0){
                 const auto& clicked=resolved[static_cast<std::size_t>(found)];
                 selected=clicked.source.id;
-                const float near=std::max(7.f,9.f*ui)/k;
-                resizing=std::fabs(mx-(clicked.clipped.x+clicked.clipped.w))<=near &&
-                         std::fabs(my-(clicked.clipped.y+clicked.clipped.h))<=near;
+                // 'near' is a legacy Windows header macro; keep this
+                // local name safe for MSVC and GCC alike.
+                const float hitTolerance=std::max(7.f,9.f*ui)/k;
+                resizing=std::fabs(mx-(clicked.clipped.x+clicked.clipped.w))<=hitTolerance &&
+                         std::fabs(my-(clicked.clipped.y+clicked.clipped.h))<=hitTolerance;
             }else resizing=false;
         }
         if(ImGui::IsItemActivated()){
