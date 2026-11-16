@@ -2473,3 +2473,16 @@ the property scroll child (ID/type is already pinned outside).
 This saves vertical space without lowering the font scale or breaking
 separate OS modules. Must re-verify final exact HEAD and inspect the
 newest screenshot; do not describe the older screenshot as latest.
+
+
+## November 16 continuation — responsive F10 Panel rows/columns (current task)
+
+**Project:** Banemanz/3D-RTS-Engine-Test, same original open Draft PR #1, `feat/rts-vertical-slice`. Verified starting HEAD **`19c31d13c52068a5712c18dc43bf8e31cc9af61d`** fully GREEN: prior **92/92** CTests Windows/Linux Release and both Debug suites, strict replay parity, real native 150% F10 and F9 screenshots. Prior F6 UI click trigger events, live variables, visibility rules and snap/resize/nudge precision tools already exist; do not duplicate them.
+
+**This pass:** `RTSUIFrames.hpp` adds optional `layout` (Free/StackRow/StackColumn, Panel only), finite `layout_gap` 0..64 and `layout_padding` 0..80, and child `stretch_cross_axis` (only when parent flows). Defaults preserve existing Free layouts and serialization. `RTSUIFrameLayout.hpp` adds bounded per-Panel deterministic flow cursors in stable authoring order; hidden F6 variable children skip both size and gap, descendants clip to parent bounds and exact same resolved rectangles drive F10 preview, F9 OpenGL and actual Button hit tests. Nested row/column stacks supported; stretch sets width (column) or height (row) based on parent inner extent. `CreatorUIFrameEditor.hpp` adds flow modes, padding/gap sliders, direct child nudge reset, cross-axis stretch switch, actual resolved rectangle and clipping warning; anchor/alignment disabled while parent owns flow placement. New child insertion under Flow starts with zero offsets.
+
+**Original fixture:** `projects/ui_responsive_layout_showcase.rtsproject.json` based on real F6 variable/trigger dashboard. `signal_panel` TopRight 318x345 StackColumn has variable-bound stacked labels, replay-queued `event_button`, dynamic `signal_count` progress bar, hidden-until-click ACK label and subsequent reflowing status. `command_strip` TopLeft 390x67 StackRow holds army/worker/base buttons. New `RTSUIResponsiveTests` checks exact four-resolution geometry, gaps/stretch/clipping/hit, real click-driven F6 hide/show reflow, schema type/range rejection, project roundtrip, author Undo/Redo and 120-tick state digest equality between flow/nonflow presentations with replay roundtrip; writes `ui_responsive_fingerprint.txt` for byte-identical Windows/Linux Debug comparison.
+
+**CI/docs/packaging:** Add 93rd CTest with Release assertions both OS, bundled project validation, new manual `docs/UI_RESPONSIVE_LAYOUT.md`, feature marker `RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1`, Linux native 150% F10 selected signal_panel screenshot and actual F9 after recorded SEND SIGNAL click. README/matrix/architecture/build/testing/next chat handoff updated. All changes only on same draft PR; don't merge.
+
+**NEXT: MUST commit and verify exact head Windows/Linux Release 93/93, Debug 93/93, cross-OS `ui_responsive_fingerprint`, inspect F10/F9 screenshots. Fix any compiler/test or layout bugs on SAME branch before claiming green.** Future: real game HUD accessibility DPI, text autosize, F10 image/icon assets, keyboard navigation, layout wrapping/grid and richer engine functionality.

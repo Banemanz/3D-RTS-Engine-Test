@@ -611,3 +611,8 @@ other axis and chosen anchor across 640×480, 800×600,
 capture F10's real 150%-scaled grid/inspector and F9's unchanged
 gameplay HUD, while the existing 120-tick replay parity and
 UI-variable fingerprint checks remain mandatory.
+
+
+## Responsive F10 authored Panel flow regression
+
+`RTSUIResponsiveTests` loads the authored live F6 responsive sample and validates StackColumn/StackRow order at four resolutions, exact padding and gap, stretch widths, clipping, legal click regions, hidden F6 variables collapsing row/column slots, invalid schema/parent rejection and atomic authoring Undo/Redo. It runs 120 fixed simulation ticks comparing free vs responsive appearance with identical triggers and buttons, requires byte-identical authoritative digests, serializes/verifies the real replay and emits `ui_responsive_fingerprint.txt` for strict Windows/Linux Debug comparison. Native Mesa screenshot tests render actual F10 parent layout controls and the real F9 game after a replay-safe trigger click.

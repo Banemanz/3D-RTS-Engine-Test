@@ -3,6 +3,7 @@
 #include "RTSHUDLayout.hpp"
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -43,32 +44,65 @@ inline std::vector<RTSUIResolvedFrame> rtsResolveUIFrames(
                                   float(std::max(1,viewportHeight))};
     std::vector<RTSUIResolvedFrame> out;
     out.reserve(frames.size());
+    // The cursor belongs to each Panel ID (not global order). Nested flow
+    // containers have independent cursors and stable author-defined order.
+    std::map<std::string,float> flowCursor;
     for(const auto& f:frames){
         HUDRect base=root,clip=root;
         int depth=0;
         bool parentVisible=true;
+        const RTSUIResolvedFrame* parent=nullptr;
         if(!f.parent.empty()){
             const auto it=std::find_if(out.begin(),out.end(),
-                [&](const RTSUIResolvedFrame& parent){
-                    return parent.source.id==f.parent;
+                [&](const RTSUIResolvedFrame& candidate){
+                    return candidate.source.id==f.parent;
                 });
             if(it==out.end())throw std::invalid_argument("Missing UI parent");
+            parent=&*it;
             base=it->bounds;
             clip=it->clipped;
             depth=it->depth+1;
             parentVisible=it->visible;
         }
-        float x=base.x,y=base.y;
-        if(f.anchor=="TopRight" || f.anchor=="BottomRight")
-            x+=base.w-f.width;
-        else if(f.anchor=="Center")
-            x+=(base.w-f.width)*.5f;
-        if(f.anchor=="BottomLeft" || f.anchor=="BottomRight")
-            y+=base.h-f.height;
-        else if(f.anchor=="Center")
-            y+=(base.h-f.height)*.5f;
-        const HUDRect rect{x+f.x,y+f.y,f.width,f.height};
         const bool shown=parentVisible && (!game || rtsUIFrameVisible(f,*game));
+        float x=base.x,y=base.y;
+        float width=f.width,height=f.height;
+        if(parent && parent->source.layout!="Free"){
+            const auto& config=parent->source;
+            const float padding=config.layoutPadding;
+            const float cursor=flowCursor[f.parent];
+            if(config.layout=="StackColumn"){
+                if(f.stretchCrossAxis)
+                    width=std::clamp(base.w-2.f*padding,24.f,650.f);
+                x+=padding+f.x;
+                y+=padding+cursor+f.y;
+            }else{ // StackRow
+                if(f.stretchCrossAxis)
+                    height=std::clamp(base.h-2.f*padding,20.f,400.f);
+                x+=padding+cursor+f.x;
+                y+=padding+f.y;
+            }
+            // Hidden siblings are excluded from the flow; F6 variable
+            // changes therefore reflow text, hit boxes and draw together.
+            if(shown)
+                flowCursor[f.parent]+=(
+                    config.layout=="StackColumn"?height:width)+
+                    config.layoutGap;
+        }else{
+            // Leave every Free-layout coordinate byte-for-byte compatible
+            // with the existing five-anchor authoring math.
+            if(f.anchor=="TopRight" || f.anchor=="BottomRight")
+                x+=base.w-width;
+            else if(f.anchor=="Center")
+                x+=(base.w-width)*.5f;
+            if(f.anchor=="BottomLeft" || f.anchor=="BottomRight")
+                y+=base.h-height;
+            else if(f.anchor=="Center")
+                y+=(base.h-height)*.5f;
+            x+=f.x;
+            y+=f.y;
+        }
+        const HUDRect rect{x,y,width,height};
         out.push_back({f,rect,rtsUIRectIntersect(clip,rect),depth,shown});
     }
     return out;

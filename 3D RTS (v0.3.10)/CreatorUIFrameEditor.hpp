@@ -114,8 +114,14 @@ void draw(App& app){
         if(item.kind=="Panel")item.consumeInput=true;
         const int parent=findFrame(draft,selected);
         if(parent>=0 && draft[static_cast<std::size_t>(parent)].kind=="Panel"){
-            item.parent=draft[static_cast<std::size_t>(parent)].id;
-            item.x=12.f;item.y=35.f;
+            const auto& group=draft[static_cast<std::size_t>(parent)];
+            item.parent=group.id;
+            if(group.layout=="Free"){
+                item.x=12.f;item.y=35.f;
+            }else{
+                item.x=0.f;item.y=0.f;
+                item.stretchCrossAxis=group.layout=="StackColumn";
+            }
         }else{
             item.x=30.f+18.f*float(draft.size()%6);
             item.y=85.f+27.f*float(draft.size()%6);
@@ -415,6 +421,53 @@ void draw(App& app){
             // Primary Button action should be visible immediately at
             // high DPI; don't bury it behind several size controls.
             if(f.kind=="Button")combo("Click action",f.action,actions,5);
+            if(f.kind=="Panel"){
+                if(ImGui::CollapsingHeader("Responsive child layout",
+                                           ImGuiTreeNodeFlags_DefaultOpen)){
+                    const char* layouts[]={"Free","StackColumn","StackRow"};
+                    const std::string before=f.layout;
+                    combo("Arrange direct children",f.layout,layouts,3);
+                    if(before!=f.layout && f.layout=="Free"){
+                        for(auto& child:draft)if(child.parent==f.id)
+                            child.stretchCrossAxis=false;
+                    }
+                    if(f.layout!="Free"){
+                        ImGui::PushID("flow");
+                        ImGui::TextUnformatted("Inner padding");
+                        ImGui::SetNextItemWidth(-1.f);
+                        if(ImGui::SliderFloat("##padding",&f.layoutPadding,0.f,
+                                              80.f,"%.0f px"))dirty=true;
+                        ImGui::TextUnformatted("Gap between visible children");
+                        ImGui::SetNextItemWidth(-1.f);
+                        if(ImGui::SliderFloat("##gap",&f.layoutGap,0.f,
+                                              64.f,"%.0f px"))dirty=true;
+                        ImGui::PopID();
+                        if(ImGui::SmallButton("Reset child nudges")){
+                            for(auto& child:draft)if(child.parent==f.id){
+                                child.x=0.f;child.y=0.f;
+                            }
+                            dirty=true;
+                        }
+                        ImGui::TextWrapped("Children flow in list order. Hidden children collapse their space. Child X/Y remain fine-offset nudges; anchors do not control stacked children.");
+                    }else{
+                        ImGui::TextDisabled("Children keep independent anchors and offsets.");
+                    }
+                }
+            }else if(!f.parent.empty()){
+                const int parentIndex=findFrame(draft,f.parent);
+                const bool stacked=parentIndex>=0 &&
+                    draft[static_cast<std::size_t>(parentIndex)].layout!="Free";
+                if(stacked){
+                    ImGui::SeparatorText("Responsive parent flow");
+                    ImGui::TextDisabled("%s",
+                        draft[static_cast<std::size_t>(parentIndex)].layout.c_str());
+                    if(ImGui::Checkbox("Stretch across parent",&f.stretchCrossAxis))
+                        dirty=true;
+                    ImGui::TextWrapped("Placement comes from the parent flow. X/Y nudge this child; Width or Height controls its primary-axis extent.");
+                }else if(f.stretchCrossAxis){
+                    f.stretchCrossAxis=false;dirty=true;
+                }
+            }
             ImGui::SeparatorText("Live data & conditional visibility");
             if(f.kind=="Bar"){
                 const char* progress[]={"Supply","SelectedHealth","Variable"};
@@ -484,19 +537,27 @@ void draw(App& app){
                        rtsUIVariableValue(app.game,f.visibleVariable));
             }
             if(ImGui::CollapsingHeader("Geometry, anchors & palette")){
+            const int anchorParent=findFrame(draft,f.parent);
+            const bool flowed=anchorParent>=0 &&
+                draft[static_cast<std::size_t>(anchorParent)].layout!="Free";
+            ImGui::BeginDisabled(flowed);
             combo("Anchor",f.anchor,anchors,5);
+            ImGui::EndDisabled();
             combo("Blue theme palette",f.palette,palettes,5);
             ImGui::TextUnformatted("Parent (root or an earlier panel)");
             ImGui::SetNextItemWidth(-1.f);
             if(ImGui::BeginCombo("##parent",f.parent.empty()?"Screen":f.parent.c_str())){
                 if(ImGui::Selectable("Screen",f.parent.empty())){
-                    f.parent.clear();dirty=true;
+                    f.parent.clear();f.stretchCrossAxis=false;dirty=true;
                 }
                 for(int j=0;j<index;++j)
                     if(draft[static_cast<std::size_t>(j)].kind=="Panel"){
                         const auto& id=draft[static_cast<std::size_t>(j)].id;
                         if(ImGui::Selectable(id.c_str(),f.parent==id)){
-                            f.parent=id;dirty=true;
+                            f.parent=id;
+                            if(draft[static_cast<std::size_t>(j)].layout=="Free")
+                                f.stretchCrossAxis=false;
+                            dirty=true;
                         }
                     }
                 ImGui::EndCombo();
@@ -514,6 +575,16 @@ void draw(App& app){
             drag("Y offset",f.y,-2048.f,2048.f);
             drag("Width",f.width,24.f,650.f);
             drag("Height",f.height,20.f,400.f);
+            if(index<int(resolved.size())){
+                const auto& visual=resolved[static_cast<std::size_t>(index)];
+                ImGui::TextDisabled("Actual rect: %.0f, %.0f  |  %.0f x %.0f",
+                    visual.bounds.x,visual.bounds.y,
+                    visual.bounds.w,visual.bounds.h);
+                if(visual.clipped.w+0.01f<visual.bounds.w ||
+                   visual.clipped.h+0.01f<visual.bounds.h)
+                    ImGui::TextColored(ImVec4(1.f,.76f,.39f,1.f),
+                        "Clipped by parent or viewport");
+            }
             HUDRect parentBounds{0,0,float(w),float(h)};
             bool canAlign=true;
             try{parentBounds=rtsUIFrameParentRect(resolved,f,w,h);}
@@ -521,7 +592,9 @@ void draw(App& app){
             ImGui::SeparatorText("Align inside parent / screen");
             if(!canAlign)ImGui::TextColored(ImVec4(1.f,.68f,.35f,1.f),
                 "Fix the frame parent before aligning");
-            ImGui::BeginDisabled(!canAlign);
+            ImGui::BeginDisabled(!canAlign || flowed);
+            if(flowed)ImGui::TextDisabled(
+                "Parent flow controls placement; use X/Y nudge instead");
             const auto alignAxis=[&](int axis,int pos){
                 rtsUIAlignFrame(f,parentBounds,axis,pos);
                 dirty=true;

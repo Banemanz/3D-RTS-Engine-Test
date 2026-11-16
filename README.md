@@ -600,3 +600,8 @@ typed F6 variable and visibility controls visible without excessive
 scrolling on high-DPI monitors. Independent
 `RTSUIEditorGeometryTests` covers all six alignments, snaps,
 bounding and multi-resolution consistency.
+
+
+## Responsive F10 UI layout (November 16)
+
+Custom UI Panels can now arrange their own children automatically in **StackColumn** or **StackRow** flows with configurable padding/gap, invisible-child collapse, and optional cross-axis stretch. Free/anchor placement stays byte-for-byte compatible with existing maps. The F10 high-DPI inspector exposes flow controls, child nudge normalization, actual resolved rectangles and clipping warnings. Both live gameplay drawing and real button hit-testing use the same bounded layout math; a hidden F6-variable Label causes later items to reflow. [Responsive layout manual](docs/UI_RESPONSIVE_LAYOUT.md) and the original [responsive sample](projects/ui_responsive_layout_showcase.rtsproject.json) explain usage. Regression tests cover four resolutions, genuine replay-safe UI trigger events, simulation/replay invariance, Windows/Linux parity and F10/F9 OpenGL screenshots.

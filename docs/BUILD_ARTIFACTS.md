@@ -310,3 +310,8 @@ the new project, and CTest includes `ui_variable_bindings` with
 Release assertions enabled on both OS. Native F10/F9 OpenGL
 screenshots plus strict cross-OS Debug replay fingerprint parity
 are required in addition to the unchanged existing tests.
+
+
+## Responsive UI layout native bundle check
+
+Both Windows and Linux bundles ship `projects/ui_responsive_layout_showcase.rtsproject.json`, `docs/UI_RESPONSIVE_LAYOUT.md`, and require compiled `RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1`. The included `RTSProjectTool` validates the new F6-responsive UI showcase. Release `ui_responsive` CTest runs with assertions on both OS; the Debug CI additionally diffs `ui_responsive_fingerprint.txt` and captures genuine native F10 (150% font) and F9 flow layouts under Mesa.

@@ -47,6 +47,7 @@ def main() -> int:
         "projects/ui_frame_studio_showcase.rtsproject.json",
         "projects/ui_trigger_showcase.rtsproject.json",
         "projects/ui_variable_dashboard_showcase.rtsproject.json",
+        "projects/ui_responsive_layout_showcase.rtsproject.json",
         "docs/AUTHORING.md",
         "docs/ACTOR_EVENT_AUTHORING.md",
         "docs/REQUIREMENT_AUTHORING.md",
@@ -59,6 +60,7 @@ def main() -> int:
         "docs/UI_FRAME_HIERARCHY.md",
         "docs/UI_TRIGGER_EVENTS.md",
         "docs/UI_VARIABLE_BINDINGS.md",
+        "docs/UI_RESPONSIVE_LAYOUT.md",
         "docs/BUILD_ARTIFACTS.md",
         "docs/CREATOR_ARCHITECTURE.md",
         "docs/TRIGGER_EDITOR.md",
@@ -158,6 +160,7 @@ def main() -> int:
         "RTS_FEATURE_UI_FRAME_HIERARCHY",
         "RTS_FEATURE_UI_TRIGGER_EVENTS",
         "RTS_FEATURE_UI_VARIABLE_BINDINGS",
+        "RTS_FEATURE_UI_RESPONSIVE_LAYOUT",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

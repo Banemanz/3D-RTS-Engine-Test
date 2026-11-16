@@ -298,3 +298,8 @@ scrollable selected frame inspector no longer repeats the pinned
 frame ID/title. The quick frame chooser and collapsible hierarchy
 remain available; the same controls become visible earlier without
 shrinking fonts.
+
+
+## Responsive layout at 150–250% creator scaling
+
+The F10 Custom UI properties show each Panel's row/column layout, padding and spacing, a child nudge-normalization action and optional stretch across a flow parent. A selected frame shows real resolved game-space coordinates and explicit clipping warnings. The independent, scrollable F10 property inspector and original navy/teal theme retain per-user OS DPI and manual 85–250% zoom, without modifying the game-space coordinates or the project when a user changes editor accessibility settings. See `docs/UI_RESPONSIVE_LAYOUT.md`.

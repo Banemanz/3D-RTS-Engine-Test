@@ -488,3 +488,8 @@ a headless end-to-end replay test, cross-OS deterministic fingerprint
 and genuine F10/F9 native screenshots cover this. It remains narrower
 than Galaxy's arbitrary dialog binding/skin/trigger UI API: no
 arbitrary UI-side expression engine or client-only variable scripts.
+
+
+## Responsive F10 panel containers
+
+The original F10 Custom UI now has row/column flow containers as well as free-anchor positioning; authored Panels control padding, gap and cross-axis stretch, and dynamically hidden children collapse their occupied slot. Windows/Linux share one model for F10 preview, F9 OpenGL rendering and hit testing. A flow example with replay-safe F6 UI-click and conditional acknowledgement is packaged and tested. This advances authoring beyond isolated dialog elements but does not yet provide Galaxy's complete UI layout engine, per-frame image assets, arbitrary scripts, localization or full flexible constraint layout. See `docs/UI_RESPONSIVE_LAYOUT.md`.

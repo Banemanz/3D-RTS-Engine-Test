@@ -43,6 +43,7 @@ jobs:
             build/ui_frames_fingerprint.txt
             build/ui_trigger_fingerprint.txt
             build/ui_variable_fingerprint.txt
+            build/ui_responsive_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -336,6 +337,26 @@ jobs:
           name: rts-ui-variable-f9-screenshot
           path: rts-ui-variable-f9.png
           if-no-files-found: error
+      - name: Capture 150 percent F10 responsive row/column layout authoring
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame signal_panel --smoke-ui-scale 1.50 --project projects/ui_responsive_layout_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-responsive-f10.ppm
+      - name: Convert responsive F10 editor screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-responsive-f10.ppm rts-ui-responsive-f10.png
+      - name: Upload real native responsive F10 editor
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-responsive-f10-screenshot
+          path: rts-ui-responsive-f10.png
+          if-no-files-found: error
+      - name: Capture F9 runtime after conditional flow reflow
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_responsive_layout_showcase.rtsproject.json --smoke-ui-trigger --smoke-frames 95 --screenshot rts-ui-responsive-f9.ppm
+      - name: Convert responsive F9 gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-responsive-f9.ppm rts-ui-responsive-f9.png
+      - name: Upload real F9 responsive game UI
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-responsive-f9-screenshot
+          path: rts-ui-responsive-f9.png
+          if-no-files-found: error
       - name: Capture actual F10 Interface Editor as a native OS window
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
       - name: Convert native F10 Interface Editor screenshot
@@ -584,6 +605,7 @@ jobs:
             build/ui_frames_fingerprint.txt
             build/ui_trigger_fingerprint.txt
             build/ui_variable_fingerprint.txt
+            build/ui_responsive_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -623,3 +645,4 @@ jobs:
           diff -u fingerprints/linux/ui_frames_fingerprint.txt fingerprints/windows/ui_frames_fingerprint.txt
           diff -u fingerprints/linux/ui_trigger_fingerprint.txt fingerprints/windows/ui_trigger_fingerprint.txt
           diff -u fingerprints/linux/ui_variable_fingerprint.txt fingerprints/windows/ui_variable_fingerprint.txt
+          diff -u fingerprints/linux/ui_responsive_fingerprint.txt fingerprints/windows/ui_responsive_fingerprint.txt

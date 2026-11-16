@@ -160,3 +160,8 @@ safe existing ECA actions. This intentionally avoids injecting
 untracked GUI callbacks into deterministic combat/resources, and
 does not copy Blizzard API code, proprietary UI assets or GPL engine
 implementations. See docs/UI_TRIGGER_EVENTS.md.
+
+
+## Responsive Panel containers (November 16)
+
+In addition to named anchors and F6 dialog events, modern authoring requires composable layouts that do not force every widget into absolute coordinates. The original RTS Creator now implements bounded StackRow/StackColumn Panels with padding/gap, cross-axis stretch and F6-variable-driven visible-child reflow. This is a homegrown C++17 layout math model rather than copied Galaxy XML or GPL engines. It intentionally does not yet implement full constraint solving, wrapping, text autosize or texture-based frames. See `docs/UI_RESPONSIVE_LAYOUT.md`.

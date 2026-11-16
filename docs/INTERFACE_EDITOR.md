@@ -149,3 +149,8 @@ replay command. The resulting ECA actions can alter real gameplay;
 this is not a direct GUI callback or an arbitrary native script.
 F10 protects existing F6 references during Apply/Undo/Redo.
 See [UI Trigger Events](UI_TRIGGER_EVENTS.md).
+
+
+## Row/column responsive Custom UI
+
+F10 Custom UI Panels may now automatically place direct children in horizontal or vertical stacks with controllable padding/gaps; conditional F6 variable visibility reflows subsequent children and optionally stretches them across the parent's other axis. Old free anchors and legacy native HUD layouts stay unchanged. All preview/render/click rectangles share the same bounded C++ geometry model, with undoable project Apply. The original sample and validation details are in [Responsive UI layout](UI_RESPONSIVE_LAYOUT.md).

@@ -411,3 +411,8 @@ on 720p/high-DPI creator windows. All edits are staged in the F10
 draft and validated with the existing single-transaction Apply.
 `RTSUIEditorGeometryTests` covers 4 resolutions and malformed
 alignment/grid inputs without needing OpenGL.
+
+
+## Auto-layout Panels in the F10 frame hierarchy
+
+The shared `RTSUIFrames.hpp` schema adds optional Panel `layout` (`Free`, `StackRow`, `StackColumn`), finite `layout_gap`/`layout_padding`, and per-child `stretch_cross_axis`. The pure `rtsResolveUIFrames` model computes independent per-parent stable flow cursors, uses current F6 variables for hidden-sibling collapse, clips all descendants, and is reused without duplication by both F9 renderer/input hit tests and F10 preview. `EditorSession::setUIFrames` already provides strict project validation plus atomic Undo/Redo; changing flow cannot mutate authoritative simulation state. The F10 inspector provides flow settings and disables anchor alignment for flow-driven children. See `docs/UI_RESPONSIVE_LAYOUT.md`.

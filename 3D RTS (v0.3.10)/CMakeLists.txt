@@ -67,6 +67,10 @@ if(BUILD_TESTING)
     add_executable(RTSUIEditorGeometryTests tests/ui_editor_geometry_tests.cpp)
     target_link_libraries(RTSUIEditorGeometryTests PRIVATE RTSSimulation)
     add_test(NAME ui_editor_geometry COMMAND RTSUIEditorGeometryTests)
+    add_executable(RTSUIResponsiveTests tests/ui_responsive_layout_tests.cpp)
+    target_link_libraries(RTSUIResponsiveTests PRIVATE RTSSimulation)
+    add_test(NAME ui_responsive COMMAND RTSUIResponsiveTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ui_responsive_layout_showcase.rtsproject.json")
     add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
     target_link_libraries(RTSCommandReplayTests PRIVATE RTSSimulation)
     add_test(NAME command_replay COMMAND RTSCommandReplayTests)
@@ -295,7 +299,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSAIPlannerTests RTSAIResearchTests RTSCreatorUISettingsTests RTSInterfaceEditorTests RTSUIFrameTests RTSUITriggerTests RTSUIVariableBindingTests RTSUIEditorGeometryTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
+    foreach(test_target IN ITEMS RTSAIPlannerTests RTSAIResearchTests RTSCreatorUISettingsTests RTSInterfaceEditorTests RTSUIFrameTests RTSUITriggerTests RTSUIVariableBindingTests RTSUIEditorGeometryTests RTSUIResponsiveTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
@@ -412,6 +416,7 @@ install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_FRAME_HIERARCHY.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_TRIGGER_EVENTS.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_VARIABLE_BINDINGS.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_RESPONSIVE_LAYOUT.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/SC2_FEATURE_MATRIX.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/BUILD_ARTIFACTS.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_ARCHITECTURE.md"
