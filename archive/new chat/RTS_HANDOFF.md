@@ -2390,3 +2390,20 @@ compiler, replay or editor issues on SAME PR before calling green.
 Next: support authored UI responsive layout containers, per-widget
 image/texture assets, keyboard navigation, more Galaxy-style editor
 tools and richer engine functionality. No proprietary names/source.
+
+
+### F10 variable inspector compile correction
+
+First commit `2d97af5ed436552e556ef066facea59e05095b34`
+triggered Linux GCC Debug compilation failure in
+`CreatorUIFrameEditor.hpp` at the new typed variable dropdown:
+`globals->second.is<picojson::object>()` and
+`get<picojson::object>()` are dependent template calls inside
+`template<class App> draw`. GCC requires explicit
+`globals->second.template is<...>()` /
+`globals->second.template get<...>()`. The next commit applies
+those qualifiers AND moves the F6 variable/visibility controls above
+a collapsed Geometry/Anchor appearance section for readable F10
+at 150–250% scale, preserving the complete inspector and original
+project model. Re-run Windows/Linux exact HEAD CI and test
+`ui_variable_bindings`, replay fingerprints and actual F10/F9 captures.

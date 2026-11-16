@@ -300,39 +300,7 @@ void draw(App& app){
             // Primary Button action should be visible immediately at
             // high DPI; don't bury it behind several size controls.
             if(f.kind=="Button")combo("Click action",f.action,actions,5);
-            combo("Anchor",f.anchor,anchors,5);
-            combo("Blue theme palette",f.palette,palettes,5);
-            ImGui::TextUnformatted("Parent (root or an earlier panel)");
-            ImGui::SetNextItemWidth(-1.f);
-            if(ImGui::BeginCombo("##parent",f.parent.empty()?"Screen":f.parent.c_str())){
-                if(ImGui::Selectable("Screen",f.parent.empty())){
-                    f.parent.clear();dirty=true;
-                }
-                for(int j=0;j<index;++j)
-                    if(draft[static_cast<std::size_t>(j)].kind=="Panel"){
-                        const auto& id=draft[static_cast<std::size_t>(j)].id;
-                        if(ImGui::Selectable(id.c_str(),f.parent==id)){
-                            f.parent=id;dirty=true;
-                        }
-                    }
-                ImGui::EndCombo();
-            }
-            auto drag=[&](const char* label,float& value,float lo,float hi){
-                ImGui::PushID(label);
-                ImGui::TextUnformatted(label);
-                ImGui::SetNextItemWidth(-1.f);
-                if(ImGui::DragFloat("##value",&value,1.f,lo,hi,"%.0f px")){
-                    value=std::clamp(value,lo,hi);dirty=true;
-                }
-                ImGui::PopID();
-            };
-            drag("X offset",f.x,-2048.f,2048.f);
-            drag("Y offset",f.y,-2048.f,2048.f);
-            drag("Width",f.width,24.f,650.f);
-            drag("Height",f.height,20.f,400.f);
-            ImGui::TextUnformatted("Text / optional binding prefix");
-            ImGui::SetNextItemWidth(-1.f);
-            if(ImGui::InputText("##frameText",&f.text))dirty=true;
+            ImGui::SeparatorText("Live data & conditional visibility");
             if(f.kind=="Bar"){
                 const char* progress[]={"Supply","SelectedHealth","Variable"};
                 combo("Progress value",f.binding,progress,3);
@@ -341,8 +309,8 @@ void draw(App& app){
             // Apply time and migrated during variable renames.
             const auto globals=app.project.extensions.find("trigger_variables");
             const picojson::object* variables=globals!=app.project.extensions.end()
-                && globals->second.is<picojson::object>()?
-                    &globals->second.get<picojson::object>():nullptr;
+                && globals->second.template is<picojson::object>()?
+                    &globals->second.template get<picojson::object>():nullptr;
             const auto chooseVariable=[&](const char* label,std::string& target,
                                           bool allowNone){
                 ImGui::PushID(label);
@@ -399,6 +367,41 @@ void draw(App& app){
                 f.visibleAtLeast=std::clamp(f.visibleAtLeast,-100000000,100000000);
                 ImGui::TextDisabled("%s = %d",f.visibleVariable.c_str(),
                        rtsUIVariableValue(app.game,f.visibleVariable));
+            }
+            if(ImGui::CollapsingHeader("Geometry, anchors & palette")){
+            combo("Anchor",f.anchor,anchors,5);
+            combo("Blue theme palette",f.palette,palettes,5);
+            ImGui::TextUnformatted("Parent (root or an earlier panel)");
+            ImGui::SetNextItemWidth(-1.f);
+            if(ImGui::BeginCombo("##parent",f.parent.empty()?"Screen":f.parent.c_str())){
+                if(ImGui::Selectable("Screen",f.parent.empty())){
+                    f.parent.clear();dirty=true;
+                }
+                for(int j=0;j<index;++j)
+                    if(draft[static_cast<std::size_t>(j)].kind=="Panel"){
+                        const auto& id=draft[static_cast<std::size_t>(j)].id;
+                        if(ImGui::Selectable(id.c_str(),f.parent==id)){
+                            f.parent=id;dirty=true;
+                        }
+                    }
+                ImGui::EndCombo();
+            }
+            auto drag=[&](const char* label,float& value,float lo,float hi){
+                ImGui::PushID(label);
+                ImGui::TextUnformatted(label);
+                ImGui::SetNextItemWidth(-1.f);
+                if(ImGui::DragFloat("##value",&value,1.f,lo,hi,"%.0f px")){
+                    value=std::clamp(value,lo,hi);dirty=true;
+                }
+                ImGui::PopID();
+            };
+            drag("X offset",f.x,-2048.f,2048.f);
+            drag("Y offset",f.y,-2048.f,2048.f);
+            drag("Width",f.width,24.f,650.f);
+            drag("Height",f.height,20.f,400.f);
+            ImGui::TextUnformatted("Text / optional binding prefix");
+            ImGui::SetNextItemWidth(-1.f);
+            if(ImGui::InputText("##frameText",&f.text))dirty=true;
             }
             if(f.kind=="Panel" || f.kind=="Button"){
                 if(f.kind=="Button" && f.action=="Trigger" && !f.consumeInput){
