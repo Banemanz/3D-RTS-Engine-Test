@@ -1,6 +1,7 @@
 #pragma once
 #include "EditorSession.hpp"
 #include "RTSUIFrameLayout.hpp"
+#include "RTSUIEditorGeometry.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include <algorithm>
@@ -14,6 +15,9 @@ namespace CreatorUIFrameEditor {
 inline int previewResolution=0;
 inline std::string focusFrameId; // deterministic CI/author selection
 inline bool revealSelectedFrame=false;
+inline bool snapToGrid=true;
+inline bool drawGrid=true;
+inline int gridStep=8;
 inline const std::array<std::array<int,2>,3> resolutions={{
     {{1280,720}},{{1920,1080}},{{800,600}}
 }};
@@ -136,6 +140,21 @@ void draw(App& app){
                 previewResolution=i;
         ImGui::EndCombo();
     }
+    ImGui::Checkbox("Snap to grid",&snapToGrid);
+    ImGui::SameLine();
+    ImGui::Checkbox("Grid lines",&drawGrid);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(112.f*ui);
+    const char* gridOptions[]={"4 px","8 px","16 px","32 px"};
+    const int steps[]={4,8,16,32};
+    if(ImGui::BeginCombo("Grid step",
+                         gridStep==4?"4 px":gridStep==16?"16 px":
+                         gridStep==32?"32 px":"8 px")){
+        for(int i=0;i<4;++i)
+            if(ImGui::Selectable(gridOptions[i],gridStep==steps[i]))
+                gridStep=steps[i];
+        ImGui::EndCombo();
+    }
 
     const int w=resolutions[previewResolution][0];
     const int h=resolutions[previewResolution][1];
@@ -170,6 +189,23 @@ void draw(App& app){
         const ImVec2 canvasMax{base.x+size.x,base.y+size.y};
         auto* drawList=ImGui::GetWindowDrawList();
         drawList->AddRectFilled(base,canvasMax,IM_COL32(13,29,50,255));
+        if(drawGrid){
+            // Limit rendered grid density on heavily downscaled previews.
+            // Logical grid step remains exact; only the visual guide
+            // spacing increases to keep it readable at 125-250% DPI.
+            const int skip=std::max(1,int(std::ceil(11.f/(gridStep*k))));
+            const int guideStep=gridStep*skip;
+            drawList->PushClipRect(base,canvasMax,true);
+            for(int x=guideStep;x<w;x+=guideStep)
+                drawList->AddLine(ImVec2(px(float(x)),base.y),
+                                  ImVec2(px(float(x)),canvasMax.y),
+                                  IM_COL32(72,117,152,44),1.f);
+            for(int y=guideStep;y<h;y+=guideStep)
+                drawList->AddLine(ImVec2(base.x,py(float(y))),
+                                  ImVec2(canvasMax.x,py(float(y))),
+                                  IM_COL32(72,117,152,44),1.f);
+            drawList->PopClipRect();
+        }
         drawList->AddRect(base,canvasMax,IM_COL32(75,119,156,230));
         // Build a real, nested frame tree from the project geometry model.
         for(const auto& item:resolved){
@@ -211,21 +247,85 @@ void draw(App& app){
                 drawList->PopClipRect();
             }
         }
+        // Active selection gets a high-contrast resize handle in
+        // actual game-space coordinates.
+        const auto selectedIt=std::find_if(resolved.begin(),resolved.end(),
+            [&](const RTSUIResolvedFrame& item){return item.source.id==selected;});
+        if(selectedIt!=resolved.end() && selectedIt->clipped.w>0 &&
+           selectedIt->clipped.h>0){
+            const auto& box=selectedIt->clipped;
+            const ImVec2 handle{px(box.x+box.w),py(box.y+box.h)};
+            const float hs=std::max(6.f,7.f*ui);
+            drawList->AddRectFilled(
+                ImVec2(handle.x-hs,handle.y-hs),handle,
+                IM_COL32(126,236,222,255),1.5f);
+            drawList->AddRect(ImVec2(handle.x-hs,handle.y-hs),handle,
+                              IM_COL32(16,44,62,255),1.5f);
+        }
         ImGui::SetCursorScreenPos(base);
         ImGui::InvisibleButton("##CustomFrameCanvas",size);
         const ImVec2 mouse=ImGui::GetIO().MousePos;
         const float mx=(mouse.x-base.x)/k,my=(mouse.y-base.y)/k;
+        static std::string dragId;
+        static float dragX=0,dragY=0,dragW=0,dragH=0;
+        static bool resizing=false;
+        static bool pressedFrame=false;
         if(ImGui::IsItemClicked()){
             const int found=rtsUIFrameAt(resolved,mx,my);
-            if(found>=0)selected=resolved[static_cast<std::size_t>(found)].source.id;
+            pressedFrame=found>=0;
+            if(found>=0){
+                const auto& clicked=resolved[static_cast<std::size_t>(found)];
+                selected=clicked.source.id;
+                const float near=std::max(7.f,9.f*ui)/k;
+                resizing=std::fabs(mx-(clicked.clipped.x+clicked.clipped.w))<=near &&
+                         std::fabs(my-(clicked.clipped.y+clicked.clipped.h))<=near;
+            }else resizing=false;
         }
-        if(ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left,3.f)){
+        if(ImGui::IsItemActivated()){
+            dragId=pressedFrame?selected:std::string{};
+            const int index=findFrame(draft,dragId);
+            if(index>=0){
+                const auto& f=draft[static_cast<std::size_t>(index)];
+                dragX=f.x;dragY=f.y;dragW=f.width;dragH=f.height;
+            }
+        }
+        if(ImGui::IsItemActive() &&
+           ImGui::IsMouseDragging(ImGuiMouseButton_Left,3.f)){
+            const int index=findFrame(draft,dragId);
+            if(index>=0){
+                auto& f=draft[static_cast<std::size_t>(index)];
+                const ImVec2 delta=ImGui::GetMouseDragDelta(
+                    ImGuiMouseButton_Left,3.f);
+                if(resizing){
+                    f.width=rtsUISnapDimension(dragW+delta.x/k,gridStep,
+                                               snapToGrid,24.f,650.f);
+                    f.height=rtsUISnapDimension(dragH+delta.y/k,gridStep,
+                                                snapToGrid,20.f,400.f);
+                }else{
+                    f.x=rtsUISnapCoordinate(dragX+delta.x/k,gridStep,snapToGrid);
+                    f.y=rtsUISnapCoordinate(dragY+delta.y/k,gridStep,snapToGrid);
+                }
+                dirty=true;
+            }
+        }
+        if(ImGui::IsItemHovered() && !ImGui::GetIO().WantTextInput){
             const int index=findFrame(draft,selected);
             if(index>=0){
                 auto& f=draft[static_cast<std::size_t>(index)];
-                f.x=std::clamp(f.x+ImGui::GetIO().MouseDelta.x/k,-2048.f,2048.f);
-                f.y=std::clamp(f.y+ImGui::GetIO().MouseDelta.y/k,-2048.f,2048.f);
-                dirty=true;
+                const int nudge=snapToGrid?gridStep:1;
+                const int speed=ImGui::GetIO().KeyShift?4:1;
+                float dx=0.f,dy=0.f;
+                if(ImGui::IsKeyPressed(ImGuiKey_LeftArrow))dx=-1.f;
+                if(ImGui::IsKeyPressed(ImGuiKey_RightArrow))dx=1.f;
+                if(ImGui::IsKeyPressed(ImGuiKey_UpArrow))dy=-1.f;
+                if(ImGui::IsKeyPressed(ImGuiKey_DownArrow))dy=1.f;
+                if(dx!=0.f||dy!=0.f){
+                    f.x=rtsUISnapCoordinate(f.x+dx*nudge*speed,gridStep,
+                                            snapToGrid);
+                    f.y=rtsUISnapCoordinate(f.y+dy*nudge*speed,gridStep,
+                                            snapToGrid);
+                    dirty=true;
+                }
             }
         }
         if(!error.empty())ImGui::TextColored(ImVec4(1.f,.68f,.37f,1.f),
@@ -255,10 +355,23 @@ void draw(App& app){
         const float propertyHeight=std::max(165.f,panelHeight-85.f*ui);
         if(ImGui::BeginChild("##FramePropertiesScroll",ImVec2(0,propertyHeight),
                              ImGuiChildFlags_Borders)){
-        ImGui::TextDisabled("FRAME HIERARCHY");
-        // Keep at least half the inspector available for selected frame
-        // properties on 720p and at 150-250% desktop DPI.
-        const float listHeight=std::clamp(panelHeight*.28f,88.f,132.f);
+        // Fast frame chooser remains visible even when the full tree
+        // is closed, making the property inspector useful at 150-250% UI
+        // scaling rather than burying variable/visibility controls.
+        ImGui::SetNextItemWidth(-1.f);
+        if(ImGui::BeginCombo("##frameQuickSelect",
+                              selected.empty()?"Select a frame":selected.c_str())){
+            for(const auto& frame:draft){
+                const std::string label=frame.kind+"  "+frame.id;
+                if(ImGui::Selectable(label.c_str(),selected==frame.id)){
+                    selected=frame.id;
+                    revealSelectedFrame=true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        if(ImGui::CollapsingHeader("Browse hierarchy (optional)")){
+        const float listHeight=std::clamp(panelHeight*.30f,88.f,175.f);
         if(ImGui::BeginChild("##frameTree",ImVec2(0,listHeight),
                              ImGuiChildFlags_Borders)){
             for(const auto& frame:draft){
@@ -277,6 +390,7 @@ void draw(App& app){
             }
         }
         ImGui::EndChild();
+        } // optional full hierarchy
         int index=findFrame(draft,selected);
         if(index>=0){
             RTSUIFrame& f=draft[static_cast<std::size_t>(index)];
@@ -399,6 +513,30 @@ void draw(App& app){
             drag("Y offset",f.y,-2048.f,2048.f);
             drag("Width",f.width,24.f,650.f);
             drag("Height",f.height,20.f,400.f);
+            HUDRect parentBounds{0,0,float(w),float(h)};
+            bool canAlign=true;
+            try{parentBounds=rtsUIFrameParentRect(resolved,f,w,h);}
+            catch(const std::invalid_argument&){canAlign=false;}
+            ImGui::SeparatorText("Align inside parent / screen");
+            if(!canAlign)ImGui::TextColored(ImVec4(1.f,.68f,.35f,1.f),
+                "Fix the frame parent before aligning");
+            ImGui::BeginDisabled(!canAlign);
+            const auto alignAxis=[&](int axis,int pos){
+                rtsUIAlignFrame(f,parentBounds,axis,pos);
+                dirty=true;
+            };
+            if(ImGui::SmallButton("Left"))alignAxis(0,0);
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Center X"))alignAxis(0,1);
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Right"))alignAxis(0,2);
+            if(ImGui::SmallButton("Top"))alignAxis(1,0);
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Middle"))alignAxis(1,1);
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Bottom"))alignAxis(1,2);
+            ImGui::EndDisabled();
+            ImGui::TextDisabled("Arrow keys over canvas: nudge frame");
             ImGui::TextUnformatted("Text / optional binding prefix");
             ImGui::SetNextItemWidth(-1.f);
             if(ImGui::InputText("##frameText",&f.text))dirty=true;

@@ -584,3 +584,19 @@ validation. A new [Signal Dashboard](projects/ui_variable_dashboard_showcase.rts
 demonstrates a replay-recorded click incrementing a counter, filling
 a meter and revealing an acknowledgement. See
 [UI Variable Bindings](docs/UI_VARIABLE_BINDINGS.md).
+
+
+## Precision F10 editing: snap, resize and alignment (November 16)
+
+Custom UI frames now have optional **4/8/16/32-pixel grid snapping**
+with a readable grid overlay, an actual bottom-right drag-resize handle,
+arrow-key nudging (Shift increases the step) and exact Left/Center/Right,
+Top/Middle/Bottom alignment to the selected frame's parent or screen.
+The headless geometry helper applies these commands in **game layout
+pixels**, not monitor/DPI pixels, so a 150–250% creator UI scale does
+not corrupt authored offsets. The F10 inspector has a persistent
+quick frame selector and a collapsible full hierarchy to keep
+typed F6 variable and visibility controls visible without excessive
+scrolling on high-DPI monitors. Independent
+`RTSUIEditorGeometryTests` covers all six alignments, snaps,
+bounding and multi-resolution consistency.

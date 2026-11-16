@@ -2407,3 +2407,38 @@ a collapsed Geometry/Anchor appearance section for readable F10
 at 150–250% scale, preserving the complete inspector and original
 project model. Re-run Windows/Linux exact HEAD CI and test
 `ui_variable_bindings`, replay fingerprints and actual F10/F9 captures.
+
+
+### F10 precision grid/align follow-up and completed variable CI
+
+At commit `8b9a88000af94f85240e9036b1b855a14c684e5a`
+**FULLY GREEN**: Windows/Linux Release **91/91 CTests**
+(including `ui_variable_bindings`), packages 46 Windows and
+45 Linux files verified, bundled Signal Dashboard project validated,
+Windows/Linux Debug green, strict `ui_variable_fingerprint.txt`
+replay parity and real native F10 (1239×892) and F9 (1280×720)
+screenshots. Visual inspection confirms replay-queued SEND SIGNAL
+increases F6 signal_count and fills F10 Bar to 1/3 while revealing
+the UPLINK ACKNOWLEDGED label in F9. Initial native F10 had a
+very tall hierarchy hiding the selected bound-variable inspector,
+so next F10 precision pass makes a quick selector always visible
+and the full hierarchy optional/collapsible.
+
+The new following editor pass adds:
+- `RTSUIEditorGeometry.hpp`: headless 4/8/16/32px snap and bounds,
+  root/parent rect retrieval and exact per-axis alignment preserving
+  authored TopLeft/TopRight/BottomLeft/BottomRight/Center anchor.
+- F10 grid guide overlay, responsive line density, snap toggle,
+  drag-to-resize selected bottom-right handle, total-delta
+  position/size dragging (no cumulative snap rounding),
+  canvas-hover arrow nudges (Shift x4), six alignment commands.
+- Graceful invalid draft-parent handling disables align, never
+  crashes; `RTSUIEditorGeometryTests` CTest retains Release
+  assertions on both platforms. Quick frame chooser plus optional
+  hierarchy preserves inspector space at 150–250% DPI.
+
+**MUST:** check exact new commit Windows/Linux Release **92/92**
+tests, both Debug suites, cross-platform replay fingerprint and
+new native F10 screenshot. Keep everything on the SAME original
+open unmerged Draft PR #1 branch `feat/rts-vertical-slice`,
+do not claim this is complete Galaxy UI scripting or asset parity.

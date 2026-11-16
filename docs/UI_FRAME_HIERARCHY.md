@@ -232,3 +232,31 @@ F10 continues to show its hierarchy for authoring.
 See [UI Variable Bindings](UI_VARIABLE_BINDINGS.md) for the full
 typed schema, strict cross-reference validation, F6 Rename migration,
 original Signal Dashboard map and Windows/Linux replay/GUI tests.
+
+
+## F10 precision geometry tools
+
+The Custom UI frames canvas now supports optional 4, 8, 16 or
+32-pixel snap-to-grid, low-opacity grid guides with automatic visual
+density adjustment for downscaled previews, and direct bottom-right
+**resize handles** on the selected element. A mouse drag uses its
+original press position, not repeated rounding of intermediate
+snapped coordinates, preventing snapped frames from becoming
+impossible to move in small increments. Arrow keys nudge the
+selected element while the canvas is hovered (Shift makes the
+movement four times larger), without hijacking active text input.
+
+Expand the F10 Inspector's **Geometry, anchors & palette** section
+for exact offsets, sizes and six **Align** controls:
+Left / Center X / Right / Top / Middle / Bottom. Alignment preserves
+the author's chosen relative anchor, changes only the requested
+axis, and targets the actual parent rectangle or screen.
+Invalid temporary parent references disable alignment rather than
+crash the editor. Grid snapping and guides are editor-only
+preferences: they do not change the map until Apply.
+
+At high creator UI scales, a quick **Select frame** dropdown
+and optional **Browse hierarchy** foldout leave much more vertical
+space for the selected element's live variable/visibility controls.
+The source model is `RTSUIEditorGeometry.hpp`, unit tested by
+`RTSUIEditorGeometryTests` on Windows and Linux.

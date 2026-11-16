@@ -394,3 +394,20 @@ Remove rejects dangling references. The F10 UI exposes dropdowns,
 bar bounds, integer visibility threshold and hidden preview markers.
 See docs/UI_VARIABLE_BINDINGS.md and sample
 projects/ui_variable_dashboard_showcase.rtsproject.json.
+
+
+## Native F10 precision editing helpers
+
+`RTSUIEditorGeometry.hpp` contains unit-tested, headless game-pixel
+snap and clamp functions, parent rectangle resolution and
+per-axis Start/Middle/End alignment that preserves anchors.
+`CreatorUIFrameEditor.hpp` uses these functions for snap grid,
+bottom-right resize interaction, arrow nudge and six align buttons.
+Drag motion uses the initial press values plus total mouse delta,
+avoiding cumulative rounding and DPI drift. The full frame
+hierarchy is optional behind a foldout with an always-available
+frame selector, so typed F6 data bindings appear near the top
+on 720p/high-DPI creator windows. All edits are staged in the F10
+draft and validated with the existing single-transaction Apply.
+`RTSUIEditorGeometryTests` covers 4 resolutions and malformed
+alignment/grid inputs without needing OpenGL.

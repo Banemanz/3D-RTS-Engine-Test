@@ -597,3 +597,17 @@ under appearance-only edits. The new Debug
 `ui_variable_fingerprint.txt` is byte-diffed between Windows/Linux.
 CI also screenshots the genuine native F10 data-bound inspector
 and real F9 dashboard after a recorded trigger event.
+
+
+## F10 headless precision layout editing
+
+`RTSUIEditorGeometryTests` runs with optimized assertions enabled
+on Windows and Linux. It checks 4/8/16/32px grid snap, negative
+coordinates, finite clamping and invalid grid steps, bounded
+resize dimensions, root and nested parent rects, all six
+per-axis alignment controls and preservation of the frame's
+other axis and chosen anchor across 640×480, 800×600,
+1280×720 and 1920×1080. Linux Mesa screenshots additionally
+capture F10's real 150%-scaled grid/inspector and F9's unchanged
+gameplay HUD, while the existing 120-tick replay parity and
+UI-variable fingerprint checks remain mandatory.

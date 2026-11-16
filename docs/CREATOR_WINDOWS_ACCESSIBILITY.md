@@ -269,3 +269,17 @@ on the preview, without changing the underlying 60Hz simulation.
 User's 85–250% editor UI scale and contrast remain separate from
 the authored game-space geometry, F6 variables and replay data.
 See [F6↔F10 Variable Bindings](UI_VARIABLE_BINDINGS.md).
+
+
+## High-DPI custom frame placement and hierarchy browsing
+
+F10 now exposes precision 4/8/16/32px grid snapping, aligned
+parent/screen placement, a large high-contrast drag-resize handle
+and arrow-key nudging. Pixel-grid maths operate in authored game
+coordinates independently of the active monitor or 85–250% editor
+font scaling. Visual grid density adapts to small previews instead
+of filling the window with unreadably dense lines. A fast frame
+dropdown and optionally expandable full hierarchy give the
+inspector immediate room to show F6 live bindings and conditional
+visibility; numeric fields and align buttons remain keyboard
+accessible and scrollable.
