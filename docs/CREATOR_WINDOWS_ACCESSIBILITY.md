@@ -36,10 +36,12 @@ Properties areas are independent bordered panels separated by a
 resized without changing gameplay resolution.
 
 On normal Windows/Linux desktop runs, Dear ImGui docking **multi-viewports
-are enabled**: drag an editor module by its title bar outside the
-primary game window to turn it into its own native GLFW/OS window.
-That real OS window can be moved to another monitor and treated as a
-separate desktop window. The original terrain/game viewport remains
+are enabled** and each selected module uses the pinned backend's per-window
+`NoAutoMerge` flag: it opens as a **real native GLFW/OS window even while
+overlapping the game window**. The module can be moved to another
+monitor, minimized or resized independently. Its desktop decoration/
+taskbar visibility is preserved. Its module selector also switches
+directly among the different editors. The original terrain/game viewport remains
 in the original native window. Additional technology, relationship,
 opponent AI and trigger monitor panels remain independently floating
 or dockable.

@@ -2000,7 +2000,24 @@ int main(int argc, char** argv) {
                 // HUD or screenshot work; no rendering state may leak.
                 GLFWwindow* previousContext=glfwGetCurrentContext();
                 ImGui::UpdatePlatformWindows();
+                // Screenshot CI reads the DETACHED native window's BACK
+                // buffer before swap. GLX/Xvfb is allowed to discard the
+                // front buffer after swap (which produced a black PNG).
+                // Only the final smoke frame skips the secondary swap.
+                const bool freezeSwap=moduleWindowsSmoke && smokeFrames>0 &&
+                                      renderedFrames+1>=smokeFrames;
+                auto& platformIO=ImGui::GetPlatformIO();
+                const auto originalPlatformSwap=platformIO.Platform_SwapBuffers;
+                const auto originalRendererSwap=platformIO.Renderer_SwapBuffers;
+                if(freezeSwap){
+                    platformIO.Platform_SwapBuffers=nullptr;
+                    platformIO.Renderer_SwapBuffers=nullptr;
+                }
                 ImGui::RenderPlatformWindowsDefault();
+                if(freezeSwap){
+                    platformIO.Platform_SwapBuffers=originalPlatformSwap;
+                    platformIO.Renderer_SwapBuffers=originalRendererSwap;
+                }
                 glfwMakeContextCurrent(previousContext);
             }
             if(app.pauseMenu && app.editor.panel==EditorSession::Panel::Play){
@@ -2038,11 +2055,19 @@ int main(int argc, char** argv) {
                     if(width<=0 || height<=0 || width>8192 || height>8192)
                         throw std::runtime_error("Invalid module screenshot dimensions");
                     glfwMakeContextCurrent(capture);
-                    glReadBuffer(moduleWindowsSmoke?GL_FRONT:GL_BACK);
+                    glReadBuffer(GL_BACK);
                     std::vector<unsigned char> pixels(
                         static_cast<size_t>(width)*height*3);
                     glPixelStorei(GL_PACK_ALIGNMENT,1);
                     glReadPixels(0,0,width,height,GL_RGB,GL_UNSIGNED_BYTE,pixels.data());
+                    if(moduleWindowsSmoke){
+                        std::size_t nonBlack=0;
+                        for(std::size_t k=0;k<pixels.size();k+=3)
+                            if(pixels[k] || pixels[k+1] || pixels[k+2])++nonBlack;
+                        if(nonBlack<static_cast<std::size_t>(width)*height/10)
+                            throw std::runtime_error(
+                                "Native module OpenGL frame is blank; screenshot rejected");
+                    }
                     std::ofstream out(screenshotPath,std::ios::binary);
                     out<<"P6\n"<<width<<" "<<height<<"\n255\n";
                     for(int y=height-1;y>=0;--y)

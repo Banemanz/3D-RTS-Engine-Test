@@ -1890,3 +1890,26 @@ cross-OS replay parity; fix any crashes in same branch. Need inspect
 generated images and check mouse/text controls. If user wants Galaxy
 UI Editor parity later, implement actual authorable in-game HUD
 components/anchors rather than claiming this module shell does it.
+
+
+### Native viewport verification correction and automatic OS modules
+
+Initial `cca7e9e` / `b43b545` Debug workflow achieved 88/88
+Windows/Linux Debug tests and replay parity, but the downloaded
+`rts-native-module-window-dpi150-screenshot` was a **completely black**
+1032x574 image (the secondary platform window existed, but GL_FRONT
+readback after swap on Mesa/Xvfb was invalid). The screenshot itself
+is an integration bug, not visual verification. Next fix:
+- `CreatorWorkbench::moduleWorkspace` sets an `ImGuiWindowClass`
+  with pinned docking `ImGuiViewportFlags_NoAutoMerge`, clearing
+  NoDecoration and NoTaskBarIcon so selected modules are real OS
+  windows **immediately**, rather than only after drag-out. A
+  module switch dropdown works inside each module.
+- The game loop skips secondary platform window buffer swap on the
+  FINAL screenshot frame only (saves/restores both platform/render
+  swap callbacks); it then reads GL_BACK in the secondary context,
+  and rejects screenshots with fewer than 10% nonblack pixels.
+  Normal runtime multi-window swaps and the game's context remain
+  unchanged. CI must now prove visible actual module framebuffer.
+- A fresh exact-HEAD cross-platform Release+Debug CI and real
+  screenshot inspection are required before declaring success.

@@ -1409,6 +1409,16 @@ void moduleWorkspace(App& app){
         ImVec2(std::min(area.x*.89f,std::max(710.f*scale,area.x*.73f)),
                std::max(355.f*scale,area.y-100.f*scale)),
         ImGuiCond_FirstUseEver);
+    // Pinned ImGui docking exposes per-window NoAutoMerge: even while
+    // overlapping the game's window this creates a REAL native OS window,
+    // with its own decoration/taskbar entry, not merely a detached panel.
+    if(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable){
+        ImGuiWindowClass nativeClass;
+        nativeClass.ViewportFlagsOverrideSet=ImGuiViewportFlags_NoAutoMerge;
+        nativeClass.ViewportFlagsOverrideClear=
+            ImGuiViewportFlags_NoDecoration|ImGuiViewportFlags_NoTaskBarIcon;
+        ImGui::SetNextWindowClass(&nativeClass);
+    }
     bool open=true;
     const bool body=ImGui::Begin(title.c_str(),&open,
         ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoDocking);
@@ -1424,6 +1434,18 @@ void moduleWorkspace(App& app){
         ImGui::SameLine();
         if(ImGui::SmallButton("Back to Playtest"))
             choosePanel(app,EditorSession::Panel::Play);
+        ImGui::SetNextItemWidth(240.f*scale);
+        if(ImGui::BeginCombo("Switch module",
+              creatorModuleTitle(static_cast<int>(ed.panel)))){
+            const EditorSession::Panel choices[]={
+                EditorSession::Panel::Terrain,EditorSession::Panel::Triggers,
+                EditorSession::Panel::Data,EditorSession::Panel::Scene};
+            for(const auto next:choices)
+                if(ImGui::Selectable(creatorModuleTitle(static_cast<int>(next)),
+                                     ed.panel==next))
+                    choosePanel(app,next);
+            ImGui::EndCombo();
+        }
         ImGui::Separator();
         const ImGuiTableFlags flags=ImGuiTableFlags_Resizable|
             ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchProp;
