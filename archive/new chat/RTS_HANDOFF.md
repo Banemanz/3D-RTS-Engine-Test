@@ -2136,3 +2136,34 @@ Windows/Linux Release/Debug 89 CTests, check bundled project
 validation, replay fingerprint parity, and download/inspect real
 F10/F9 images. Fix MSVC/GCC build differences or layout/UI issues
 on SAME PR, update PR body with exact SHA and action links.
+
+
+### First custom-frame screenshot QA and state isolation checks
+
+First feature HEAD `45e883a941dd67769140161d1907b8e4e26be0d8`
+**FULLY GREEN**: 89/89 Release CTests on Windows/Linux, native
+packages verified (42 Windows files/41 Linux files), sample project
+validated with bundled CLI, all Debug tests, strict replay parity,
+actual F10 secondary-native GL screenshot and F9 game screenshot
+on original authored UI Frame Studio fixture. Native F10 at
+1246x892 shows blue/teal hierarchy and actual draggable visual
+preview; F9 at 1280x720 shows mission console, health bar, live
+resources, buttons and status footer. No fake/mock screenshot.
+
+Visual QA uncovered overlapping Panel caption + child heading and
+truncated supply label in native F9, and preview labels drawn with
+unscaled editor font size in F10. Follow-up resolves by clearing the
+sample root panel caption, shortening the supply prefix to `SP`,
+aligning Panel captions to the top, improving minimal status font
+sizing, and scaling F10 preview text by canvas zoom. F10 inspector
+gains its own scroll pane and sticky Apply/Discard/Clear controls to
+remain usable at user scales 125–250%. Additional
+`RTSUIFrameTests` now exercise 120 actual simulation ticks with/
+without UI frame metadata, identical state digests, verified replay
+roundtrip; `ui_frames_fingerprint.txt` added to strict Windows/Linux
+Debug CI diff gate.
+
+**MUST:** recheck this follow-up commit Windows/Linux Release 89/89,
+Debug replay fingerprint diff, and download actual F10/F9 screenshots
+to confirm text sizes/readability. Update same original PR body
+exact SHA/CI URLs; do not merge.

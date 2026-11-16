@@ -181,3 +181,26 @@ content or GPL engine source**.
 - [Galaxy dialogs tutorial](https://s2editor-guides.readthedocs.io/New_Tutorials/03_Trigger_Editor/043_Dialogs/)
 - [Galaxy UI events overview](https://s2editor-guides.readthedocs.io/New_Tutorials/03_Trigger_Editor/049_UI_Events/)
 - [Dear ImGui docking 1.91.9b API](https://github.com/ocornut/imgui)
+
+
+## First end-to-end screenshot review and UI accessibility polish
+
+The initial real F10 (1246×892 native secondary GLFW window) and real F9
+(1280×720 game framebuffer) captures confirmed that nested UI frames
+and live economy/health values are genuinely rendered by the engine.
+They also revealed: a parent Panel caption behind its child header,
+truncated "SUPPLY" prefixes on a narrow field, and oversized preview
+font labels at the F10 canvas' downscaled resolution. The sample
+now leaves the container caption blank, uses a concise SP prefix, and
+the F10 preview scales text to its canvas zoom rather than editor
+font zoom. The F9 renderer places Panel captions at the top and
+uses a legible minimum size for small status labels. The F10 right-hand
+property inspector now scrolls independently and keeps Apply/Discard/
+Clear controls reachable at the top, including at 175–250% zoom.
+
+The headless UI frame test also compares **120 actual fixed simulation
+ticks** with and without authored UI metadata. State digests are
+required to be identical, the custom-UI replay is verified against
+the original engine, and Windows/Linux Debug CI now byte-compares
+`ui_frames_fingerprint.txt`. This demonstrates the UI is only
+presentation/input authoring and doesn't covertly alter simulation.

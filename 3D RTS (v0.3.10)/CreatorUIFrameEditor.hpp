@@ -61,6 +61,20 @@ void draw(App& app){
         selected=draft.empty()?std::string{}:draft.front().id;
         dirty=false;
     }
+    const auto persist=[&]{
+        if(app.editor.setUIFrames(app.project,draft)){
+            try{app.reloadFromProject();}
+            catch(const std::exception& e){
+                app.editor.message=std::string("UI RELOAD FAILED: ")+e.what();
+            }
+            committed=rtsUIFramesToJson(draft).serialize();
+            dirty=false;
+        }
+    };
+    const auto revert=[&]{
+        draft=current;committed=version;dirty=false;
+        selected=draft.empty()?std::string{}:draft.front().id;
+    };
     ImGui::TextColored(ImVec4(.54f,.88f,.97f,1.f),
                        "CUSTOM FRAMES  /  Hierarchical UI authoring");
     ImGui::SameLine();
@@ -173,7 +187,13 @@ void draw(App& app){
             const auto name=rtsUIFrameText(item.source,app.game);
             if(!name.empty() && (hi.x-lo.x)>35.f && (hi.y-lo.y)>15.f){
                 drawList->PushClipRect(lo,hi,true);
-                drawList->AddText(ImVec2(lo.x+5.f,lo.y+3.f),
+                // Native ImGui font stays crisp but is sized to the
+                // logical GAME canvas zoom, not to the editor's own
+                // 125-250% DPI multiplier. Avoid overlapping child labels.
+                const float canvasFont=std::clamp(
+                    ImGui::GetFontSize()*k*1.12f,8.f,ImGui::GetFontSize());
+                drawList->AddText(ImGui::GetFont(),canvasFont,
+                    ImVec2(lo.x+5.f,lo.y+3.f),
                     IM_COL32(237,247,255,255),name.c_str());
                 drawList->PopClipRect();
             }
@@ -198,6 +218,21 @@ void draw(App& app){
         if(!error.empty())ImGui::TextColored(ImVec4(1.f,.68f,.37f,1.f),
                                                "Frame error: %s",error.c_str());
         ImGui::TableSetColumnIndex(1);
+        // Keep Apply/Discard available at every font scale while the
+        // property inspector itself scrolls independently on small screens.
+        if(ImGui::SmallButton("Apply"))persist();
+        ImGui::SameLine();
+        if(ImGui::SmallButton("Discard"))revert();
+        ImGui::SameLine();
+        if(ImGui::SmallButton("Clear")){
+            draft.clear();selected.clear();dirty=true;
+        }
+        if(dirty)ImGui::TextColored(ImVec4(1.f,.77f,.35f,1.f),
+                                    "Unapplied changes");
+        ImGui::Separator();
+        const float propertyHeight=std::max(165.f,panelHeight-100.f*ui);
+        if(ImGui::BeginChild("##FramePropertiesScroll",ImVec2(0,propertyHeight),
+                             ImGuiChildFlags_Borders)){
         ImGui::TextDisabled("FRAME HIERARCHY");
         const float listHeight=std::max(110.f,155.f*ui);
         if(ImGui::BeginChild("##frameTree",ImVec2(0,listHeight),
@@ -291,27 +326,10 @@ void draw(App& app){
                 selected=draft.empty()?std::string{}:draft.back().id;
             }
         }else ImGui::TextDisabled("Select or create a frame to edit.");
-        ImGui::SeparatorText("Project operations");
-        if(ImGui::Button("Apply frames",ImVec2(-1,0))){
-            if(app.editor.setUIFrames(app.project,draft)){
-                try{app.reloadFromProject();}
-                catch(const std::exception& e)
-                    {app.editor.message=std::string("UI RELOAD FAILED: ")+e.what();}
-                committed=rtsUIFramesToJson(draft).serialize();
-                dirty=false;
-            }
-        }
-        if(ImGui::Button("Discard changes",ImVec2(-1,0))){
-            draft=current;
-            committed=version;
-            dirty=false;
-            selected=draft.empty()?std::string{}:draft.front().id;
-        }
-        if(ImGui::Button("Clear custom UI",ImVec2(-1,0))){
-            draft.clear();selected.clear();dirty=true;
-        }
         if(!app.editor.message.empty())
             ImGui::TextWrapped("%s",app.editor.message.c_str());
+        }
+        ImGui::EndChild();
         ImGui::EndTable();
     }
     ImGui::TextWrapped("Rendering, hierarchy clipping and button hit-testing use one pure model. Only Buttons execute existing allowed RTS commands. No custom scripts, engine memory access or copied external game UI.");

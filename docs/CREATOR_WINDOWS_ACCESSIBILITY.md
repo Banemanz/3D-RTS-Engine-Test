@@ -222,3 +222,14 @@ authored. Frame properties include exact numeric offsets, parent
 reference, anchoring, palette, text/binding and click action; the
 hierarchy remains scrollable at large text sizes. No new bundled fonts
 or platform-specific UI branch. See docs/UI_FRAME_HIERARCHY.md.
+
+
+### Frame hierarchy editor large-type property scrolling
+
+The Custom UI frames F10 tab now keeps Apply, Discard and Clear as
+visible, high-contrast operations above its own independently
+scrollable right-hand hierarchy/properties panel. The editor's
+canvas preview renders text scaled to the **canvas's screen-to-game
+zoom**, rather than blindly using the enlarged desktop UI font:
+nested labels and small buttons no longer overlap when previewing
+a 1280px game inside a 125–250% creator desktop window.

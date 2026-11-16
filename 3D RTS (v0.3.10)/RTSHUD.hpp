@@ -67,8 +67,8 @@ class RTSHUD {
             }
             const std::string line=rtsUIFrameText(f.source,game);
             if(line.empty())continue;
-            const float fontSize=std::min(2.1f,
-                std::max(.85f,(f.bounds.h-12.f)/9.f));
+            const float fontSize=std::clamp(
+                (f.bounds.h-8.f)/8.f,1.2f,2.1f);
             const float left=std::max(f.bounds.x,f.clipped.x)+6.f;
             const float right=std::min(f.bounds.x+f.bounds.w,
                                         f.clipped.x+f.clipped.w)-6.f;
@@ -76,9 +76,13 @@ class RTSHUD {
             if(space<20.f)continue;
             const std::size_t chars=static_cast<std::size_t>(
                 std::max(1.f,space/(6.f*fontSize)));
-            text(left,std::max(f.bounds.y,f.clipped.y)+
-                std::max(2.f,(f.clipped.h-7.f*fontSize)*.5f),
-                fontSize,shortText(line,chars),.92f,.97f,1.f);
+            // Panel captions belong at the top of the container;
+            // dynamic labels and button captions are centered. This
+            // prevents panel titles colliding with nested controls.
+            const float y=std::max(f.bounds.y,f.clipped.y)+
+                (f.source.kind=="Panel"?6.f:
+                 std::max(2.f,(f.clipped.h-7.f*fontSize)*.5f));
+            text(left,y,fontSize,shortText(line,chars),.92f,.97f,1.f);
         }
     }
 public:

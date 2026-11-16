@@ -554,3 +554,16 @@ on Mesa software OpenGL using project
 `projects/ui_frame_studio_showcase.rtsproject.json`. The F10
 capture must be from a real native GLFW secondary OS window and
 rejects blank frames. No new replay command source is added.
+
+
+### UI-only state-digest and replay parity enforcement
+
+In addition to F10 hierarchy and live-button hit tests,
+`RTSUIFrameTests` now loads the same original map with/without
+`metadata.ui_frames`, runs 120 fixed 60Hz ticks in both, and
+requires equal state digests at zero and every 30 ticks. It verifies
+a full real RTS replay with UI frames embedded in the project,
+including serialized roundtrip. CTest emits
+`ui_frames_fingerprint.txt`; the existing GitHub Actions
+Windows/Linux replay-parity job uploads and diffs it byte-for-byte.
+This complements the two actual Mesa F10/F9 screenshot captures.

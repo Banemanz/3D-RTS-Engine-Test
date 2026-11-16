@@ -6,6 +6,7 @@
 #endif
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -47,6 +48,33 @@ int main(int argc,char** argv){
            RTSProject::fromJson(project.toJson()).toJson().serialize());
     const auto round=rtsUIFramesFromProject(RTSProject::fromJson(project.toJson()));
     assert(rtsUIFramesToJson(frames).serialize()==rtsUIFramesToJson(round).serialize());
+    // Presentation-only authoring cannot affect game state: the same
+    // project with and without custom frames MUST produce identical
+    // fixed-step digests, and the framed project must replay exactly.
+    RTSProject noUI=project;
+    noUI.metadata.erase("ui_frames");
+    noUI.validate();
+    RTSSkirmish withUI,withoutUI;
+    withUI.loadProject(project);
+    withoutUI.loadProject(noUI);
+    assert(withUI.stateDigest()==withoutUI.stateDigest());
+    for(int i=0;i<120;++i){
+        withUI.update(1.f/60.f);
+        withoutUI.update(1.f/60.f);
+        if((i+1)%30==0)
+            assert(withUI.stateDigest()==withoutUI.stateDigest());
+    }
+    const auto tape=withUI.replayTape();
+    std::string diagnostic;
+    assert(verifyRTSReplay(tape,&diagnostic));
+    assert(verifyRTSReplay(RTSReplayTape::fromJson(tape.toJson()),&diagnostic));
+    std::ofstream fingerprint("ui_frames_fingerprint.txt",
+                              std::ios::binary|std::ios::trunc);
+    assert(fingerprint.is_open());
+    for(const auto& checkpoint:tape.checkpoints)
+        fingerprint<<checkpoint.tick<<" "<<checkpoint.digest<<"\n";
+    fingerprint.flush();
+    assert(fingerprint.good());
     RTSSkirmish game;game.loadProject(project);
     assert(rtsUIFrameText(frames[2],game).find(std::to_string(game.playerMinerals))
            !=std::string::npos);
@@ -102,6 +130,7 @@ int main(int argc,char** argv){
     // Strict bounded schema, parent ordering, actions and text safety.
     auto bad=frames;bad[1].id=frames[0].id;assert(invalid(bad));
     bad=frames;bad[1].parent="future";assert(invalid(bad));
+    bad=frames;bad[3].parent="header";assert(invalid(bad)); // only Panel parents
     bad=frames;bad[0].parent=bad[0].id;assert(invalid(bad));
     bad=frames;bad[1].action="SelectArmy";assert(invalid(bad));
     bad=frames;bad[4].binding="Minerals";assert(invalid(bad));
