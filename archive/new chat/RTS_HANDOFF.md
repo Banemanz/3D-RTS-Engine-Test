@@ -1818,3 +1818,18 @@ selects `raider_doctrine` in F7 smoke instead of a default Model, and
 uses a short 225px read-only Play monitor with an appropriate caption.
 User-resized/docked window geometry remains authoritative.
 Re-verify the exact next HEAD CI and inspect replacement captures.
+
+
+### Native F7 screenshot layout persistence gotcha
+
+At `06cf861` a real F7 screenshot still showed the OLD inspector/policy
+positions despite updated default geometry. It was NOT an ImGui
+positioning failure: CI runs many screenshot commands in one working
+directory and earlier screenshot sessions save `imgui.ini`, causing
+`ImGuiCond_FirstUseEver` to skip new defaults. The next follow-up sets
+`ImGui::GetIO().IniFilename=nullptr` only for
+`--smoke-ai-research` / `--smoke-ai-research-play` modes, prior to
+creating the first ImGui frame. This ensures deterministic fresh
+screenshot geometry while preserving normal users' persisted docking,
+floating window sizes and positions. Recheck F7 no overlap and F9
+compact HUD, exact Windows/Linux CI after commit.

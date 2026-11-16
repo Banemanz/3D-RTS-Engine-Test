@@ -1210,6 +1210,12 @@ int main(int argc, char** argv) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         auto& io=ImGui::GetIO();
+        // Native screenshot modes start from a clean floating-pane layout.
+        // Earlier CI smokes save imgui.ini and otherwise override our
+        // FirstUseEver panel geometry; normal creator sessions still
+        // persist custom docking and window sizes as before.
+        if(smokeFrames>0 && (aiResearchSmoke || aiResearchPlaySmoke))
+            io.IniFilename=nullptr;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::StyleColorsDark();
