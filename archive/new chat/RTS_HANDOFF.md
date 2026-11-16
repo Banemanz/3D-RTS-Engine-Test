@@ -2031,3 +2031,30 @@ geometry wrong, clipping, smaller screen) and strict replay parity.
 Fix all on SAME draft PR, update its description. Limitations:
 this is a data-driven layout for native HUD panels, NOT a full custom
 UI widget tree / XML/skin editor like Galaxy's entire UI suite.
+
+
+### Native F10 and F9 screenshot review / correction
+
+The integrated `b7259d24d12bf146f8055bfcd496462ca873a6e7`
+Release builds passed **88/88 CTests on Linux x86_64 and Windows x64**,
+each with valid bundled project/manual and native feature check.
+Linux F10 actual secondary native GLFW window screenshot
+`rts-interface-editor-f10-screenshot` was 1246x892 and nonblack.
+The screenshot showed the real blue/teal schematic HUD, separate
+OS title bar and project settings. F9 screenshot
+`rts-authored-interface-f9-screenshot` was real gameplay at 1280x720
+with a larger bottom panel, minimap and command grid from the
+same authored project; no fake visual-only preview. Windows/Linux Debug
+and strict replay parity also passed on base pass.
+
+Visual QA caught a *real F10 usability issue*: slider names were
+rendered to the right of 100%-width controls and therefore invisible.
+The followup `CreatorInterfaceEditor.hpp` renders names above
+full-width sliders with proper label IDs and wraps preview help text.
+Re-run exact updated HEAD all-platform CI, inspect F10 again, and
+update original PR description. The separate higher-DPI 175% F7
+screenshot remains scroll-heavy at 720px screen height; expected at
+that monitor size, while default 150% detached windows on 1050p
+use ample area. Future work: collapsible inspector sections and
+independent in-game widget/skin frames rather than overselling this
+bounded HUD layout designer as complete Galaxy UI authoring.

@@ -113,3 +113,14 @@ map, new frame types, script- or trigger-connected data bindings,
 custom mouse focus traversal, keyboard nudging and drag-resize handles,
 per-user HUD preferences, and accessibility beyond the authoring
 workbench. See [Creator Windows & Accessibility](CREATOR_WINDOWS_ACCESSIBILITY.md).
+
+
+## Native screenshot QA: accessible element controls
+
+The initial real 125% F10 screenshot showed the authored canvas and
+selected Minimap controls, but revealed a text-layout regression:
+using a full-width ImGui slider with its label to the right hid
+"Minimap scale" and "Left inset" behind the right edge. The controls
+now render each **label above its slider**, with a full-width precise
+value and no clipped name. The preview help line wraps rather than
+running off the column. This also improves 175–250% accessibility.
