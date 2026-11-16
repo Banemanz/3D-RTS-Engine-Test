@@ -208,6 +208,12 @@ void browser(App& app){
         ImGui::TextDisabled("%zu of %zu objects",
             ed.matchingCatalogCount(p),p.catalog.entries().size());
         if(ImGui::SmallButton("Clear search"))ed.clearCatalogSearch(p);
+        // Creation presets are useful but consume most of a 720px window
+        // at 175-250% scaling. Collapse them in module mode so the actual
+        // object list gets the height, while leaving one-click discovery.
+        const bool showCreation=!modulePane ||
+            ImGui::CollapsingHeader("Create / derive objects");
+        if(showCreation){
         if(ImGui::BeginCombo("##createCatalogObject","New catalog object...")){
             struct PresetChoice {const char* type;const char* preset;const char* label;};
             const PresetChoice presets[]={
@@ -257,12 +263,31 @@ void browser(App& app){
 
         if(ImGui::SmallButton("Derive selected"))
             refresh(app,ed.duplicateCatalogObject(app.project));
+        }
+        ImGui::SeparatorText("Object explorer");
         ImGui::BeginChild("##catalogTree",ImVec2(0,-5),true);
         const auto& entries=p.catalog.entries();
         std::vector<std::size_t> visible;
         visible.reserve(ed.matchingCatalogCount(p));
         for(std::size_t i=0;i<entries.size();++i)
             if(ed.catalogMatches(entries[i]))visible.push_back(i);
+        // External technology-graph navigation should reveal the actual
+        // selected object in the catalog, rather than leaving the list
+        // scrolled to an unrelated Model. Never steal manual scrolling
+        // unless the selected catalog ID truly changes.
+        static std::string lastNavigatorSelected;
+        const auto* selected=ed.selected(p);
+        const std::string selectedId=selected?selected->id:std::string{};
+        if(selectedId!=lastNavigatorSelected){
+            const auto row=std::find(visible.begin(),visible.end(),ed.selectedObject);
+            if(row!=visible.end()){
+                const float y=static_cast<float>(row-visible.begin())*
+                    ImGui::GetTextLineHeightWithSpacing();
+                ImGui::SetScrollY(std::max(0.f,
+                    y-ImGui::GetWindowHeight()*.40f));
+            }
+            lastNavigatorSelected=selectedId;
+        }
         // UI work is proportional to rows on screen, not all 10k entries.
         // Filtering and indexing stay in headless C++.
         ImGuiListClipper clip;

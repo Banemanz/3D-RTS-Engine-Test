@@ -159,3 +159,14 @@ minimum widths and show a **horizontal scrollbar** when 175–250% text
 sizing exceeds one monitor. Top title and action buttons are on
 separate rows instead of risking clipped controls at high DPI.
 User-sized/docked windows still override first-use defaults.
+
+
+### Navigator space at high UI scales
+
+At 150–250% zoom, creation presets now live under the discoverable
+**Create / derive objects** foldout so the Object Explorer gets the
+available height. When a link, technology node or inspector action
+selects a different catalog entry, the list scrolls to that object
+exactly once; ordinary manual browsing does not repeatedly jump back.
+This is an accessibility/layout improvement on top of the resizable
+Navigator/Properties splitter.

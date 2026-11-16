@@ -1931,3 +1931,23 @@ True secondary OS screenshot at b43/cca7 was actually black even
 though native viewport count check succeeded. `13c48b9` changes
 final-frame platform swap logic to read GL_BACK before swap, and
 requires >10% nonblack pixels; recheck outcome and handle failures.
+
+
+### Native F7 visual confirmation and catalog readability follow-up
+
+The first no-swap native OS module capture from `13c48b9`
+generated a verified **nonblack** 1032x574 PNG: real decorated
+`RTS Creator | Data Editor`, bright blue text, resizable navigator/
+inspector, Save Undo Redo and module switch, showing authored
+`raider_doctrine` Upgrade. Source CI artifact
+`rts-native-module-window-dpi150-screenshot`. The earlier black GL_FRONT
+capture is resolved by reading GL_BACK before the final secondary
+swap and requiring visible color pixels.
+
+Visually the 150% navigator still only displayed ~one object row on
+720px height, because creation templates consumed its available
+height. The next followup groups creation/derive controls under a
+closed-by-default foldout in separate-module mode, adds a clear
+Object Explorer heading, and scrolls automatically to a changed
+selected catalog ID once without hijacking normal manual scrolling.
+Check the resulting F7 150% and 175% screenshots on latest HEAD.
