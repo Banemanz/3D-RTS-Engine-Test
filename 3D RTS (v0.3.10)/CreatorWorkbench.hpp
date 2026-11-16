@@ -1448,6 +1448,31 @@ void moduleWorkspace(App& app){
     const bool body=ImGui::Begin(title.c_str(),&open,
         ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoDocking);
     if(body){
+        // ImGui's GLFW backend receives keyboard events in secondary OS
+        // windows, while the game's original GLFW key callback does not.
+        // Route those shortcuts here, but NEVER in the primary viewport
+        // (where editorKeyCallback already owns them).
+        if(ImGui::GetWindowViewport()!=ImGui::GetMainViewport() &&
+           ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)){
+            const auto& keys=ImGui::GetIO();
+            const bool ctrl=keys.KeyCtrl;
+            if(ctrl && ImGui::IsKeyPressed(ImGuiKey_S))app.saveProject();
+            if(ctrl && !keys.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Z))
+                refresh(app,ed.undo(app.project));
+            if(ctrl && !keys.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Y))
+                refresh(app,ed.redo(app.project));
+            const EditorSession::Panel target=
+                ImGui::IsKeyPressed(ImGuiKey_F5)?EditorSession::Panel::Terrain:
+                ImGui::IsKeyPressed(ImGuiKey_F6)?EditorSession::Panel::Triggers:
+                ImGui::IsKeyPressed(ImGuiKey_F7)?EditorSession::Panel::Data:
+                ImGui::IsKeyPressed(ImGuiKey_F8)?EditorSession::Panel::Scene:
+                EditorSession::Panel::Play;
+            if(target!=EditorSession::Panel::Play)
+                choosePanel(app,ed.panel==target?
+                    EditorSession::Panel::Play:target);
+            else if(ImGui::IsKeyPressed(ImGuiKey_F9))
+                choosePanel(app,EditorSession::Panel::Play);
+        }
         ImGui::TextColored(ImVec4(.48f,.83f,.96f,1.f),"CREATOR  /  %s",
             creatorModuleTitle(static_cast<int>(ed.panel)));
         ImGui::Separator();

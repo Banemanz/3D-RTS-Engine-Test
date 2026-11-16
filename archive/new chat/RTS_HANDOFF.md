@@ -1951,3 +1951,15 @@ closed-by-default foldout in separate-module mode, adds a clear
 Object Explorer heading, and scrolls automatically to a changed
 selected catalog ID once without hijacking normal manual scrolling.
 Check the resulting F7 150% and 175% screenshots on latest HEAD.
+
+
+### Detached native module keyboard routing
+
+The new OS-native editor modules are separate GLFW windows so the
+game's `editorKeyCallback` on the primary window does NOT receive their
+keyboard events. `CreatorWorkbench::moduleWorkspace` now handles
+F5/F6/F7/F8 workspace toggles, F9 Play, Ctrl+S, Ctrl+Z, Ctrl+Y using
+ImGui secondary viewport key state when its root/child is focused,
+with Ctrl+Z/Y gated against active text input. Primary-window input
+still flows through editorKeyCallback; no duplicate command dispatch.
+Do not call this complete without current SHA Windows/Linux CI.

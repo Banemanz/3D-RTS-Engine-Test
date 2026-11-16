@@ -170,3 +170,14 @@ selects a different catalog entry, the list scrolls to that object
 exactly once; ordinary manual browsing does not repeatedly jump back.
 This is an accessibility/layout improvement on top of the resizable
 Navigator/Properties splitter.
+
+
+### Keyboard commands in detached editor windows
+
+The primary game GLFW callback handles shortcut keys when the game is
+focused. Detached native editor windows receive keyboard input via
+ImGui's own GLFW platform backend instead. The active module therefore
+also accepts **F5 Terrain, F6 Triggers, F7 Data, F8 Scene, F9 Play,
+Ctrl+S Save, Ctrl+Z Undo and Ctrl+Y Redo** when its OS window is
+focused. Text editing keeps its own Ctrl+Z/Y history. Commands share the
+same project editor controller, not a second copy of the map.
