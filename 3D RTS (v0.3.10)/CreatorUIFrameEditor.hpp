@@ -13,6 +13,7 @@
 namespace CreatorUIFrameEditor {
 inline int previewResolution=0;
 inline std::string focusFrameId; // deterministic CI/author selection
+inline bool revealSelectedFrame=false;
 inline const std::array<std::array<int,2>,3> resolutions={{
     {{1280,720}},{{1920,1080}},{{800,600}}
 }};
@@ -63,7 +64,10 @@ void draw(App& app){
         dirty=false;
     }
     if(!focusFrameId.empty()){
-        if(findFrame(draft,focusFrameId)>=0)selected=focusFrameId;
+        if(findFrame(draft,focusFrameId)>=0){
+            selected=focusFrameId;
+            revealSelectedFrame=true;
+        }
         focusFrameId.clear();
     }
     const auto persist=[&]{
@@ -234,12 +238,23 @@ void draw(App& app){
         }
         if(dirty)ImGui::TextColored(ImVec4(1.f,.77f,.35f,1.f),
                                     "Unapplied changes");
+        const int chosenIndex=findFrame(draft,selected);
+        if(chosenIndex>=0){
+            const auto& chosen=draft[static_cast<std::size_t>(chosenIndex)];
+            ImGui::TextColored(ImVec4(.53f,.91f,.96f,1.f),
+                "%s | %s",chosen.id.c_str(),chosen.kind.c_str());
+            if(chosen.action=="Trigger")
+                ImGui::TextColored(ImVec4(1.f,.79f,.43f,1.f),
+                    "Click: F6 trigger event");
+        }
         ImGui::Separator();
-        const float propertyHeight=std::max(165.f,panelHeight-100.f*ui);
+        const float propertyHeight=std::max(165.f,panelHeight-85.f*ui);
         if(ImGui::BeginChild("##FramePropertiesScroll",ImVec2(0,propertyHeight),
                              ImGuiChildFlags_Borders)){
         ImGui::TextDisabled("FRAME HIERARCHY");
-        const float listHeight=std::max(110.f,155.f*ui);
+        // Keep at least half the inspector available for selected frame
+        // properties on 720p and at 150-250% desktop DPI.
+        const float listHeight=std::clamp(panelHeight*.28f,88.f,132.f);
         if(ImGui::BeginChild("##frameTree",ImVec2(0,listHeight),
                              ImGuiChildFlags_Borders)){
             for(const auto& frame:draft){
@@ -251,6 +266,10 @@ void draw(App& app){
                     frame.kind+"  "+frame.id;
                 if(ImGui::Selectable(title.c_str(),selected==frame.id))
                     selected=frame.id;
+                if(revealSelectedFrame && selected==frame.id){
+                    ImGui::SetScrollHereY(.45f);
+                    revealSelectedFrame=false;
+                }
             }
         }
         ImGui::EndChild();
@@ -274,6 +293,9 @@ void draw(App& app){
                 }
                 ImGui::PopID();
             };
+            // Primary Button action should be visible immediately at
+            // high DPI; don't bury it behind several size controls.
+            if(f.kind=="Button")combo("Click action",f.action,actions,5);
             combo("Anchor",f.anchor,anchors,5);
             combo("Blue theme palette",f.palette,palettes,5);
             ImGui::TextUnformatted("Parent (root or an earlier panel)");
@@ -311,8 +333,6 @@ void draw(App& app){
                 const char* progress[]={"Supply","SelectedHealth"};
                 combo("Progress value",f.binding,progress,2);
             }else combo("Live data binding",f.binding,bindings,8);
-            if(f.kind=="Button")
-                combo("Click action",f.action,actions,5);
             if(f.kind=="Panel" || f.kind=="Button"){
                 if(f.kind=="Button" && f.action=="Trigger" && !f.consumeInput){
                     f.consumeInput=true;dirty=true;

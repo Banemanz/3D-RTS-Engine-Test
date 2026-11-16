@@ -245,3 +245,15 @@ F6/F10 share the same validated project/Undo controller: switching
 modules does not duplicate the script authoring state. Real 150%
 F10 native-window smoke and actual F9 gameplay after the UI event
 are checked on Linux Mesa.
+
+
+### Script-button authoring screenshot refinements
+
+A real 150%-scale F10 CI screenshot showed the selected script
+Button outlined in the canvas, but the hierarchy list consumed
+too much of the available inspector height. The Custom UI frames
+tab now shortens the tree, scrolls to the selected frame once,
+keeps action controls at the top, and shows a prominent amber
+"Click: F6 trigger event" status when appropriate. The right pane
+remains independently scrollable and the blue-on-blue aesthetic
+and user DPI preference behavior are unchanged.

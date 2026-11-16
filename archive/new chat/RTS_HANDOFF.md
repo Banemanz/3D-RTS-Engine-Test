@@ -2289,3 +2289,32 @@ world digests then must match at initialization and after 60
 fixed ticks. This preserves strong replay integrity AND verifies
 visual-only metadata cannot alter gameplay. Re-run new exact-head
 Windows/Linux Release/Debug 90 CTests, replay parity, F10/F9 images.
+
+
+### Successful UI click replay path and F10 visual inspection
+
+At `441a6e06f4f9c165b7e5ab3beb6d216a0e941981`,
+primary Windows/Linux Release CI both **90/90 CTests passed**
+and both packages verified. Windows/Linux Debug CI and strict
+`ui_trigger_fingerprint.txt` replay parity passed. Genuine
+Linux Mesa F10 150% native secondary GLFW screenshot (1239x892)
+and real F9 (1280x720) captured the new event:
+amber SEND SIGNAL Button, +75 player minerals in the resource
+strip, centered "BEACON SIGNAL RECEIVED" message, selected-unit
+health bar and nested mission panels. No direct GUI rewards.
+Earlier red CTests were fixed: (1) F6 whitelist overwritten
+during blob staging; (2) replay tape also contains real AI orders;
+(3) removing a trigger from a comparison map necessarily changes
+the authoritative state hash, so the final test compares only
+visual frame changes while preserving identical F6 script graphs.
+
+Visual QA on successful screenshot: F10 property pane still
+began with a tall 230px hierarchy at 150% DPI, hiding the
+selected Button's editable properties. Follow-up reduces tree
+to ~28% of available area, scrolls to selected event_button,
+shows the selected ID/action above properties and moves
+Click action to the top of editing controls. F9's linked
+STATUS Message label was truncated; increase original fixture
+status width 250->420px. Re-run final exact-HEAD Windows/Linux
+Release 90/90 CTests, Debug strict replay parity and inspect
+fresh F10/F9 screenshots. Update same Draft PR body; do not merge.

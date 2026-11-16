@@ -112,3 +112,24 @@ or third-party source.
 
 See [UI Frame Hierarchy](UI_FRAME_HIERARCHY.md) and
 [Interface Editor](INTERFACE_EDITOR.md).
+
+
+## High-DPI F10 inspector screenshot QA
+
+Real Linux OpenGL F10 screenshot at 150% creator UI scaling
+confirmed the selected script Button rendered correctly but its
+properties were pushed below a tall hierarchy list. The native
+F10 right inspector now reserves space for a compact, vertically
+scrollable hierarchy (about 28% of the available panel), scrolls
+the selected item into view and displays the selected Button's
+ID/type/Trigger event status above the inspector. The main
+**Click action** selector is now the first editable property,
+rather than below offsets, dimensions and bindings. Apply/Discard/
+Clear remain pinned at the top. This avoids tiny controls and
+excessive nested scrolling at 150-250% DPI scaling.
+
+Real F9 screenshot showed the intended mineral reward and
+"BEACON SIGNAL RECEIVED" event message but truncated the linked
+left-hand status Label. The original sample's status display is
+widened to show the complete message without compromising the
+native resource strip or RTS command grid.
