@@ -1963,3 +1963,17 @@ ImGui secondary viewport key state when its root/child is focused,
 with Ctrl+Z/Y gated against active text input. Primary-window input
 still flows through editorKeyCallback; no duplicate command dispatch.
 Do not call this complete without current SHA Windows/Linux CI.
+
+
+### Native module default height refinement
+
+After confirming the nonblack genuine GLFW/GL 150% F7 screenshot at
+`b8dc21a`, the PNG (1239x574) showed that native modules were still
+sized vertically from the **720px primary game viewport**, even on the
+2600x1050 virtual desktop. The next pass chooses the editor's initial
+height from `ImGui::GetPlatformIO().Monitors[0].WorkSize` (~85% of
+monitor height) clamped to available room, preserving user-resized
+window geometry (ImGuiCond_FirstUseEver). This should visibly increase
+F7 navigator and inspector space at 150-250% scale; inspect new image.
+The detached-native Ctrl+S/Z/Y + F5-F9 shortcuts were added in prior
+commit `a32cd6a`; check final exact-HEAD CI and hotkey compilation.

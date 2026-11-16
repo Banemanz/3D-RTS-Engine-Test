@@ -181,3 +181,14 @@ also accepts **F5 Terrain, F6 Triggers, F7 Data, F8 Scene, F9 Play,
 Ctrl+S Save, Ctrl+Z Undo and Ctrl+Y Redo** when its OS window is
 focused. Text editing keeps its own Ctrl+Z/Y history. Commands share the
 same project editor controller, not a second copy of the map.
+
+
+### Desktop-height window sizing
+
+Detached modules now size their initial height against the **monitor
+work area** (approximately 85% of the available desktop), rather than
+inheriting the 720px game window height. The first-use height is clamped
+to the usable monitor area; user-resized windows still retain their
+saved sizes. This gives the large-text F7 object explorer much more
+room on 1080p and taller displays without sacrificing the independent
+world viewport.

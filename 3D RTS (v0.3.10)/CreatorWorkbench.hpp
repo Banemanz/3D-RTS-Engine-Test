@@ -1426,13 +1426,23 @@ void moduleWorkspace(App& app){
         static_cast<int>(ed.panel)))+"###creator_module_"+
         std::to_string(static_cast<int>(ed.panel));
     const ImVec2 area=viewport->Size;
+    // The editor is a separate desktop window: derive its vertical work
+    // area from the monitor, NOT the original 1280x720 game window.
+    // High-DPI tools otherwise remain only ~570px tall on a 1050p desktop.
+    ImVec2 monitorWork=area;
+    const auto& monitors=ImGui::GetPlatformIO().Monitors;
+    if(!monitors.empty())monitorWork=monitors[0].WorkSize;
+    const float safeHeight=std::max(320.f,
+        monitorWork.y-app.moduleStartOffset.y-28.f*scale);
+    const float preferredHeight=std::max(
+        355.f*scale,std::max(area.y-100.f*scale,monitorWork.y*.85f));
     ImGui::SetNextWindowPos(
         ImVec2(viewport->Pos.x+app.moduleStartOffset.x,
                viewport->Pos.y+app.moduleStartOffset.y),
         ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(
         ImVec2(std::max(420.f,area.x-28.f*scale),
-               std::max(355.f*scale,area.y-100.f*scale)),
+               std::min(safeHeight,preferredHeight)),
         ImGuiCond_FirstUseEver);
     // Pinned ImGui docking exposes per-window NoAutoMerge: even while
     // overlapping the game's window this creates a REAL native OS window,
