@@ -149,3 +149,16 @@ and F9 live progression via \`--smoke-ai-research\` /
 Both platform bundles ship the scenario and manual and report
 \`RTS_FEATURE_AI_RESEARCH=1\` from the real compiled executable.
 No borrowed Blizzard assets, UI, names, or third-party engine source.
+
+
+## UI screenshot review and default panel placement
+
+The first native F7/F9 screenshots exposed default floating window
+overlap, not a gameplay error. The policy panel now reserves the
+left browser and right inspector at 1280-wide, and the inspector
+offers a narrower default width while the policy is open. In Play
+mode, the read-only monitor uses a compact 225px height and no
+authoring instructions, leaving the combat map and in-house HUD
+visible. The screenshot harness selects `raider_doctrine` so the
+policy controls and a related typed Upgrade inspector can be
+seen together. User docking and window resizing override defaults.

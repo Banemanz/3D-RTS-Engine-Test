@@ -16,16 +16,23 @@ void draw(App& app){
     if(!visible || (app.editor.panel!=EditorSession::Panel::Data &&
                     app.editor.panel!=EditorSession::Panel::Play))return;
     const auto view=ImGui::GetIO().DisplaySize;
-    ImGui::SetNextWindowPos(ImVec2(326.f,65.f),ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(std::min(510.f,view.x-340.f),
-                                   std::min(570.f,view.y-95.f)),
+    const bool play=app.editor.panel==EditorSession::Panel::Play;
+    // Reserve space for the browser on the left and the inspector on
+    // the right in a 1280-wide editor; docking/manual resizing still win.
+    constexpr float left=326.f,rightInspector=360.f,gutter=40.f;
+    const float panelWidth=std::min(560.f,std::max(315.f,
+        view.x-left-rightInspector-gutter));
+    ImGui::SetNextWindowPos(ImVec2(left,65.f),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(panelWidth,
+                                   std::min(play?225.f:570.f,view.y-95.f)),
                              ImGuiCond_FirstUseEver);
     if(!ImGui::Begin("Creator | Opponent Research",&visible)){
         ImGui::End();return;
     }
     auto settings=rtsAIResearchSettings(app.project);
-    ImGui::TextDisabled("AUTHORING | fixed-step enemy research policy");
-    ImGui::TextWrapped("This is an opt-in opponent economy. Research uses actual producers, Show/Use Requirements, per-level costs and owner-specific stat upgrades. Attack AI remains independent.");
+    ImGui::TextDisabled("%s",play?"PLAYTEST | live opponent technology":
+        "AUTHORING | fixed-step enemy research policy");
+    if(!play)ImGui::TextWrapped("This is an opt-in opponent economy. Research uses actual producers, Show/Use Requirements, per-level costs and owner-specific stat upgrades. Attack AI remains independent.");
     if(app.editor.panel==EditorSession::Panel::Play){
         if(!settings.enabled){
             ImGui::SeparatorText("AI research disabled in this project");

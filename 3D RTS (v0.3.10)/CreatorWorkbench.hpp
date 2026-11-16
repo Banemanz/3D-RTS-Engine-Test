@@ -292,7 +292,8 @@ void inspector(App& app){
     // remain authoritative on every OS.
     const float inspectorWidth=ed.panel==EditorSession::Panel::Triggers?490.f:
         ed.panel==EditorSession::Panel::Data?
-            std::clamp(w.x*.40f,400.f,540.f):360.f;
+            (CreatorAIResearch::visible ? 360.f :
+             std::clamp(w.x*.40f,400.f,540.f)):360.f;
     ImGui::SetNextWindowPos(
         ImVec2(std::max(320.f,w.x-inspectorWidth-15.f),50.f),
         ImGuiCond_FirstUseEver);

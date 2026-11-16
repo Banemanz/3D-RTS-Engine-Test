@@ -1795,3 +1795,26 @@ multiplayer lockstep implemented yet. Next prioritize independent owner
 resource/economy model and production AI, richer requirements inspector,
 native F7 workflow/UI modernization, scene manipulation gizmos and
 model/texture/animation import.
+
+
+### November 16 CI / real screenshot review
+
+Full AI research feature commit `3e7dfb9a9fe6283fcd676fd28ea86ddc849672ae`
+**VERIFIED GREEN**: Release 86/86 CTests each on Windows x64 and Linux
+x86_64, packaged sample and new AI_RESEARCH manual and native feature marker,
+both Debug test matrices, byte-identical cross-OS
+`ai_research_fingerprint.txt`, real native F7 policy editor and F9 monitor
+screenshots. Workflows:
+- https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43869194929
+- https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43869194881
+- https://github.com/Banemanz/3D-RTS-Engine-Test/actions/runs/43869205227
+
+Real screenshot inspection revealed F7 policy panel visually overlapped
+normal F7 inspector and clipped policy labels. The F9 policy monitor
+needlessly occupied a tall authoring panel and displayed AUTHORING
+intro text. The follow-up adjusts first-use geometry to share space
+with a narrower (360px) inspector only while the policy pane is open,
+selects `raider_doctrine` in F7 smoke instead of a default Model, and
+uses a short 225px read-only Play monitor with an appropriate caption.
+User-resized/docked window geometry remains authoritative.
+Re-verify the exact next HEAD CI and inspect replacement captures.

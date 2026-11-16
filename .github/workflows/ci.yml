@@ -254,7 +254,7 @@ jobs:
           path: rts-research-unlocked-f9.png
           if-no-files-found: error
       - name: Capture F7 opponent AI research authoring
-        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-ai-research --project projects/ai_research_showcase.rtsproject.json --smoke-frames 90 --screenshot rts-ai-research-editor.ppm
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-ai-research --project projects/ai_research_showcase.rtsproject.json --smoke-select-catalog-id raider_doctrine --smoke-frames 90 --screenshot rts-ai-research-editor.ppm
       - name: Convert F7 opponent AI research screenshot
         run: python3 tools/ppm_to_png.py rts-ai-research-editor.ppm rts-ai-research-editor.png
       - name: Upload real F7 AI research authoring
