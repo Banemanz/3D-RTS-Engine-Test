@@ -16,6 +16,7 @@ std::string EditorSession::panelName()const {
         case Panel::Data:return "DATA EDITOR";
         case Panel::Triggers:return "TRIGGER EDITOR";
         case Panel::Scene:return "SCENE EDITOR";
+        case Panel::Interface:return "INTERFACE EDITOR";
     }
     return "";
 }
@@ -1478,7 +1479,7 @@ bool EditorSession::mutateTrigger(
 bool EditorSession::setTriggerEvent(RTSProject& project,const std::string& type) {
     if(type!="OnMapStart" && type!="After" && type!="Every" &&
        type!="OnUnitDeath" && type!="OnRegionEnter" && type!="MineralsBelow" &&
-       type!="OnVariableChanged")return false;
+       type!="OnVariableChanged" && type!="OnUIFrameClicked")return false;
     picojson::object event{{"type",picojson::value(type)}};
     if(type=="After" || type=="Every")event["seconds"]=picojson::value(1.0);
     if(type=="MineralsBelow")event["amount"]=picojson::value(100.0);
@@ -1491,6 +1492,19 @@ bool EditorSession::setTriggerEvent(RTSProject& project,const std::string& type)
         }
         event["variable"]=picojson::value(
             globals->second.get<picojson::object>().begin()->first);
+    }
+    if(type=="OnUIFrameClicked"){
+        const auto frames=rtsUIFramesFromProject(project);
+        const auto available=std::find_if(frames.begin(),frames.end(),
+            [](const RTSUIFrame& frame){
+                return frame.kind=="Button" && frame.action=="Trigger" &&
+                       frame.consumeInput;
+            });
+        if(available==frames.end()){
+            message="CREATE A SCRIPT BUTTON IN F10 FIRST";
+            return false;
+        }
+        event["frame"]=picojson::value(available->id);
     }
     if(type=="OnRegionEnter") {
         auto it=std::find_if(project.placements.begin(),project.placements.end(),

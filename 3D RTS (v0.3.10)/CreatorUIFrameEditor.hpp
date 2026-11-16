@@ -21,7 +21,7 @@ inline const char* anchors[]={"TopLeft","TopRight","BottomLeft","BottomRight","C
 inline const char* palettes[]={"Navy","Teal","Cobalt","Amber","Slate"};
 inline const char* bindings[]={"None","Minerals","Supply","Workers",
                                 "Selected","SelectedHealth","Message","Ticks"};
-inline const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase"};
+inline const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase","Trigger"};
 inline std::string nextId(const std::vector<RTSUIFrame>& frames){
     for(int i=1;i<=999;++i){
         const auto candidate="ui_"+std::to_string(i);
@@ -312,11 +312,20 @@ void draw(App& app){
                 combo("Progress value",f.binding,progress,2);
             }else combo("Live data binding",f.binding,bindings,8);
             if(f.kind=="Button")
-                combo("Click action",f.action,actions,4);
+                combo("Click action",f.action,actions,5);
             if(f.kind=="Panel" || f.kind=="Button"){
-                if(ImGui::Checkbox("Consume world mouse clicks",&f.consumeInput))
-                    dirty=true;
+                if(f.kind=="Button" && f.action=="Trigger" && !f.consumeInput){
+                    f.consumeInput=true;dirty=true;
+                }
+                if(f.kind!="Button" || f.action!="Trigger"){
+                    if(ImGui::Checkbox("Consume world mouse clicks",&f.consumeInput))
+                        dirty=true;
+                }else ImGui::TextDisabled(
+                    "Script buttons always consume world clicks");
             }
+            if(f.kind=="Button" && f.action=="Trigger")
+                ImGui::TextWrapped(
+                    "F6 Trigger Editor: choose OnUIFrameClicked and this frame ID. Clicks are replay-recorded at 60Hz.");
             if(ImGui::Button("Duplicate frame",ImVec2(-1,0)) &&
                draft.size()<32){
                 auto copy=f;

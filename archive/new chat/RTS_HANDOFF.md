@@ -2229,3 +2229,29 @@ and actual F10/F9 screenshots. Fix failures and document results
 on the same PR, never merge. Remaining: more widget types,
 arbitrary UI event callback APIs, player-scoped networking,
 font/UI assets and native game HUD DPI zoom.
+
+
+### F6/F10 multi-file integration correction (November 16)
+
+Initial event feature commit `7f0f820b491c3ac72ca178c651e350ad8f3b4c94`
+compiled on Linux Debug, but 89/90 CTests passed: `ui_trigger`
+failed on `creator.setTriggerEvent(project,"OnUIFrameClicked")`.
+Root cause was an *overlapping blob staging mistake*: code changes
+to EditorSession.cpp, CreatorUIFrameEditor.hpp, and the render loop
+were each created separately against the previous branch revision,
+then a later blob replaced earlier unrelated changes in the same file.
+The fix explicitly combines source edits in all three:
+
+- EditorSession.cpp retains UI reference validation AND adds F6
+  OnUIFrameClicked whitelist, first valid Button default, Interface
+  panel display name.
+- CreatorUIFrameEditor.hpp retains F10 screenshot focus and adds
+  Trigger action dropdown, auto `consume_input`, click-event help.
+- main_entry_point_render_loop.cpp retains `--smoke-ui-trigger` and
+  F10 focus CLI options AND adds native mouse-click queue routing
+  and feature marker `RTS_FEATURE_UI_TRIGGER_EVENTS=1`.
+
+**Re-run exact latest HEAD 90/90 Windows/Linux CTest, packaged CLI
+bundle, real OpenGL F10/F9 images and replay fingerprint; do not claim
+success from the earlier red CI.** All work remains on original
+unmerged Draft PR #1.

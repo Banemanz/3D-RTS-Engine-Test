@@ -473,6 +473,10 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
                     state->command(HUDCommand::SelectWorkers);
                 else if(overlay.action=="FocusBase")
                     state->command(HUDCommand::FocusBase);
+                else if(overlay.action=="Trigger"){
+                    if(!state->game.queueUIFrameClick(overlay.frameId))
+                        state->inform("UI EVENT UNAVAILABLE OR QUEUE FULL");
+                }
             }
             if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE)
                 state->selectionManager.isDragging=false;
@@ -963,7 +967,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_CREATOR_MODULE_WINDOWS=1\n"
                  <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n"
                  <<"RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1\n"
-                 <<"RTS_FEATURE_UI_FRAME_HIERARCHY=1\n";
+                 <<"RTS_FEATURE_UI_FRAME_HIERARCHY=1\n"
+                 <<"RTS_FEATURE_UI_TRIGGER_EVENTS=1\n";
         return 0;
     }
     RTSCrashReporter::install();
