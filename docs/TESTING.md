@@ -523,3 +523,16 @@ while Release bundle verification checks the manual/sample/executable.
 ## Creator module and visual accessibility regressions
 
 `RTSCreatorUISettingsTests` validates readable default settings, scale bounds (85–250%), OS-DPI multiplication / safe 400% cap, separate-module/contrast preferences, JSON and filesystem roundtrip/overwrite, invalid/corrupt/oversized settings handling and stable module titles. The Linux OpenGL CI starts an extended virtual desktop, launches `RTSCameraTerrain --data-editor --smoke-module-windows --smoke-ui-scale 1.50`, **requires a secondary ImGui native platform viewport**, and reads the detached window's real GL framebuffer. Another capture uses 175% scale in single-viewport mode. Release verification and Windows CTest build the same creator and settings code. Neither test mutates the project/replay schema.
+
+
+## Interface Editor gameplay/UI regression (November 16)
+
+`RTSInterfaceEditorTests` verifies the classic unmodified HUD geometry,
+strict bounded profile metadata, project serialization round-trip,
+single-transaction authoring Apply/Undo/Redo/default reset and
+presentation/input rectangle alignment across 640×480, 800×600,
+1280×720 and 1920×1080. Real Xvfb/Mesa OpenGL captures exercise
+F10's secondary OS-native module canvas and the actual F9 gameplay
+HUD using the same authored map, not a synthetic image. Both platform
+bundles include the sample/manual and expose the feature marker.
+The existing deterministic replay parity gate remains in place.

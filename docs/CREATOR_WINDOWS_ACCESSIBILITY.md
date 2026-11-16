@@ -192,3 +192,20 @@ to the usable monitor area; user-resized windows still retain their
 saved sizes. This gives the large-text F7 object explorer much more
 room on 1080p and taller displays without sacrificing the independent
 world viewport.
+
+
+## F10 Interface Editor versus personal GUI accessibility
+
+F10 is now a **new native creator module** for authoring the playable
+game HUD itself. Its layout canvas supports compact/desktop/1080p
+resolutions and applies profile edits to project JSON only when the
+author presses Apply; Undo and Redo use the unified project history.
+Separately, View → Appearance remains per-user for accessibility:
+175% zoom and higher text contrast do NOT alter the game HUD or
+the layout delivered to players. See [Interface Editor](INTERFACE_EDITOR.md).
+
+F7's property browser has also been redesigned as a resizable,
+horizontally scrollable Scope/Field/Value table with per-field filtering,
+inherited/local tint distinction and wrapped long values. This prevents
+a single `[INHERITED] long_field = long JSON` label from disappearing
+at larger DPI/text settings.

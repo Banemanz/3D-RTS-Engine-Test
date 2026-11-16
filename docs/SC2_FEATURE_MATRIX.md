@@ -429,3 +429,17 @@ The original RTS engine now supports opt-in enemy research planning through shar
 ## Galaxy-inspired separated editor modules and accessible presentation
 
 F5 Terrain, F6 Triggers, F7 Data and F8 Scene now use individually titled module windows, two-pane resizable Navigator/Properties, independent saved geometry and drag-out native OS multi-viewports on desktop. The existing authoring model, headless data rules, Play/F9 and Windows/Linux feature parity remain intact. Native editor GUI scale runs at 85–250% atop user/system monitor DPI, with on-disk per-user preferences, a blue/teal palette and optional high-contrast text. This matches Galaxy's conceptual *module separation*, **not** fully implemented Galaxy GUI/UI Editor, cutscene editor, simultaneous active document controllers or importer parity. Read docs/CREATOR_WINDOWS_ACCESSIBILITY.md.
+
+
+## Authorable GUI/HUD Interface module (November 16)
+
+The original F10 Interface Editor now exists as a separate OS-native
+creator workspace (in addition to F5 Terrain, F6 Triggers, F7 Data,
+F8 Scene), with schematic drag/select preview, 3 resolution presets,
+structured property sliders, real project metadata and undo/redo.
+The native RTS HUD and real mouse hit regions both honor the authored
+layout, with a distinct sample and Windows/Linux tests. F7 property
+list now uses resizable, searchable, wrapped Scope/Field/Value rows
+instead of unreadable long concatenated strings, supporting the
+high-contrast and 150–250% creator scales. This is **not** full
+Galaxy UI Editor frame/skin/dialog trigger parity.

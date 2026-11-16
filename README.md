@@ -512,3 +512,20 @@ The skirmish enemy can now run an opt-in **economic research policy** using an i
 ## New desktop editor workspaces and accessibility scaling (November 16)
 
 The creator now separates **Terrain (F5), Triggers (F6), Data (F7) and Scene (F8)** into individually titled, position-persistent editor windows, each with a resizable Navigator/Properties split and its own Save/Undo/Redo controls. Normal native Windows/Linux builds enable Dear ImGui multi-viewports: the selected module opens in an independent decorated OS window (and can move to another monitor). The Play/F9 world and in-house HUD remain independent. **Appearance** offers 85–250% UI scale presets, system/active-monitor DPI following, enhanced text contrast and a switch back to the old floating layout. Fonts are recreated at their actual target resolution. Preferences save per-user (not in maps/replays). See [Creator Windows & Accessibility](docs/CREATOR_WINDOWS_ACCESSIBILITY.md), with a dedicated real native module-window CI capture and a separate 175% readability screenshot.
+
+
+## F10 Interface Studio — editable gameplay HUD
+
+The **Interface Editor (F10)** is a dedicated native creator module for the
+actual playable RTS HUD. Its interactive blue-on-blue canvas projects real
+`RTSHUDLayout` geometry at 800×600, 1280×720 and 1920×1080. Select, drag or
+use precise sliders to adjust the tactical minimap, 12-button command grid,
+bottom panel and upper resource strip; **Apply** commits one validated,
+undoable `hud_profile` map transaction. The **gameplay renderer and mouse
+input both use the authored rectangles**, not a static editor-only mockup.
+Old projects retain their exact default layout. The new sample
+`projects/interface_studio_showcase.rtsproject.json` and
+[Interface Editor manual](docs/INTERFACE_EDITOR.md) ship in Windows/Linux
+bundles. F7's resolved-property inspector now has a searchable,
+resizable Scope / Field / Value table with wrapped text and clear
+local/inherited indicators, designed to work at 150–250% UI scaling.

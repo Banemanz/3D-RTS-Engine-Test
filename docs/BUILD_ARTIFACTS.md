@@ -257,3 +257,15 @@ Both native bundles include `projects/ai_research_showcase.rtsproject.json`, `do
 ## Desktop module windows and creator DPI feature gate
 
 Both release executables report `RTS_FEATURE_CREATOR_MODULE_WINDOWS=1` and `RTS_FEATURE_CREATOR_DPI_SCALING=1`. Both distributions ship docs/CREATOR_WINDOWS_ACCESSIBILITY.md and the bundle verifier checks the flags and manual. The same pinned docking-enabled GLFW/OpenGL3 GUI backend is built on both platforms; no separate Windows-only editor DLL. The Linux Debug CI runs a genuine **second native GLFW window** on Xvfb and captures its own GL framebuffer at 150% creator UI scale; an independent 175% single-window F7 screenshot checks large-font layout. Unit tests exercise JSON preference bounds, DPI arithmetic and malformed-file safety.
+
+
+## F10 gameplay interface designer in native bundles
+
+Windows and Linux ship `projects/interface_studio_showcase.rtsproject.json`
+and `docs/INTERFACE_EDITOR.md`. The bundle verifier requires both plus
+the compiled `RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1` marker, and
+bundled RTSProjectTool validates the authored project. Release CTest
+includes `interface_editor` with assertion retention and real gameplay
+hit-test/presentation geometry checks. Linux screenshot CI captures
+the actual native F10 OS module and F9 gameplay from the same project.
+No new runtime library, font file or GPU-specific dependency.

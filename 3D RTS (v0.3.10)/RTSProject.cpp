@@ -1,4 +1,5 @@
 #include "RTSProject.hpp"
+#include "RTSHUDProfile.hpp"
 #include "RTSAIResearchPolicy.hpp"
 #include "InstanceOverrides.hpp"
 #include "TriggerDefinition.hpp"
@@ -254,6 +255,9 @@ void RTSProject::validate() const {
         throw std::invalid_argument("enemy_ai_guard_radius must be between 0 and 80");
     // Shared authoring/simulation parser: no silent AI policy fallback.
     (void)rtsAIResearchSettings(*this);
+    // Project-local HUD geometry must pass strict checks before packaging.
+    // Default project metadata intentionally leaves the classic layout.
+    (void)RTSHUDProfile::fromProject(*this);
     // Any game-facing data object must be valid before we allow project saves.
     for(const auto& e:catalog.entries()) {
         if(e.type=="Unit") {

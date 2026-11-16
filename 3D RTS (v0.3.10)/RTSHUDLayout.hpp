@@ -1,5 +1,6 @@
 #pragma once
 #include "RTSSkirmish.hpp"
+#include "RTSHUDProfile.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -38,14 +39,27 @@ inline float rtsCommandTitlePixelSize(const HUDButton& button,bool compact){
 }
 class RTSHUDLayout {
 public:
-    explicit RTSHUDLayout(int w,int h):width(std::max(w,1)),height(std::max(h,1)){
-        const float panel=height<620?160.f:194.f;
-        topBar={0,22,float(width),46};
+    explicit RTSHUDLayout(int w,int h,const RTSHUDProfile& profile=RTSHUDProfile{})
+        :width(std::max(w,1)),height(std::max(h,1)){
+        profile.validate();
+        const float basePanel=height<620?160.f:194.f;
+        const float panel=std::min(float(height)*.54f,
+                                   std::max(110.f,basePanel+profile.bottomExtra));
+        topBar={0,profile.resourceTop,float(width),profile.resourceHeight};
         bottom={0,float(height)-panel,float(width),panel};
-        minimap={14,bottom.y+22,panel-37,panel-40};
-        commandArea={float(width)-344,bottom.y+20,330,panel-34};
-        selectionArea={minimap.x+minimap.w+24,bottom.y+20,
-                       std::max(40.f,commandArea.x-(minimap.x+minimap.w+34)),panel-34};
+        // Preserve exactly the legacy rectangle geometry when the author
+        // omits hud_profile. Custom editor values modify renderer and hits
+        // through this single headless layout, avoiding phantom click zones.
+        const float mapW=std::min((panel-37.f)*profile.minimapScale,
+            std::max(40.f,float(width)-profile.commandWidth-
+                             profile.commandInset-profile.minimapInset-104.f));
+        const float mapH=std::min((panel-40.f)*profile.minimapScale,panel-34.f);
+        minimap={profile.minimapInset,bottom.y+22.f,mapW,mapH};
+        commandArea={float(width)-profile.commandInset-profile.commandWidth,
+                     bottom.y+20.f,profile.commandWidth,panel-34.f};
+        const float selectionX=minimap.x+minimap.w+24.f;
+        selectionArea={selectionX,bottom.y+20.f,
+                       std::max(40.f,commandArea.x-(selectionX+10.f)),panel-34.f};
     }
     int width=0,height=0;
     HUDRect topBar,bottom,minimap,selectionArea,commandArea;

@@ -264,6 +264,29 @@ bool EditorSession::selectCatalogId(const RTSProject& project,const std::string&
     }
     return false;
 }
+bool EditorSession::setHUDProfile(RTSProject& project,const RTSHUDProfile& profile){
+    if(textEditing)return false;
+    try{profile.validate();}
+    catch(const std::exception& e){
+        message=std::string("INVALID HUD PROFILE: ")+e.what();
+        return false;
+    }
+    const auto current=RTSHUDProfile::fromProject(project);
+    if(current.toJson().serialize()==profile.toJson().serialize())return false;
+    const RTSProject before=project;
+    if(profile.isDefault())project.metadata.erase("hud_profile");
+    else project.metadata["hud_profile"]=profile.toJson();
+    try{project.validate();}
+    catch(const std::exception& e){
+        project=before;
+        message=std::string("INVALID HUD LAYOUT: ")+e.what();
+        return false;
+    }
+    remember(before);
+    modified=true;
+    message="GAME HUD LAYOUT UPDATED";
+    return true;
+}
 bool EditorSession::setAIResearchSetting(RTSProject& project,
                                           const std::string& key,
                                           const picojson::value& value){

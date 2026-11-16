@@ -320,3 +320,22 @@ The opt-in `RTSAIResearchPolicy.hpp` strictly parses and validates author settin
 ## Native module separation and creator DPI (November 16)
 
 The native creator uses one validated `EditorSession` and project as before. `CreatorWorkbench::moduleWorkspace` now owns a titled module surface per F5/F6/F7/F8 workspace and a resizable two-column Navigator/Properties table, rather than drawing all root panels directly over the game. Dear ImGui's existing pinned GLFW/OpenGL3 backend has `ViewportsEnable` on desktop so each selected module gets a real native OS window (per-window NoAutoMerge); the game's primary GL context is restored after rendering platform windows. Multiple editor windows are independently addressable but only one primary editing workspace is active at a time. Appearance model `CreatorUISettings.hpp` is headless, strictly validated, user-local JSON and never modifies map/replay state. `CreatorUIRuntime.hpp` supplies a blue/teal theme, focus-sensitive monitor DPI, font atlas reconstruction and absolute-base style scaling. See docs/CREATOR_WINDOWS_ACCESSIBILITY.md.
+
+
+## First actual gameplay Interface Editor (November 16)
+
+`RTSHUDProfile.hpp` parses/validates optional project `metadata.hud_profile`,
+with bounded geometry settings and strict backwards-compatible defaults.
+`RTSHUDLayout` now accepts a profile; this ONE headless geometry class
+drives F9 native HUD rendering, command-grid hit testing, click interception
+and minimap world-coordinate panning. The F10
+`CreatorInterfaceEditor.hpp` is an original resizable native module,
+a schematic interactive projection of those same geometry calculations,
+with resolution presets, selection and movement, sliders, Apply/Discard/
+Reset. `EditorSession::setHUDProfile` performs an atomic validated
+undo transaction; the game reloads only after an Apply. The sample
+and Linux real F10 secondary-window/F9 game screenshots enforce
+presentation/use consistency, while `RTSInterfaceEditorTests` covers
+metadata bounds, geometric hit regions and undo/redo. See
+docs/INTERFACE_EDITOR.md. This is not a complete arbitrary frame/skin
+UI scripting engine.

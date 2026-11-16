@@ -2,6 +2,7 @@
 #include "RTSProject.hpp"
 #include "RTSRequirements.hpp"
 #include "RTSUpgrades.hpp"
+#include "RTSHUDProfile.hpp"
 #include "TriggerTree.hpp"
 #include <cstddef>
 #include <deque>
@@ -14,7 +15,7 @@
 // commands. A whole project can be edited and saved without any GPU.
 class EditorSession {
 public:
-    enum class Panel { Play, Terrain, Data, Triggers, Scene };
+    enum class Panel { Play, Terrain, Data, Triggers, Scene, Interface };
     enum class Tool { Raise, Lower, Smooth, Flatten, Paint, Block, Unblock,
                       PlaceMineral, PlaceUnit, PlaceDoodad };
     Panel panel=Panel::Play;
@@ -80,6 +81,8 @@ public:
     // rejected before the runtime/project is reloaded.
     bool setAIResearchSetting(RTSProject& project,const std::string& key,
                               const picojson::value& value);
+    // One atomic undoable transaction for authored live-game HUD geometry.
+    bool setHUDProfile(RTSProject& project,const RTSHUDProfile& profile);
     void beginCatalogSearch();
     void clearCatalogSearch(const RTSProject& project);
     bool finishCatalogSearch(const RTSProject& project);

@@ -127,6 +127,7 @@ inline const char* creatorModuleTitle(int panel){
         case 2:return "RTS Creator | Data Editor";
         case 3:return "RTS Creator | Trigger Editor";
         case 4:return "RTS Creator | Scene Editor";
+        case 5:return "RTS Creator | Interface Editor";
         default:return "RTS Creator | Workspace";
     }
 }

@@ -154,7 +154,7 @@ struct AppState {
     int windowHeight = 720;
     void command(HUDCommand action,double px=0,double py=0){
         if(action==HUDCommand::Minimap){
-            RTSHUDLayout hud(windowWidth,windowHeight);
+            RTSHUDLayout hud(windowWidth,windowHeight,RTSHUDProfile::fromProject(project));
             const Vec3 world=hud.minimapWorld(px,py,project.terrain);
             camera.targetFocalPoint=world;
             camera.focalPoint=world;
@@ -459,7 +459,8 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
     if(state->editor.panel==EditorSession::Panel::Play) {
-        RTSHUDLayout hud(state->windowWidth,state->windowHeight);
+        RTSHUDLayout hud(state->windowWidth,state->windowHeight,
+                         RTSHUDProfile::fromProject(state->project));
         if(hud.consumes(mouseX,mouseY)){
             if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE)
                 state->selectionManager.isDragging=false;
@@ -659,7 +660,7 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
     }
     if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard &&
        !(ctrl && key==GLFW_KEY_S) &&
-       !(key>=GLFW_KEY_F5 && key<=GLFW_KEY_F9))
+       !(key>=GLFW_KEY_F5 && key<=GLFW_KEY_F10))
         return;
     auto& edit=s->editor;
     if(edit.textEditing) {
@@ -735,6 +736,12 @@ void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,in
         return;
     }
     if(key==GLFW_KEY_F9) {edit.panel=EditorSession::Panel::Play;s->reloadFromProject();return;}
+    if(key==GLFW_KEY_F10){
+        edit.panel=edit.panel==EditorSession::Panel::Interface?
+            EditorSession::Panel::Play:EditorSession::Panel::Interface;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
     if(key==GLFW_KEY_ESCAPE) {
         if(edit.panel!=EditorSession::Panel::Play) {
             edit.panel=EditorSession::Panel::Play;s->reloadFromProject();
@@ -935,7 +942,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_TECH_DEPENDENCY_MAP=1\n"
                  <<"RTS_FEATURE_AI_RESEARCH=1\n"
                  <<"RTS_FEATURE_CREATOR_MODULE_WINDOWS=1\n"
-                 <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n";
+                 <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n"
+                 <<"RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -946,6 +954,7 @@ int main(int argc, char** argv) {
     bool startTriggerEditor=false;
     bool startSceneEditor=false;
     bool startDataEditor=false;
+    bool startInterfaceEditor=false;
     bool selectArmyForSmoke=false;
     bool selectProducerForSmoke=false;
     bool selectAbilityCasterSmoke=false;
@@ -976,6 +985,7 @@ int main(int argc, char** argv) {
         else if(arg == "--trigger-editor")startTriggerEditor=true;
         else if(arg == "--scene-editor")startSceneEditor=true;
         else if(arg == "--data-editor")startDataEditor=true;
+        else if(arg == "--interface-editor")startInterfaceEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
         else if(arg == "--smoke-research-upgrade" && i+1<argc)
@@ -1151,8 +1161,9 @@ int main(int argc, char** argv) {
                     "Research smoke did not complete authored technology");
         }
         if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor ||
-           (stressEditor && smokeFrames>0)) {
-            app.editor.panel=startDataEditor ? EditorSession::Panel::Data :
+           startInterfaceEditor || (stressEditor && smokeFrames>0)) {
+            app.editor.panel=startInterfaceEditor ? EditorSession::Panel::Interface :
+                startDataEditor ? EditorSession::Panel::Data :
                 startSceneEditor ? EditorSession::Panel::Scene :
                 startTriggerEditor ? EditorSession::Panel::Triggers :
                                      EditorSession::Panel::Terrain;
@@ -1981,7 +1992,8 @@ int main(int argc, char** argv) {
             // selection dossier and clickable command grid.
             if(app.editor.panel==EditorSession::Panel::Play &&
                app.windowWidth>0 && app.windowHeight>0) {
-                RTSHUDLayout layout(app.windowWidth,app.windowHeight);
+                RTSHUDLayout layout(app.windowWidth,app.windowHeight,
+                                    RTSHUDProfile::fromProject(app.project));
                 RTSHUD hud(hudBoxShader,hudVAO,hudVBO,layout);
                 const int commandMode=app.mode==AppState::Mode::Move?1:
                     app.mode==AppState::Mode::AttackMove?2:

@@ -9,12 +9,14 @@
 #include "CreatorTechGraph.hpp"
 #include "CreatorAIResearch.hpp"
 #include "CreatorUISettings.hpp"
+#include "CreatorInterfaceEditor.hpp"
 #include "RTSCatalogValuePreview.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
 #include "imgui_stdlib.h"
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <set>
 #include <string>
 
@@ -56,9 +58,10 @@ void toolbar(App& app) {
             const EditorSession::Panel tabs[]={
                 EditorSession::Panel::Play,EditorSession::Panel::Terrain,
                 EditorSession::Panel::Data,EditorSession::Panel::Triggers,
-                EditorSession::Panel::Scene};
-            const char* labels[]={"Play","Terrain","Data","Triggers","Scene"};
-            for(int i=0;i<5;++i)
+                EditorSession::Panel::Scene,EditorSession::Panel::Interface};
+            const char* labels[]={"Play","Terrain","Data","Triggers","Scene",
+                                  "Interface"};
+            for(int i=0;i<6;++i)
                 if(ImGui::MenuItem(labels[i],nullptr,ed.panel==tabs[i]))
                     choosePanel(app,tabs[i]);
             ImGui::EndMenu();
@@ -117,10 +120,10 @@ void toolbar(App& app) {
         const EditorSession::Panel tabs[]={
             EditorSession::Panel::Play,EditorSession::Panel::Terrain,
             EditorSession::Panel::Data,EditorSession::Panel::Triggers,
-            EditorSession::Panel::Scene};
-        const char* names[]={"PLAY","TERRAIN","DATA","TRIGGERS","SCENE"};
-        if(ImGui::GetContentRegionAvail().x>565.f)
-        for(int i=0;i<5;++i){
+            EditorSession::Panel::Scene,EditorSession::Panel::Interface};
+        const char* names[]={"PLAY","TERRAIN","DATA","TRIGGERS","SCENE","INTERFACE"};
+        if(ImGui::GetContentRegionAvail().x>750.f)
+        for(int i=0;i<6;++i){
             ImGui::PushID(i);
             if(ImGui::SmallButton(names[i]))choosePanel(app,tabs[i]);
             ImGui::SameLine();
@@ -1235,18 +1238,76 @@ void inspector(App& app){
                 }
                 ImGui::SeparatorText("Resolved properties");
                 const auto fields=ed.fields(project);
-                ImGui::BeginChild("##fields",ImVec2(0,210.f),true);
-                for(std::size_t i=0;i<fields.size();++i){
-                    const auto& name=fields[i];
-                    const std::string display=(entry->fields.count(name)?"[LOCAL] ":"[INHERITED] ")+
-                                              name+" = "+rtsFormatCatalogPreview(resolved.at(name));
-                    if(ImGui::Selectable(display.c_str(),ed.selectedField==i)){
-                        ed.selectedField=i;
-                        if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                            ed.beginValueEdit(project);
+                // A readable, resizable grid replaces the single clipped
+                // "[INHERITED] very_long_field = very_long_value" label.
+                // Selection indexes still reference EditorSession's true
+                // unfiltered field order, not a temporary UI row.
+                static std::string propertyFilter;
+                static bool localOnly=false;
+                ImGui::SetNextItemWidth(std::max(150.f,
+                    ImGui::GetContentRegionAvail().x-145.f*
+                    (ImGui::GetFontSize()/16.5f)));
+                ImGui::InputTextWithHint("##propertySearch",
+                    "Find property or value...",&propertyFilter);
+                ImGui::SameLine();
+                ImGui::Checkbox("Local only",&localOnly);
+                const auto contains=[](std::string text,std::string search){
+                    std::transform(text.begin(),text.end(),text.begin(),
+                        [](unsigned char c){return char(std::tolower(c));});
+                    std::transform(search.begin(),search.end(),search.begin(),
+                        [](unsigned char c){return char(std::tolower(c));});
+                    return text.find(search)!=std::string::npos;
+                };
+                int shown=0;
+                const float unit=ImGui::GetFontSize()/16.5f;
+                const auto flags=ImGuiTableFlags_Resizable|
+                    ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|
+                    ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY|
+                    ImGuiTableFlags_SizingStretchProp;
+                const float minWidth=(92.f+190.f+275.f)*unit;
+                if(ImGui::BeginTable("##resolvedFieldTable",3,flags,
+                    ImVec2(0,std::min(345.f*unit,
+                        std::max(210.f*unit,ImGui::GetContentRegionAvail().y*.40f))),
+                    minWidth)){
+                    ImGui::TableSetupColumn("Scope",ImGuiTableColumnFlags_WidthFixed,
+                                            92.f*unit);
+                    ImGui::TableSetupColumn("Field",ImGuiTableColumnFlags_WidthFixed,
+                                            190.f*unit);
+                    ImGui::TableSetupColumn("Value",ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableHeadersRow();
+                    for(std::size_t i=0;i<fields.size();++i){
+                        const auto& name=fields[i];
+                        const bool local=entry->fields.count(name)>0;
+                        if(localOnly && !local)continue;
+                        const std::string preview=rtsFormatCatalogPreview(
+                            resolved.at(name));
+                        if(!propertyFilter.empty() &&
+                           !contains(name,propertyFilter) &&
+                           !contains(preview,propertyFilter))continue;
+                        ++shown;
+                        ImGui::TableNextRow();
+                        ImGui::PushID(static_cast<int>(i));
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::TextColored(local?ImVec4(.50f,.92f,.86f,1.f):
+                            ImVec4(.74f,.82f,.91f,1.f),
+                            "%s",local?"Local":"Inherited");
+                        ImGui::TableSetColumnIndex(1);
+                        if(ImGui::Selectable(name.c_str(),ed.selectedField==i,
+                                            ImGuiSelectableFlags_AllowDoubleClick)){
+                            ed.selectedField=i;
+                            if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                                ed.beginValueEdit(project);
+                        }
+                        ImGui::TableSetColumnIndex(2);
+                        ImGui::TextWrapped("%s",preview.c_str());
+                        if(ImGui::IsItemHovered() && preview.size()>70.f)
+                            ImGui::SetTooltip("%s",preview.c_str());
+                        ImGui::PopID();
                     }
+                    ImGui::EndTable();
                 }
-                ImGui::EndChild();
+                ImGui::TextDisabled("%d visible of %zu fields | double-click to edit",
+                                    shown,fields.size());
                 if(!ed.textEditing && !fields.empty()){
                     const std::string field=ed.selectedFieldName(project);
                     auto found=resolved.find(field);
@@ -1476,6 +1537,7 @@ void moduleWorkspace(App& app){
                 ImGui::IsKeyPressed(ImGuiKey_F6)?EditorSession::Panel::Triggers:
                 ImGui::IsKeyPressed(ImGuiKey_F7)?EditorSession::Panel::Data:
                 ImGui::IsKeyPressed(ImGuiKey_F8)?EditorSession::Panel::Scene:
+                ImGui::IsKeyPressed(ImGuiKey_F10)?EditorSession::Panel::Interface:
                 EditorSession::Panel::Play;
             if(target!=EditorSession::Panel::Play)
                 choosePanel(app,ed.panel==target?
@@ -1499,7 +1561,8 @@ void moduleWorkspace(App& app){
               creatorModuleTitle(static_cast<int>(ed.panel)))){
             const EditorSession::Panel choices[]={
                 EditorSession::Panel::Terrain,EditorSession::Panel::Triggers,
-                EditorSession::Panel::Data,EditorSession::Panel::Scene};
+                EditorSession::Panel::Data,EditorSession::Panel::Scene,
+                EditorSession::Panel::Interface};
             for(const auto next:choices)
                 if(ImGui::Selectable(creatorModuleTitle(static_cast<int>(next)),
                                      ed.panel==next))
@@ -1507,6 +1570,9 @@ void moduleWorkspace(App& app){
             ImGui::EndCombo();
         }
         ImGui::Separator();
+        if(ed.panel==EditorSession::Panel::Interface){
+            CreatorInterfaceEditor::draw(app);
+        }else{
         const ImGuiTableFlags flags=ImGuiTableFlags_Resizable|
             ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchProp|
             ImGuiTableFlags_ScrollX;
@@ -1530,6 +1596,7 @@ void moduleWorkspace(App& app){
             modulePane=false;
             ImGui::EndTable();
         }
+        }
     }
     ImGui::End();
     if(!open)choosePanel(app,EditorSession::Panel::Play);
@@ -1541,7 +1608,8 @@ void draw(App& app){
     CreatorTriggerMonitor::draw(app);
     CreatorAIResearch::draw(app);
     if(app.editor.panel==EditorSession::Panel::Play)return;
-    if(app.uiSettings.separateModules){
+    if(app.uiSettings.separateModules ||
+       app.editor.panel==EditorSession::Panel::Interface){
         // Drag the title bar outside the game viewport for an independent
         // native GLFW/OS window; the project/controller stays shared.
         moduleWorkspace(app);

@@ -1977,3 +1977,57 @@ window geometry (ImGuiCond_FirstUseEver). This should visibly increase
 F7 navigator and inspector space at 150-250% scale; inspect new image.
 The detached-native Ctrl+S/Z/Y + F5-F9 shortcuts were added in prior
 commit `a32cd6a`; check final exact-HEAD CI and hotkey compilation.
+
+
+## November 16 follow-up — real Interface Editor and readable F7 property table
+
+**Original branch/PR only:** `feat/rts-vertical-slice`, Draft PR #1.
+Previous verified baseline head `4ca108d103785fda2fc1c965cff1b5e17a90557a`
+passed **87/87 Windows/Linux Release CTests**, both Debug suites,
+strict replay parity and actual F7 detached OS-window screenshot at
+150% UI scaling (1239×892), plus 175% screenshot. No merge.
+
+**New F10 Interface Editor:** `EditorSession::Panel::Interface` (append
+enum, preserve existing numeric values), `--interface-editor`, F10
+shortcut in primary/secondary module, menu Workspace → Interface.
+New `CreatorInterfaceEditor.hpp` draws a blue/teal schematic
+canvas derived from actual `RTSHUDLayout` calculations and has
+preview modes 800×600, 1280×720, 1920×1080. Click to select,
+drag minimap/command/bottom/resources, use bounded sliders and
+Apply / Discard / Reset. Unlike creator appearance (per-user),
+the HUD layout is authored project metadata `hud_profile` defined in
+`RTSHUDProfile.hpp`: bottom height offset, minimap scale/left inset,
+command grid width/right inset, resource bar top/height. All validated,
+range bounded and default exact legacy-compatible; owner selection
+area fills between neighbors. `EditorSession::setHUDProfile` applies
+one strict undo transaction, reset deletes the property.
+
+**Real engine wiring:** All `RTSHUDLayout` call sites in
+`main_entry_point_render_loop.cpp` (F9 render, mouse-button hit routing
+and minimap camera pan) now parse the same project profile. No fake
+HUD rendering or separate editor-only game click logic. No changes
+to 60Hz simulation, replay wire format or damage logic.
+`RTSProject::validate()` rejects malformed HUD values on load/save.
+
+**Original fixture:** `projects/interface_studio_showcase.rtsproject.json`
+sets a 34px larger bottom bar, 1.18x minimap, 360px command grid
+and adjusted insets and resource strip. `RTSInterfaceEditorTests`
+validates legacy defaults, 4 resolution hit regions, strict metadata,
+roundtrip and undo/redo. CMake and test assertions in Release on
+both OS. Release packages and sample validation include manual
+`docs/INTERFACE_EDITOR.md` and feature marker
+RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1.
+Real Linux OpenGL CI screenshot of an F10 independent GLFW/OS
+window at 125% scale and F9 game HUD render using same sample.
+
+**F7 usability:** resolved field list is now a resizable, searchable
+three-column table: Scope (Local/Inherited), Field and wrapped Value,
+with filter and local-only toggle, keeping selectedField stable.
+Implemented in `CreatorWorkbench.hpp`.
+
+**MUST CHECK:** compile current HEAD under GCC/MSVC, CTest full
+Release+Debug on both, real F10/F9 screenshots (inspect for blank frames,
+geometry wrong, clipping, smaller screen) and strict replay parity.
+Fix all on SAME draft PR, update its description. Limitations:
+this is a data-driven layout for native HUD panels, NOT a full custom
+UI widget tree / XML/skin editor like Galaxy's entire UI suite.
