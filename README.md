@@ -567,3 +567,20 @@ F10 refuses to remove a Button referenced by a script. New original
 [UI Trigger Events manual](docs/UI_TRIGGER_EVENTS.md) ship with the
 Windows/Linux executables; native F10/F9 screenshots and a 120-tick
 cross-OS replay fingerprint test cover the integration.
+
+
+## F6 trigger variables live in the F10 interface (November 16)
+
+The original F10 hierarchical UI can now bind **Labels, Buttons and progress Bars**
+directly to named, typed F6 map variables, with adjustable min/max Bar
+ranges. Any frame can also have a **conditional F6 variable visibility
+threshold**, inherited by its descendants; hidden elements do not
+intercept mouse clicks. The F10 inspector provides readable dropdowns
+and integer controls, while the editor preview visually marks hidden
+items. Data is read from the authoritative game TriggerEngine and
+never mutated by the renderer. F6 variable rename migrates typed F10
+references and deleting a referenced variable is blocked by project
+validation. A new [Signal Dashboard](projects/ui_variable_dashboard_showcase.rtsproject.json)
+demonstrates a replay-recorded click incrementing a counter, filling
+a meter and revealing an acknowledgement. See
+[UI Variable Bindings](docs/UI_VARIABLE_BINDINGS.md).

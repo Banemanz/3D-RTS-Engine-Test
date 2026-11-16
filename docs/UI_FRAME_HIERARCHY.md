@@ -217,3 +217,18 @@ then runs the author's normal conditions/actions on the next 60Hz
 simulation tick. Deleting an F6-referenced F10 Button is rejected
 non-destructively. See [UI Trigger Events](UI_TRIGGER_EVENTS.md)
 and [UI Trigger Studio](../projects/ui_trigger_showcase.rtsproject.json).
+
+
+## Read-only F6 variable bindings and threshold visibility
+
+F10's four custom frame types now support a `"Variable"` live text
+binding to a named F6 map integer. Progress Bars may use this
+binding with bounded integer `bar_min` and `bar_max`. Any frame,
+including a parent Panel, can be conditionally visible through
+`visible_variable` and `visible_at_least`. A hidden parent hides
+all descendants from both OpenGL drawing and input routing, while
+F10 continues to show its hierarchy for authoring.
+
+See [UI Variable Bindings](UI_VARIABLE_BINDINGS.md) for the full
+typed schema, strict cross-reference validation, F6 Rename migration,
+original Signal Dashboard map and Windows/Linux replay/GUI tests.

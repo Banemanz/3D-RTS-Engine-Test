@@ -377,3 +377,20 @@ and trigger tracing. `EditorSession::setUIFrames` and
 Existing core gameplay orders, HUD actions and replay serialization
 remain backwards-compatible; only original typed command additions.
 See docs/UI_TRIGGER_EVENTS.md.
+
+
+## F6/F10 read-only data bindings and conditional UI
+
+The optional F10 frame fields `variable`, `bar_min`, `bar_max`,
+`visible_variable` and `visible_at_least` connect authored frames
+to existing F6 typed integer map variables. `RTSProject::validate`
+cross-checks every live reference using `parseTriggerVariables`.
+`RTSUIFrameLayout` reads `TriggerEngine::variables()` through the
+const RTS game context; its geometry/visibility result is shared by
+F9 render and input hit-testing. A hidden parent hides all descendants,
+including input-consuming Buttons. `EditorSession::renameTriggerVariable`
+migrates F10 typed refs transactionally alongside F6 ECA nodes;
+Remove rejects dangling references. The F10 UI exposes dropdowns,
+bar bounds, integer visibility threshold and hidden preview markers.
+See docs/UI_VARIABLE_BINDINGS.md and sample
+projects/ui_variable_dashboard_showcase.rtsproject.json.

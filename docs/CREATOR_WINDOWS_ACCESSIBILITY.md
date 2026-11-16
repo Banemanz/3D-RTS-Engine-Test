@@ -257,3 +257,15 @@ keeps action controls at the top, and shows a prominent amber
 "Click: F6 trigger event" status when appropriate. The right pane
 remains independently scrollable and the blue-on-blue aesthetic
 and user DPI preference behavior are unchanged.
+
+
+## F10 conditional visibility and variable-bound widgets
+
+The separate native F10 module now has large-text dropdowns for
+named F6 map variables, per-Bar integer bounds and an optional
+per-frame visible-if-variable-threshold inspector. Hidden elements
+remain in the scrollable hierarchy tree and show muted HIDDEN outlines
+on the preview, without changing the underlying 60Hz simulation.
+User's 85–250% editor UI scale and contrast remain separate from
+the authored game-space geometry, F6 variables and replay data.
+See [F6↔F10 Variable Bindings](UI_VARIABLE_BINDINGS.md).

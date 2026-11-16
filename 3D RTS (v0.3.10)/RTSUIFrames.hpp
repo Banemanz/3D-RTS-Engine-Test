@@ -21,6 +21,12 @@ struct RTSUIFrame {
     std::string binding="None";   // None, Minerals, Supply, Workers, Selected,
                                    // SelectedHealth, Message, Ticks
     std::string action="None";    // None, SelectArmy, SelectWorkers, FocusBase, Trigger
+    // F6 variable-driven interface. Pure live presentation: never writes
+    // the trigger variable or creates unrecorded game-side mutations.
+    std::string variable;           // required when binding="Variable"
+    int barMin=0, barMax=100;       // integer range for Variable progress bars
+    std::string visibleVariable;    // nonempty => visibility if value >= threshold
+    int visibleAtLeast=1;
     float x=20.f, y=90.f, width=200.f, height=50.f;
     bool consumeInput=false;      // panel or button optionally blocks world clicks
 };
@@ -35,7 +41,7 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
     const char* anchors[]={"TopLeft","TopRight","BottomLeft","BottomRight","Center"};
     const char* palettes[]={"Navy","Teal","Cobalt","Amber","Slate"};
     const char* bindings[]={"None","Minerals","Supply","Workers",
-                             "Selected","SelectedHealth","Message","Ticks"};
+                             "Selected","SelectedHealth","Message","Ticks","Variable"};
     const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase","Trigger"};
     std::set<std::string> previous;
     for(const auto& f:frames){
@@ -68,7 +74,7 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
         if(!rtsUIFrameChoice(f.kind,kinds,4) ||
            !rtsUIFrameChoice(f.anchor,anchors,5) ||
            !rtsUIFrameChoice(f.palette,palettes,5) ||
-           !rtsUIFrameChoice(f.binding,bindings,8) ||
+           !rtsUIFrameChoice(f.binding,bindings,9) ||
            !rtsUIFrameChoice(f.action,actions,5))
             throw std::invalid_argument("ui_frames: unknown kind/anchor/palette/binding/action: "+f.id);
         if(f.kind!="Button" && f.action!="None")
@@ -76,8 +82,32 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
         if(f.action=="Trigger" && !f.consumeInput)
             throw std::invalid_argument("ui_frames: scripted Button must consume world clicks: "+f.id);
         if(f.kind=="Bar" &&
-           f.binding!="Supply" && f.binding!="SelectedHealth")
-            throw std::invalid_argument("ui_frames: Bar binding must be Supply or SelectedHealth");
+           f.binding!="Supply" && f.binding!="SelectedHealth" &&
+           f.binding!="Variable")
+            throw std::invalid_argument("ui_frames: Bar binding must be Supply, SelectedHealth or Variable");
+        const auto isVarId=[](const std::string& name)->bool{
+            if(name.empty() || name.size()>64 ||
+               !((name.front()>='A' && name.front()<='Z') ||
+                 (name.front()>='a' && name.front()<='z') ||
+                 name.front()=='_'))return false;
+            for(const char c:name)
+                if(!((c>='A' && c<='Z') || (c>='a' && c<='z') ||
+                     (c>='0' && c<='9') || c=='_'))return false;
+            return true;
+        };
+        if(f.binding=="Variable"){
+            if(!isVarId(f.variable))
+                throw std::invalid_argument("ui_frames: Variable binding needs a valid F6 variable: "+f.id);
+        }else if(!f.variable.empty())
+            throw std::invalid_argument("ui_frames: unused Variable reference: "+f.id);
+        if(!f.visibleVariable.empty() && !isVarId(f.visibleVariable))
+            throw std::invalid_argument("ui_frames: invalid visibility variable: "+f.id);
+        if(f.barMin<-100000000 || f.barMin>100000000 ||
+           f.barMax<-100000000 || f.barMax>100000000 ||
+           f.visibleAtLeast<-100000000 || f.visibleAtLeast>100000000)
+            throw std::invalid_argument("ui_frames: invalid variable range/threshold: "+f.id);
+        if(f.kind=="Bar" && f.binding=="Variable" && f.barMin>=f.barMax)
+            throw std::invalid_argument("ui_frames: Variable bar needs max > min: "+f.id);
         if(f.text.size()>128)
             throw std::invalid_argument("ui_frames: text limit is 128 ASCII characters");
         for(unsigned char ch:f.text)
@@ -113,6 +143,13 @@ inline picojson::value rtsUIFramesToJson(const std::vector<RTSUIFrame>& frames){
         v["width"]=picojson::value(double(f.width));
         v["height"]=picojson::value(double(f.height));
         v["consume_input"]=picojson::value(f.consumeInput);
+        if(f.binding=="Variable")v["variable"]=picojson::value(f.variable);
+        if(f.barMin!=0)v["bar_min"]=picojson::value(double(f.barMin));
+        if(f.barMax!=100)v["bar_max"]=picojson::value(double(f.barMax));
+        if(!f.visibleVariable.empty()){
+            v["visible_variable"]=picojson::value(f.visibleVariable);
+            v["visible_at_least"]=picojson::value(double(f.visibleAtLeast));
+        }
         output.emplace_back(v);
     }
     return picojson::value(output);
@@ -132,7 +169,8 @@ inline std::vector<RTSUIFrame> rtsUIFramesFromProject(const RTSProject& project)
         const auto& o=item.get<picojson::object>();
         static const std::set<std::string> allowed={
             "id","parent","kind","anchor","palette","text",
-            "binding","action","x","y","width","height","consume_input"};
+            "binding","action","x","y","width","height","consume_input",
+            "variable","bar_min","bar_max","visible_variable","visible_at_least"};
         for(const auto& kv:o)
             if(!allowed.count(kv.first))
                 throw std::invalid_argument("ui_frames: unknown property "+kv.first);
@@ -157,6 +195,21 @@ inline std::vector<RTSUIFrame> rtsUIFramesFromProject(const RTSProject& project)
         str("id",f.id);str("parent",f.parent);str("kind",f.kind);
         str("anchor",f.anchor);str("palette",f.palette);
         str("text",f.text);str("binding",f.binding);str("action",f.action);
+        str("variable",f.variable);
+        str("visible_variable",f.visibleVariable);
+        const auto integer=[&](const char* name,int& value){
+            auto found=o.find(name);
+            if(found==o.end())return;
+            if(!found->second.is<double>())
+                throw std::invalid_argument(std::string("ui_frames: ")+name+" must be integer");
+            const double n=found->second.get<double>();
+            if(!std::isfinite(n) || n!=std::floor(n) ||
+               n<-100000000. || n>100000000.)
+                throw std::invalid_argument(std::string("ui_frames: ")+name+" out of range");
+            value=static_cast<int>(n);
+        };
+        integer("bar_min",f.barMin);integer("bar_max",f.barMax);
+        integer("visible_at_least",f.visibleAtLeast);
         num("x",f.x);num("y",f.y);num("width",f.width);num("height",f.height);
         const auto consume=o.find("consume_input");
         if(consume!=o.end()){

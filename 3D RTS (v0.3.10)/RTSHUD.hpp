@@ -34,7 +34,7 @@ class RTSHUD {
         return s;
     }
     void drawAuthoredFrames(const RTSSkirmish& game,const RTSProject& project)const{
-        const auto frames=rtsResolveUIFrames(rtsUIFramesFromProject(project),w_,h_);
+        const auto frames=rtsResolveUIFrames(rtsUIFramesFromProject(project),w_,h_,&game);
         const auto drawClipped=[&](const HUDRect& source,const HUDRect& clip,
                                    float r,float g,float b,float a){
             const auto visible=rtsUIRectIntersect(source,clip);
@@ -42,7 +42,7 @@ class RTSHUD {
                 rect(visible.x,visible.y,visible.w,visible.h,r,g,b,a);
         };
         for(const auto& f:frames){
-            if(f.clipped.w<1.f || f.clipped.h<1.f)continue;
+            if(!f.visible || f.clipped.w<1.f || f.clipped.h<1.f)continue;
             const auto palette=rtsUIFrameColor(f.source.palette);
             const bool label=f.source.kind=="Label";
             if(!label){

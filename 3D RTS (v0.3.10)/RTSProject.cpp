@@ -259,7 +259,27 @@ void RTSProject::validate() const {
     // Project-local HUD geometry must pass strict checks before packaging.
     // Default project metadata intentionally leaves the classic layout.
     (void)RTSHUDProfile::fromProject(*this);
-    (void)rtsUIFramesFromProject(*this);
+    const auto uiFrames=rtsUIFramesFromProject(*this);
+    // Frame labels/progress/visibility can reference real F6 map
+    // variables. Do not allow dangling names, even if no ECA rule
+    // currently accesses the variable. Untouched legacy maps opt out.
+    bool hasVariableBinding=false;
+    for(const auto& frame:uiFrames)
+        if(frame.binding=="Variable" || !frame.visibleVariable.empty()){
+            hasVariableBinding=true;break;
+        }
+    if(hasVariableBinding){
+        const auto defined=parseTriggerVariables(*this);
+        for(const auto& frame:uiFrames){
+            if(frame.binding=="Variable" && !defined.count(frame.variable))
+                throw std::invalid_argument("ui_frames: missing bound F6 variable: "+
+                                            frame.id+" -> "+frame.variable);
+            if(!frame.visibleVariable.empty() &&
+               !defined.count(frame.visibleVariable))
+                throw std::invalid_argument("ui_frames: missing visibility F6 variable: "+
+                                            frame.id+" -> "+frame.visibleVariable);
+        }
+    }
     // Projects that author UI frames + script events must never persist
     // dangling button links. Existing legacy maps without this new
     // feature keep their previous trigger migration behavior.

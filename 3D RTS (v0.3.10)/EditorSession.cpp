@@ -1351,6 +1351,22 @@ bool EditorSession::renameTriggerVariable(RTSProject& project,
                 }
             }
         }
+        // Migrate only typed F10 UI variable and visibility references.
+        // Bare text labels and unknown extensions are never rewritten.
+        auto frameSetting=candidate.metadata.find("ui_frames");
+        if(frameSetting!=candidate.metadata.end() &&
+           frameSetting->second.is<picojson::array>()){
+            for(auto& item:frameSetting->second.get<picojson::array>()){
+                if(!item.is<picojson::object>())continue;
+                auto& frame=item.get<picojson::object>();
+                for(const char* name:{"variable","visible_variable"}){
+                    auto field=frame.find(name);
+                    if(field!=frame.end() && field->second.is<std::string>() &&
+                       field->second.get<std::string>()==oldName)
+                        field->second=picojson::value(newName);
+                }
+            }
+        }
         (void)parseTriggerRules(candidate);
         candidate.validate();
     }catch(const std::exception& e){

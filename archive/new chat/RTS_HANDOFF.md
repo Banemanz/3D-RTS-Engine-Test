@@ -2318,3 +2318,75 @@ STATUS Message label was truncated; increase original fixture
 status width 250->420px. Re-run final exact-HEAD Windows/Linux
 Release 90/90 CTests, Debug strict replay parity and inspect
 fresh F10/F9 screenshots. Update same Draft PR body; do not merge.
+
+
+## November 16 continuation — F6 variables → F10 dynamic HUD and visibility
+
+**Project:** Banemanz/3D-RTS-Engine-Test. Remain ONLY on original
+`feat/rts-vertical-slice` OPEN UNMERGED DRAFT PR #1.
+Baseline PR head `1084392eed478a6a8f7d346c04ecb2383140ceb1`
+was GREEN across Windows/Linux Release (90/90 CTests, bundled artifacts),
+Debug suites, cross-OS fingerprint and genuine F10/F9 UI-trigger captures.
+The prior F6 OnUIFrameClicked replay-safe feature is implemented; do
+not redo it.
+
+**This pass's new engine/editor feature:** F10 custom UI frames accept
+new optional schema: `binding="Variable"` and `variable="F6_id"`
+for live Label/Panel/Button integer text or Bar fills (using integer
+`bar_min`/`bar_max`, default 0/100, max>min). All frames accept
+`visible_variable="F6_id"` with `visible_at_least` integer threshold,
+default 1. `RTSUIFrames.hpp` serializes only used optional properties,
+validates typed names and bounded -1e8..1e8 integer fields.
+`RTSProject::validate` cross-checks existence in typed F6
+`parseTriggerVariables`. `EditorSession::renameTriggerVariable`
+transactionally migrates both F10 `variable` and `visible_variable`
+references (never rewriting free text); removal of an in-use F6
+variable must fail atomically. No new replay command or simulation
+hash changes; presentation-only behavior.
+
+`RTSUIFrameLayout.hpp` resolves current F6 integers from
+`game.triggerDiagnostics().variables()`, normalizes variable Bars,
+computes conditional visibility and inherits hidden parent state.
+`rtsUIFrameAt`/Hit skip hidden frames. F9 `RTSHUD::drawAuthoredFrames`
+skips invisible children, and F9 mouseButtonCallback uses the same
+game-aware layout so hidden controls cannot steal world clicks.
+F10 `CreatorUIFrameEditor.hpp` shows typed F6 variable dropdown,
+Bar min/max numeric settings, threshold variable & numeric controls,
+live value feedback, and subdued HIDDEN outlines in the canvas.
+UI scale/DPI remain per-user and never change game F6 state.
+
+**Fixture:** `projects/ui_variable_dashboard_showcase.rtsproject.json`
+derived from authored UI-trigger project, has F6 `signal_count=0`,
+existing replay-safe SEND SIGNAL Button and new `AddVariable`
+action incrementing signal_count. Three new F10 widgets:
+signal_meter Bar (0..3), signal_counter Label, and signal_ack
+Label conditionally visible when signal_count>=1. Real F9 renders
+the dynamic progress after the recorded UI click.
+
+**Tests/CI/docs:** New `RTSUIVariableBindingTests` asserts real
+click -> typed variable -> text/bar/visibility, inherited hiding,
+multi-resolution coordinates, malformed project/unknown F6 refs,
+rename/remove transactional undo/redo, replay integrity and digest
+isolation under purely visual edits. Writes
+`ui_variable_fingerprint.txt` byte-compared by Windows/Linux Debug.
+CMake test target with Release assertions (91st CTest),
+both native packages validate the new fixture and include
+`docs/UI_VARIABLE_BINDINGS.md`, require
+`RTS_FEATURE_UI_VARIABLE_BINDINGS=1`; Mesa/Xvfb genuine native F10
+and actual F9 dashboard screenshots. Other docs updated.
+
+**IMPORTANT staging trap:** main_entry_point_render_loop.cpp was
+edited for both F9 game-aware visibility and executable feature marker;
+the FINAL staged blob must include BOTH changes (combined blob
+`210f16adfc6d32f0c13810004876ef87f661967d`).
+CreatorUIFrameEditor.hpp final blob includes F10 game-aware layout
+and controls (`ed6d62dd9b9d71e35819db4fa6f1163b70e10dbe`).
+Do NOT overwrite them with stale branch source when committing.
+
+**MUST verify newest PR commit, not the baseline:** both Windows/Linux
+Release+Debug 91/91 CTests, package, strict new fingerprint parity,
+and download/visually inspect F10/F9 screenshots. Fix any MSVC/GCC
+compiler, replay or editor issues on SAME PR before calling green.
+Next: support authored UI responsive layout containers, per-widget
+image/texture assets, keyboard navigation, more Galaxy-style editor
+tools and richer engine functionality. No proprietary names/source.

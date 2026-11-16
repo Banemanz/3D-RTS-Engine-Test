@@ -464,7 +464,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         // pass and F10 preview, so buttons cannot create world orders.
         const auto overlay=rtsUIFrameHit(
             rtsResolveUIFrames(rtsUIFramesFromProject(state->project),
-                               state->windowWidth,state->windowHeight),
+                               state->windowWidth,state->windowHeight,&state->game),
             mouseX,mouseY);
         if(overlay.consumed){
             if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
@@ -968,7 +968,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n"
                  <<"RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1\n"
                  <<"RTS_FEATURE_UI_FRAME_HIERARCHY=1\n"
-                 <<"RTS_FEATURE_UI_TRIGGER_EVENTS=1\n";
+                 <<"RTS_FEATURE_UI_TRIGGER_EVENTS=1\n"
+                 <<"RTS_FEATURE_UI_VARIABLE_BINDINGS=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -1089,7 +1090,7 @@ int main(int argc, char** argv) {
             // Exercise the real geometry admission and authoritative
             // command path; this is not a fake HUD-data edit.
             const auto frames=rtsResolveUIFrames(
-                rtsUIFramesFromProject(app.project),app.windowWidth,app.windowHeight);
+                rtsUIFramesFromProject(app.project),app.windowWidth,app.windowHeight,&app.game);
             const auto found=std::find_if(frames.begin(),frames.end(),
                 [](const RTSUIResolvedFrame& frame){
                     return frame.source.id=="event_button";

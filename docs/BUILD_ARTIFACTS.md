@@ -298,3 +298,15 @@ both platforms, and Windows/Linux Debug CI compares the
 `ui_trigger_fingerprint.txt` file byte-for-byte.
 Real Linux OpenGL screenshot artifacts capture the 150%-scaled F10
 Button editor and F9 live message/reward aftermath.
+
+
+## F6-F10 variable dashboard distribution
+
+Both Windows and Linux executable bundles include
+`projects/ui_variable_dashboard_showcase.rtsproject.json` and
+`docs/UI_VARIABLE_BINDINGS.md`. The compiled binary reports
+`RTS_FEATURE_UI_VARIABLE_BINDINGS=1`, the packaged CLI validates
+the new project, and CTest includes `ui_variable_bindings` with
+Release assertions enabled on both OS. Native F10/F9 OpenGL
+screenshots plus strict cross-OS Debug replay fingerprint parity
+are required in addition to the unchanged existing tests.

@@ -473,3 +473,18 @@ demonstrates a clickable mission beacon granting real minerals and
 a message. Cross-OS replay fingerprinting and 150% F10/F9 real
 screenshot coverage are provided. This is **not** arbitrary script
 execution, multiplayer UI events or complete Galaxy dialog parity.
+
+
+## Live F6 integer variables ↔ F10 UI dashboard (November 16)
+
+The original F10 UI hierarchy now supports live F6 map-variable text
+and bounded progress bars, plus threshold-controlled frame/ancestor
+visibility. Actual F9 rendering and mouse hit testing both observe
+the same current authoritative trigger-variable state, while F10
+provides direct typed variable selection and visual conditional
+settings. F6 variable renames migrate those references; deletion
+blocks active UI references. One original Signal Dashboard showcase,
+a headless end-to-end replay test, cross-OS deterministic fingerprint
+and genuine F10/F9 native screenshots cover this. It remains narrower
+than Galaxy's arbitrary dialog binding/skin/trigger UI API: no
+arbitrary UI-side expression engine or client-only variable scripts.

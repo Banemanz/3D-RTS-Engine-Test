@@ -133,3 +133,15 @@ Real F9 screenshot showed the intended mineral reward and
 left-hand status Label. The original sample's status display is
 widened to show the complete message without compromising the
 native resource strip or RTS command grid.
+
+
+## Dynamic F10 feedback after a replay-safe UI click
+
+An F6 `OnUIFrameClicked` event can now modify a typed integer
+map variable, and F10 custom Labels/Bars/Panel visibility can read
+that variable directly. The real SEND SIGNAL showcase extends to
+`projects/ui_variable_dashboard_showcase.rtsproject.json`: each
+recorded click increments `signal_count`, changes a 0–3 progress
+bar and reveals an acknowledgement at count ≥1. No renderer-side
+simulation mutation is involved. See
+[UI Variable Bindings](UI_VARIABLE_BINDINGS.md).

@@ -21,7 +21,7 @@ inline const char* kinds[]={"Panel","Label","Button","Bar"};
 inline const char* anchors[]={"TopLeft","TopRight","BottomLeft","BottomRight","Center"};
 inline const char* palettes[]={"Navy","Teal","Cobalt","Amber","Slate"};
 inline const char* bindings[]={"None","Minerals","Supply","Workers",
-                                "Selected","SelectedHealth","Message","Ticks"};
+                                "Selected","SelectedHealth","Message","Ticks","Variable"};
 inline const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase","Trigger"};
 inline std::string nextId(const std::vector<RTSUIFrame>& frames){
     for(int i=1;i<=999;++i){
@@ -178,12 +178,15 @@ void draw(App& app){
             const ImVec2 lo{px(box.x),py(box.y)};
             const ImVec2 hi{px(box.x+box.w),py(box.y+box.h)};
             if(item.source.kind!="Label")
-                drawList->AddRectFilled(lo,hi,rgb(item.source.palette),3.f*ui);
+                drawList->AddRectFilled(lo,hi,item.visible?
+                    rgb(item.source.palette):IM_COL32(27,37,53,130),3.f*ui);
             const bool chosen=item.source.id==selected;
             drawList->AddRect(lo,hi,
-                chosen?IM_COL32(133,241,229,255):IM_COL32(67,141,180,225),
+                chosen?IM_COL32(133,241,229,255):
+                item.visible?IM_COL32(67,141,180,225):
+                             IM_COL32(126,132,145,110),
                 3.f*ui,0,chosen?3.f:1.f);
-            if(item.source.kind=="Bar"){
+            if(item.source.kind=="Bar" && item.visible){
                 const float r=rtsUIFrameBarRatio(item.source,app.game);
                 const HUDRect track{item.bounds.x+3,item.bounds.y+3,
                     (item.bounds.w-6)*r,item.bounds.h-6};
@@ -193,7 +196,8 @@ void draw(App& app){
                         ImVec2(px(vis.x+vis.w),py(vis.y+vis.h)),
                         IM_COL32(53,200,187,236),2.f);
             }
-            const auto name=rtsUIFrameText(item.source,app.game);
+            const auto name=item.visible?
+                rtsUIFrameText(item.source,app.game):std::string{"HIDDEN"};
             if(!name.empty() && (hi.x-lo.x)>35.f && (hi.y-lo.y)>15.f){
                 drawList->PushClipRect(lo,hi,true);
                 // Native ImGui font stays crisp but is sized to the
@@ -330,9 +334,72 @@ void draw(App& app){
             ImGui::SetNextItemWidth(-1.f);
             if(ImGui::InputText("##frameText",&f.text))dirty=true;
             if(f.kind=="Bar"){
-                const char* progress[]={"Supply","SelectedHealth"};
-                combo("Progress value",f.binding,progress,2);
-            }else combo("Live data binding",f.binding,bindings,8);
+                const char* progress[]={"Supply","SelectedHealth","Variable"};
+                combo("Progress value",f.binding,progress,3);
+            }else combo("Live data binding",f.binding,bindings,9);
+            // Live typed F6 map variable references are validated at
+            // Apply time and migrated during variable renames.
+            const auto globals=app.project.extensions.find("trigger_variables");
+            const picojson::object* variables=globals!=app.project.extensions.end()
+                && globals->second.is<picojson::object>()?
+                    &globals->second.get<picojson::object>():nullptr;
+            const auto chooseVariable=[&](const char* label,std::string& target,
+                                          bool allowNone){
+                ImGui::PushID(label);
+                ImGui::TextUnformatted(label);
+                ImGui::SetNextItemWidth(-1.f);
+                if(ImGui::BeginCombo("##var",
+                       target.empty()?"Always / none":target.c_str())){
+                    if(allowNone && ImGui::Selectable("Always / none",
+                                                       target.empty())){
+                        target.clear();dirty=true;
+                    }
+                    if(variables)for(const auto& entry:*variables)
+                        if(ImGui::Selectable(entry.first.c_str(),
+                                             target==entry.first)){
+                            target=entry.first;dirty=true;
+                        }
+                    ImGui::EndCombo();
+                }
+                ImGui::PopID();
+            };
+            if(f.binding=="Variable"){
+                if(f.variable.empty() && variables && !variables->empty()){
+                    f.variable=variables->begin()->first;dirty=true;
+                }
+                chooseVariable("Bound F6 map variable",f.variable,false);
+                if(variables && variables->count(f.variable))
+                    ImGui::TextDisabled("Current value: %d",
+                                       rtsUIVariableValue(app.game,f.variable));
+                if(f.kind=="Bar"){
+                    ImGui::TextUnformatted("Progress minimum (integer)");
+                    ImGui::SetNextItemWidth(-1.f);
+                    if(ImGui::InputInt("##VariableBarMin",&f.barMin))dirty=true;
+                    ImGui::TextUnformatted("Progress maximum (integer)");
+                    ImGui::SetNextItemWidth(-1.f);
+                    if(ImGui::InputInt("##VariableBarMax",&f.barMax))dirty=true;
+                    f.barMin=std::clamp(f.barMin,-100000000,100000000);
+                    f.barMax=std::clamp(f.barMax,-100000000,100000000);
+                    if(f.barMax<=f.barMin)
+                        ImGui::TextColored(ImVec4(1.f,.68f,.35f,1.f),
+                                           "Maximum must exceed minimum");
+                }
+                if(!variables || variables->empty())
+                    ImGui::TextWrapped("Create an F6 map variable first. Apply rejects missing bindings.");
+            }else if(!f.variable.empty()){
+                f.variable.clear();dirty=true;
+            }
+            ImGui::SeparatorText("Conditional visibility");
+            chooseVariable("Visible when F6 variable reaches threshold",
+                           f.visibleVariable,true);
+            if(!f.visibleVariable.empty()){
+                ImGui::TextUnformatted("Visible when variable >= value");
+                ImGui::SetNextItemWidth(-1.f);
+                if(ImGui::InputInt("##showAtLeast",&f.visibleAtLeast))dirty=true;
+                f.visibleAtLeast=std::clamp(f.visibleAtLeast,-100000000,100000000);
+                ImGui::TextDisabled("%s = %d",f.visibleVariable.c_str(),
+                       rtsUIVariableValue(app.game,f.visibleVariable));
+            }
             if(f.kind=="Panel" || f.kind=="Button"){
                 if(f.kind=="Button" && f.action=="Trigger" && !f.consumeInput){
                     f.consumeInput=true;dirty=true;

@@ -583,3 +583,17 @@ Debug jobs. Release executable bundles include sample/manual and
 validate compiled feature marker. Linux Mesa/Xvfb CI captures the
 real native F10 editor at 150% scaling and F9 gameplay after a
 scheduled input from the same hit-tested Frame ID.
+
+
+## F6-F10 live UI variable binding and replay regression
+
+`RTSUIVariableBindingTests` validates real click-driven F6
+`AddVariable` → F10 integer text/Bar ratio/threshold visibility,
+clipping inherited by descendants, 640×480 through 1920×1080
+projection, strict missing-reference and invalid-type rejection,
+transactional F6 Rename/Remove/Undo/Redo across typed F10 references,
+replay roundtrip verification and identical authoritative digests
+under appearance-only edits. The new Debug
+`ui_variable_fingerprint.txt` is byte-diffed between Windows/Linux.
+CI also screenshots the genuine native F10 data-bound inspector
+and real F9 dashboard after a recorded trigger event.
