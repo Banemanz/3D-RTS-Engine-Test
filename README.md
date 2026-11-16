@@ -502,3 +502,8 @@ also exports safe deterministic Graphviz DOT:
 
 See [Technology Map](docs/TECH_TREE_MAP.md). Native CI screenshots and
 a Windows/Linux test+packaging parity gate exercise the same source.
+
+
+## Owner-aware enemy research AI and F7 planner (November 16)
+
+The skirmish enemy can now run an opt-in **economic research policy** using an independent fixed mineral budget and real typed research structures. A priority-ordered planner considers current Show/Use Requirements, producer capability, queued jobs, level costs, affordability and completion; it submits only authorized source-1 ResearchUpgrade commands to the deterministic replay stream. Enemy research improves existing/future enemy units, without spending player minerals. Open **F7 → View → Opponent research planner** to edit the policy via fully validated undo/redo, or view the live research budget/levels in Play. A new [Opponent Technology Academy](projects/ai_research_showcase.rtsproject.json) map and [AI research manual](docs/AI_RESEARCH.md) demonstrate chained, level-specific research. Windows/Linux CTests, replay fingerprints and genuine F7/F9 screenshots cover the workflow. This does not yet provide enemy worker economy or autonomous construction.

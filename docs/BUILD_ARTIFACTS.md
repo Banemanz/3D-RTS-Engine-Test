@@ -247,3 +247,8 @@ feature in both native executables. Debug Linux Mesa/Xvfb captures F7 using
 projects/technology_forge_showcase.rtsproject.json` and uploads the actual
 `rts-technology-map-f7-screenshot` artifact. A real headless graph test
 and CLI DOT CTest run under optimized Windows/Linux builds as well.
+
+
+## Opponent Research Academy packaging
+
+Both native bundles include `projects/ai_research_showcase.rtsproject.json`, `docs/AI_RESEARCH.md` and report `RTS_FEATURE_AI_RESEARCH=1` from the compiled EXE. The packaging verifier and bundled CLI validate the sample on Windows/Linux. CTest includes `ai_research` and the Debug replay state parity gate compares `ai_research_fingerprint.txt`. Linux software-OpenGL screenshots capture the actual F7 AI priority editor and F9 budget/levels monitor. No additional runtime dependencies or platform-specific feature forks were introduced.

@@ -68,3 +68,32 @@ std::vector<RTSCommand> planRTSEnemyAttackOrders(
     }
     return planned;
 }
+
+std::vector<RTSCommand> planRTSEnemyResearchOrders(
+    const std::vector<RTSAIResearchCandidate>& legalCandidates,
+    const std::vector<std::string>& upgradePriorities,
+    std::uint64_t executionTick){
+    if(executionTick==0 || executionTick>RTSCommandStream::MaxCommandTick ||
+       upgradePriorities.empty())return {};
+    // Priority order is author-controlled. Repeated candidates for the
+    // same Upgrade resolve by lowest stable producer ID, not unit vector
+    // iteration order, hash-map iteration or wall-clock/RNG decisions.
+    for(const std::string& id:upgradePriorities){
+        if(id.empty())continue;
+        const RTSAIResearchCandidate* best=nullptr;
+        for(const auto& candidate:legalCandidates){
+            if(candidate.upgradeId!=id || candidate.producerId<=0 ||
+               candidate.nextLevel<=0 || candidate.mineralCost<0)continue;
+            if(!best || candidate.producerId<best->producerId)best=&candidate;
+        }
+        if(!best)continue;
+        RTSCommand command;
+        command.tick=executionTick;
+        command.source=1;
+        command.kind=RTSCommandKind::ResearchUpgrade;
+        command.units={best->producerId};
+        command.catalog=id;
+        return {command};
+    }
+    return {};
+}

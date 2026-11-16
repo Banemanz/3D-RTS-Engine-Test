@@ -40,6 +40,10 @@ if(BUILD_TESTING)
     add_test(NAME ai_planner COMMAND RTSAIPlannerTests)
     add_test(NAME ai_defense_behavior COMMAND RTSAIPlannerTests
              "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_defense_showcase.rtsproject.json")
+    add_executable(RTSAIResearchTests tests/ai_research_tests.cpp)
+    target_link_libraries(RTSAIResearchTests PRIVATE RTSSimulation)
+    add_test(NAME ai_research COMMAND RTSAIResearchTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_research_showcase.rtsproject.json")
     add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
     target_link_libraries(RTSCommandReplayTests PRIVATE RTSSimulation)
     add_test(NAME command_replay COMMAND RTSCommandReplayTests)
@@ -268,7 +272,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSAIPlannerTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
+    foreach(test_target IN ITEMS RTSAIPlannerTests RTSAIResearchTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
@@ -379,6 +383,7 @@ install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECHNOLOGY_RESEARCH.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECH_SHOW_USE.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECH_TREE_MAP.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AI_RESEARCH.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/SC2_FEATURE_MATRIX.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/BUILD_ARTIFACTS.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_ARCHITECTURE.md"

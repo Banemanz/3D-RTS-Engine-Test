@@ -419,3 +419,8 @@ real OpenGL screenshot tests on the original engine. This is an original
 dependency *reference* visualization rather than a Boolean-expression
 solver, graph-wiring editor, generalized Upgrade operation system, or
 Galaxy Editor feature parity.
+
+
+## Enemy technology macro-policy (November 16)
+
+The original RTS engine now supports opt-in enemy research planning through shared immutable commands, owner-isolated resources, deterministic prioritized legal upgrades, actual timing/Show/Use requirements and level buffs. The dockable F7 opponent policy editor provides undoable priority reorder, live reference navigation and a producer wiring warning. Play mode shows research progress. Sample data and Windows/Linux replay parity tests are included. This is not a clone of Galaxy AI actions nor a complete resource-gathering/macro-economy system; see docs/AI_RESEARCH.md.

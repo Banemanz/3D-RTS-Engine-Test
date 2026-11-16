@@ -310,3 +310,8 @@ focused one-hop navigation, hover diagnostics, NOT/ANY/Show/Use styling
 and clipboard DOT export. `RTSProjectTool --tech-graph` uses the same model.
 See `docs/TECH_TREE_MAP.md`. Full independent/native creator widget parity
 is still incomplete; no additional UI library was introduced.
+
+
+## Engine-owned AI research and owner-safe creator policy
+
+The opt-in `RTSAIResearchPolicy.hpp` strictly parses and validates author settings; `RTSAIPlanner` chooses deterministic commands from already-legal research candidates; `RTSSkirmish` applies the source-1 ResearchUpgrade via shared admission/queues and isolated enemy mineral accounting. UI cannot directly mutate the world state. `EditorSession::setAIResearchSetting` commits one validated undoable whole-project transaction; `CreatorAIResearch.hpp` is merely its shared Windows/Linux dockable F7/F9 controller/monitor. Metadata priority references participate in catalog rename/delete safety. The replay format is unchanged and old maps still opt out. See docs/AI_RESEARCH.md.

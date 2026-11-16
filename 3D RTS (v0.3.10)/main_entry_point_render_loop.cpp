@@ -924,7 +924,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_REQUIREMENT_GRAPHS=1\n"
                  <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n"
                  <<"RTS_FEATURE_TECH_SHOW_USE=1\n"
-                 <<"RTS_FEATURE_TECH_DEPENDENCY_MAP=1\n";
+                 <<"RTS_FEATURE_TECH_DEPENDENCY_MAP=1\n"
+                 <<"RTS_FEATURE_AI_RESEARCH=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -947,6 +948,8 @@ int main(int argc, char** argv) {
     bool triggerMonitorSmoke=false;
     bool liveTriggerMonitorSmoke=false;
     bool techGraphSmoke=false;
+    bool aiResearchSmoke=false;
+    bool aiResearchPlaySmoke=false;
     std::string smokeTriggerId;
     std::string smokeCatalogId;
     std::string smokeResearchUpgrade;
@@ -975,6 +978,8 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
         else if(arg == "--smoke-live-trigger-monitor")liveTriggerMonitorSmoke=true;
         else if(arg == "--smoke-tech-graph")techGraphSmoke=true;
+        else if(arg == "--smoke-ai-research")aiResearchSmoke=true;
+        else if(arg == "--smoke-ai-research-play")aiResearchPlaySmoke=true;
         else if(arg == "--smoke-select-trigger-id" && i+1<argc)
             smokeTriggerId=argv[++i];
         else if(arg == "--smoke-select-catalog-id" && i+1<argc)
@@ -1012,6 +1017,14 @@ int main(int argc, char** argv) {
             CreatorCatalogNavigator::visible=false;
             startDataEditor=true;
         }
+        if(aiResearchSmoke && smokeFrames>0){
+            CreatorAIResearch::visible=true;
+            CreatorTechGraph::visible=false;
+            CreatorCatalogNavigator::visible=false;
+            startDataEditor=true;
+        }
+        if(aiResearchPlaySmoke && smokeFrames>0)
+            CreatorAIResearch::visible=true;
         if(selectArmyForSmoke && smokeFrames>0)
             app.command(HUDCommand::SelectArmy);
         if(selectAbilityCasterSmoke && smokeFrames>0){

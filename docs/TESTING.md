@@ -503,3 +503,18 @@ CTest preserve assertions. Linux's real OpenGL screenshot job runs
 `--data-editor --smoke-tech-graph --smoke-select-catalog-id frontier_tactics`,
 and Windows CI builds the same GUI with no platform-specific fork.
 The graph is read-only; replay fingerprints remain unchanged.
+
+
+## Opponent Technology Academy research regression
+
+CTest `ai_research` loads the real `projects/ai_research_showcase.rtsproject.json`.
+It validates opt-in strict metadata, deterministic resource-isolated source-1
+ResearchUpgrade commands, priority fallback when plating is locked,
+fixed-tick level completion/stat grants, cost/refund behavior, forged owner
+command rejection, cross-OS replay verification, mutation-free planner
+ordering, F7 atomic undo/redo and metadata catalog reference migrations.
+Both optimized Release and Debug builds must execute assertions. Debug
+writes `ai_research_fingerprint.txt`, which the CI replay-parity job
+byte-compares between Linux and Windows. The Linux GL CI additionally
+records genuine F7 policy editor and F9 research monitor screenshots,
+while Release bundle verification checks the manual/sample/executable.

@@ -7,6 +7,7 @@
 #include "CreatorAreaShapePreview.hpp"
 #include "CreatorCatalogNavigator.hpp"
 #include "CreatorTechGraph.hpp"
+#include "CreatorAIResearch.hpp"
 #include "RTSCatalogValuePreview.hpp"
 #include "CreatorTriggerMonitor.hpp"
 #include "imgui.h"
@@ -69,6 +70,8 @@ void toolbar(App& app) {
                             &CreatorCatalogNavigator::visible);
             ImGui::MenuItem("Technology dependency map",nullptr,
                             &CreatorTechGraph::visible);
+            ImGui::MenuItem("Opponent research planner",nullptr,
+                            &CreatorAIResearch::visible);
             ImGui::Separator();
             ImGui::TextDisabled("Creator GUI: docking enabled");
             ImGui::TextDisabled("Drag panel title bars to dock/float");
@@ -1337,6 +1340,7 @@ void draw(App& app){
     if(app.pauseMenu)return; // Native pause UI owns the entire overlay/input.
     toolbar(app);
     CreatorTriggerMonitor::draw(app);
+    CreatorAIResearch::draw(app);
     if(app.editor.panel==EditorSession::Panel::Play)return;
     // The center is a pass-through 3D viewport. Panels can dock around it
     // without forcing world clicks to be interpreted as GUI input.

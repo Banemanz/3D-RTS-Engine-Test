@@ -1,4 +1,5 @@
 #include "RTSProject.hpp"
+#include "RTSAIResearchPolicy.hpp"
 #include "InstanceOverrides.hpp"
 #include "TriggerDefinition.hpp"
 #include <algorithm>
@@ -251,6 +252,8 @@ void RTSProject::validate() const {
         guardRadius->second.get<double>()<0. ||
         guardRadius->second.get<double>()>80.))
         throw std::invalid_argument("enemy_ai_guard_radius must be between 0 and 80");
+    // Shared authoring/simulation parser: no silent AI policy fallback.
+    (void)rtsAIResearchSettings(*this);
     // Any game-facing data object must be valid before we allow project saves.
     for(const auto& e:catalog.entries()) {
         if(e.type=="Unit") {
@@ -341,6 +344,15 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
                shown->second.get<std::string>()==oldId)
                 shown->second=picojson::value(newId);
         }
+    }
+    if(type=="Upgrade") {
+        auto priorities=next.metadata.find("enemy_ai_upgrade_priorities");
+        if(priorities!=next.metadata.end() &&
+           priorities->second.is<picojson::array>())
+            for(auto& entry:priorities->second.get<picojson::array>())
+                if(entry.is<std::string>() &&
+                   entry.get<std::string>()==oldId)
+                    entry=picojson::value(newId);
     }
     if(type=="Unit") {
         // The built-in skirmish has six metadata-configurable unit roles.
@@ -544,6 +556,15 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                shown->second.get<std::string>()==id)
                 refs.push_back("placement "+placement.id+".unit.show_requirement");
         }
+    }
+    if(original->type=="Upgrade") {
+        auto priorities=metadata.find("enemy_ai_upgrade_priorities");
+        if(priorities!=metadata.end() &&
+           priorities->second.is<picojson::array>())
+            for(const auto& value:priorities->second.get<picojson::array>())
+                if(value.is<std::string>() &&
+                   value.get<std::string>()==id)
+                    refs.push_back("AI research priority");
     }
     if(original->type=="Unit") {
         const std::pair<const char*,const char*> roles[]={

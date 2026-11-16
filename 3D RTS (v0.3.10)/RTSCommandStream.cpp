@@ -72,11 +72,18 @@ void validateRTSCommand(const RTSCommand& c){
         c.kind==RTSCommandKind::ResearchUpgrade) &&
        (c.catalog.empty() || c.units.empty() || c.append))
         throw std::invalid_argument("Ability command requires a catalog ID, caster, and no queue append");
-    // Internal AI has one explicitly authorized action. This prevents
-    // game-owned input from issuing human-only economy/production orders.
-    if(c.source==1 && (c.kind!=RTSCommandKind::Attack ||
-       c.targetId<1 || c.units.empty()))
-        throw std::invalid_argument("AI commands require an attack target and unit IDs");
+    // Internal AI has two strictly scoped actions. Research carries a
+    // single explicit producer ID and no target; applyCommand revalidates
+    // its owner, author policy, resources and Show/Use Requirements.
+    if(c.source==1){
+        const bool attack=c.kind==RTSCommandKind::Attack &&
+            c.targetId>=1 && !c.units.empty() && c.catalog.empty();
+        const bool research=c.kind==RTSCommandKind::ResearchUpgrade &&
+            c.targetId==-1 && c.units.size()==1 && !c.catalog.empty() &&
+            !c.append && c.point.x==0.f && c.point.y==0.f && c.point.z==0.f;
+        if(!attack && !research)
+            throw std::invalid_argument("AI command must be attack or scoped research");
+    }
     for(std::size_t i=0;i<c.units.size();++i)
         if(c.units[i]<1 || c.units[i]>10000000 ||
            (i>0 && c.units[i-1]>=c.units[i]))

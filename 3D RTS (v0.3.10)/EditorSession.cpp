@@ -264,6 +264,31 @@ bool EditorSession::selectCatalogId(const RTSProject& project,const std::string&
     }
     return false;
 }
+bool EditorSession::setAIResearchSetting(RTSProject& project,
+                                          const std::string& key,
+                                          const picojson::value& value){
+    if(textEditing)return false;
+    const bool allowed=key=="enemy_ai_research_enabled" ||
+        key=="enemy_ai_research_starting_minerals" ||
+        key=="enemy_ai_research_interval_ticks" ||
+        key=="enemy_ai_upgrade_priorities";
+    if(!allowed){message="NOT AN AI RESEARCH SETTING";return false;}
+    const auto old=project.metadata.find(key);
+    const bool had=old!=project.metadata.end();
+    if(had && old->second.serialize()==value.serialize())return false;
+    const RTSProject before=project;
+    project.metadata[key]=value;
+    try{project.validate();}
+    catch(const std::exception& e){
+        project=before; // restore all metadata, even previously absent keys
+        message=std::string("INVALID AI SETTING: ")+e.what();
+        return false;
+    }
+    remember(before);
+    modified=true;
+    message="AI RESEARCH POLICY UPDATED";
+    return true;
+}
 bool EditorSession::setCatalogField(RTSProject& project,const std::string& key,
                                     const picojson::value& value) {
     if(textEditing)return false;

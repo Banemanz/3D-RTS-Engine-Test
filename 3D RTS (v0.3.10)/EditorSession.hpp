@@ -76,6 +76,10 @@ public:
     // Validated, atomic, undoable typed field editing for property widgets.
     bool setCatalogField(RTSProject& project,const std::string& key,
                          const picojson::value& value);
+    // Atomic, undoable project-side AI policy settings. Invalid edits are
+    // rejected before the runtime/project is reloaded.
+    bool setAIResearchSetting(RTSProject& project,const std::string& key,
+                              const picojson::value& value);
     void beginCatalogSearch();
     void clearCatalogSearch(const RTSProject& project);
     bool finishCatalogSearch(const RTSProject& project);

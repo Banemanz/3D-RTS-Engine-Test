@@ -208,3 +208,8 @@ and dynamic visibility are never stored in command tapes; only
 stable Unit and catalog IDs are. The new regression writes
 tech_visibility_fingerprint.txt for strict byte parity between
 Windows and Linux Debug CI.
+
+
+## Source-1 research commands
+
+AI source 1 is authorized to submit **Attack** or narrowly scoped **ResearchUpgrade** commands only. Research requires one enemy-owned producer ID, an author-prioritized Upgrade, target=-1, zero position, no queue append, a real unlocked Show/Use Requirement and adequate independent AI research budget. The engine records the accepted/rejected command attempts and all resulting owner-level grants/refunds in the existing v2 replay. Legacy source-1 attack-only replays remain compatible because the policy defaults to disabled. `ai_research_fingerprint.txt` is diffed byte-for-byte between Windows and Linux. Detailed scheme: docs/AI_RESEARCH.md.

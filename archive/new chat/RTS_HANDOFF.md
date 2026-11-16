@@ -1737,3 +1737,61 @@ ImGui_ImplGlfw_NewFrame and BEFORE ImGui::NewFrame, and explicitly
 disables Technology Map hover tooltips only in `--smoke-tech-graph`.
 Normal interactive F7 hover remains unchanged. Verify the new native
 screenshot and Windows/Linux parity on the latest SHA.
+
+
+## November 16 continuation — owner-aware AI research / F7 planner
+
+**Scope:** keep all work in original OPEN DRAFT PR #1,
+`feat/rts-vertical-slice`; do not merge or make another PR. Earlier
+fully verified HEAD `3bc41812633cc886f9275f80369f7af8be5ef6b6` was
+85/85 Windows/Linux Release CTests, all Debug suites and replay parity,
+real F7 Technology Map screenshot and installed Graphviz DOT CLI.
+
+**Engine implementation this pass:** new strict metadata policy
+(`RTSAIResearchPolicy.hpp`) for opt-in opponent research enable, finite
+enemy starting minerals (0..1e6), 2..3600 fixed-tick decision cadence
+and ordered unique Upgrade priorities (up to 12), preserving legacy maps
+by default. `RTSAIPlanner` now proposes single-producer Upgrade commands
+using immutable legal candidates, author priorities and stable producer
+IDs; `RTSSkirmish` reuses existing authoritative ResearchUpgrade
+command validation, Show/Use Requirement evaluation, per-level costs,
+timed producer queues, cancellation-on-death refunds and stat updates
+for all matching owner-1 Units. Enemy budget is owner-isolated and its
+hash contribution is conditional on author opt-in. The source-1 wire
+schema only accepts Attack or narrowly shaped ResearchUpgrade; apply
+rejects foreign producers, missing capability/priorities and bad
+requirements. Live AI orders remain replay-recorded; v2 replay never
+replans AI.
+
+**Editor implementation:** new native dockable `CreatorAIResearch.hpp`
+panel via F7 View -> Opponent research planner, with policy enable,
+starting bank and cadence sliders, prioritized Upgrade Add/Inspect/Up/
+Down/Remove and missing-producer warning. Play/F9 view displays
+enemy research budget, levels and ongoing real research jobs. F7 edits
+go through `EditorSession::setAIResearchSetting`: one validated
+undoable transaction; bad metadata rejected/rolled back. Project typed
+reference rename and deletion protection now include AI priority IDs.
+
+**Fixture/tests:** new original
+`projects/ai_research_showcase.rtsproject.json`, technology chain
+raider_doctrine -> raider_plating with two doctrine levels and
+per-level costs; initially higher-priority plating locked until
+doctrine L1. New `tests/ai_research_tests.cpp` verifies 120 ticks,
+research times/affordability, refunds, ownership, replay integrity,
+metadata validation, editing transactions and references, writes
+`ai_research_fingerprint.txt`. CMake CTest and Release assertions
+plus strict GitHub Actions Windows/Linux fingerprint parity.
+OpenGL screenshot CLI `--smoke-ai-research` and
+`--smoke-ai-research-play` with fixed ticks verifies genuine F7/F9
+monitor. New docs/AI_RESEARCH.md manual and executable feature marker
+RTS_FEATURE_AI_RESEARCH=1 are bundled/verified on Windows/Linux.
+No copied proprietary or GPL code, assets or names.
+
+**IMPORTANT:** after committing, check CI on exact HEAD and repair
+compiler/runtime regressions in this same PR before saying green.
+Check `ai_research_fingerprint.txt` parity and inspect native screenshots.
+No worker gather macro AI, automated enemy training/construction or
+multiplayer lockstep implemented yet. Next prioritize independent owner
+resource/economy model and production AI, richer requirements inspector,
+native F7 workflow/UI modernization, scene manipulation gizmos and
+model/texture/animation import.

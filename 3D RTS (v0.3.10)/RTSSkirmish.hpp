@@ -8,6 +8,7 @@
 #include "RTSCommandStream.hpp"
 #include "RTSRequirements.hpp"
 #include "RTSUpgrades.hpp"
+#include "RTSAIResearchPolicy.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -69,6 +70,8 @@ public:
     NavigationGrid navigation;
     RTSVision vision; // player team's explored/visible terrain, independent of OpenGL
     int playerMinerals = 0;
+    // Read-only opponent budget: no fake player mineral spending.
+    int enemyResearchMinerals() const{return enemyResearchMinerals_;}
     int supplyUsed = 0;
     int supplyCap = 0;
     MatchResult result = MatchResult::Playing;
@@ -343,6 +346,7 @@ private:
     // UI-only command-card page. Not included in simulation digests.
     int abilityPage_ = 0;
     float enemySpawnTimer_ = 12.0f;
+    int enemyResearchMinerals_=0;
     float visionIntervalTimer_=0.0f;
     std::unordered_set<int> releasedSupply_;
     std::map<int, Route> routes_; // stable unit-ID processing order

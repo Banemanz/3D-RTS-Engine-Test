@@ -139,6 +139,7 @@ void RTSSkirmish::reset() {
     enemyBaseCatalog_=metaString(project_,"enemy_base",
         project_.catalog.find("rift_bastion")?"rift_bastion":"hive");
     playerMinerals=std::max(0,int(metaNumber(project_,"player_starting_minerals",220)));
+    enemyResearchMinerals_=rtsAIResearchSettings(project_).startingMinerals;
     supplyCap=std::max(0,int(metaNumber(project_,"player_supply_cap",18)));
     enemyInterval_=float(std::clamp(metaNumber(project_,"enemy_spawn_interval",16.0),1.0,1000.0));
     supplyUsed=0;enemySpawnTimer_=enemyInterval_;result=MatchResult::Playing;
@@ -575,7 +576,8 @@ std::vector<std::string> RTSSkirmish::researchableUpgrades(
     int producerId)const{
     const Unit* producer=find(producerId);
     if(!producer || !producer->isAlive() || !producer->isStructure ||
-       producer->ownerId!=0 || producer->catalogId.empty())return {};
+       (producer->ownerId!=0 && producer->ownerId!=1) ||
+       producer->catalogId.empty())return {};
     const auto ids=unitResearchIds(project_.catalog,producer->catalogId);
     std::vector<std::string> visible;
     visible.reserve(ids.size());
@@ -770,16 +772,29 @@ bool RTSSkirmish::canResearchAt(int producerId,
                                const std::string& id)const{
     const Unit* building=find(producerId);
     if(result!=MatchResult::Playing || !building || !building->isAlive() ||
-       !building->isStructure || building->ownerId!=0 ||
+       !building->isStructure ||
+       (building->ownerId!=0 && building->ownerId!=1) ||
        construction_.count(producerId)>0 ||
        research_.size()>=MaxResearchJobs)return false;
+    if(building->ownerId==1){
+        const auto settings=rtsAIResearchSettings(project_);
+        const auto globalAI=project_.metadata.find("enemy_ai_enabled");
+        if(!settings.enabled ||
+           (globalAI!=project_.metadata.end() &&
+            !globalAI->second.get<bool>()) ||
+           std::find(settings.upgradePriorities.begin(),
+                     settings.upgradePriorities.end(),id)==
+                     settings.upgradePriorities.end())return false;
+    }
     const auto available=researchableUpgrades(producerId);
     if(std::find(available.begin(),available.end(),id)==available.end())
         return false;
     const auto upgrade=compileUpgrade(project_.catalog,id);
     const int level=upgradeLevel(building->ownerId,id);
+    const int budget=building->ownerId==0?
+        playerMinerals:enemyResearchMinerals_;
     if(level>=upgrade.maxLevel ||
-       playerMinerals<upgrade.levels[static_cast<std::size_t>(level)].mineralCost ||
+       budget<upgrade.levels[static_cast<std::size_t>(level)].mineralCost ||
        !meetsRequirement(upgrade.requirementId,building,nullptr))return false;
     for(const auto& job:research_)
         if(job.buildingId==producerId ||
@@ -797,7 +812,8 @@ bool RTSSkirmish::queueResearchAt(int producerId,const std::string& id){
     const int owner=producer->ownerId;
     const auto& next=upgrade.levels[static_cast<std::size_t>(
         upgradeLevel(owner,id))];
-    playerMinerals-=next.mineralCost;
+    if(owner==0)playerMinerals-=next.mineralCost;
+    else enemyResearchMinerals_-=next.mineralCost;
     research_.push_back({producerId,owner,id,next.mineralCost,
         tick_,tick_+next.researchTicks});
     return true;
@@ -810,6 +826,8 @@ void RTSSkirmish::updateResearch(){
             // The completed technology belongs only to its owner; canceled
             // or destroyed producers refund research as with unit training.
             if(it->ownerId==0)playerMinerals+=it->paidMinerals;
+            else if(it->ownerId==1)
+                enemyResearchMinerals_+=it->paidMinerals;
             it=research_.erase(it);
             continue;
         }
@@ -949,6 +967,30 @@ void RTSSkirmish::planAIOrders(){
         // On queue saturation, a unit retries next tick; do not bypass
         // the replay log by modifying the unit directly.
         (void)queueCommand(decision);
+
+    // Economic AI uses the same validated ResearchUpgrade command as a
+    // player, but with an explicit enemy-owned producer and separate budget.
+    // Planning cadence is derived from the fixed tick (no mutable clock,
+    // no wall time, RNG, hidden selection or platform-specific scheduling).
+    const auto settings=rtsAIResearchSettings(project_);
+    if(!settings.enabled || settings.upgradePriorities.empty() ||
+       tick_%std::uint64_t(settings.intervalTicks)!=1 ||
+       tick_>=RTSCommandStream::MaxCommandTick)return;
+    std::vector<RTSAIResearchCandidate> legal;
+    for(const std::string& id:settings.upgradePriorities){
+        for(const auto& producer:units){
+            if(!producer.isAlive() || producer.ownerId!=1 ||
+               !producer.isStructure || !canResearchAt(producer.id,id))
+                continue;
+            const auto upgrade=compileUpgrade(project_.catalog,id);
+            const int level=upgradeLevel(1,id);
+            legal.push_back({producer.id,id,level+1,
+                upgrade.levels[static_cast<std::size_t>(level)].mineralCost});
+        }
+    }
+    for(const auto& command:planRTSEnemyResearchOrders(
+            legal,settings.upgradePriorities,tick_+1))
+        (void)queueCommand(command);
 }
 void RTSSkirmish::emitActorCue(int unitId,RTSActorCueEvent event,
                                 const Vec3& at){
@@ -1731,9 +1773,16 @@ bool RTSSkirmish::queuePlayerCommand(RTSCommandKind kind,const Vec3& point,
     return queueCommand(std::move(command));
 }
 bool RTSSkirmish::applyCommand(const RTSCommand& command){
-    // Enemy AI uses explicit IDs and a restricted attack command without
-    // touching the player's selection or invoking player-only order APIs.
+    // Game-owned AI is always explicit-identity and owner checked.
+    // Research is an engine command, never a selected player structure.
     if(command.source==1){
+        if(command.kind==RTSCommandKind::ResearchUpgrade){
+            if(command.units.size()!=1 || command.targetId!=-1 ||
+               command.catalog.empty())return false;
+            const Unit* producer=find(command.units.front());
+            return producer && producer->ownerId==1 &&
+                   queueResearchAt(producer->id,command.catalog);
+        }
         if(command.kind!=RTSCommandKind::Attack)return false;
         Unit* target=find(command.targetId);
         if(!target || !target->isAlive() || target->ownerId!=0)return false;
@@ -1984,6 +2033,10 @@ std::string RTSSkirmish::stateDigest()const{
         hash.signedNumber(p.buildingId);hash.text(p.catalogId);
         hash.scalar(p.remaining);hash.signedNumber(p.reservedSupply);
         hash.signedNumber(p.paidMinerals);hash.scalar(p.totalTime);
+    }
+    if(rtsAIResearchSettings(project_).enabled){
+        hash.text("enemy_research_budget");
+        hash.signedNumber(enemyResearchMinerals_);
     }
     if(!research_.empty()){
         hash.text("pending_research");

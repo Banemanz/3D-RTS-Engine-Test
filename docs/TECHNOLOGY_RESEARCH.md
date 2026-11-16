@@ -232,3 +232,8 @@ Requirements into guaranteed prerequisites; non-tech predicates remain in
 the Requirement editor and are counted separately. The same engine-neutral
 graph projects to Graphviz DOT via `RTSProjectTool --tech-graph path`.
 See [Technology Map](TECH_TREE_MAP.md).
+
+
+## Opponent AI can now research authored technology
+
+The same Upgrade levels, Show/Use Requirements and per-producer queue are now available to an explicit owner-1 command source, using a separate finite research mineral bank. Ordered, editor-authored AI priorities skip unavailable gates and retry on a fixed tick cadence. F7 has a validated, undoable policy editor; Play/F9 has a read-only research monitor. See [AI Research](AI_RESEARCH.md) for map JSON schema, sample and replay/determinism details. This is not yet an autonomous gathering/building AI.
