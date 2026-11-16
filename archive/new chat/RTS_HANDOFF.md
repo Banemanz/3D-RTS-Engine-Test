@@ -2454,3 +2454,22 @@ so MSVC saw `const float =...` and emitted C2513/C2059.
 The subsequent fix renames the local `near` variable to
 `hitTolerance` with identical resize-handle behavior. Do not
 claim Windows/Linux parity until final exact-HEAD builds succeed.
+
+
+### Followup F10 screenshot actual visual QA (150% DPI)
+
+Downloaded and visually inspected native secondary OS-window capture
+from Linux workflow at `f349d6ec`, 1239x892 PNG,
+`rts-ui-variable-f10-screenshot`. The new precision grid, snap toggle,
+step dropdown, navy/teal canvas, selected frame resize handle and
+quick frame chooser **really rendered**. However, a long redundant
+intro paragraph and duplicate selected ID/title in the right
+scrollable inspector still hid F6 live-variable controls below the
+initial viewport at 150% font scaling.
+
+The next followup shortens the primary F10 and custom-frames help
+paragraphs and removes the redundant selected-frame heading inside
+the property scroll child (ID/type is already pinned outside).
+This saves vertical space without lowering the font scale or breaking
+separate OS modules. Must re-verify final exact HEAD and inspect the
+newest screenshot; do not describe the older screenshot as latest.

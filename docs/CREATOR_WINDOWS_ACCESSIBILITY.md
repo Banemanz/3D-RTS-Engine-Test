@@ -283,3 +283,18 @@ dropdown and optionally expandable full hierarchy give the
 inspector immediate room to show F6 live bindings and conditional
 visibility; numeric fields and align buttons remain keyboard
 accessible and scrollable.
+
+
+### 150% F10 screenshot-driven layout adjustment
+
+Reviewing the actual 1239×892 native secondary-window screenshot of
+the grid/snap editor confirmed the controls and resized handle were
+visible and the original dark-blue/teal palette remained clear. It
+also revealed that long redundant introductions and a repeated
+selected-frame title consumed enough vertical height to hide F6
+variable-binding inputs at 150% font scale. The native F10 Interface
+Designer and its Custom UI tab now use concise help text, and the
+scrollable selected frame inspector no longer repeats the pinned
+frame ID/title. The quick frame chooser and collapsible hierarchy
+remain available; the same controls become visible earlier without
+shrinking fonts.

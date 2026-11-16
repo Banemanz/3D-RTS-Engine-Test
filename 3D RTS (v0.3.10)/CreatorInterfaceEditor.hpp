@@ -49,7 +49,7 @@ void draw(App& app){
         "INTERFACE DESIGNER  /  Native gameplay HUD");
     ImGui::SameLine();
     ImGui::TextDisabled("%s",dirty?"UNAPPLIED PREVIEW":"PROJECT LAYOUT");
-    ImGui::TextWrapped("Author the classic HUD panels or build a nested, anchored custom UI frame hierarchy. Both are real in-game UI, not mock editor visuals.");
+    ImGui::TextDisabled("Edit the playable HUD: classic panels or custom frames.");
     ImGui::Separator();
     if(!ImGui::BeginTabBar("##InterfaceToolTabs"))return;
     if(ImGui::BeginTabItem("Native HUD panels")){

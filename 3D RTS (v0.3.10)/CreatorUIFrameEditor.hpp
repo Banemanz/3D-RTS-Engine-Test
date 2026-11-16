@@ -93,7 +93,7 @@ void draw(App& app){
     ImGui::SameLine();
     ImGui::TextDisabled("%zu/32 frames %s",draft.size(),
                         dirty?"| UNAPPLIED":"| SAVED");
-    ImGui::TextWrapped("Create screen-anchored panels, text, live data, buttons and bars. Parent/child nesting clips visible content and mouse input. Changes become live only after Apply.");
+    ImGui::TextDisabled("Compose nested frames; Apply changes to the playable game.");
     const float ui=std::max(.9f,ImGui::GetFontSize()/16.5f);
     const auto add=[&](const char* type){
         if(draft.size()>=32)return;
@@ -396,9 +396,8 @@ void draw(App& app){
         int index=findFrame(draft,selected);
         if(index>=0){
             RTSUIFrame& f=draft[static_cast<std::size_t>(index)];
-            ImGui::SeparatorText("Frame properties");
-            ImGui::TextColored(ImVec4(.52f,.90f,.96f,1.f),
-                "%s  /  %s",f.id.c_str(),f.kind.c_str());
+            // The selected ID/kind is pinned above this scroll pane;
+            // do not repeat it and push actionable properties offscreen.
             const auto combo=[&](const char* label,std::string& current,
                                  const char* const* options,int count){
                 ImGui::TextUnformatted(label);
