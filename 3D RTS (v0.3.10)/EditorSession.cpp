@@ -280,7 +280,12 @@ bool EditorSession::setUIFrames(RTSProject& project,
     const RTSProject before=project;
     if(frames.empty())project.metadata.erase("ui_frames");
     else project.metadata["ui_frames"]=next;
-    try{project.validate();}
+    try{
+        project.validate();
+        // No frame can be removed while an authored trigger still
+        // references that button, even during unsaved UI transactions.
+        (void)parseTriggerRules(project);
+    }
     catch(const std::exception& e){
         project=before;
         message=std::string("INVALID UI FRAMES: ")+e.what();

@@ -204,3 +204,16 @@ required to be identical, the custom-UI replay is verified against
 the original engine, and Windows/Linux Debug CI now byte-compares
 `ui_frames_fingerprint.txt`. This demonstrates the UI is only
 presentation/input authoring and doesn't covertly alter simulation.
+
+
+## F6 script event integration
+
+Button action `Trigger` now complements the original safe
+SelectArmy, SelectWorkers and FocusBase actions. F10 automatically
+enforces `consume_input: true` for script Buttons and the F6 editor
+exposes `OnUIFrameClicked` with a validated frame-ID selector.
+The click enters a new player-only `UIFrameClick` recorded command,
+then runs the author's normal conditions/actions on the next 60Hz
+simulation tick. Deleting an F6-referenced F10 Button is rejected
+non-destructively. See [UI Trigger Events](UI_TRIGGER_EVENTS.md)
+and [UI Trigger Studio](../projects/ui_trigger_showcase.rtsproject.json).

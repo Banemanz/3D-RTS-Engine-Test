@@ -12,6 +12,7 @@
 
 namespace CreatorUIFrameEditor {
 inline int previewResolution=0;
+inline std::string focusFrameId; // deterministic CI/author selection
 inline const std::array<std::array<int,2>,3> resolutions={{
     {{1280,720}},{{1920,1080}},{{800,600}}
 }};
@@ -60,6 +61,10 @@ void draw(App& app){
         draft=current;
         selected=draft.empty()?std::string{}:draft.front().id;
         dirty=false;
+    }
+    if(!focusFrameId.empty()){
+        if(findFrame(draft,focusFrameId)>=0)selected=focusFrameId;
+        focusFrameId.clear();
     }
     const auto persist=[&]{
         if(app.editor.setUIFrames(app.project,draft)){

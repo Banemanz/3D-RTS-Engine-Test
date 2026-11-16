@@ -358,3 +358,22 @@ default projects are unchanged. `CreatorUIFrameEditor.hpp` supplies
 the native draggable, DPI-aware preview/hierarchy and inspectors
 without moving editing logic into the GL renderer. See
 docs/UI_FRAME_HIERARCHY.md and headless `RTSUIFrameTests`.
+
+
+## Fixed-tick UI-to-trigger event pipeline
+
+F10 Buttons can select `action="Trigger"` (always consumes world clicks).
+F6's actual event dropdown adds `OnUIFrameClicked` with a selectable
+`event.frame` reference to such buttons. `RTSCommandKind::UIFrameClick`
+is appended to the existing wire enum without renumbering old commands:
+valid player-source-only, unitless, coordinate-free, one-frame-ID
+commands are enqueued for tick + 1 and captured in replay.
+`RTSSkirmish::applyCommand` revalidates the target Button against
+the authoritative project, then passes the ID into TriggerEngine's
+bounded event queue. The engine dispatches events in command order
+at its normal fixed tick, through shared ECA conditions/actions
+and trigger tracing. `EditorSession::setUIFrames` and
+`TriggerDefinition.cpp` enforce cross-document reference safety.
+Existing core gameplay orders, HUD actions and replay serialization
+remain backwards-compatible; only original typed command additions.
+See docs/UI_TRIGGER_EVENTS.md.

@@ -1,6 +1,7 @@
 #include "TriggerDefinition.hpp"
 #include "RTSProject.hpp"
 #include "RTSScriptExpression.hpp"
+#include "RTSUIFrames.hpp"
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -97,8 +98,18 @@ std::vector<TriggerEngine::Rule> parseTriggerRules(const RTSProject& project) {
             throw std::invalid_argument("Trigger event must be object");
         const auto& e=event->second.get<picojson::object>();
         rule.event=str(e,"type");
-        requireType(rule.event,{"OnMapStart","After","Every","OnUnitDeath","OnRegionEnter","MineralsBelow","OnVariableChanged"});
+        requireType(rule.event,{"OnMapStart","After","Every","OnUnitDeath","OnRegionEnter","MineralsBelow","OnVariableChanged","OnUIFrameClicked"});
         rule.region=str(e,"region");
+        if(rule.event=="OnUIFrameClicked"){
+            rule.uiFrame=str(e,"frame");
+            const auto frames=rtsUIFramesFromProject(project);
+            const auto it=std::find_if(frames.begin(),frames.end(),
+                [&](const RTSUIFrame& frame){return frame.id==rule.uiFrame;});
+            if(it==frames.end() || it->kind!="Button" ||
+               it->action!="Trigger" || !it->consumeInput)
+                throw std::invalid_argument(
+                    "OnUIFrameClicked requires a script-enabled Button: "+rule.uiFrame);
+        }
         if(rule.event=="OnVariableChanged") {
             rule.variable=str(e,"variable");
             if(!variables.count(rule.variable))

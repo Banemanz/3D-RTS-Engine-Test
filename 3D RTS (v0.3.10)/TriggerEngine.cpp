@@ -58,6 +58,7 @@ void TriggerEngine::configure(const RTSProject& p){
     rules_=std::move(next);
     variables_=std::move(initialVariables);
     pendingVariableChanges_.clear();
+    pendingUIFrameClicks_.clear();
     trace_.clear();
     nextSequence_=1;
     lastSimulationSeconds_=0.;
@@ -192,6 +193,12 @@ void TriggerEngine::run(Rule& rule,RTSSkirmish& game,int subjectId,double elapse
     ++rule.executions;
     record(rule,elapsed,subjectId,TraceStatus::Executed,summary);
 }
+bool TriggerEngine::queueUIFrameClick(const std::string& frameId){
+    if(frameId.empty() || pendingUIFrameClicks_.size()>=MaxUIFrameClicksPerTick)
+        return false;
+    pendingUIFrameClicks_.push_back(frameId);
+    return true;
+}
 void TriggerEngine::start(RTSSkirmish& game) {
     lastSimulationSeconds_=0.;
     for(auto& r:rules_)if(r.event=="OnMapStart")run(r,game,-1,0.);
@@ -199,6 +206,16 @@ void TriggerEngine::start(RTSSkirmish& game) {
 void TriggerEngine::tick(RTSSkirmish& game,double elapsed,
                          const std::vector<int>& killed) {
     lastSimulationSeconds_=elapsed;
+    // Recorded player commands are applied before this tick's triggers.
+    // Deliver UI events in command sequence order with a bounded budget.
+    // Each rule still observes its own Once flag, normal conditions,
+    // action error tracing and the standard ECA execution sandbox.
+    auto clicks=std::move(pendingUIFrameClicks_);
+    pendingUIFrameClicks_.clear();
+    for(const auto& frame:clicks)
+        for(auto& rule:rules_)
+            if(rule.event=="OnUIFrameClicked" && rule.uiFrame==frame)
+                run(rule,game,-1,elapsed);
     // Deliver a snapshot of the prior tick's changes; callbacks cannot
     // reenter this batch. Coalesce each variable's first/last values to
     // guarantee bounded work (at most 64 globals, 256 authored rules).

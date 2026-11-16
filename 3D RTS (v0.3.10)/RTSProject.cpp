@@ -260,6 +260,11 @@ void RTSProject::validate() const {
     // Default project metadata intentionally leaves the classic layout.
     (void)RTSHUDProfile::fromProject(*this);
     (void)rtsUIFramesFromProject(*this);
+    // Projects that author UI frames + script events must never persist
+    // dangling button links. Existing legacy maps without this new
+    // feature keep their previous trigger migration behavior.
+    if(metadata.count("ui_frames") && extensions.count("triggers"))
+        (void)parseTriggerRules(*this);
     // Any game-facing data object must be valid before we allow project saves.
     for(const auto& e:catalog.entries()) {
         if(e.type=="Unit") {

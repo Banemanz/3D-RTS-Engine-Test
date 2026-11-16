@@ -147,3 +147,16 @@ support, only whitelisted native actions are exposed; arbitrary
 trigger callback routing and image/skin/frame import are future
 separate milestones. No Blizzard XML, names, icons or licensed
 third-party implementation was copied.
+
+
+## UI event as a replay-recordable input
+
+Publicly documented RTS trigger editors separate UI/dialog events
+from the presentation widget tree and execute typed trigger action
+sequences. The original RTS Creator now has corresponding
+`OnUIFrameClicked` events, but first records frame clicks as
+authoritative 60Hz commands; the F6 script runner executes only
+safe existing ECA actions. This intentionally avoids injecting
+untracked GUI callbacks into deterministic combat/resources, and
+does not copy Blizzard API code, proprietary UI assets or GPL engine
+implementations. See docs/UI_TRIGGER_EVENTS.md.

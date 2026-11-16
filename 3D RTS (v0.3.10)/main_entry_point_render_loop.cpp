@@ -991,6 +991,8 @@ int main(int argc, char** argv) {
     bool aiResearchPlaySmoke=false;
     bool moduleWindowsSmoke=false;
     bool uiFramesSmoke=false;
+    bool uiTriggerSmoke=false;
+    std::string smokeUIFrameId;
     double smokeUiScale=0.;
     std::string smokeTriggerId;
     std::string smokeCatalogId;
@@ -1023,6 +1025,9 @@ int main(int argc, char** argv) {
         else if(arg == "--smoke-tech-graph")techGraphSmoke=true;
         else if(arg == "--smoke-ai-research")aiResearchSmoke=true;
         else if(arg == "--smoke-ai-research-play")aiResearchPlaySmoke=true;
+        else if(arg == "--smoke-ui-trigger")uiTriggerSmoke=true;
+        else if(arg == "--smoke-select-ui-frame" && i+1<argc)
+            smokeUIFrameId=argv[++i];
         else if(arg == "--smoke-ui-frames"){
             uiFramesSmoke=true;
             moduleWindowsSmoke=true;
@@ -1073,6 +1078,25 @@ int main(int argc, char** argv) {
         app.reloadFromProject();
         if(uiFramesSmoke && smokeFrames>0)
             CreatorInterfaceEditor::requestFrameTab=true;
+        if(!smokeUIFrameId.empty() && smokeFrames>0)
+            CreatorUIFrameEditor::focusFrameId=smokeUIFrameId;
+        if(uiTriggerSmoke && smokeFrames>0){
+            // Exercise the real geometry admission and authoritative
+            // command path; this is not a fake HUD-data edit.
+            const auto frames=rtsResolveUIFrames(
+                rtsUIFramesFromProject(app.project),app.windowWidth,app.windowHeight);
+            const auto found=std::find_if(frames.begin(),frames.end(),
+                [](const RTSUIResolvedFrame& frame){
+                    return frame.source.id=="event_button";
+                });
+            if(found==frames.end())
+                throw std::invalid_argument("UI trigger smoke lacks event_button");
+            const auto hit=rtsUIFrameHit(frames,
+                found->bounds.x+6.f,found->bounds.y+6.f);
+            if(hit.action!="Trigger" || hit.frameId!=found->source.id ||
+               !app.game.queueUIFrameClick(hit.frameId))
+                throw std::runtime_error("UI trigger smoke event scheduling failed");
+        }
         if((triggerMonitorSmoke || liveTriggerMonitorSmoke) && smokeFrames>0)
             app.triggerTraceVisible=true;
         if(techGraphSmoke && smokeFrames>0){

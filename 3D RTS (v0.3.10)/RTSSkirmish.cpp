@@ -6,6 +6,7 @@
 #include "RTSFormation.hpp"
 #include "RTSProjectileCollision.hpp"
 #include "RTSAIPlanner.hpp"
+#include "RTSUIFrames.hpp"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -1754,6 +1755,20 @@ bool RTSSkirmish::queueCommand(RTSCommand command){
     if(result!=MatchResult::Playing || tick_>=RTSCommandStream::MaxCommandTick)return false;
     return commandStream_.enqueue(std::move(command),tick_);
 }
+bool RTSSkirmish::queueUIFrameClick(const std::string& frameId){
+    const auto frames=rtsUIFramesFromProject(project_);
+    const auto item=std::find_if(frames.begin(),frames.end(),
+        [&](const RTSUIFrame& frame){
+            return frame.id==frameId && frame.kind=="Button" &&
+                   frame.action=="Trigger" && frame.consumeInput;
+        });
+    if(item==frames.end())return false;
+    RTSCommand command;
+    command.tick=tick_+1;
+    command.kind=RTSCommandKind::UIFrameClick;
+    command.catalog=frameId;
+    return queueCommand(std::move(command));
+}
 bool RTSSkirmish::queuePlayerCommand(RTSCommandKind kind,const Vec3& point,
                                      int targetId,bool append,
                                      const std::string& catalog){
@@ -1796,6 +1811,18 @@ bool RTSSkirmish::applyCommand(const RTSCommand& command){
             issued=true;
         }
         return issued;
+    }
+    // Revalidate authoring references when a recorded UI command reaches its
+    // simulation tick. Forged IDs and non-script buttons cannot fire events.
+    if(command.kind==RTSCommandKind::UIFrameClick){
+        const auto frames=rtsUIFramesFromProject(project_);
+        const auto found=std::find_if(frames.begin(),frames.end(),
+            [&](const RTSUIFrame& frame){
+                return frame.id==command.catalog && frame.kind=="Button" &&
+                       frame.action=="Trigger" && frame.consumeInput;
+            });
+        return found!=frames.end() &&
+               triggers_.queueUIFrameClick(command.catalog);
     }
     // Commands reference identities, never a live selection flag or pointer.
     // Restore visual selection even if execution spawns a new vector element
@@ -2092,6 +2119,13 @@ std::string RTSSkirmish::stateDigest()const{
             hash.signedNumber(pending.second.first);
             hash.signedNumber(pending.second.second);
         }
+    }
+    // Only nonempty pending UI events contribute, preserving hashes for
+    // older projects/replays whose UI event queue never contains clicks.
+    if(!triggers_.pendingUIFrameClicks().empty()){
+        hash.text("pending_ui_frame_clicks");
+        hash.number(triggers_.pendingUIFrameClicks().size());
+        for(const auto& frame:triggers_.pendingUIFrameClicks())hash.text(frame);
     }
     hash.text(triggerMessage);
     std::ostringstream s;

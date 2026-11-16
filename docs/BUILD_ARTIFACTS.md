@@ -284,3 +284,17 @@ Release and covers project authoring/serialization, geometric
 hierarchy/clipping/hit-testing and live bindings. Linux Mesa/Xvfb
 captures real F10 secondary-native-window and F9 game screenshots,
 plus existing cross-platform deterministic replay parity.
+
+
+## F6/F10 UI event feature bundle
+
+Windows/Linux native packages now include original
+`projects/ui_trigger_showcase.rtsproject.json`,
+`docs/UI_TRIGGER_EVENTS.md` and the compiled
+`RTS_FEATURE_UI_TRIGGER_EVENTS=1` marker. Bundled CLI utilities
+validate the sample (including trigger/UI cross references).
+`RTSUITriggerTests` runs with optimized Release assertions on
+both platforms, and Windows/Linux Debug CI compares the
+`ui_trigger_fingerprint.txt` file byte-for-byte.
+Real Linux OpenGL screenshot artifacts capture the 150%-scaled F10
+Button editor and F9 live message/reward aftermath.

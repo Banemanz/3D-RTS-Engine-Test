@@ -10,10 +10,10 @@
 #include <utility>
 
 namespace {
-constexpr std::array<const char*,16> names{{
+constexpr std::array<const char*,17> names{{
     "Move","AttackMove","Patrol","Gather","Attack","Stop","Hold",
     "Build","Rally","TrainCatalog","TrainRanger","TrainWorker",
-    "CancelTraining","Context","CastAbility","ResearchUpgrade"
+    "CancelTraining","Context","CastAbility","ResearchUpgrade","UIFrameClick"
 }};
 std::uint64_t integer(const picojson::object& object,const char* key,
                       std::uint64_t minimum,std::uint64_t maximum) {
@@ -72,6 +72,16 @@ void validateRTSCommand(const RTSCommand& c){
         c.kind==RTSCommandKind::ResearchUpgrade) &&
        (c.catalog.empty() || c.units.empty() || c.append))
         throw std::invalid_argument("Ability command requires a catalog ID, caster, and no queue append");
+    if(c.kind==RTSCommandKind::UIFrameClick){
+        if(c.source!=0 || c.units.size()!=0 || c.catalog.empty() ||
+           c.catalog.size()>48 || c.targetId!=-1 || c.append ||
+           c.point.x!=0.f || c.point.y!=0.f || c.point.z!=0.f)
+            throw std::invalid_argument("UIFrameClick requires an unowned, zero-target frame ID");
+        for(const unsigned char ch:c.catalog)
+            if(!((ch>='a'&&ch<='z')||(ch>='A'&&ch<='Z')||
+                 (ch>='0'&&ch<='9')||ch=='_'||ch=='-'))
+                throw std::invalid_argument("UIFrameClick contains an illegal frame ID");
+    }
     // Internal AI has two strictly scoped actions. Research carries a
     // single explicit producer ID and no target; applyCommand revalidates
     // its owner, author policy, resources and Show/Use Requirements.

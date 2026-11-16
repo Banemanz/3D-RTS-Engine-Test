@@ -567,3 +567,19 @@ including serialized roundtrip. CTest emits
 `ui_frames_fingerprint.txt`; the existing GitHub Actions
 Windows/Linux replay-parity job uploads and diffs it byte-for-byte.
 This complements the two actual Mesa F10/F9 screenshot captures.
+
+
+## Replay-safe scriptable UI input
+
+`RTSUITriggerTests` validates original UI Trigger Studio:
+project/frame/event references; event scheduling (not direct GUI
+execution), +75 minerals reward and ShowMessage at tick+1;
+repeat triggers, 16-per-tick bounded delivery, tracing, invalid
+Button refs, F10 delete rollback, F6 event creation/undo, strict
+player-only/zero-units command schema, replay tape roundtrip and
+120-tick verification. The CTest writes a canonical
+`ui_trigger_fingerprint.txt` compared between Linux and Windows
+Debug jobs. Release executable bundles include sample/manual and
+validate compiled feature marker. Linux Mesa/Xvfb CI captures the
+real native F10 editor at 150% scaling and F9 gameplay after a
+scheduled input from the same hit-tested Frame ID.

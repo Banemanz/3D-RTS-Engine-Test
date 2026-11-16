@@ -459,3 +459,17 @@ the conceptual structure of Galaxy Dialog panels / UI events, but is
 **not complete Galaxy UI Editor parity**: no arbitrary buttons/scripts,
 XML skin loading, trigger click events, text localization or custom
 texture pipelines yet. See docs/UI_FRAME_HIERARCHY.md.
+
+
+## Typed F10 button → F6 Trigger event wiring
+
+New `OnUIFrameClicked` event with per-button reference selector,
+F10 `Trigger` action, and strict replay-recordable
+`RTSCommandKind::UIFrameClick` turns authored UI into genuine
+map scripting inputs. The native game renderer and mouse routing use
+the same clipped hierarchy, and the event hits the existing
+bounded ECA interpreter at a fixed 60Hz simulation tick. The sample
+demonstrates a clickable mission beacon granting real minerals and
+a message. Cross-OS replay fingerprinting and 150% F10/F9 real
+screenshot coverage are provided. This is **not** arbitrary script
+execution, multiplayer UI events or complete Galaxy dialog parity.

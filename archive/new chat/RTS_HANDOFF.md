@@ -2167,3 +2167,65 @@ Debug CI diff gate.
 Debug replay fingerprint diff, and download actual F10/F9 screenshots
 to confirm text sizes/readability. Update same original PR body
 exact SHA/CI URLs; do not merge.
+
+
+## November 16 continuation — F6/F10 UI trigger events
+
+**Same original OPEN UNMERGED DRAFT PR #1** branch
+`feat/rts-vertical-slice`. Previous exact commit
+`8b404f6fdacc5e61c332e8c5e5600b17bb0981c8` was
+**89/89 Release CTests Windows/Linux, Debug tests + strict replay
+parity, bundles and F10/F9 genuine OpenGL captures all GREEN**.
+
+Next work extends F10 original custom UI hierarchy to F6 ECA:
+- `RTSUIFrames.hpp`: new allowed Button action `Trigger`,
+  must `consume_input=true`, no other element may execute actions.
+- `RTSCommandStream.hpp/.cpp`: append enum `UIFrameClick` and
+  canonical name; strictly player-only, explicit valid ASCII Button
+  ID in `catalog`, zero units, no world coordinates/target/append.
+  Original enum values and old replay tape compatibility preserved.
+- `RTSSkirmish`: `queueUIFrameClick(frameId)` records a tick+1
+  command; `applyCommand` checks loaded project Button/action and
+  sends to `TriggerEngine::queueUIFrameClick`. Bounded <=16
+  delivered events per game tick; extra valid commands are recorded
+  but rejected at event-admission, so replay reproduces outcomes.
+  Pending clicks included in digest when nonempty; legacy hashes
+  are unchanged.
+- `TriggerEngine`: `Rule::uiFrame`, pending click IDs with
+  deterministic sequence order, typed `OnUIFrameClicked` event
+  subscriptions processed before normal tick event passes. Reuses
+  existing ECA conditions/recursion budgets, variable changes,
+  Once semantics and execution/block trace.
+- `TriggerDefinition.cpp`: verify references to existing
+  authored input-consuming script Buttons. `EditorSession.cpp`
+  F6 event type provides valid first Button, F10 Apply parses
+  cross-references and rolls back deletion of active event links.
+  `RTSProject::validate` also checks rules for projects with
+  UI frame metadata. `CreatorTriggerWidgets.hpp` frame dropdown,
+  `CreatorUIFrameEditor.hpp` Trigger action dropdown/help.
+- `main_entry_point_render_loop.cpp`: actual native F9 mouse
+  hit routing calls queueUIFrameClick, not fake direct mineral
+  mutation; feature marker `RTS_FEATURE_UI_TRIGGER_EVENTS=1`.
+  New `--smoke-ui-trigger` simulates a recorded click using
+  actual `rtsUIFrameHit` geometry; `--smoke-select-ui-frame`
+  preselects frame in native F10 capture.
+- Original `projects/ui_trigger_showcase.rtsproject.json`
+  adds amber SEND SIGNAL Button (id event_button), Message
+  status label and author trigger on_beacon_signal awarding
+  +75 minerals and "BEACON SIGNAL RECEIVED" on real click.
+- `RTSUITriggerTests` validates schema/fake packets/F6 authoring,
+  deleted-ref safety, 16 per tick capped clicks, simulation events,
+  trigger tracing, replay serialization + 120 ticks, and emits
+  `ui_trigger_fingerprint.txt` for byte-identical Windows/Linux.
+- CI/packaging: Windows/Linux Release and Debug include the new
+  90th CTest, bundled CLI sample validation, manual
+  `docs/UI_TRIGGER_EVENTS.md` and feature marker; Linux Xvfb/Mesa
+  captures real F10 native 150% and F9 fired-UI event screenshots.
+  Existing cross-OS replay diff includes new fingerprint.
+
+**Must check at HEAD before success claim:** two OS Release packages
+90/90 tests, Windows/Linux Debug, strict replay fingerprint,
+and actual F10/F9 screenshots. Fix failures and document results
+on the same PR, never merge. Remaining: more widget types,
+arbitrary UI event callback APIs, player-scoped networking,
+font/UI assets and native game HUD DPI zoom.

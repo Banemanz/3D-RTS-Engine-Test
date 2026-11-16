@@ -28,11 +28,15 @@ void field(App& app,const std::string& ruleId,bool event,bool condition,
                                std::to_string(nodeIndex)+"."+name;
     ImGui::PushID(identity.c_str());
     if(name=="catalog" || name=="region" || name=="result" || name=="effect" ||
-       name=="variable" || name=="operator"){
+       name=="variable" || name=="operator" || name=="frame"){
         if(value.template is<std::string>()){
             const std::string current=value.template get<std::string>();
             std::vector<std::string> options;
-            if(name=="result")options={"Victory","Defeat"};
+            if(name=="frame"){
+                for(const auto& f:rtsUIFramesFromProject(project))
+                    if(f.kind=="Button" && f.action=="Trigger" && f.consumeInput)
+                        options.push_back(f.id);
+            }else if(name=="result")options={"Victory","Defeat"};
             else if(name=="operator")options={"==","!=","<","<=",">",">="};
             else if(name=="variable"){
                 const auto it=project.extensions.find("trigger_variables");
@@ -341,7 +345,8 @@ void draw(App& app){
         if(ImGui::BeginCombo("Event kind",active.c_str())){
             std::string next;
             for(const char* type:{"OnMapStart","After","Every","OnUnitDeath",
-                                  "OnRegionEnter","MineralsBelow","OnVariableChanged"}){
+                                  "OnRegionEnter","MineralsBelow","OnVariableChanged",
+                                  "OnUIFrameClicked"}){
                 if(ImGui::Selectable(type,active==type))next=type;
             }
             ImGui::EndCombo();

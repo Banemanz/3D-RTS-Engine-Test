@@ -29,6 +29,7 @@ public:
         std::string event;
         std::string region;
         std::string variable; // OnVariableChanged event subscription
+        std::string uiFrame; // OnUIFrameClicked event subscription
         double interval=0;
         double threshold=0;
         double startTime=0;
@@ -45,6 +46,12 @@ public:
     void configure(const RTSProject& project);
     void start(RTSSkirmish& game);
     void tick(RTSSkirmish& game,double elapsed,const std::vector<int>& killed);
+    // The replay command interpreter is the ONLY producer of UI script
+    // events. Events are bounded, ordered, and delivered on this tick.
+    bool queueUIFrameClick(const std::string& frameId);
+    const std::vector<std::string>& pendingUIFrameClicks()const{
+        return pendingUIFrameClicks_;
+    }
     const std::vector<Rule>& rules()const { return rules_; }
     const std::map<std::string,int>& variables()const{return variables_;}
     // First and last value within one tick; a variable fires at most once on
@@ -62,6 +69,8 @@ private:
     std::vector<Rule> rules_;
     std::map<std::string,int> variables_; // sorted for stable replay/inspectors
     std::map<std::string,std::pair<int,int>> pendingVariableChanges_;
+    std::vector<std::string> pendingUIFrameClicks_;
+    static constexpr std::size_t MaxUIFrameClicksPerTick=16;
     bool tracingEnabled_=false;
     std::deque<Trace> trace_;
     std::uint64_t nextSequence_=1;

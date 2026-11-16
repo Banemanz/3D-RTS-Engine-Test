@@ -48,6 +48,8 @@ public:
     // Apply immutable gameplay orders at a fixed simulation tick. The UI
     // captures the selected entity IDs before the command is queued.
     bool queueCommand(RTSCommand command);
+    // Authored UI click: explicit frame ID, no selected unit/window state.
+    bool queueUIFrameClick(const std::string& frameId);
     bool queuePlayerCommand(RTSCommandKind kind,const Vec3& point=Vec3{},
                             int targetId=-1,bool append=false,
                             const std::string& catalog="");

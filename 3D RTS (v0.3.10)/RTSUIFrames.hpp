@@ -20,7 +20,7 @@ struct RTSUIFrame {
     std::string text;
     std::string binding="None";   // None, Minerals, Supply, Workers, Selected,
                                    // SelectedHealth, Message, Ticks
-    std::string action="None";    // None, SelectArmy, SelectWorkers, FocusBase
+    std::string action="None";    // None, SelectArmy, SelectWorkers, FocusBase, Trigger
     float x=20.f, y=90.f, width=200.f, height=50.f;
     bool consumeInput=false;      // panel or button optionally blocks world clicks
 };
@@ -36,7 +36,7 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
     const char* palettes[]={"Navy","Teal","Cobalt","Amber","Slate"};
     const char* bindings[]={"None","Minerals","Supply","Workers",
                              "Selected","SelectedHealth","Message","Ticks"};
-    const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase"};
+    const char* actions[]={"None","SelectArmy","SelectWorkers","FocusBase","Trigger"};
     std::set<std::string> previous;
     for(const auto& f:frames){
         if(f.id.empty()||f.id.size()>48)
@@ -69,10 +69,12 @@ inline void rtsValidateUIFrames(const std::vector<RTSUIFrame>& frames){
            !rtsUIFrameChoice(f.anchor,anchors,5) ||
            !rtsUIFrameChoice(f.palette,palettes,5) ||
            !rtsUIFrameChoice(f.binding,bindings,8) ||
-           !rtsUIFrameChoice(f.action,actions,4))
+           !rtsUIFrameChoice(f.action,actions,5))
             throw std::invalid_argument("ui_frames: unknown kind/anchor/palette/binding/action: "+f.id);
         if(f.kind!="Button" && f.action!="None")
             throw std::invalid_argument("ui_frames: only Buttons may bind actions: "+f.id);
+        if(f.action=="Trigger" && !f.consumeInput)
+            throw std::invalid_argument("ui_frames: scripted Button must consume world clicks: "+f.id);
         if(f.kind=="Bar" &&
            f.binding!="Supply" && f.binding!="SelectedHealth")
             throw std::invalid_argument("ui_frames: Bar binding must be Supply or SelectedHealth");

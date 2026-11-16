@@ -549,3 +549,21 @@ sample: [UI Frame Studio](projects/ui_frame_studio_showcase.rtsproject.json)
 and full [UI Frames manual](docs/UI_FRAME_HIERARCHY.md). Windows/Linux
 native bundles, headless geometry/serialization/undo regression tests,
 and genuine F10/F9 screenshots cover this original engine/editor pass.
+
+
+## F6 × F10 scriptable UI events (November 16)
+
+The F10 custom frame designer can now mark Buttons with a **Trigger**
+action. F6 offers the typed **OnUIFrameClicked** event and a dropdown
+of valid authored script button IDs. A real F9 click goes through native
+frame hit-testing into a dedicated `UIFrameClick` 60Hz command, which
+is recorded in the authoritative replay, validated against the loaded
+project and delivered to the existing trigger ECA runtime. Actions such
+as GrantMinerals, ShowMessage, variables and conditional branches then
+affect real gameplay—not a local UI mock. Strict schema checks block
+AI-forged/UI spoofed commands; per-tick event admission is bounded.
+F10 refuses to remove a Button referenced by a script. New original
+[UI Trigger Studio](projects/ui_trigger_showcase.rtsproject.json) and
+[UI Trigger Events manual](docs/UI_TRIGGER_EVENTS.md) ship with the
+Windows/Linux executables; native F10/F9 screenshots and a 120-tick
+cross-OS replay fingerprint test cover the integration.

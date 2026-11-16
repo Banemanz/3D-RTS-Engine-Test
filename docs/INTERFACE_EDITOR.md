@@ -138,3 +138,14 @@ renderer and mouse input use the same resolved rectangles.
 Apply/Undo/Redo follow the existing validated EditorSession project
 history. For the schema, restrictions, action safety, samples and
 tests, see [Custom UI Frame Hierarchy](UI_FRAME_HIERARCHY.md).
+
+
+## Scriptable Button event authoring
+
+The Custom UI frames F10 tab supports action `Trigger`, wiring
+one Button into F6's `OnUIFrameClicked` event picker. Gameplay
+mouse input becomes an authoritative tick+1 `UIFrameClick`
+replay command. The resulting ECA actions can alter real gameplay;
+this is not a direct GUI callback or an arbitrary native script.
+F10 protects existing F6 references during Apply/Undo/Redo.
+See [UI Trigger Events](UI_TRIGGER_EVENTS.md).

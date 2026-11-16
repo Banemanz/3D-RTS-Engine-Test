@@ -233,3 +233,15 @@ canvas preview renders text scaled to the **canvas's screen-to-game
 zoom**, rather than blindly using the enlarged desktop UI font:
 nested labels and small buttons no longer overlap when previewing
 a 1280px game inside a 125–250% creator desktop window.
+
+
+## Accessible UI event authoring across native modules
+
+The F10 Button properties include a labeled Trigger click action and
+guidance on wiring the frame to an F6 rule; F6 offers an ordinary
+typed/dropdown `OnUIFrameClicked` event. Both keep the per-user
+85–250% scaling, contrast and independent native window behavior.
+F6/F10 share the same validated project/Undo controller: switching
+modules does not duplicate the script authoring state. Real 150%
+F10 native-window smoke and actual F9 gameplay after the UI event
+are checked on Linux Mesa.

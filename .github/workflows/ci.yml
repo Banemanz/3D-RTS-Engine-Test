@@ -41,6 +41,7 @@ jobs:
             build/tech_visibility_fingerprint.txt
             build/ai_research_fingerprint.txt
             build/ui_frames_fingerprint.txt
+            build/ui_trigger_fingerprint.txt
           if-no-files-found: error
       - name: Install software OpenGL smoke test dependencies
         run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
@@ -273,6 +274,26 @@ jobs:
         with:
           name: rts-ai-research-play-screenshot
           path: rts-ai-research-play.png
+          if-no-files-found: error
+      - name: Capture native F10 script button editor at 150 percent scale
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame event_button --smoke-ui-scale 1.50 --project projects/ui_trigger_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-script-f10.ppm
+      - name: Convert F10 script button editor capture
+        run: python3 tools/ppm_to_png.py rts-ui-script-f10.ppm rts-ui-script-f10.png
+      - name: Upload actual F10 script button authoring screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-trigger-f10-screenshot
+          path: rts-ui-script-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 script button effect using recorded game click
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_trigger_showcase.rtsproject.json --smoke-ui-trigger --smoke-select-army --smoke-frames 95 --screenshot rts-ui-script-f9.ppm
+      - name: Convert F9 mission beacon screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-script-f9.ppm rts-ui-script-f9.png
+      - name: Upload actual F9 fired UI trigger screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-trigger-f9-screenshot
+          path: rts-ui-script-f9.png
           if-no-files-found: error
       - name: Capture custom hierarchical F10 UI frame editor at 125 percent
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-ui-scale 1.25 --project projects/ui_frame_studio_showcase.rtsproject.json --smoke-select-army --smoke-frames 95 --screenshot rts-ui-frames-f10.ppm
@@ -540,6 +561,7 @@ jobs:
             build/tech_visibility_fingerprint.txt
             build/ai_research_fingerprint.txt
             build/ui_frames_fingerprint.txt
+            build/ui_trigger_fingerprint.txt
           if-no-files-found: error
 
   replay-parity:
@@ -577,3 +599,4 @@ jobs:
           diff -u fingerprints/linux/tech_visibility_fingerprint.txt fingerprints/windows/tech_visibility_fingerprint.txt
           diff -u fingerprints/linux/ai_research_fingerprint.txt fingerprints/windows/ai_research_fingerprint.txt
           diff -u fingerprints/linux/ui_frames_fingerprint.txt fingerprints/windows/ui_frames_fingerprint.txt
+          diff -u fingerprints/linux/ui_trigger_fingerprint.txt fingerprints/windows/ui_trigger_fingerprint.txt
