@@ -2579,3 +2579,31 @@ GLB with JSON+BIN from the original embedded-data glTF and demands
 bit-for-bit equality of compiled mesh and texture, plus corrupt GLB
 rejection. GL3.3 imported normals now use inverse-transpose model
 transform for nonuniformly scaled geometry. No new third-party deps.
+
+
+## November 17 — native C++ importer and F7 source picker (current)
+
+Continue ONLY on original open unmerged draft PR #1, feat/rts-vertical-slice.
+Starting head was 80170a0. RTSGltfImport.cpp now links pinned MIT cgltf and
+stb_image into RTSAuthoring and both portable binaries, compiling source glTF
+or GLB directly to the existing RTSMESH1 contract. Native importer supports
+quaternion rotation/positive scale/translation, opaque PNG/JPEG albedo and
+one node/primitive; validates bounds before accessor reads, confines external
+resources to source root and publishes without overwriting via staged hardlink.
+F7 has a real folder/file picker and output name, errors and library refresh.
+Import writes resource; separate Register Model + Actor remains one undo step.
+CLI: --import-gltf source.glb project.json assets/name.rtsmesh. Manual:
+docs/NATIVE_ASSET_IMPORT.md includes dependencies, exact limits and next work.
+Portable installs include examples/beacon.gltf and both MIT licenses; both
+platform package workflows run native conversion and compare original bytes.
+New native_gltf_import CLI regression covers GLB, transform math, JPEG, opaque
+alpha, malformed data, traversal, no-clobber and cleanup. Real F7 popup capture
+uses --smoke-import-dialog, alongside existing F7/F8/F9 native screenshots.
+
+Local Release headless initial 99/99 passed. Recheck final changes, full GUI,
+Windows/Linux Actions and screenshots before claiming exact commit green.
+No animation, multi-material/hierarchy, preview turntable or source manifest yet.
+Next prioritization: multi-material runtime format and source manifest/reimport,
+then static node graphs and PBR/sRGB, skeletons/clips and actor animation events.
+Hardlink publication requires supporting filesystem; a killed process can leave
+a reserved .importing folder (see manual). Keep draft, do not merge.

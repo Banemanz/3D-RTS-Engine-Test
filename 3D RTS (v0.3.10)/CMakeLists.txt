@@ -19,7 +19,7 @@ find_package(Python3 COMPONENTS Interpreter QUIET)
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(RTSAuthoring STATIC TerrainMap.cpp DataCatalog.cpp RTSRequirements.cpp RTSUpgrades.cpp RTSProject.cpp EditorSession.cpp SceneEditor.cpp InstanceOverrides.cpp TriggerDefinition.cpp)
+add_library(RTSAuthoring STATIC RTSGltfImport.cpp TerrainMap.cpp DataCatalog.cpp RTSRequirements.cpp RTSUpgrades.cpp RTSProject.cpp EditorSession.cpp SceneEditor.cpp InstanceOverrides.cpp TriggerDefinition.cpp)
 target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(RTSSimulation STATIC
@@ -83,6 +83,8 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
     if(Python3_Interpreter_FOUND)
+        add_test(NAME native_gltf_import COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_native_import.py" $<TARGET_FILE:RTSProjectTool>)
         add_test(NAME gltf_import COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_asset_pipeline.py")
     endif()
@@ -415,6 +417,7 @@ endif()
 
 # Installable layout is intentionally identical on Windows and Linux:
 # exe/launcher files beside projects/, docs/, and build manifest.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon.gltf" DESTINATION "examples")
 install(TARGETS RTSProjectTool RUNTIME DESTINATION ".")
 if(RTS_BUILD_DEMO)
     install(TARGETS RTSCameraTerrain RUNTIME DESTINATION ".")
@@ -431,6 +434,7 @@ install(FILES
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AUTHORING.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/ASSET_PIPELINE.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/NATIVE_ASSET_IMPORT.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/ACTOR_EVENT_AUTHORING.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/REQUIREMENT_AUTHORING.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECHNOLOGY_RESEARCH.md"
@@ -452,6 +456,8 @@ install(FILES
     DESTINATION "docs")
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PICOJSON_LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/CGLTF_LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/STB_LICENSE"
     DESTINATION "licenses")
 if(RTS_BUILD_DEMO)
     install(FILES "${imgui_SOURCE_DIR}/LICENSE.txt"

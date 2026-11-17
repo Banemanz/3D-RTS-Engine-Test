@@ -377,6 +377,18 @@ jobs:
           name: rts-ui-wrapped-f9-screenshot
           path: rts-ui-wrapped-f9.png
           if-no-files-found: error
+      - name: Capture native glTF import dialog
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-import-dialog --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-native-import.ppm
+      - name: Convert native import capture
+        if: runner.os == 'Linux'
+        run: python3 tools/ppm_to_png.py rts-native-import.ppm rts-native-import.png
+      - name: Upload native import dialog screenshot
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-native-import-dialog-screenshot
+          path: rts-native-import.png
       - name: Capture real F7 imported-asset library editor panel
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-assets-f7.ppm
       - name: Convert F7 asset library capture

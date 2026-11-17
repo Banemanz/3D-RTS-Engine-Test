@@ -106,6 +106,9 @@ jobs:
           ./RTSProjectTool --validate projects/ui_wrapped_layout_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/asset_import_showcase.rtsproject.json
           ./RTSProjectTool --asset-report projects/asset_import_showcase.rtsproject.json
+          ./RTSProjectTool --import-gltf examples/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
+          cmp projects/assets/beacon.rtsmesh projects/assets/native_smoke.rtsmesh
+          rm projects/assets/native_smoke.rtsmesh
 
       - name: Validate bundled maps with bundled project utility (Windows)
         if: runner.os == 'Windows'
@@ -136,6 +139,10 @@ jobs:
           .\RTSProjectTool.exe --validate projects/ui_wrapped_layout_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/asset_import_showcase.rtsproject.json
           .\RTSProjectTool.exe --asset-report projects/asset_import_showcase.rtsproject.json
+          .\RTSProjectTool.exe --import-gltf examples/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
+          if ($LASTEXITCODE -ne 0) { throw "Native glTF import failed" }
+          if ((Get-FileHash projects/assets/beacon.rtsmesh).Hash -ne (Get-FileHash projects/assets/native_smoke.rtsmesh).Hash) { throw "Native import bytes differ" }
+          Remove-Item projects/assets/native_smoke.rtsmesh
 
       - name: Smoke test the packaged Linux editor with software OpenGL
         if: runner.os == 'Linux'

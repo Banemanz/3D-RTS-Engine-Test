@@ -621,3 +621,13 @@ when a mesh is missing or invalid. The original playable
 uses a model exported to a real glTF file with embedded PNG, with source at
 `assets/source/beacon.gltf`. See [Asset pipeline](docs/ASSET_PIPELINE.md).
 This does not implement skeletal animation or full PBR.
+
+
+## November 17 — native static asset import
+
+F7 now imports raw glTF/GLB through an in-editor source picker using pinned
+cgltf and stb_image, without an external Python process. Native quaternion
+rotation, positive nonuniform scale, PNG/JPEG base color, validated publication
+and a matching CLI are implemented; the existing Model/Actor registration and
+F8 placement workflow remains. This is a single-node/primitive static subset,
+not animation or full PBR support. See [native import](docs/NATIVE_ASSET_IMPORT.md).

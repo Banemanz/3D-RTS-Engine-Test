@@ -3,6 +3,7 @@
 #include "RTSCommandStream.hpp"
 #include "RTSTechGraph.hpp"
 #include "RTSAssetAudit.hpp"
+#include "RTSGltfImport.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -13,6 +14,7 @@
 // users who prefer code/text edits over the live property inspector.
 static void usage() {
     std::cerr
+      << "RTSProjectTool --import-gltf source.glb project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --create path\n"
       << "RTSProjectTool --validate path\n"
       << "RTSProjectTool --asset-report path  # Verify all referenced mesh files\n"
@@ -31,6 +33,12 @@ int main(int argc,char** argv) {
     try {
         if(argc<3){usage();return 2;}
         const std::string action=argv[1],path=argv[2];
+        if(action=="--import-gltf"){
+            if(argc!=5){usage();return 2;}
+            rtsImportGltf(path,argv[3],argv[4]);
+            std::cout<<"Imported "<<argv[4]<<"; register it in F7 to add Model + Actor\n";
+            return 0;
+        }
         if(action=="--verify-replay"){
             if(argc!=3){usage();return 2;}
             const auto tape=RTSReplayTape::loadFile(path);

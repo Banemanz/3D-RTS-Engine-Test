@@ -167,6 +167,7 @@ def main() -> int:
         "RTS_FEATURE_UI_RESPONSIVE_LAYOUT",
         "RTS_FEATURE_UI_WRAPPED_LAYOUT",
         "RTS_FEATURE_STATIC_GLTF_ASSETS",
+        "RTS_FEATURE_NATIVE_GLTF_IMPORT",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

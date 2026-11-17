@@ -975,7 +975,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_UI_VARIABLE_BINDINGS=1\n"
                  <<"RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1\n"
                  <<"RTS_FEATURE_UI_WRAPPED_LAYOUT=1\n"
-                 <<"RTS_FEATURE_STATIC_GLTF_ASSETS=1\n";
+                 <<"RTS_FEATURE_STATIC_GLTF_ASSETS=1\n"
+                 <<"RTS_FEATURE_NATIVE_GLTF_IMPORT=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -1004,6 +1005,7 @@ int main(int argc, char** argv) {
     bool moduleWindowsSmoke=false;
     bool uiFramesSmoke=false;
     bool uiTriggerSmoke=false;
+    bool importDialogSmoke=false;
     std::string smokeUIFrameId;
     double smokeUiScale=0.;
     std::string smokeTriggerId;
@@ -1020,6 +1022,7 @@ int main(int argc, char** argv) {
         else if(arg == "--trigger-editor")startTriggerEditor=true;
         else if(arg == "--scene-editor")startSceneEditor=true;
         else if(arg == "--data-editor")startDataEditor=true;
+        else if(arg == "--smoke-import-dialog")importDialogSmoke=true;
         else if(arg == "--interface-editor")startInterfaceEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
@@ -1247,6 +1250,10 @@ int main(int argc, char** argv) {
                     std::clamp(read("zoom",42),app.camera.minZoomDistance,app.camera.maxZoomDistance);
                 app.camera.targetZoomDistance=app.camera.currentZoomDistance;
             }
+        }
+        if(importDialogSmoke && smokeFrames>0){
+            app.editor.panel=EditorSession::Panel::Data;
+            CreatorAssetLibrary::requestImportPopup=true;
         }
         // Verify F7's actual typed inspector for a named data object;
         // fail smoke runs on missing catalog objects instead of showing a

@@ -496,3 +496,13 @@ producer card states show disabled EMPTY slots rather than generic
 fallback Build/Ranger/Worker options; implicit legacy training
 lists follow the same gate. Typed references, rename/deletion,
 Undo/Redo, project tests and replay parity are covered.
+
+
+## November 17 — native static asset import
+
+F7 now imports raw glTF/GLB through an in-editor source picker using pinned
+cgltf and stb_image, without an external Python process. Native quaternion
+rotation, positive nonuniform scale, PNG/JPEG base color, validated publication
+and a matching CLI are implemented; the existing Model/Actor registration and
+F8 placement workflow remains. This is a single-node/primitive static subset,
+not animation or full PBR support. See [native import](NATIVE_ASSET_IMPORT.md).
