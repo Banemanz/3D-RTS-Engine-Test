@@ -22,7 +22,8 @@ uniform mat4 uProjection;
 out vec3 vNormal;
 out vec2 vUV;
 void main(){
-    vNormal=mat3(uModel)*aNormal;
+    // Correct nonuniform world/placement scaling (inverse transpose).
+    vNormal=transpose(inverse(mat3(uModel)))*aNormal;
     vUV=aUV;
     gl_Position=uProjection*uView*uModel*vec4(aPos,1.0);
 }

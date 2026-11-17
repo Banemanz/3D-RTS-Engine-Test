@@ -249,6 +249,18 @@ def compile_mesh(source):
             "Static v1 supports triangles only, no morph targets")
     attrs = primitive.get("attributes", {})
     require("POSITION" in attrs, "Triangle primitive needs POSITION")
+    unsupported = set(attrs) - {"POSITION", "NORMAL", "TEXCOORD_0"}
+    require(not unsupported,
+            "Bake/remove unsupported vertex attributes: " + ", ".join(sorted(unsupported)))
+    accessors = data.get("accessors", [])
+    require(accessors[attrs["POSITION"]].get("componentType") == 5126,
+            "POSITION must be glTF float32")
+    if "NORMAL" in attrs:
+        require(accessors[attrs["NORMAL"]].get("componentType") == 5126,
+                "NORMAL must be glTF float32")
+    if "indices" in primitive:
+        require(accessors[primitive["indices"]].get("componentType") in (5121, 5123, 5125),
+                "glTF triangle indices must be unsigned integers")
     positions = read_accessor(data, buffers, attrs["POSITION"], "VEC3")
     require(len(positions) <= MAX_VERTICES, "Too many mesh vertices")
     normals = (read_accessor(data, buffers, attrs["NORMAL"], "VEC3")
@@ -263,8 +275,11 @@ def compile_mesh(source):
     require(len(indices) <= MAX_INDICES and len(indices) % 3 == 0 and
             all(0 <= idx < len(positions) for idx in indices),
             "Triangle indices are malformed or out of range")
-    nodes = [n for n in data.get("nodes", []) if n.get("mesh") == 0]
-    require(len(nodes) <= 1, "Static v1 cannot instance a mesh in multiple nodes")
+    nodes = data.get("nodes", [])
+    require(len(nodes) <= 1,
+            "Static v1 requires a single root mesh node; bake node hierarchies")
+    require(not nodes or nodes[0].get("mesh") == 0,
+            "Static v1 cannot ignore a scene node that omits the mesh")
     node = nodes[0] if nodes else {}
     require(not node.get("skin") and not node.get("children"),
             "Static v1 cannot bake skin or child hierarchy")

@@ -113,3 +113,15 @@ returns a nonzero exit status when an asset is missing, unsupported or
 corrupt. `--validate` remains a gameplay/catalog validation command
 and intentionally does not require external asset files. CI verifies
 bundled sample dependencies with both Windows and Linux executables.
+
+## Importer regression and geometric constraints
+
+The Python self-test also constructs a valid GLB 2.0 binary container
+with a BIN chunk from the original glTF fixture and verifies that
+both glTF and GLB produce **identical compiled geometry and texture
+bytes**. The importer explicitly rejects node hierarchies, extra
+tangent/skin/secondary-UV attributes, floating-point index buffers,
+and malformed GLB lengths rather than discarding information or
+silently distorting a model. The OpenGL imported-mesh vertex shader
+uses an inverse-transpose normal matrix so nonuniform scaling of
+original doodads does not shear normal-based lighting.

@@ -2569,3 +2569,13 @@ headless asset_audit and asset_report_cli CTests cover the subsystem.
 `--validate` intentionally remains compatible with maps that omit
 external static resource files. Keep PR #1 draft/unmerged and update CI
 results when exact head is green.
+
+## November 17 — import correctness refinement
+
+Original glTF/GLB converter now refuses unbaked multi-node hierarchies,
+unsupported mesh attributes and float indices instead of making a
+false-success mesh. End-to-end Python CTest synthesizes a standards
+GLB with JSON+BIN from the original embedded-data glTF and demands
+bit-for-bit equality of compiled mesh and texture, plus corrupt GLB
+rejection. GL3.3 imported normals now use inverse-transpose model
+transform for nonuniformly scaled geometry. No new third-party deps.
