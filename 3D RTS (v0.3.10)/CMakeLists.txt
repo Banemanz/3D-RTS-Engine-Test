@@ -14,6 +14,7 @@ if(NOT RTS_SOURCE_COMMIT)
     set(RTS_SOURCE_COMMIT "unknown")
 endif()
 include(CTest)
+find_package(Python3 COMPONENTS Interpreter QUIET)
 
 add_library(RTSNavigation STATIC NavigationGrid.cpp)
 target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -67,6 +68,15 @@ if(BUILD_TESTING)
     add_executable(RTSUIEditorGeometryTests tests/ui_editor_geometry_tests.cpp)
     target_link_libraries(RTSUIEditorGeometryTests PRIVATE RTSSimulation)
     add_test(NAME ui_editor_geometry COMMAND RTSUIEditorGeometryTests)
+    add_executable(RTSStaticMeshTests tests/static_mesh_tests.cpp)
+    target_include_directories(RTSStaticMeshTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME static_mesh COMMAND RTSStaticMeshTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME gltf_import COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_asset_pipeline.py")
+    endif()
     add_executable(RTSUIResponsiveTests tests/ui_responsive_layout_tests.cpp)
     target_link_libraries(RTSUIResponsiveTests PRIVATE RTSSimulation)
     add_test(NAME ui_responsive COMMAND RTSUIResponsiveTests
@@ -299,7 +309,7 @@ if(BUILD_TESTING)
     add_test(NAME triggers COMMAND RTSTriggerTests)
 
     # Preserve assert() checks even when producing optimized Release bundles.
-    foreach(test_target IN ITEMS RTSAIPlannerTests RTSAIResearchTests RTSCreatorUISettingsTests RTSInterfaceEditorTests RTSUIFrameTests RTSUITriggerTests RTSUIVariableBindingTests RTSUIEditorGeometryTests RTSUIResponsiveTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
+    foreach(test_target IN ITEMS RTSAIPlannerTests RTSAIResearchTests RTSCreatorUISettingsTests RTSInterfaceEditorTests RTSUIFrameTests RTSUITriggerTests RTSUIVariableBindingTests RTSUIEditorGeometryTests RTSUIResponsiveTests RTSStaticMeshTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
         if(MSVC)
             target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
         else()
@@ -398,6 +408,8 @@ if(RTS_BUILD_DEMO)
 endif()
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../projects/"
         DESTINATION "projects" FILES_MATCHING PATTERN "*.rtsproject.json")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/"
+        DESTINATION "projects/assets" FILES_MATCHING PATTERN "*.rtsmesh")
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/START_HERE.txt"
     "${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
@@ -405,6 +417,7 @@ install(FILES
     DESTINATION ".")
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AUTHORING.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/ASSET_PIPELINE.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/ACTOR_EVENT_AUTHORING.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/REQUIREMENT_AUTHORING.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECHNOLOGY_RESEARCH.md"
