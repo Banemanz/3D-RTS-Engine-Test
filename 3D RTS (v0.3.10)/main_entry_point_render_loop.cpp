@@ -12,6 +12,7 @@
 #include "BitmapHUD.hpp"
 #include "RTSHUDLayout.hpp"
 #include "RTSHUD.hpp"
+#include "RTSStaticMeshGL.hpp"
 #include "NativePauseMenu.hpp"
 #include "NativePauseMenuGL.hpp"
 #include "CrashReporter.hpp"
@@ -971,7 +972,8 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_UI_TRIGGER_EVENTS=1\n"
                  <<"RTS_FEATURE_UI_VARIABLE_BINDINGS=1\n"
                  <<"RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1\n"
-                 <<"RTS_FEATURE_UI_WRAPPED_LAYOUT=1\n";
+                 <<"RTS_FEATURE_UI_WRAPPED_LAYOUT=1\n"
+                 <<"RTS_FEATURE_STATIC_GLTF_ASSETS=1\n";
         return 0;
     }
     RTSCrashReporter::install();
@@ -1339,6 +1341,7 @@ int main(int argc, char** argv) {
         GLuint ringShader    = compileShaderProgram(RING_VERTEX_SHADER, RING_FRAGMENT_SHADER);
         GLuint hudBoxShader  = compileShaderProgram(HUD_BOX_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
         GLuint lineShader    = compileShaderProgram(LINE_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
+        RTSStaticMeshRenderer importedMeshes;
 
         // Streaming 1-channel vision texture, one texel per terrain cell.
         // Uploads are revision-gated; this does not rebuild the terrain VBO.
@@ -1689,8 +1692,12 @@ int main(int argc, char** argv) {
                 glUniform1f(glGetUniformLocation(unitShader, "uSelected"), unit.isSelected ? 1.0f : 0.0f);
                 glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),unit.actorOpacity);
 
-                glBindVertexArray(unitVAO);
-                glDrawArrays(GL_TRIANGLES, 0, 33);
+                if(!importedMeshes.draw(unit.actorMesh,app.projectPath,
+                                        unitModel,view,proj,
+                                        unit.data.faction_color,unit.actorOpacity)){
+                    glBindVertexArray(unitVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 33);
+                }
 
                 if (unit.attackFlashTimer > 0.0f) {
                     Vec3 muzzle = unit.position + Vec3(0.0f, unit.height * 0.65f, 0.0f);
@@ -1758,8 +1765,11 @@ int main(int argc, char** argv) {
                             visual.tint.x,visual.tint.y,visual.tint.z);
                 glUniform1f(glGetUniformLocation(unitShader, "uSelected"),0.0f);
                 glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),visual.opacity);
-                glBindVertexArray(unitVAO);
-                glDrawArrays(GL_TRIANGLES,0,33);
+                if(!importedMeshes.draw(visual.mesh,app.projectPath,transform,
+                                        view,proj,visual.tint,visual.opacity)){
+                    glBindVertexArray(unitVAO);
+                    glDrawArrays(GL_TRIANGLES,0,33);
+                }
             }
 
             // Data-authored projectile models use the native procedural mesh
@@ -2156,6 +2166,7 @@ int main(int argc, char** argv) {
             glfwPollEvents();
         }
 
+        importedMeshes.clear();
         glDeleteTextures(1,&fogTexture);
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();

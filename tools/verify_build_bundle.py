@@ -49,6 +49,9 @@ def main() -> int:
         "projects/ui_variable_dashboard_showcase.rtsproject.json",
         "projects/ui_responsive_layout_showcase.rtsproject.json",
         "projects/ui_wrapped_layout_showcase.rtsproject.json",
+        "projects/asset_import_showcase.rtsproject.json",
+        "projects/assets/beacon.rtsmesh",
+        "docs/ASSET_PIPELINE.md",
         "docs/AUTHORING.md",
         "docs/ACTOR_EVENT_AUTHORING.md",
         "docs/REQUIREMENT_AUTHORING.md",
@@ -163,6 +166,7 @@ def main() -> int:
         "RTS_FEATURE_UI_VARIABLE_BINDINGS",
         "RTS_FEATURE_UI_RESPONSIVE_LAYOUT",
         "RTS_FEATURE_UI_WRAPPED_LAYOUT",
+        "RTS_FEATURE_STATIC_GLTF_ASSETS",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]
     if missing:

@@ -2510,3 +2510,29 @@ undo/redo and 120-tick state isolation. Both OS Release bundles validate
 the sample and `RTS_FEATURE_UI_WRAPPED_LAYOUT=1` marker. Verify
 Windows/Linux Release, Debug, replay and native screenshots at exact HEAD.
 Do not merge or create a parallel PR.
+
+
+## November 16 — glTF static assets, exact next engineering stage
+
+Same OPEN, UNMERGED Draft PR #1 on `feat/rts-vertical-slice`.
+New `tools/import_gltf.py` compiles a strict, bounded static glTF/GLB
+subset to RTSMESH1 (positions, normals, UV0, one triangle primitive,
+optional RGB/RGBA8 PNG, baseColorFactor). It rejects unsupported skins,
+animations, morph targets, additional primitives, Draco, unsafe URI,
+invalid PNG and out-of-bounds bufferViews, rather than silently dropping
+them. `RTSStaticMesh.hpp` is a GPU-independent, exact-length, finite-float
+CPU loader with project-local asset path verification and corruption CTest.
+`RTSStaticMeshGL.hpp` adds GL3.3 cached VAO/VBO/index/texture presentation
+for both authored Unit.actorMesh and F8 Doodad ActorVisual.mesh, falling
+back to procedural geometry if invalid/missing. GL resources are released
+before context teardown. Engine simulation/replay semantics unchanged.
+Original portable example `projects/asset_import_showcase.rtsproject.json`
+links Model->Actor->three Doodads and packaged 2x2 PNG-textured mesh
+`projects/assets/beacon.rtsmesh`, reproducible from
+`assets/source/beacon.gltf`; CTest validates bit-identical regeneration.
+New feature flag `RTS_FEATURE_STATIC_GLTF_ASSETS=1`, Windows/Linux
+Release bundles include the compiled asset, real Linux F9 OpenGL
+screenshot CI added. Check exact HEAD Release and Debug CTests, replay
+parity, package and screenshots, then iterate. Roadmap in
+`docs/ASSET_PIPELINE.md`; static subset is NOT yet full glTF/animation/
+materials/asset-browser capability. Keep single draft PR; do not merge.

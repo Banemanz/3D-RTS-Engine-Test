@@ -1,6 +1,9 @@
 #include "GLCore.hpp"
 #include <iostream>
 
+PFNGLDELETEBUFFERSPROC glDeleteBuffers = nullptr;
+PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = nullptr;
+PFNGLDELETEPROGRAMPROC glDeleteProgram = nullptr;
 PFNGLGENBUFFERSPROC glGenBuffers = nullptr;
 PFNGLBINDBUFFERPROC glBindBuffer = nullptr;
 PFNGLBUFFERDATAPROC glBufferData = nullptr;
@@ -29,6 +32,9 @@ PFNGLUNIFORM1FPROC glUniform1f = nullptr;
 PFNGLUNIFORM1IPROC glUniform1i = nullptr;
 
 bool loadOpenGLFunctions() {
+    glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)glfwGetProcAddress("glDeleteBuffers");
+    glDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)glfwGetProcAddress("glDeleteVertexArrays");
+    glDeleteProgram = (PFNGLDELETEPROGRAMPROC)glfwGetProcAddress("glDeleteProgram");
     glGenBuffers = (PFNGLGENBUFFERSPROC)glfwGetProcAddress("glGenBuffers");
     glBindBuffer = (PFNGLBINDBUFFERPROC)glfwGetProcAddress("glBindBuffer");
     glBufferData = (PFNGLBUFFERDATAPROC)glfwGetProcAddress("glBufferData");
@@ -58,6 +64,9 @@ bool loadOpenGLFunctions() {
 
     bool ok = true;
 #define REQUIRE_GL(fn) if (!(fn)) { std::cerr << "Missing OpenGL function: " #fn << '\n'; ok = false; }
+    REQUIRE_GL(glDeleteBuffers)
+    REQUIRE_GL(glDeleteVertexArrays)
+    REQUIRE_GL(glDeleteProgram)
     REQUIRE_GL(glGenBuffers)
     REQUIRE_GL(glBindBuffer)
     REQUIRE_GL(glBufferData)

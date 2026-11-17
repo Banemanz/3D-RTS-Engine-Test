@@ -43,6 +43,9 @@ typedef ptrdiff_t GLintptr;
 #define GL_SRC_ALPHA                      0x0302
 #define GL_ONE_MINUS_SRC_ALPHA            0x0303
 
+typedef void (APIENTRY *PFNGLDELETEBUFFERSPROC)(GLsizei n,const GLuint *buffers);
+typedef void (APIENTRY *PFNGLDELETEVERTEXARRAYSPROC)(GLsizei n,const GLuint *arrays);
+typedef void (APIENTRY *PFNGLDELETEPROGRAMPROC)(GLuint program);
 typedef void (APIENTRY *PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
 typedef void (APIENTRY *PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
 typedef void (APIENTRY *PFNGLBUFFERDATAPROC)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
@@ -70,6 +73,9 @@ typedef void (APIENTRY *PFNGLUNIFORM3FPROC)(GLint location, GLfloat v0, GLfloat 
 typedef void (APIENTRY *PFNGLUNIFORM1FPROC)(GLint location, GLfloat v0);
 typedef void (APIENTRY *PFNGLUNIFORM1IPROC)(GLint location, GLint v0);
 
+extern PFNGLDELETEBUFFERSPROC glDeleteBuffers;
+extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+extern PFNGLDELETEPROGRAMPROC glDeleteProgram;
 extern PFNGLGENBUFFERSPROC glGenBuffers;
 extern PFNGLBINDBUFFERPROC glBindBuffer;
 extern PFNGLBUFFERDATAPROC glBufferData;

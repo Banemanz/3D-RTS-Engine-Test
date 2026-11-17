@@ -605,3 +605,19 @@ bounding and multi-resolution consistency.
 ## Responsive F10 UI layout (November 16)
 
 Custom UI Panels can now arrange their own children automatically in **StackColumn** or **StackRow** flows with configurable padding/gap, invisible-child collapse, and optional cross-axis stretch. Free/anchor placement stays byte-for-byte compatible with existing maps. The F10 high-DPI inspector exposes flow controls, child nudge normalization, actual resolved rectangles and clipping warnings. Both live gameplay drawing and real button hit-testing use the same bounded layout math; a hidden F6-variable Label causes later items to reflow. [Responsive layout manual](docs/UI_RESPONSIVE_LAYOUT.md) and the original [responsive sample](projects/ui_responsive_layout_showcase.rtsproject.json) explain usage. Regression tests cover four resolutions, genuine replay-safe UI trigger events, simulation/replay invariance, Windows/Linux parity and F10/F9 OpenGL screenshots.
+
+
+## Original imported static 3D models (November 16)
+
+The first end-to-end **glTF 2.0 / GLB → compiled mesh → native F9 OpenGL**
+pipeline is available. `tools/import_gltf.py` validates a bounded static
+triangle/PNG subset and generates portable `.rtsmesh` files. F7 Model
+catalog `mesh: "assets/my_model.rtsmesh"` paths are project-relative
+(`projects/assets/` for shipped maps) and linked through existing Actors.
+The native engine caches real VAO/IBO/albedo textures, draws imported Unit
+and placed Doodad models, and falls back to existing procedural geometry
+when a mesh is missing or invalid. The original playable
+[Imported Beacons](projects/asset_import_showcase.rtsproject.json) example
+uses a model exported to a real glTF file with embedded PNG, with source at
+`assets/source/beacon.gltf`. See [Asset pipeline](docs/ASSET_PIPELINE.md).
+This does not implement skeletal animation or full PBR.
