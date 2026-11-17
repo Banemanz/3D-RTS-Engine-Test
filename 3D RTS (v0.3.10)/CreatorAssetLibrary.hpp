@@ -123,7 +123,7 @@ bool draw(App& app){
     const float avail=ImGui::GetContentRegionAvail().y;
     ImGui::BeginChild("##compiledMeshLibrary",
         ImVec2(0,std::min(215.f*ImGui::GetFontSize()/16.5f,
-                          std::max(60.f,avail*.35f))),true);
+                          std::max(120.f*ImGui::GetFontSize()/16.5f,avail*.35f))),true);
     for(std::size_t i=0;i<browser.records.size();++i){
         const auto& asset=browser.records[i];
         ImGui::PushID(static_cast<int>(i));

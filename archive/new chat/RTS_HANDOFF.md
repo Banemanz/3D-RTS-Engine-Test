@@ -2607,3 +2607,23 @@ Next prioritization: multi-material runtime format and source manifest/reimport,
 then static node graphs and PBR/sRGB, skeletons/clips and actor animation events.
 Hardlink publication requires supporting filesystem; a killed process can leave
 a reserved .importing folder (see manual). Keep draft, do not merge.
+
+
+### Native importer verification and screenshot follow-up
+
+Functional commit 7f4446f58cc5722bef5af3a108c587b5ace212cc passed both
+Windows/Linux Release package jobs (run 44170037708), including 99/99 CTests
+and installed native import byte comparison. Local full Linux Release GUI
+compiled, 99/99 CTests passed, and the actual importer passed AddressSanitizer
+plus UBSan fixture tests (LeakSanitizer disabled because host ptrace prevents
+its operation). Local display initialization was unavailable; use real Linux
+Mesa/Xvfb CI captures instead. Exact-head screenshot artifacts from
+44170037823 were downloaded and visually reviewed: import modal, F7 library,
+and F9 textured beacon rendering all present, no generated mockups.
+
+Screenshot QA found the F7 asset-list child clipped the Register Model + Actor
+button at 1280x720 after adding import controls. Follow-up reserves a minimum
+120 logical pixels scaled with editor font size, so at least one full asset
+record fits. Recheck final-head CI/screens; this does not change import/runtime
+semantics. Parser now has a 128 MiB cumulative allocation budget, and tests
+cover a fully embedded GLB image bufferView as well as PNG/JPEG data URIs.
