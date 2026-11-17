@@ -2555,3 +2555,17 @@ C++ asset_library CTest plus actual Linux F7/F8 OpenGL captures.
 This is NOT yet an integrated raw GLB importer or general asset manager.
 Check exact head CI and carry forward next stage: native glTF importer,
 typed multi-mesh/material support, preview controls and content hashes.
+
+## November 17 — asset packaging audit
+
+`RTSAssetAudit.hpp` now audits every nonprocedural Model.mesh reference
+in a project against the exact same CPU mesh reader used by renderer,
+with per-model results, duplicate-file caching, secure project-relative
+resolution, vertex/triangle counts and explicit errors. New CLI
+`RTSProjectTool --asset-report <map>` returns failure if any model is
+missing, invalid or unsafe, without changing map data. Linux/Windows
+Release workflows run that audit against packaged asset showcase;
+headless asset_audit and asset_report_cli CTests cover the subsystem.
+`--validate` intentionally remains compatible with maps that omit
+external static resource files. Keep PR #1 draft/unmerged and update CI
+results when exact head is green.

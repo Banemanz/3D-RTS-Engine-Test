@@ -100,3 +100,16 @@ convert via tools/import_gltf.py into assets/*.rtsmesh, then register it
 in the editor. Linux and Windows game/editor binaries need no Python runtime
 once compiled. The existing strict single-primitive static glTF subset
 limitations still apply. Test: asset_library CTest.
+
+## Standalone packaging audit
+
+Use `RTSProjectTool --asset-report projects/my_map.rtsproject.json`
+from the repository root or the portable installed bundle to verify that
+every Model with a nonprocedural mesh reference resolves to a valid
+project-local RTSMESH1 file. The audit checks exact mesh binary sizes,
+indices, vertices, references and path safety. It reports per-Model
+errors, counts unique source files to prevent repeated validation, and
+returns a nonzero exit status when an asset is missing, unsupported or
+corrupt. `--validate` remains a gameplay/catalog validation command
+and intentionally does not require external asset files. CI verifies
+bundled sample dependencies with both Windows and Linux executables.

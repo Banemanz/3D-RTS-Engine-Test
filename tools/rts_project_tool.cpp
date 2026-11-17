@@ -2,6 +2,7 @@
 #include "TriggerEngine.hpp"
 #include "RTSCommandStream.hpp"
 #include "RTSTechGraph.hpp"
+#include "RTSAssetAudit.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -14,6 +15,7 @@ static void usage() {
     std::cerr
       << "RTSProjectTool --create path\n"
       << "RTSProjectTool --validate path\n"
+      << "RTSProjectTool --asset-report path  # Verify all referenced mesh files\n"
       << "RTSProjectTool --list path [catalog-type]\n"
       << "RTSProjectTool --get path object-id field\n"
       << "RTSProjectTool --set path object-id field json-value\n"
@@ -54,6 +56,21 @@ int main(int argc,char** argv) {
                 throw std::runtime_error("Tech graph exceeds 512 nodes or 2048 links");
             std::cout<<rtsTechGraphDot(graph);
             return 0;
+        }
+        if(action=="--asset-report"){
+            if(argc!=3){usage();return 2;}
+            project.validate();
+            const auto audit=rtsAuditProjectAssets(project,path);
+            for(const auto& row:audit.rows)
+                std::cout<<(row.valid()?"OK ":"ERROR ")
+                         <<row.modelId<<" -> "<<row.reference
+                         <<(row.valid()?" ("+std::to_string(row.triangles)+
+                            " triangles)":": "+row.error)<<"\n";
+            std::cout<<"Asset report: "<<audit.models<<" Model objects, "
+                     <<audit.importedModels<<" external references, "
+                     <<audit.uniqueFiles<<" unique compiled mesh files, "
+                     <<audit.uniqueTriangles<<" unique triangles\n";
+            return audit.valid()?0:1;
         }
         if(action=="--validate") {
             if(argc!=3){usage();return 2;}

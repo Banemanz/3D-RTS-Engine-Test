@@ -68,6 +68,10 @@ if(BUILD_TESTING)
     add_executable(RTSUIEditorGeometryTests tests/ui_editor_geometry_tests.cpp)
     target_link_libraries(RTSUIEditorGeometryTests PRIVATE RTSSimulation)
     add_test(NAME ui_editor_geometry COMMAND RTSUIEditorGeometryTests)
+    add_executable(RTSAssetAuditTests tests/asset_audit_tests.cpp)
+    target_link_libraries(RTSAssetAuditTests PRIVATE RTSAuthoring)
+    add_test(NAME asset_audit COMMAND RTSAssetAuditTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json")
     add_executable(RTSAssetLibraryTests tests/asset_library_tests.cpp)
     target_link_libraries(RTSAssetLibraryTests PRIVATE RTSAuthoring)
     add_test(NAME asset_library COMMAND RTSAssetLibraryTests
@@ -325,6 +329,10 @@ endif()
 
 add_executable(RTSProjectTool "../tools/rts_project_tool.cpp")
 target_link_libraries(RTSProjectTool PRIVATE RTSSimulation)
+if(BUILD_TESTING)
+    add_test(NAME asset_report_cli COMMAND RTSProjectTool --asset-report
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json")
+endif()
 if(BUILD_TESTING)
     add_test(NAME tech_graph_cli COMMAND RTSProjectTool --tech-graph
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/technology_forge_showcase.rtsproject.json")
