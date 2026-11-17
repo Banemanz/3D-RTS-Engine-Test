@@ -47,6 +47,8 @@ struct AppState {
     std::string notice;
     float noticeSeconds=0;
     std::string projectPath="projects/working.rtsproject.json";
+    std::uint64_t assetRevision=0; // F7 refresh signal, not per-frame I/O
+
     std::filesystem::path uiSettingsPath=CreatorUISettings::userConfigPath();
     CreatorUISettings uiSettings=CreatorUISettings::load(uiSettingsPath);
     bool uiSettingsDirty=false;
@@ -1342,6 +1344,7 @@ int main(int argc, char** argv) {
         GLuint hudBoxShader  = compileShaderProgram(HUD_BOX_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
         GLuint lineShader    = compileShaderProgram(LINE_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
         RTSStaticMeshRenderer importedMeshes;
+        std::uint64_t uploadedAssetRevision=0;
 
         // Streaming 1-channel vision texture, one texel per terrain cell.
         // Uploads are revision-gated; this does not rebuild the terrain VBO.
@@ -1616,6 +1619,10 @@ int main(int argc, char** argv) {
                                     GL_UNSIGNED_BYTE,texels.data());
                 }
                 uploadedFogRevision=vision.revision();
+            }
+            if(uploadedAssetRevision!=app.assetRevision){
+                importedMeshes.clear();
+                uploadedAssetRevision=app.assetRevision;
             }
             glClearColor(0.08f, 0.11f, 0.15f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

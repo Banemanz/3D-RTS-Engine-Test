@@ -82,3 +82,21 @@ sound events should be presentation-only and independent of replays.
 Do not copy GPL implementation code or proprietary game assets. A
 data-driven RTS creation tool must preserve both Linux/Windows parity and
 authored-content ownership boundaries.
+
+## Editor asset library and scene placement — November 17
+
+F7 now discovers and validates bounded project-local compiled mesh assets
+from the map's assets/ directory on initial open or manual Scan / refresh.
+A creator can inspect mesh count, triangle count and imported texture size,
+then Register Model + Actor to add the linked typed catalog entries in one
+validated/undoable transaction. Re-registering an existing reference is
+idempotent. The F8 Scene editor provides an imported Actor palette with
+Place at camera focus and Use terrain doodad brush buttons. Scanning
+increments an asset revision, explicitly invalidating the cached OpenGL
+mesh/texture resources once so modified compiled models can reload.
+
+This workflow does NOT yet import raw .glb from a file picker: creators
+convert via tools/import_gltf.py into assets/*.rtsmesh, then register it
+in the editor. Linux and Windows game/editor binaries need no Python runtime
+once compiled. The existing strict single-primitive static glTF subset
+limitations still apply. Test: asset_library CTest.

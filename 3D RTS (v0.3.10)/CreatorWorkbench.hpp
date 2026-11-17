@@ -8,6 +8,7 @@
 #include "CreatorCatalogNavigator.hpp"
 #include "CreatorTechGraph.hpp"
 #include "CreatorAIResearch.hpp"
+#include "CreatorAssetLibrary.hpp"
 #include "CreatorUISettings.hpp"
 #include "CreatorInterfaceEditor.hpp"
 #include "RTSCatalogValuePreview.hpp"
@@ -400,6 +401,11 @@ void inspector(App& app){
         ImGui::Separator();
         ImGui::TextWrapped("Scene placements, actors, data and triggers are editable in their own workspace tabs.");
     }else if(ed.panel==EditorSession::Panel::Data){
+        if(CreatorAssetLibrary::draw(app)){
+            refresh(app,true);
+            endPane();
+            return;
+        }
         const CatalogEntry* entry=ed.selected(project);
         if(entry){
             ImGui::Text("Type: %s",entry->type.c_str());
@@ -1364,6 +1370,53 @@ void inspector(App& app){
             }
         }
     }else if(ed.panel==EditorSession::Panel::Scene){
+        ImGui::SeparatorText("Imported 3D model palette");
+        static std::string paletteActor;
+        if(paletteActor.empty())paletteActor=ed.placementDoodad;
+        const auto isImported=[&](const std::string& id){
+            const auto* actor=project.catalog.find(id);
+            if(!actor || actor->type!="Actor")return false;
+            return rtsSafeMeshReference(
+                actorFromCatalog(project.catalog,id).mesh);
+        };
+        if(!isImported(paletteActor)){
+            paletteActor.clear();
+            for(const auto& candidate:project.catalog.entries())
+                if(candidate.type=="Actor" && isImported(candidate.id)){
+                    paletteActor=candidate.id;
+                    break;
+                }
+        }
+        if(ImGui::BeginCombo("Model actor",paletteActor.empty()?
+                             "No imported actors":paletteActor.c_str())){
+            for(const auto& candidate:project.catalog.entries())
+                if(candidate.type=="Actor" && isImported(candidate.id))
+                    if(ImGui::Selectable(candidate.id.c_str(),
+                                          paletteActor==candidate.id))
+                        paletteActor=candidate.id;
+            ImGui::EndCombo();
+        }
+        if(!paletteActor.empty()){
+            if(ImGui::Button("Place at camera focus")){
+                if(ed.placeSceneDoodad(project,paletteActor,
+                                      app.camera.focalPoint)){
+                    refresh(app,true);
+                    endPane();
+                    return;
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Use terrain doodad brush")){
+                ed.placementDoodad=paletteActor;
+                ed.tool=EditorSession::Tool::PlaceDoodad;
+                ed.panel=EditorSession::Panel::Terrain;
+                endPane();
+                return;
+            }
+        }else{
+            ImGui::TextDisabled(
+                "Register a compiled model in F7 to enable imported doodads.");
+        }
         const auto* item=ed.selectedPlacement(project);
         if(item){
             // Command mutations may grow/replace project. Never use a

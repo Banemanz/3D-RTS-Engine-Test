@@ -377,6 +377,26 @@ jobs:
           name: rts-ui-wrapped-f9-screenshot
           path: rts-ui-wrapped-f9.png
           if-no-files-found: error
+      - name: Capture real F7 imported-asset library editor panel
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-assets-f7.ppm
+      - name: Convert F7 asset library capture
+        run: python3 tools/ppm_to_png.py rts-assets-f7.ppm rts-assets-f7.png
+      - name: Upload F7 imported-asset library capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-asset-library-f7-screenshot
+          path: rts-assets-f7.png
+          if-no-files-found: error
+      - name: Capture real F8 imported model scene palette
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --scene-editor --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-assets-f8.ppm
+      - name: Convert F8 scene palette capture
+        run: python3 tools/ppm_to_png.py rts-assets-f8.ppm rts-assets-f8.png
+      - name: Upload F8 scene palette capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-asset-scene-f8-screenshot
+          path: rts-assets-f8.png
+          if-no-files-found: error
       - name: Capture real textured glTF asset in game and scene
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/asset_import_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-asset-f9.ppm
       - name: Convert genuine imported mesh OpenGL screenshot

@@ -2536,3 +2536,22 @@ screenshot CI added. Check exact HEAD Release and Debug CTests, replay
 parity, package and screenshots, then iterate. Roadmap in
 `docs/ASSET_PIPELINE.md`; static subset is NOT yet full glTF/animation/
 materials/asset-browser capability. Keep single draft PR; do not merge.
+
+## November 17 — F7/F8 asset library, one-step typed registration
+
+Continues on original draft PR #1, branch feat/rts-vertical-slice.
+New CPU-only RTSAssetLibrary.hpp has bounded project-local file scans,
+full compiled mesh validation, stable sort and safe paths. A new
+EditorSession::importStaticMesh transaction registers validated meshes as
+linked Model + Actor catalog entries (collision-free IDs; idempotence
+for previously registered files), without corrupting project state if
+invalid; one undo removes both. EditorSession::placeSceneDoodad adds a
+stable-ID doodad from the Scene editor with full validation and undo.
+The F7 CreatorAssetLibrary.hpp presentation adapter allows Scan/refresh,
+diagnostics and one-click registration. F8 palette places an imported
+Actor at camera focus or sets Terrain doodad brush. Revision-gated GPU
+cache invalidation avoids checking files per frame. CI includes original
+C++ asset_library CTest plus actual Linux F7/F8 OpenGL captures.
+This is NOT yet an integrated raw GLB importer or general asset manager.
+Check exact head CI and carry forward next stage: native glTF importer,
+typed multi-mesh/material support, preview controls and content hashes.
