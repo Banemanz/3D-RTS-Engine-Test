@@ -50,6 +50,7 @@ and image contract; native import is now the preferred creator workflow.
 
 ## Validation and publication
 
+Parser allocations are capped at 128 MiB cumulatively.
 Input/resource files are limited to 64 MiB, aggregate declared buffers to
 64 MiB, 32 buffers, 256 views/accessors, 250,000 vertices, 750,000 indices and
 2048×2048 decoded images. Validate buffer and accessor arithmetic before

@@ -49,6 +49,20 @@ with tempfile.TemporaryDirectory() as tmp:
     glb_path = folder/'source.glb'
     glb_path.write_bytes(payload)
     assert run(glb_path, project, 'assets/binary.rtsmesh').read_bytes() == result
+    # A self-contained GLB stores its image in a bufferView, not a data URI.
+    embedded = copy.deepcopy(glb)
+    png = base64.b64decode(embedded['images'][0].pop('uri').split(',')[1])
+    embedded['images'][0].update(mimeType='image/png', bufferView=len(embedded['bufferViews']))
+    embedded['bufferViews'].append({'buffer':0,'byteOffset':len(binary),'byteLength':len(png)})
+    packed = binary + png
+    embedded['buffers'][0]['byteLength'] = len(packed)
+    packed += b'\0' * (-len(packed)%4)
+    js = json.dumps(embedded).encode()
+    js += b' ' * (-len(js)%4)
+    glb_path.write_bytes(b'glTF' + struct.pack('<II',2,28+len(js)+len(packed)) +
+                        struct.pack('<I4s',len(js),b'JSON')+js +
+                        struct.pack('<I4s',len(packed),b'BIN\0')+packed)
+    assert run(glb_path,project,'assets/embedded_image.rtsmesh').read_bytes() == result
     glb_path.write_bytes(payload[:-3])
     run(glb_path, project, 'assets/corrupt.rtsmesh', False)
 

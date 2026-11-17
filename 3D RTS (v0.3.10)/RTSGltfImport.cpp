@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cctype>
+#include <cstdlib>
 #include <memory>
 #include <set>
 
@@ -101,7 +102,17 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     std::transform(ext.begin(),ext.end(),ext.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
     need(ext==".gltf" || ext==".glb","Choose a .gltf or .glb model");
     const auto raw=readFile(source);
+    // Bound parser allocations as well as input bytes. Monotonic accounting
+    // also limits allocation churn on malformed documents.
+    std::size_t allocated=0;
     cgltf_options options{};
+    options.memory.user_data=&allocated;
+    options.memory.alloc_func=[](void* user,cgltf_size size)->void*{
+        auto& used=*static_cast<std::size_t*>(user);
+        if(size>2*maxBytes-used)return nullptr;
+        used+=size;return std::malloc(size);
+    };
+    options.memory.free_func=[](void*,void* ptr){std::free(ptr);};
     cgltf_data* parsed=nullptr;
     need(cgltf_parse(&options,raw.data(),raw.size(),&parsed)==cgltf_result_success,"Invalid glTF 2.0 / GLB document");
     std::unique_ptr<cgltf_data,decltype(&cgltf_free)> owner(parsed,cgltf_free);
@@ -118,7 +129,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     need(!d.cameras_count && !d.lights_count,"Export mesh selection without cameras or lights");
     need(d.buffers_count>0 && d.buffers_count<=32 && d.buffer_views_count<=256 && d.accessors_count<=256,
          "Too many buffers, views or accessors");
-    // Keep owned buffers alive until after cgltf_free, and never let cgltf open URI paths.
+    // cgltf borrows these bytes without freeing them; never let it open URI paths.
     std::vector<std::vector<unsigned char>> buffers(d.buffers_count);
     std::size_t total=0;
     for(std::size_t i=0;i<d.buffers_count;++i){
