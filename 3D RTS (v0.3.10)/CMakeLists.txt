@@ -68,6 +68,11 @@ if(BUILD_TESTING)
     add_executable(RTSUIEditorGeometryTests tests/ui_editor_geometry_tests.cpp)
     target_link_libraries(RTSUIEditorGeometryTests PRIVATE RTSSimulation)
     add_test(NAME ui_editor_geometry COMMAND RTSUIEditorGeometryTests)
+    add_executable(RTSAssetLibraryTests tests/asset_library_tests.cpp)
+    target_link_libraries(RTSAssetLibraryTests PRIVATE RTSAuthoring)
+    add_test(NAME asset_library COMMAND RTSAssetLibraryTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
     add_executable(RTSStaticMeshTests tests/static_mesh_tests.cpp)
     target_include_directories(RTSStaticMeshTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_test(NAME static_mesh COMMAND RTSStaticMeshTests

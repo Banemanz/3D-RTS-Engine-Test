@@ -107,6 +107,13 @@ public:
     // All presets use the same transactional catalog/undo API as F7 editing.
     bool createCatalogObject(RTSProject& project,const std::string& type,
                              const std::string& preset);
+    // One validated, reversible Model + Actor registration for a compiled mesh.
+    bool importStaticMesh(RTSProject& project,
+                          const std::string& projectFile,
+                          const std::string& reference);
+    // Place a typed Actor-based doodad from F8 as an undoable scene command.
+    bool placeSceneDoodad(RTSProject& project,const std::string& actorId,
+                          const Vec3& world);
     bool convertEffectKind(RTSProject& project,const std::string& kind);
     // Ground targeting and the grouped AoE inspector use full transactional
     // mutations, keeping the map valid through Self<->Ground conversion.

@@ -1,5 +1,6 @@
 #include "EditorSession.hpp"
 #include "TriggerDefinition.hpp"
+#include "RTSStaticMesh.hpp"
 #include "TriggerTree.hpp"
 #include "RTSScriptExpression.hpp"
 #include <algorithm>
@@ -479,6 +480,132 @@ bool EditorSession::removeLocalOverride(RTSProject& project) {
     catch(...){mutableEntry->fields[key]=old;return false;}
     remember(before);
     modified=true;message="OVERRIDE REMOVED";return true;
+}
+
+bool EditorSession::importStaticMesh(
+    RTSProject& project,const std::string& projectFile,
+    const std::string& reference){
+    if(textEditing)return false;
+    try{
+        const auto source=rtsResolveMeshReference(projectFile,reference);
+        const auto mesh=rtsReadStaticMesh(source);
+        if(mesh.indices.empty())throw std::invalid_argument("Empty mesh");
+        for(const auto& entry:project.catalog.entries()){
+            if(entry.type!="Model")continue;
+            const auto f=project.catalog.resolvedFields(entry.id);
+            const auto it=f.find("mesh");
+            if(it==f.end() || !it->second.is<std::string>() ||
+               it->second.get<std::string>()!=reference)continue;
+            for(const auto& a:project.catalog.entries()){
+                if(a.type!="Actor")continue;
+                const auto af=project.catalog.resolvedFields(a.id);
+                const auto m=af.find("model");
+                if(m!=af.end() && m->second.is<std::string>() &&
+                   m->second.get<std::string>()==entry.id){
+                    selectCatalogId(project,a.id);
+                    message="ASSET ALREADY REGISTERED: "+reference;
+                    return false;
+                }
+            }
+            throw std::invalid_argument(
+                "Existing Model uses this mesh; create/link its Actor in F7");
+        }
+        std::string normalized;
+        for(unsigned char c:source.stem().string()){
+            if(normalized.size()>=40)break;
+            if((c>='a'&&c<='z') || (c>='0'&&c<='9'))
+                normalized.push_back(char(c));
+            else if(c>='A'&&c<='Z')normalized.push_back(char(c-'A'+'a'));
+            else if(normalized.empty() || normalized.back()!='_')
+                normalized.push_back('_');
+        }
+        if(normalized.empty())normalized="mesh";
+        const std::string prefix="import_"+normalized;
+        std::string modelId,actorId;
+        for(int n=1;n<=10000;++n){
+            const auto suffix=n==1?std::string{}:"_"+std::to_string(n);
+            modelId=prefix+"_model"+suffix;
+            actorId=prefix+"_actor"+suffix;
+            if(!project.catalog.find(modelId) && !project.catalog.find(actorId))
+                break;
+            if(n==10000)throw std::invalid_argument("Cannot allocate asset IDs");
+        }
+        RTSProject candidate=project;
+        CatalogEntry model;
+        model.id=modelId;model.type="Model";
+        model.fields={
+            {"mesh",picojson::value(reference)},
+            {"scale",picojson::value(picojson::array{
+                picojson::value(1.0),picojson::value(1.0),
+                picojson::value(1.0)})}
+        };
+        if(!candidate.catalog.add(std::move(model)))
+            throw std::invalid_argument("Catalog Model limit");
+        CatalogEntry actor;
+        actor.id=actorId;actor.type="Actor";
+        actor.fields={
+            {"model",picojson::value(modelId)},
+            {"tint",picojson::value(picojson::array{
+                picojson::value(1.0),picojson::value(1.0),
+                picojson::value(1.0)})},
+            {"opacity",picojson::value(1.0)}
+        };
+        if(!candidate.catalog.add(std::move(actor)))
+            throw std::invalid_argument("Catalog Actor limit");
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        remember(project);
+        project=std::move(candidate);
+        modified=true;
+        placementDoodad=actorId;
+        selectCatalogId(project,actorId);
+        message="MODEL + ACTOR REGISTERED: "+reference;
+        return true;
+    }catch(const std::exception& ex){
+        message=std::string("ASSET REGISTRATION REJECTED: ")+ex.what();
+        return false;
+    }
+}
+bool EditorSession::placeSceneDoodad(
+    RTSProject& project,const std::string& actorId,const Vec3& world){
+    if(textEditing || panel!=Panel::Scene ||
+       !std::isfinite(world.x) || !std::isfinite(world.z) ||
+       !project.terrain.insideWorld(world.x,world.z))return false;
+    const auto* actor=project.catalog.find(actorId);
+    if(!actor || actor->type!="Actor")return false;
+    try{
+        RTSProject candidate=project;
+        std::string id="doodad_"+actorId;
+        const auto exists=[&](const std::string& name){
+            return std::any_of(candidate.placements.begin(),
+                               candidate.placements.end(),
+                [&](const ProjectPlacement& p){return p.id==name;});
+        };
+        if(exists(id)){
+            const std::string base=id;
+            for(int n=2;n<=10000;++n){
+                id=base+"_"+std::to_string(n);
+                if(!exists(id))break;
+                if(n==10000)throw std::invalid_argument("Too many placements");
+            }
+        }
+        ProjectPlacement p;
+        p.id=id;p.name="Doodad "+actorId;p.kind="Doodad";
+        p.catalogId=actorId;p.owner=-1;
+        p.position=candidate.terrain.clampToMap(world);
+        candidate.placements.push_back(std::move(p));
+        candidate.validate();
+        (void)parseTriggerRules(candidate);
+        remember(project);
+        project=std::move(candidate);
+        selectedPlacementId=id;
+        modified=true;
+        message="SCENE DOODAD PLACED: "+id;
+        return true;
+    }catch(const std::exception& ex){
+        message=std::string("SCENE PLACE REJECTED: ")+ex.what();
+        return false;
+    }
 }
 bool EditorSession::createCatalogObject(RTSProject& project,
                                         const std::string& type,
