@@ -76,13 +76,13 @@ if(BUILD_TESTING)
     target_link_libraries(RTSAssetLibraryTests PRIVATE RTSAuthoring)
     add_test(NAME asset_library COMMAND RTSAssetLibraryTests
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon_dual.rtsmesh")
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
     add_executable(RTSStaticMeshTests tests/static_mesh_tests.cpp)
     target_include_directories(RTSStaticMeshTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_test(NAME static_mesh COMMAND RTSStaticMeshTests
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon_dual.rtsmesh")
     if(Python3_Interpreter_FOUND)
         add_test(NAME native_gltf_import COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_native_import.py" $<TARGET_FILE:RTSProjectTool>)
