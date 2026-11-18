@@ -503,3 +503,15 @@ rotation, positive nonuniform scale, PNG/JPEG base color, validated publication
 and a matching CLI are implemented; the existing Model/Actor registration and
 F8 placement workflow remains. This is a single-node/primitive static subset,
 not animation or full PBR support. See [native import](NATIVE_ASSET_IMPORT.md).
+
+## November 18 — independent material submeshes
+
+One-root-node glTF/GLB files now support 1–32 static triangle primitives
+with independent opaque base-color materials and PNG/JPEG albedo, compiled
+to RTSMESH2 where needed. F8/F9 use shared indexed mesh storage but separate
+materials and draw spans; F7 reports surface count. CPU validation and native
+import cross-platform regressions cover both cache versions. Original
+`multi_material_showcase.rtsproject.json` demonstrates visible separate
+blue/amber surfaces. This still falls short of a Galaxy-style model data
+module: there is no hierarchy, articulated rig, animation controller,
+material graph, attachment socket authoring, or full imported-scene editor.

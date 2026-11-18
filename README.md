@@ -629,5 +629,8 @@ F7 now imports raw glTF/GLB through an in-editor source picker using pinned
 cgltf and stb_image, without an external Python process. Native quaternion
 rotation, positive nonuniform scale, PNG/JPEG base color, validated publication
 and a matching CLI are implemented; the existing Model/Actor registration and
-F8 placement workflow remains. This is a single-node/primitive static subset,
-not animation or full PBR support. See [native import](docs/NATIVE_ASSET_IMPORT.md).
+F8 placement workflow remains. It supports a single root mesh node with **up to 32 opaque, independently
+textured primitives** via a backwards-compatible `RTSMESH2` cache. There is
+still no animation, scene hierarchy or full PBR. The original
+[dual-material beacon showcase](projects/multi_material_showcase.rtsproject.json)
+demonstrates a PNG-textured blue body and a separate amber upper section. See [native import](docs/NATIVE_ASSET_IMPORT.md).

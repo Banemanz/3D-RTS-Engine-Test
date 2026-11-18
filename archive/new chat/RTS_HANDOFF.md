@@ -2627,3 +2627,46 @@ button at 1280x720 after adding import controls. Follow-up reserves a minimum
 record fits. Recheck final-head CI/screens; this does not change import/runtime
 semantics. Parser now has a 128 MiB cumulative allocation budget, and tests
 cover a fully embedded GLB image bufferView as well as PNG/JPEG data URIs.
+
+## November 18 — multi-primitive and multiple opaque materials
+
+Starting verified PR HEAD 627d2b4a, earlier three commits already added
+native glTF/GLB import, strict allocation/embedded GLB validation and F7
+panel layout. **Do not duplicate those features.** Continued on the SAME
+open Draft PR #1 branch feat/rts-vertical-slice, without merge or new PR.
+
+This new pass added an RTSMESH2 cache format while keeping existing
+single-primitive RTSMESH1 outputs byte-identical. RTSStaticMesh.hpp now
+recognizes both versions, bounds geometry, validates indexed drawing
+surfaces, optional RGBA image dimensions, finite color factors,
+contiguous full triangle coverage and exact file lengths.
+RTSStaticMeshGL.hpp caches one VAO/VBO/EBO and one GL texture/draw per
+surface. Explicit GL texture-unit-0 activation is named rtsGlActiveTexture
+to avoid the Linux gl.h symbol clash; renderer load bookkeeping retained
+for MSVC/GCC parity. This was fixed after initial CI compile failures
+that identified duplicate glActiveTexture and missing attempted fields.
+
+RTSGltfImport.cpp accepts one root glTF mesh node with up to 32 primitives,
+preserving per-primitive positions/normals/UV0 and materials and rebasing
+indices for a shared indexed mesh. Cumulative limits 250k vertices/750k
+indices and 130 MiB compiled file. One primitive follows the old
+RTSMESH1 exact serialization; multiple primitives write RTSMESH2.
+Original blue body + amber upper cap source at
+assets/source/beacon_dual.gltf, compiled cache at
+projects/assets/beacon_dual.rtsmesh, original map at
+projects/multi_material_showcase.rtsproject.json. F7 reports number
+of materials. Tests now assert both binary versions, malformed material
+ranges and image bounds, and byte-identical source glTF and GLB import.
+Windows and Linux portable build workflows package source/compiled model,
+validate the map, audit external assets and independently rebuild the dual
+material cache then compare exact bytes; Linux CI captures real F9 Mesa
+OpenGL screenshot for visual QA. README, native importer, asset pipeline
+and Galaxy matrix updated.
+
+Known missing: multi-node scene hierarchy, PBR/normal/metallic maps,
+texture reuse optimization, skeletons, animation events, source manifest,
+editing GLB reimport and atlas/LOD/streaming. Preserve deterministic sim.
+Verification: MUST check latest exact HEAD Windows/Linux Release 99/99,
+Debug 99/99 and cross-platform replay and manually inspect dual-material
+screenshot; the PR must stay open, draft and unmerged. If tests fail, read
+job logs, patch same branch and rerun.

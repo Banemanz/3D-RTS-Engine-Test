@@ -27,33 +27,56 @@ RTSProjectTool --import-gltf examples/beacon.gltf projects/my_map.rtsproject.jso
 
 ## Supported contract
 
-- glTF 2.0 JSON and binary GLB, one root mesh node and one triangle primitive.
+- glTF 2.0 JSON and binary GLB, **one root mesh node with 1–32 triangle
+  primitives**, each with its own opaque material and optional PNG/JPEG albedo.
 - POSITION and NORMAL float32 attributes; optional UV0 (float or normalized
   unsigned byte/short). Indexed unsigned byte/short/int or nonindexed triangles.
 - Translation, normalized quaternion rotation and positive nonuniform scale.
   Positions are baked; normals use the inverse transpose then normalization.
 - Base color tint and optional PNG/JPEG image, embedded URI, GLB bufferView
   or relative external file. One opaque single-sided material, repeat wrapping
-  and linear filtering. glTF OPAQUE ignores image/factor alpha.
-- Same versioned RTSMESH1 runtime format and existing cached GL3.3 renderer.
-  Native compilation of the original beacon is byte-identical to the Python
-  compiler's bundled result.
+  and linear filtering. glTF OPAQUE ignores image/factor alpha. An imported
+  multi-primitive mesh retains one draw range, material and image per primitive.
+- One primitive still uses the byte-identical legacy **RTSMESH1** format.
+  Two or more primitives use **RTSMESH2**, read by the same bounded CPU loader.
+  The GL3.3 renderer uses a single indexed GPU mesh and one cached texture/draw
+  per material range. No gameplay, collision or replay logic changes.
 
 **Not full glTF or PBR rendering.** Lighting is still the engine's simple
 ambient/diffuse preview; scalar metallic/roughness values have no effect.
 Normal/occlusion/emissive/metallic-roughness maps, nondefault samplers,
-material extensions, alpha blending/cutout, double-sided rendering, multiple
-primitives/materials, hierarchy, matrices, mirrored/singular scales, skins,
+material extensions, alpha blending/cutout, double-sided rendering,
+hierarchy, matrices, mirrored/singular scales, skins,
 animations, morphs, sparse accessors and extra vertex attributes are rejected.
 The Python converter remains available with its older, narrower transform
 and image contract; native import is now the preferred creator workflow.
+
+## RTSMESH2 binary surface layout
+
+The cache remains little-endian and versioned. The v2 24-byte header contains
+ASCII `RTSMESH2`, u32 vertex count, u32 index count, u32 surface count
+(1..32) and a zero reserved u32. Interleaved 8-float vertices (position XYZ,
+normal XYZ, UV0 XY) and u32 indices follow. Each material adds a
+32-byte header: four u32 values (first index, index count, image width,
+image height), then four float32 RGBA factors, followed by optional RGBA8
+image pixels. All surfaces must cover consecutive, non-overlapping,
+triangle-aligned index spans; image byte counts and exact file end are
+strictly checked before allocation. Out-of-range/invalid references fail
+validation and receive a procedural fallback rather than crashing the game.
+
+The included [dual-material scene](../projects/multi_material_showcase.rtsproject.json)
+uses an original [two-primitive glTF](../assets/source/beacon_dual.gltf)
+with a textured blue main body and an untextured amber cap. F7 lists surface
+counts, and Windows/Linux release packages independently reconstruct the
+compiled asset with their native importer and compare exact bytes.
 
 ## Validation and publication
 
 Parser allocations are capped at 128 MiB cumulatively.
 Input/resource files are limited to 64 MiB, aggregate declared buffers to
-64 MiB, 32 buffers, 256 views/accessors, 250,000 vertices, 750,000 indices and
-2048×2048 decoded images. Validate buffer and accessor arithmetic before
+64 MiB, 32 buffers, 256 views/accessors, 250,000 **total** vertices, 750,000
+**total** indices, 1–32 primitives and up to 2048×2048 decoded images
+per material. The complete compiled mesh must remain under 130 MiB. Validate buffer and accessor arithmetic before
 calling parser helpers that read geometry. Reject network, absolute, escaped
 and source-directory-traversing resource URIs, including symlink escapes.
 No importer subprocesses or author scripts run.
@@ -104,6 +127,7 @@ Recoil source was copied:
 https://recoilengine.org/docs/guides/getting-started/blender-gltf-import/
 https://github.com/beyond-all-reason/RecoilEngine/blob/master/rts/Rendering/Models/GLTFParser.cpp
 
-Next: multi-primitive/material runtime resource format, node hierarchy, preview
-turntable/bounds, source manifest/content hash/reimport, background import jobs,
+Next: scene node hierarchy, preview turntable/bounds, source manifest/content
+hash/reimport, background import jobs, GPU material texture deduplication,
 PBR/sRGB/alpha rendering, then skeletons/clips and actor animation events.
+Multi-primitive static import is implemented; full glTF/PBR parity is not.

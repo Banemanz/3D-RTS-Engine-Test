@@ -135,3 +135,21 @@ rotation, positive nonuniform scale, PNG/JPEG base color, validated publication
 and a matching CLI are implemented; the existing Model/Actor registration and
 F8 placement workflow remains. This is a single-node/primitive static subset,
 not animation or full PBR support. See [native import](NATIVE_ASSET_IMPORT.md).
+
+## November 18 — multiple primitives and material draw ranges
+
+The native importer now retains up to 32 static triangle primitives on one
+root glTF mesh node, with independent opaque albedo PNG/JPEG and base-color
+factors. An original two-part beacon demonstrates this in actual gameplay.
+The original byte-for-byte `RTSMESH1` format remains the output for one
+primitive; `RTSMESH2` adds bounded, validated contiguous material/index
+ranges with one cached GPU draw per material. F7 lists the material count.
+All new C++ CPU loader, glTF/GLB import, binary corruption and installed
+Windows/Linux package checks cover the new format. See
+`projects/multi_material_showcase.rtsproject.json` and the exact binary
+layout in [Native Import](NATIVE_ASSET_IMPORT.md).
+
+**Still missing:** node hierarchies, more advanced glTF materials, metal/rough
+maps, normal maps, scene animation/skeletons, streaming and production LOD.
+Older sections above document the historic single-primitive milestone;
+the native multi-material stage here supersedes those limitations.
