@@ -85,14 +85,39 @@ void checkAccessor(const cgltf_accessor& a){
 void writeMesh(const RTSStaticMesh& mesh,const std::filesystem::path& path){
     std::ofstream out(path,std::ios::binary|std::ios::trunc);
     need(bool(out),"Unable to create compiled asset");
-    const auto write=[&](const void* data,std::size_t n){out.write(static_cast<const char*>(data),n);};
-    write("RTSMESH1",8);
-    const std::uint32_t counts[]={static_cast<std::uint32_t>(mesh.vertices.size()/8),
-        static_cast<std::uint32_t>(mesh.indices.size()),mesh.width,mesh.height};
-    write(counts,sizeof(counts));write(mesh.baseColor.data(),16);
-    write(mesh.vertices.data(),mesh.vertices.size()*4);
-    write(mesh.indices.data(),mesh.indices.size()*4);
-    if(!mesh.albedo.empty())write(mesh.albedo.data(),mesh.albedo.size());
+    const auto write=[&](const void* data,std::size_t n){
+        out.write(static_cast<const char*>(data),static_cast<std::streamsize>(n));
+    };
+    if(mesh.surfaces.empty()){
+        // Preserve exact RTSMESH1 bytes for every previously imported asset.
+        write("RTSMESH1",8);
+        const std::uint32_t counts[]={
+            static_cast<std::uint32_t>(mesh.vertices.size()/8),
+            static_cast<std::uint32_t>(mesh.indices.size()),mesh.width,mesh.height};
+        write(counts,sizeof(counts));write(mesh.baseColor.data(),16);
+        write(mesh.vertices.data(),mesh.vertices.size()*sizeof(float));
+        write(mesh.indices.data(),mesh.indices.size()*sizeof(std::uint32_t));
+        if(!mesh.albedo.empty())write(mesh.albedo.data(),mesh.albedo.size());
+    }else{
+        // RTSMESH2: magic, geometry/primitive counts, indexed geometry,
+        // then contiguous draw ranges with independent opaque RGBA materials.
+        write("RTSMESH2",8);
+        const std::uint32_t counts[]={
+            static_cast<std::uint32_t>(mesh.vertices.size()/8),
+            static_cast<std::uint32_t>(mesh.indices.size()),
+            static_cast<std::uint32_t>(mesh.surfaces.size()),0};
+        write(counts,sizeof(counts));
+        write(mesh.vertices.data(),mesh.vertices.size()*sizeof(float));
+        write(mesh.indices.data(),mesh.indices.size()*sizeof(std::uint32_t));
+        for(const auto& surface:mesh.surfaces){
+            const std::uint32_t fields[]={
+                surface.firstIndex,surface.indexCount,surface.width,surface.height};
+            write(fields,sizeof(fields));
+            write(surface.baseColor.data(),16);
+            if(!surface.albedo.empty())
+                write(surface.albedo.data(),surface.albedo.size());
+        }
+    }
     out.close();need(bool(out),"Unable to finish compiled asset");
 }
 }
@@ -119,8 +144,9 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     auto& d=*parsed;
     need(d.extensions_used_count==0 && d.extensions_required_count==0,"glTF extensions are not supported by this static compiler");
     need(!d.skins_count && !d.animations_count,"Skins and animation require the future animated asset pipeline");
-    need(d.meshes_count==1 && d.meshes[0].primitives_count==1,
-         "Static import currently requires one mesh with one triangle primitive");
+    need(d.meshes_count==1 && d.meshes[0].primitives_count>=1 &&
+         d.meshes[0].primitives_count<=32,
+         "Static import supports one mesh containing 1..32 triangle primitives");
     need(d.nodes_count==1 && d.nodes[0].mesh==&d.meshes[0] &&
          !d.nodes[0].children_count && !d.nodes[0].skin && !d.nodes[0].has_mesh_gpu_instancing,
          "Export one root mesh node; scene hierarchies are not yet supported");
@@ -153,106 +179,176 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     // Preflight arithmetic before calling parser helpers that read accessor memory.
     for(std::size_t i=0;i<d.accessors_count;++i)checkAccessor(d.accessors[i]);
     need(cgltf_validate(&d)==cgltf_result_success,"glTF validation failed");
-    const auto& p=d.meshes[0].primitives[0];
-    need(p.type==cgltf_primitive_type_triangles && !p.has_draco_mesh_compression && !p.targets_count && !d.meshes[0].weights_count,
-         "Only static triangle primitives are supported");
-    const cgltf_accessor *positions=nullptr,*normals=nullptr,*uvs=nullptr;
-    for(std::size_t i=0;i<p.attributes_count;++i){
-        const auto& a=p.attributes[i];
-        if(a.type==cgltf_attribute_type_position && a.index==0 && !positions)positions=a.data;
-        else if(a.type==cgltf_attribute_type_normal && a.index==0 && !normals)normals=a.data;
-        else if(a.type==cgltf_attribute_type_texcoord && a.index==0 && !uvs)uvs=a.data;
-        else need(false,"Export POSITION, NORMAL and optional TEXCOORD_0 only; remove tangents/colors/extra UVs");
-    }
-    need(positions && normals,"Export vertex positions and normals");
-    need(positions->type==cgltf_type_vec3 && positions->component_type==cgltf_component_type_r_32f &&
-         normals->type==cgltf_type_vec3 && normals->component_type==cgltf_component_type_r_32f &&
-         positions->count==normals->count && positions->count>=3 && positions->count<=250000,
-         "Invalid POSITION/NORMAL layout or vertex count");
-    need(!uvs || (uvs->type==cgltf_type_vec2 && uvs->count==positions->count &&
-         (uvs->component_type==cgltf_component_type_r_32f || uvs->normalized)),"Invalid UV0 layout");
-    RTSStaticMesh result;
-    const auto count=p.indices?p.indices->count:positions->count;
-    need(count>=3 && count<=750000 && count%3==0,"Invalid triangle index count");
-    if(p.indices)need(p.indices->type==cgltf_type_scalar && !p.indices->normalized &&
-        (p.indices->component_type==cgltf_component_type_r_8u ||
-         p.indices->component_type==cgltf_component_type_r_16u ||
-         p.indices->component_type==cgltf_component_type_r_32u),"Indices must be unsigned integers");
-    for(std::size_t i=0;i<count;++i){
-        const auto index=p.indices?cgltf_accessor_read_index(p.indices,i):i;
-        need(index<positions->count,"Triangle index exceeds vertices");
-        result.indices.push_back(static_cast<std::uint32_t>(index));
-    }
     const auto& node=d.nodes[0];
     need(!node.has_matrix,"Bake node matrices to TRS before import");
     double rotationLength=0;
-    for(float f:node.rotation){need(std::isfinite(f),"Invalid node rotation");rotationLength+=double(f)*f;}
-    need(std::abs(rotationLength-1)<0.001,"Node quaternion must be normalized");
-    for(float f:node.scale)need(std::isfinite(f) && f>0,"Node scale must be finite and positive");
-    float matrix[16];cgltf_node_transform_local(&node,matrix);
-    for(float f:matrix)need(std::isfinite(f),"Invalid node transform");
-    for(std::size_t i=0;i<positions->count;++i){
-        float v[3],n[3],uv[2]={0,0};
-        need(cgltf_accessor_read_float(positions,i,v,3) && cgltf_accessor_read_float(normals,i,n,3),"Cannot read vertex");
-        if(uvs)need(cgltf_accessor_read_float(uvs,i,uv,2),"Cannot read UV");
-        float out[8]={0,0,0,0,0,0,uv[0],uv[1]};
-        for(int r=0;r<3;++r){
-            out[r]=matrix[12+r];
-            for(int c=0;c<3;++c){
-                out[r]+=matrix[c*4+r]*v[c];
-                out[3+r]+=matrix[c*4+r]*n[c]/(node.scale[c]*node.scale[c]);
-            }
-        }
-        const double length=std::sqrt(double(out[3])*out[3]+double(out[4])*out[4]+double(out[5])*out[5]);
-        need(length>1e-12 && std::isfinite(length),"Invalid zero-length normal");
-        for(int j=3;j<6;++j)out[j]=static_cast<float>(out[j]/length);
-        for(float f:out)need(std::isfinite(f) && std::abs(f)<1e7f,"Invalid or oversized transformed vertex");
-        result.vertices.insert(result.vertices.end(),out,out+8);
+    for(float f:node.rotation){
+        need(std::isfinite(f),"Invalid node rotation");
+        rotationLength+=double(f)*f;
     }
-    if(p.material){
-        const auto& m=*p.material;
-        need(!m.has_pbr_specular_glossiness && !m.has_clearcoat && !m.has_transmission &&
-             !m.has_volume && !m.has_ior && !m.has_specular && !m.has_sheen &&
-             !m.has_emissive_strength && !m.has_iridescence && !m.has_diffuse_transmission &&
-             !m.has_anisotropy && !m.has_dispersion && !m.unlit && !m.extensions_count,
-             "Extended materials are not supported");
-        need(m.alpha_mode==cgltf_alpha_mode_opaque && !m.double_sided,
-             "Only opaque single-sided materials are supported");
-        need(!m.normal_texture.texture && !m.occlusion_texture.texture && !m.emissive_texture.texture &&
-             m.emissive_factor[0]==0 && m.emissive_factor[1]==0 && m.emissive_factor[2]==0 &&
-             !m.pbr_metallic_roughness.metallic_roughness_texture.texture,
-             "Normal, occlusion, emissive and metallic/roughness maps need the future material pipeline");
-        const auto& material=m.pbr_metallic_roughness;
-        std::copy(material.base_color_factor,material.base_color_factor+4,result.baseColor.begin());
-        for(float f:result.baseColor)need(std::isfinite(f) && f>=0 && f<=1,"Invalid material base color");
-        result.baseColor[3]=1.f; // glTF OPAQUE ignores authored alpha
-        const auto& view=material.base_color_texture;
-        if(view.texture){
-            need(uvs && view.texcoord==0 && !view.has_transform,"Texture requires UV0 without texture transforms");
-            const auto& tex=*view.texture;
-            need(tex.image && !tex.has_basisu && !tex.has_webp,"Missing or unsupported base color image");
-            if(tex.sampler)need(tex.sampler->wrap_s==cgltf_wrap_mode_repeat && tex.sampler->wrap_t==cgltf_wrap_mode_repeat &&
-                (!tex.sampler->mag_filter || tex.sampler->mag_filter==cgltf_filter_type_linear) &&
-                (!tex.sampler->min_filter || tex.sampler->min_filter==cgltf_filter_type_linear),
-                "Only repeat wrapping with linear filtering is supported; remove custom sampler");
-            std::vector<unsigned char> bytes;
-            if(tex.image->uri)bytes=resource(tex.image->uri,source);
-            else{
-                need(tex.image->buffer_view,"Image has no URI or bufferView");
-                const auto& v=*tex.image->buffer_view;
-                const auto* b=static_cast<const unsigned char*>(v.buffer->data)+v.offset;
-                bytes.assign(b,b+v.size);
-            }
-            int w=0,h=0,channels=0;
-            need(stbi_info_from_memory(bytes.data(),static_cast<int>(bytes.size()),&w,&h,&channels) &&
-                 w>0 && h>0 && w<=2048 && h<=2048,"Invalid PNG/JPEG image or dimensions exceed 2048");
-            stbi_uc* pixels=stbi_load_from_memory(bytes.data(),static_cast<int>(bytes.size()),&w,&h,&channels,4);
-            need(pixels,"PNG/JPEG decode failed");
-            std::unique_ptr<stbi_uc,decltype(&stbi_image_free)> image(pixels,stbi_image_free);
-            result.width=w;result.height=h;
-            result.albedo.assign(pixels,pixels+std::size_t(w)*h*4);
-            for(std::size_t i=3;i<result.albedo.size();i+=4)result.albedo[i]=255;
+    need(std::abs(rotationLength-1)<0.001,"Node quaternion must be normalized");
+    for(float f:node.scale)
+        need(std::isfinite(f) && f>0,"Node scale must be finite and positive");
+    float matrix[16];
+    cgltf_node_transform_local(&node,matrix);
+    for(float f:matrix)need(std::isfinite(f),"Invalid node transform");
+
+    RTSStaticMesh result;
+    result.surfaces.reserve(d.meshes[0].primitives_count);
+    for(std::size_t primitiveIndex=0;
+        primitiveIndex<d.meshes[0].primitives_count;++primitiveIndex){
+        const auto& p=d.meshes[0].primitives[primitiveIndex];
+        need(p.type==cgltf_primitive_type_triangles &&
+             !p.has_draco_mesh_compression && !p.targets_count &&
+             !d.meshes[0].weights_count,
+             "Only static triangle primitives are supported");
+        const cgltf_accessor *positions=nullptr,*normals=nullptr,*uvs=nullptr;
+        for(std::size_t i=0;i<p.attributes_count;++i){
+            const auto& a=p.attributes[i];
+            if(a.type==cgltf_attribute_type_position && a.index==0 && !positions)
+                positions=a.data;
+            else if(a.type==cgltf_attribute_type_normal && a.index==0 && !normals)
+                normals=a.data;
+            else if(a.type==cgltf_attribute_type_texcoord && a.index==0 && !uvs)
+                uvs=a.data;
+            else need(false,"Export POSITION, NORMAL, optional TEXCOORD_0 only; remove tangents/colors/extra UVs");
         }
+        need(positions && normals,"Export vertex positions and normals");
+        need(positions->type==cgltf_type_vec3 &&
+             positions->component_type==cgltf_component_type_r_32f &&
+             normals->type==cgltf_type_vec3 &&
+             normals->component_type==cgltf_component_type_r_32f &&
+             positions->count==normals->count &&
+             positions->count>=3 && positions->count<=250000,
+             "Invalid POSITION/NORMAL layout or vertex count");
+        need(!uvs || (uvs->type==cgltf_type_vec2 && uvs->count==positions->count &&
+             (uvs->component_type==cgltf_component_type_r_32f || uvs->normalized)),
+             "Invalid UV0 layout");
+        const auto indexCount=p.indices?p.indices->count:positions->count;
+        need(indexCount>=3 && indexCount<=750000 && indexCount%3==0,
+             "Invalid triangle index count");
+        if(p.indices)
+            need(p.indices->type==cgltf_type_scalar && !p.indices->normalized &&
+                 (p.indices->component_type==cgltf_component_type_r_8u ||
+                  p.indices->component_type==cgltf_component_type_r_16u ||
+                  p.indices->component_type==cgltf_component_type_r_32u),
+                 "Triangle indices must be unsigned integers");
+        const auto baseVertex=result.vertices.size()/8;
+        const auto firstIndex=result.indices.size();
+        need(baseVertex+positions->count<=250000 &&
+             firstIndex+indexCount<=750000,
+             "Combined primitive geometry exceeds static mesh limits");
+        for(std::size_t i=0;i<indexCount;++i){
+            const auto index=p.indices?cgltf_accessor_read_index(p.indices,i):i;
+            need(index<positions->count,"Triangle index exceeds primitive vertices");
+            result.indices.push_back(static_cast<std::uint32_t>(baseVertex+index));
+        }
+        for(std::size_t i=0;i<positions->count;++i){
+            float v[3],n[3],uv[2]={0,0};
+            need(cgltf_accessor_read_float(positions,i,v,3) &&
+                 cgltf_accessor_read_float(normals,i,n,3),"Cannot read vertex");
+            if(uvs)need(cgltf_accessor_read_float(uvs,i,uv,2),"Cannot read UV");
+            float out[8]={0,0,0,0,0,0,uv[0],uv[1]};
+            for(int r=0;r<3;++r){
+                out[r]=matrix[12+r];
+                for(int c=0;c<3;++c){
+                    out[r]+=matrix[c*4+r]*v[c];
+                    out[3+r]+=matrix[c*4+r]*n[c]/(node.scale[c]*node.scale[c]);
+                }
+            }
+            const double length=std::sqrt(double(out[3])*out[3]+
+                                          double(out[4])*out[4]+
+                                          double(out[5])*out[5]);
+            need(length>1e-12 && std::isfinite(length),
+                 "Invalid zero-length normal");
+            for(int j=3;j<6;++j)
+                out[j]=static_cast<float>(out[j]/length);
+            for(float f:out)
+                need(std::isfinite(f) && std::abs(f)<1e7f,
+                     "Invalid or oversized transformed vertex");
+            result.vertices.insert(result.vertices.end(),out,out+8);
+        }
+        RTSStaticSurface surface;
+        surface.firstIndex=static_cast<std::uint32_t>(firstIndex);
+        surface.indexCount=static_cast<std::uint32_t>(indexCount);
+        if(p.material){
+            const auto& m=*p.material;
+            need(!m.has_pbr_specular_glossiness && !m.has_clearcoat &&
+                 !m.has_transmission && !m.has_volume && !m.has_ior &&
+                 !m.has_specular && !m.has_sheen && !m.has_emissive_strength &&
+                 !m.has_iridescence && !m.has_diffuse_transmission &&
+                 !m.has_anisotropy && !m.has_dispersion && !m.unlit &&
+                 !m.extensions_count,"Extended materials are not supported");
+            need(m.alpha_mode==cgltf_alpha_mode_opaque && !m.double_sided,
+                 "Only opaque, single-sided materials are supported");
+            need(!m.normal_texture.texture && !m.occlusion_texture.texture &&
+                 !m.emissive_texture.texture &&
+                 m.emissive_factor[0]==0 && m.emissive_factor[1]==0 &&
+                 m.emissive_factor[2]==0 &&
+                 !m.pbr_metallic_roughness.metallic_roughness_texture.texture,
+                 "Normal, occlusion, emissive and metallic/roughness maps need the future material pipeline");
+            const auto& material=m.pbr_metallic_roughness;
+            std::copy(material.base_color_factor,
+                      material.base_color_factor+4,surface.baseColor.begin());
+            for(float f:surface.baseColor)
+                need(std::isfinite(f) && f>=0 && f<=1,
+                     "Invalid material base color");
+            surface.baseColor[3]=1.f; // glTF OPAQUE ignores alpha
+            const auto& view=material.base_color_texture;
+            if(view.texture){
+                need(uvs && view.texcoord==0 && !view.has_transform,
+                     "Texture requires UV0 without texture transforms");
+                const auto& tex=*view.texture;
+                need(tex.image && !tex.has_basisu && !tex.has_webp,
+                     "Missing or unsupported base color image");
+                if(tex.sampler)
+                    need(tex.sampler->wrap_s==cgltf_wrap_mode_repeat &&
+                         tex.sampler->wrap_t==cgltf_wrap_mode_repeat &&
+                         (!tex.sampler->mag_filter ||
+                          tex.sampler->mag_filter==cgltf_filter_type_linear) &&
+                         (!tex.sampler->min_filter ||
+                          tex.sampler->min_filter==cgltf_filter_type_linear),
+                         "Only repeat wrapping with linear filtering is supported");
+                std::vector<unsigned char> bytes;
+                if(tex.image->uri)bytes=resource(tex.image->uri,source);
+                else{
+                    need(tex.image->buffer_view,"Image has no URI or bufferView");
+                    const auto& v=*tex.image->buffer_view;
+                    need(v.buffer && v.buffer->data && v.size<=maxBytes,
+                         "Invalid image bufferView");
+                    const auto* b=
+                        static_cast<const unsigned char*>(v.buffer->data)+v.offset;
+                    bytes.assign(b,b+v.size);
+                }
+                int w=0,h=0,channels=0;
+                need(stbi_info_from_memory(bytes.data(),
+                         static_cast<int>(bytes.size()),&w,&h,&channels) &&
+                     w>0 && h>0 && w<=2048 && h<=2048,
+                     "Invalid PNG/JPEG image or dimensions exceed 2048");
+                stbi_uc* pixels=stbi_load_from_memory(
+                    bytes.data(),static_cast<int>(bytes.size()),&w,&h,&channels,4);
+                need(pixels,"PNG/JPEG decode failed");
+                std::unique_ptr<stbi_uc,decltype(&stbi_image_free)>
+                    image(pixels,stbi_image_free);
+                surface.width=static_cast<std::uint32_t>(w);
+                surface.height=static_cast<std::uint32_t>(h);
+                surface.albedo.assign(
+                    pixels,pixels+static_cast<std::size_t>(w)*h*4);
+                for(std::size_t i=3;i<surface.albedo.size();i+=4)
+                    surface.albedo[i]=255; // opaque alpha contract
+            }
+        }
+        result.surfaces.emplace_back(std::move(surface));
+    }
+    if(result.surfaces.size()==1){
+        // Single primitive is deliberately serialized in historic RTSMESH1.
+        // Native import of all old samples must remain bit-identical.
+        auto& surface=result.surfaces.front();
+        result.width=surface.width;
+        result.height=surface.height;
+        result.baseColor=surface.baseColor;
+        result.albedo=std::move(surface.albedo);
+        result.surfaces.clear();
     }
     return result;
 }
