@@ -76,7 +76,8 @@ if(BUILD_TESTING)
     target_link_libraries(RTSAssetLibraryTests PRIVATE RTSAuthoring)
     add_test(NAME asset_library COMMAND RTSAssetLibraryTests
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon_dual.rtsmesh")
     add_executable(RTSStaticMeshTests tests/static_mesh_tests.cpp)
     target_include_directories(RTSStaticMeshTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_test(NAME static_mesh COMMAND RTSStaticMeshTests
@@ -417,7 +418,10 @@ endif()
 
 # Installable layout is intentionally identical on Windows and Linux:
 # exe/launcher files beside projects/, docs/, and build manifest.
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon.gltf" DESTINATION "examples")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon.gltf"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon_dual.gltf"
+    DESTINATION "examples")
 install(TARGETS RTSProjectTool RUNTIME DESTINATION ".")
 if(RTS_BUILD_DEMO)
     install(TARGETS RTSCameraTerrain RUNTIME DESTINATION ".")

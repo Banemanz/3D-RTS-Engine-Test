@@ -92,6 +92,34 @@ with tempfile.TemporaryDirectory() as tmp:
     opaque['materials'][0]['pbrMetallicRoughness']['baseColorFactor'][3] = 0.2
     assert struct.unpack_from('<f',compile_data(opaque,'opaque').read_bytes(),36)[0] == 1
 
+
+    # Two-primitive source must compile bit-for-bit into the committed V2 asset.
+    dual = json.loads((root/'assets/source/beacon_dual.gltf').read_text())
+    dual_file=folder/'dual.gltf'
+    dual_file.write_text(json.dumps(dual))
+    dual_expected=(root/'projects/assets/beacon_dual.rtsmesh').read_bytes()
+    dual_result=run(dual_file,project,'assets/dual.rtsmesh').read_bytes()
+    assert dual_result==dual_expected, 'Native RTSMESH2 mismatch'
+    assert struct.unpack_from('<IIII',dual_result,8)==(64,96,2,0)
+    off=24+64*32+96*4
+    assert struct.unpack_from('<IIII',dual_result,off)==(0,48,2,2)
+    assert struct.unpack_from('<IIII',dual_result,off+48)==(48,48,0,0)
+    dual_glb=copy.deepcopy(dual)
+    packed=base64.b64decode(dual_glb['buffers'][0].pop('uri').split(',')[1])
+    js=json.dumps(dual_glb).encode()
+    js+=b' '*(-len(js)%4)
+    packed+=b'\0'*(-len(packed)%4)
+    blob=(b'glTF'+struct.pack('<II',2,28+len(js)+len(packed))+
+          struct.pack('<I4s',len(js),b'JSON')+js+
+          struct.pack('<I4s',len(packed),b'BIN\0')+packed)
+    dual_glb_file=folder/'dual.glb'
+    dual_glb_file.write_bytes(blob)
+    assert run(dual_glb_file,project,'assets/dual_glb.rtsmesh').read_bytes()==dual_expected
+    invalid=copy.deepcopy(dual)
+    invalid['meshes'][0]['primitives'][1]['mode']=1
+    dual_file.write_text(json.dumps(invalid))
+    run(dual_file,project,'assets/dual_invalid.rtsmesh',False)
+
     # Local resources (including spaces) work, but traversal and symlink escapes fail.
     external = copy.deepcopy(fixture)
     buffer = base64.b64decode(external['buffers'][0]['uri'].split(',')[1])
