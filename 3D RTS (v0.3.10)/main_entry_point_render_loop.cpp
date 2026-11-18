@@ -1,9 +1,5 @@
-/**
- * Compilation Instructions:
- *   Linux:   g++ -std=c++17 main.cpp GLCore.cpp RTSCamera.cpp UnitData.cpp Unit.cpp SelectionManager.cpp -o rts_engine -lglfw -lGL -ldl
- *   macOS:   g++ -std=c++17 main.cpp GLCore.cpp RTSCamera.cpp UnitData.cpp Unit.cpp SelectionManager.cpp -o rts_engine -lglfw -framework OpenGL
- *   Windows: g++ -std=c++17 main.cpp GLCore.cpp RTSCamera.cpp UnitData.cpp Unit.cpp SelectionManager.cpp -o rts_engine.exe -lglfw3 -lopengl32 -lgdi32
- */
+// Build using CMake; see the repository README.md.
+
 
 #include "GLCore.hpp"
 #include "Math3D.hpp"
@@ -12,51 +8,587 @@
 #include "Unit.hpp"
 #include "SelectionManager.hpp"
 #include "Shaders.hpp"
+#include "RTSSkirmish.hpp"
+#include "BitmapHUD.hpp"
+#include "RTSHUDLayout.hpp"
+#include "RTSHUD.hpp"
+#include "RTSStaticMeshGL.hpp"
+#include "NativePauseMenu.hpp"
+#include "NativePauseMenuGL.hpp"
+#include "CrashReporter.hpp"
+#include "RTSProject.hpp"
+#include "InstanceOverrides.hpp"
+#include "EditorSession.hpp"
+#include "CreatorWorkbench.hpp"
+#include "CreatorUIRuntime.hpp"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <filesystem>
+#include <cstdlib>
+#include <fstream>
+#include <cmath>
+#include <string>
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
+#include <exception>
 
 struct AppState {
     RTSCamera camera;
     SelectionManager selectionManager;
-    std::vector<Unit> units;
+    RTSSkirmish game;
+    RTSProject project=RTSProject::defaults();
+    EditorSession editor;
+    std::unordered_map<std::string,ActorVisual> doodadVisuals;
+    std::string notice;
+    float noticeSeconds=0;
+    std::string projectPath="projects/working.rtsproject.json";
+    std::uint64_t assetRevision=0; // F7 refresh signal, not per-frame I/O
+
+    std::filesystem::path uiSettingsPath=CreatorUISettings::userConfigPath();
+    CreatorUISettings uiSettings=CreatorUISettings::load(uiSettingsPath);
+    bool uiSettingsDirty=false;
+    float uiEffectiveScale=1.f;
+    // Workspace launch offsets are relative to the game window. Module
+    // windows retain independently persisted Dear ImGui positions afterward.
+    ImVec2 moduleStartOffset={32.f,65.f};
+    bool mouseStroke=false;
+    bool pauseMenu=false;
+    NativeUI::FocusList pauseFocus;
+    bool triggerTraceVisible=false;
+    bool triggerTracingEnabled=true;
+    bool hoveredTerrain=false;
+    Vec3 hoveredWorld{};
+    float terrainSlopeLimit()const {
+        auto it=project.metadata.find("max_walkable_slope");
+        if(it==project.metadata.end() || !it->second.is<double>() ||
+           !std::isfinite(it->second.get<double>()))return 1.25f;
+        return std::clamp(float(it->second.get<double>()),.05f,100.f);
+    }
+    void reloadFromProject(){
+        TriggerEngine::validate(project);
+        // Validate all actor assets once, not every rendered frame.
+        std::unordered_map<std::string,ActorVisual> previews;
+        for(const auto& placed:project.placements)
+            if(placed.kind=="Doodad")
+                previews.emplace(placed.id,resolvePlacedDoodad(project,placed));
+        game.setTriggerTracing(triggerTracingEnabled);
+        game.loadProject(project);
+        doodadVisuals=std::move(previews);
+        project.terrain.markDirty();
+        camera.terrain=&project.terrain;
+        hasMoveMarker=false;
+    }
+    void inform(const std::string& message){
+        notice=message.substr(0,140);
+        noticeSeconds=4.f;
+    }
+    void autoSave(){
+        if(!editor.modified || editor.panel==EditorSession::Panel::Play)return;
+        try{
+            TriggerEngine::validate(project);
+            project.saveFile(projectPath+".autosave");
+        }catch(const std::exception& e){
+            std::cerr<<"[Autosave] "<<e.what()<<"\n";
+            editor.message=std::string("AUTOSAVE FAILED: ")+e.what();
+        }
+    }
+    void recoverAutosave(){
+        try {
+            const std::string autosave=projectPath+".autosave";
+            if(!std::filesystem::exists(autosave))return;
+            if(std::filesystem::exists(projectPath) &&
+               std::filesystem::last_write_time(autosave)<=std::filesystem::last_write_time(projectPath))
+                return;
+            RTSProject recovered;
+            recovered.loadFile(autosave);
+            TriggerEngine::validate(recovered);
+            project=std::move(recovered);
+            editor.modified=true;
+            inform("RECOVERED NEWER AUTOSAVE - CTRL+S TO KEEP");
+        }catch(const std::exception& e){
+            std::cerr<<"[Autosave] recovery skipped: "<<e.what()<<"\n";
+        }
+    }
+    void saveProject(){
+        try{
+            TriggerEngine::validate(project);
+            project.saveFile(projectPath);
+            std::error_code ec;
+            std::filesystem::remove(projectPath+".autosave",ec);
+            editor.modified=false;editor.message="PROJECT SAVED";
+            inform("MAP SAVED");
+        }
+        catch(const std::exception& e){editor.message=std::string("SAVE ERROR: ")+e.what();}
+    }
+    void saveReplay(){
+        if(editor.panel!=EditorSession::Panel::Play){
+            inform("REPLAY EXPORT REQUIRES PLAYTEST MODE");
+            return;
+        }
+        try{
+            const std::string filename=projectPath+".rtsreplay.json";
+            const auto tape=game.replayTape();
+            tape.saveFile(filename);
+            inform("REPLAY SAVED: "+filename);
+            editor.message="REPLAY SAVED: "+filename;
+        }catch(const std::exception& e){
+            editor.message=std::string("REPLAY EXPORT ERROR: ")+e.what();
+            inform(editor.message);
+        }
+    }
+    enum class Mode { Normal, Move, AttackMove, BuildBarracks, Patrol, CastAbility } mode = Mode::Normal;
+    std::string pendingAbilityId;
+    bool keyA = false, keyB = false, keyT = false, keyC = false;
+    bool keyX = false, keyR = false, keyM=false, keyP=false, keyV=false,
+         keyF=false, keyJ=false, keyK=false,
+         keyF2=false, keyF3=false, keyG=false, keyH=false, keyTab=false;
+    std::array<std::vector<int>,10> controlGroups{};
+    std::array<bool,10> digitWasDown{};
+    int framebufferWidth = 1280, framebufferHeight = 720;
 
     Vec3 lastClickedWorldPos{0.0f, 0.0f, 0.0f};
     bool hasMoveMarker = false;
     int windowWidth = 1280;
     int windowHeight = 720;
+    void command(HUDCommand action,double px=0,double py=0){
+        if(action==HUDCommand::Minimap){
+            RTSHUDLayout hud(windowWidth,windowHeight,RTSHUDProfile::fromProject(project));
+            const Vec3 world=hud.minimapWorld(px,py,project.terrain);
+            camera.targetFocalPoint=world;
+            camera.focalPoint=world;
+            return;
+        }
+        switch(action){
+            case HUDCommand::Move: mode=Mode::Move;inform("MOVE: RIGHT CLICK DESTINATION");break;
+            case HUDCommand::Patrol:mode=Mode::Patrol;inform("PATROL: RIGHT CLICK DESTINATION");break;
+            case HUDCommand::AttackMove:mode=Mode::AttackMove;inform("ATTACK MOVE: RIGHT CLICK");break;
+            case HUDCommand::Build:mode=Mode::BuildBarracks;inform("BUILD: RIGHT CLICK CLEAR TERRAIN");break;
+            case HUDCommand::Stop:game.queuePlayerCommand(RTSCommandKind::Stop);mode=Mode::Normal;break;
+            case HUDCommand::Hold:
+                game.queuePlayerCommand(RTSCommandKind::Hold);
+                mode=Mode::Normal;
+                inform("HOLD POSITION - ATTACKS WITHOUT MOVING");
+                break;
+            case HUDCommand::CancelQueue:
+                if(!game.queuePlayerCommand(RTSCommandKind::CancelTraining))inform("CANNOT QUEUE TRAINING CANCELLATION");
+                else inform("TRAINING CANCELLED - RESOURCES REFUNDED");
+                break;
+            case HUDCommand::Ranger:
+                if(!game.queuePlayerCommand(RTSCommandKind::TrainRanger))inform("CANNOT QUEUE RANGER TRAINING");
+                break;
+            case HUDCommand::Worker:
+                if(!game.queuePlayerCommand(RTSCommandKind::TrainWorker))inform("CANNOT QUEUE WORKER TRAINING");
+                break;
+            case HUDCommand::TrainSlot0:
+            case HUDCommand::TrainSlot1:
+            case HUDCommand::TrainSlot2: {
+                const int slot=action==HUDCommand::TrainSlot0?0:
+                               action==HUDCommand::TrainSlot1?1:2;
+                const auto research=game.selectedResearchableId(slot);
+                if(!research.empty()){
+                    if(!game.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+                                                Vec3{},-1,false,research))
+                        inform("CANNOT QUEUE RESEARCH");
+                    else inform("RESEARCHING "+research);
+                }else{
+                    const auto unit=game.selectedTrainableId(slot);
+                    if(unit.empty() || !game.queuePlayerCommand(
+                            RTSCommandKind::TrainCatalog,Vec3{},-1,false,unit))
+                        inform("CANNOT QUEUE TRAINING COMMAND");
+                    else inform("TRAINING "+unit);
+                }
+                break;
+            }
+            case HUDCommand::CastAbility0:
+            case HUDCommand::CastAbility1:
+            case HUDCommand::CastAbility2: {
+                const int slot=action==HUDCommand::CastAbility0?0:
+                               action==HUDCommand::CastAbility1?1:2;
+                const std::string abilityId=game.selectedAbilityId(slot);
+                if(abilityId.empty())break;
+                int casterId=-1;
+                for(const auto& u:game.units)
+                    if(u.isSelected && u.isAlive() && u.ownerId==0){
+                        casterId=u.id;break;
+                    }
+                if(!game.canPrepareAbility(casterId,abilityId)){
+                    inform("ABILITY ON COOLDOWN OR UNAVAILABLE");
+                    break;
+                }
+                const auto ability=compileAbility(project.catalog,abilityId);
+                if(ability.target==AbilityTarget::Self){
+                    if(!game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                         Vec3{},-1,false,abilityId))
+                        inform("CANNOT QUEUE ABILITY");
+                    else inform("CAST "+abilityId);
+                    mode=Mode::Normal;
+                }else{
+                    pendingAbilityId=abilityId;
+                    mode=Mode::CastAbility;
+                    inform("CAST "+abilityId+
+                        (ability.target==AbilityTarget::Ground?
+                         " - LEFT CLICK VISIBLE GROUND":" - LEFT CLICK UNIT TARGET"));
+                }
+                break;
+            }
+            case HUDCommand::AbilityPage:
+                if(game.nextAbilityPage())
+                    inform("ABILITY PAGE "+std::to_string(game.abilityPage()+1)+
+                           "/"+std::to_string(game.abilityPageCount()));
+                break;
+            case HUDCommand::TrainingPage:
+                if(game.nextTrainingPage())
+                    inform("PRODUCTION PAGE "+std::to_string(game.trainingPage()+1)+"/"+
+                           std::to_string(game.trainingPageCount()));
+                break;
+            case HUDCommand::SelectArmy:{
+                int count=0;
+                for(auto& unit:game.units) {
+                    unit.isSelected=unit.isAlive() && unit.ownerId==0 &&
+                                     !unit.isStructure && !unit.isWorker;
+                    if(unit.isSelected)++count;
+                }
+                if(!count)inform("NO COMBAT UNITS AVAILABLE");
+                break;
+            }
+            case HUDCommand::SelectWorkers:{
+                int count=0;
+                for(auto& unit:game.units){
+                    unit.isSelected=unit.isAlive() && unit.ownerId==0 && unit.isWorker;
+                    if(unit.isSelected)++count;
+                }
+                if(!count)inform("NO WORKERS AVAILABLE");
+                break;
+            }
+            case HUDCommand::FocusBase:{
+                bool found=false;
+                for(auto& unit:game.units)if(unit.isAlive() && unit.ownerId==0 &&
+                                           unit.id==game.playerBaseId()) {
+                    for(auto& item:game.units)item.isSelected=false;
+                    unit.isSelected=true;
+                    camera.focalPoint=unit.position;
+                    camera.targetFocalPoint=unit.position;
+                    found=true;break;
+                }
+                if(!found)inform("NO COMMAND CENTER");
+                break;
+            }
+            case HUDCommand::Cancel:mode=Mode::Normal;pendingAbilityId.clear();break;
+            default:break;
+        }
+    }
 };
 
+
+void performPauseAction(GLFWwindow* window,AppState& state,NativeUI::Action action){
+    switch(action){
+    case NativeUI::Action::Resume:state.pauseMenu=false;break;
+    case NativeUI::Action::Restart:
+        state.game.reset();state.controlGroups={};
+        state.mode=AppState::Mode::Normal;state.hasMoveMarker=false;
+        state.pauseMenu=false;break;
+    case NativeUI::Action::Editor:
+        state.editor.panel=EditorSession::Panel::Terrain;
+        state.reloadFromProject();state.pauseMenu=false;break;
+    case NativeUI::Action::Exit:glfwSetWindowShouldClose(window,true);break;
+    default:break;
+    }
+}
+void reportInputFailure(GLFWwindow* window,const char* source,const char* message) noexcept {
+    try {
+        auto* state=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+        if(state) {
+            state->inform(std::string("EDITOR ERROR: ")+source+" - "+message);
+            state->editor.message=state->notice;
+            if(state->mouseStroke) {
+                state->editor.finishStroke(state->project);
+                state->mouseStroke=false;
+            }
+        }
+        std::cerr<<"[Editor] "<<source<<": "<<message<<"\n";
+        std::ofstream log("rts-editor-error.log",std::ios::app);
+        if(log)log<<"[Editor] "<<source<<": "<<message<<"\n";
+    }catch(...) {std::cerr<<"[Editor] exception while reporting callback error\n";}
+}
+
+// Exercise the REAL OpenGL editor lifecycle under CI, not just the pure
+// authoring libraries. This is an in-memory harness: no writes or user input.
+void exerciseEditorLifecycle(AppState& app,int frame) {
+    if(frame%12!=0)return;
+    auto& ed=app.editor;
+    const int phase=(frame/12)%8;
+    const float x=2.f+float((frame/96)%4)*3.f;
+    switch(phase) {
+    case 0:
+        ed.panel=EditorSession::Panel::Terrain;
+        ed.tool=EditorSession::Tool::Raise;
+        ed.startStroke(app.project);
+        ed.paint(app.project,{x,0.f,2.f});
+        ed.finishStroke(app.project);
+        app.reloadFromProject();
+        break;
+    case 1:
+        ed.panel=EditorSession::Panel::Scene;
+        ed.selectedPlacementId.clear();
+        ed.cycleSceneSelection(app.project,1);
+        ed.rotateSelectedPlacement(app.project,15.f);
+        app.reloadFromProject();
+        break;
+    case 2:
+        ed.panel=EditorSession::Panel::Triggers;
+        ed.createTrigger(app.project);
+        app.reloadFromProject();
+        break;
+    case 3:
+        ed.panel=EditorSession::Panel::Triggers;
+        if(ed.beginTriggerEdit(app.project)){
+            // Parse and replace the selected rule, then reinitialize simulation
+            // to exercise reconfiguration during a live GPU context.
+            ed.finishTriggerEdit(app.project);
+            app.reloadFromProject();
+        }
+        break;
+    case 4:
+        ed.panel=EditorSession::Panel::Data;
+        ed.beginCatalogSearch();
+        ed.editText="unit";
+        ed.finishCatalogSearch(app.project);
+        break;
+    case 5:
+        ed.panel=EditorSession::Panel::Data;
+        ed.duplicateCatalogObject(app.project);
+        app.reloadFromProject();
+        break;
+    case 6:
+        if(ed.undo(app.project))app.reloadFromProject();
+        break;
+    case 7:
+        if(ed.redo(app.project))app.reloadFromProject();
+        break;
+    }
+}
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+    auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if (state) {
+        state->framebufferWidth = width;
+        state->framebufferHeight = height;
+    }
+}
+
+void windowSizeCallback(GLFWwindow* window, int width, int height) {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
         state->windowWidth = width;
         state->windowHeight = height;
     }
 }
-
 void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
+    try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
-        state->camera.onMouseScroll(yoffset);
+        if(state->pauseMenu)return;
+        if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)return;
+        if(state->editor.panel==EditorSession::Panel::Terrain &&
+           glfwGetKey(window,GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS) {
+            state->editor.brushRadius=std::clamp(state->editor.brushRadius+
+                float(yoffset),.5f,32.0f);
+        }else state->camera.onMouseScroll(yoffset);
+    }
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"scrollCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"scrollCallback","unknown exception");
     }
 }
 
 void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+    try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (state) {
-        state->selectionManager.onMouseMove(xpos, ypos);
+        if(state->pauseMenu)return;
+        if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)return;
+        if(state->editor.panel!=EditorSession::Panel::Play) {
+            Vec3 hit;
+            state->hoveredTerrain=state->camera.screenToGroundRaycast(
+                xpos,ypos,state->windowWidth,state->windowHeight,hit);
+            if(state->hoveredTerrain)state->hoveredWorld=hit;
+            if(state->mouseStroke && state->hoveredTerrain &&
+               state->editor.panel==EditorSession::Panel::Terrain)
+                state->editor.paint(state->project,hit);
+        }else state->selectionManager.onMouseMove(xpos,ypos);
+    }
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"cursorPosCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"cursorPosCallback","unknown exception");
     }
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    try {
     auto* state = static_cast<AppState*>(glfwGetWindowUserPointer(window));
     if (!state) return;
+    if(state->pauseMenu && state->editor.panel==EditorSession::Panel::Play){
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+            double mx=0.,my=0.;
+            glfwGetCursorPos(window,&mx,&my);
+            NativeUI::PauseMenu menu(state->windowWidth,state->windowHeight);
+            const int buttonIndex=menu.indexAt(mx,my);
+            if(buttonIndex>=0)state->pauseFocus.select(
+                static_cast<std::size_t>(buttonIndex),menu.buttons().size());
+            performPauseAction(window,*state,menu.hit(mx,my));
+        }
+        return;
+    }
+    // Dear ImGui handles its own widgets. A click on a docked panel must not
+    // also trigger world selection, terrain sculpting, or combat orders.
+    if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse){
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE){
+            if(state->mouseStroke){
+                state->editor.finishStroke(state->project);
+                state->mouseStroke=false;
+            }
+            state->selectionManager.isDragging=false;
+        }
+        return;
+    }
 
     double mouseX = 0.0, mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
+    if(state->editor.panel==EditorSession::Panel::Play) {
+        // Authored UI frames are the TOPMOST clickable overlays. Their hit
+        // geometry comes from the same pure model used by their OpenGL draw
+        // pass and F10 preview, so buttons cannot create world orders.
+        const auto overlay=rtsUIFrameHit(
+            rtsResolveUIFrames(rtsUIFramesFromProject(state->project),
+                               state->windowWidth,state->windowHeight,&state->game),
+            mouseX,mouseY);
+        if(overlay.consumed){
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+                if(overlay.action=="SelectArmy")state->command(HUDCommand::SelectArmy);
+                else if(overlay.action=="SelectWorkers")
+                    state->command(HUDCommand::SelectWorkers);
+                else if(overlay.action=="FocusBase")
+                    state->command(HUDCommand::FocusBase);
+                else if(overlay.action=="Trigger"){
+                    if(!state->game.queueUIFrameClick(overlay.frameId))
+                        state->inform("UI EVENT UNAVAILABLE OR QUEUE FULL");
+                }
+            }
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE)
+                state->selectionManager.isDragging=false;
+            return;
+        }
+        RTSHUDLayout hud(state->windowWidth,state->windowHeight,
+                         RTSHUDProfile::fromProject(state->project));
+        if(hud.consumes(mouseX,mouseY)){
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE)
+                state->selectionManager.isDragging=false;
+            if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+                const int selectedId=hud.selectionUnitAt(mouseX,mouseY,state->game);
+                if(selectedId>=0){
+                    const bool additive=(mods&GLFW_MOD_SHIFT)!=0;
+                    for(auto& unit:state->game.units) {
+                        if(additive){
+                            if(unit.id==selectedId)unit.isSelected=!unit.isSelected;
+                        }else unit.isSelected=unit.isAlive() && unit.id==selectedId;
+                    }
+                }else state->command(hud.hit(mouseX,mouseY,state->game),mouseX,mouseY);
+            }
+            return; // even a HUD background click must never issue a world command
+        }
+        if(state->mode==AppState::Mode::CastAbility &&
+           button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS){
+            const auto ability=compileAbility(state->project.catalog,
+                                             state->pendingAbilityId);
+            int casterId=-1;
+            for(const auto& unit:state->game.units)
+                if(unit.isSelected && unit.ownerId==0 && unit.isAlive()){
+                    casterId=unit.id;break;
+                }
+            bool queued=false;
+            if(ability.target==AbilityTarget::Ground){
+                Vec3 hit;
+                if(state->camera.screenToGroundRaycast(mouseX,mouseY,
+                     state->windowWidth,state->windowHeight,hit) &&
+                   casterId>0 &&
+                   state->game.canCastAbilityAt(casterId,
+                                               state->pendingAbilityId,hit))
+                    queued=state->game.queuePlayerCommand(
+                        RTSCommandKind::CastAbility,hit,-1,false,
+                        state->pendingAbilityId);
+            }else{
+                Unit* target=state->selectionManager.raycastUnit(mouseX,mouseY,
+                    state->camera,state->windowWidth,state->windowHeight,
+                    state->game.units,&state->game.vision);
+                if(target && casterId>0 && state->game.canCastAbility(
+                        casterId,state->pendingAbilityId,target->id))
+                    queued=state->game.queuePlayerCommand(
+                        RTSCommandKind::CastAbility,Vec3{},target->id,false,
+                        state->pendingAbilityId);
+            }
+            if(queued){
+                state->inform("CAST "+state->pendingAbilityId);
+                state->pendingAbilityId.clear();
+                state->mode=AppState::Mode::Normal;
+            }else state->inform(ability.target==AbilityTarget::Ground?
+                "AIM AT VISIBLE GROUND INSIDE CAST RANGE":
+                "SELECT A VISIBLE TARGET WITHIN CAST RANGE");
+            return;
+        }
+        if(state->mode==AppState::Mode::CastAbility &&
+           button==GLFW_MOUSE_BUTTON_RIGHT && action==GLFW_PRESS){
+            state->mode=AppState::Mode::Normal;
+            state->pendingAbilityId.clear();
+            state->inform("CAST CANCELLED");
+            return;
+        }
+    }
+    if(state->editor.panel==EditorSession::Panel::Scene) {
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS) {
+            Vec3 hit;
+            if(state->camera.screenToGroundRaycast(mouseX,mouseY,
+                   state->windowWidth,state->windowHeight,hit)) {
+                if((mods & GLFW_MOD_SHIFT) && state->editor.selectedPlacement(state->project)) {
+                    if(state->editor.moveSelectedPlacement(state->project,hit))
+                        state->reloadFromProject();
+                } else state->editor.selectNearestPlacement(state->project,hit);
+            }
+        }
+        return;
+    }
+    if(state->editor.panel!=EditorSession::Panel::Play) {
+        if(state->editor.panel!=EditorSession::Panel::Terrain)return;
+        Vec3 hit;
+        bool hits=state->camera.screenToGroundRaycast(
+            mouseX,mouseY,state->windowWidth,state->windowHeight,hit);
+        if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_PRESS && hits) {
+            if(state->editor.tool==EditorSession::Tool::PlaceMineral ||
+               state->editor.tool==EditorSession::Tool::PlaceUnit ||
+               state->editor.tool==EditorSession::Tool::PlaceDoodad) {
+                if(state->editor.place(state->project,hit))state->reloadFromProject();
+            }else{
+                state->editor.startStroke(state->project);
+                state->mouseStroke=true;
+                state->editor.paint(state->project,hit);
+            }
+        }else if(button==GLFW_MOUSE_BUTTON_LEFT && action==GLFW_RELEASE) {
+            if(state->mouseStroke) {
+                state->editor.finishStroke(state->project);
+                state->mouseStroke=false;
+                state->game.syncTerrain(state->project.terrain);
+            }
+        }else if(button==GLFW_MOUSE_BUTTON_RIGHT && action==GLFW_PRESS && hits) {
+            if(state->editor.removeNearest(state->project,hit))state->reloadFromProject();
+        }
+        return;
+    }
 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
@@ -66,33 +598,469 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
             state->selectionManager.onLeftMouseUp(
                 mouseX, mouseY, shiftHeld,
                 state->camera, state->windowWidth, state->windowHeight,
-                state->units
+                state->game.units,&state->game.vision
             );
         }
     }
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-        Unit* clickedEnemy = state->selectionManager.raycastEnemyUnit(
-            mouseX, mouseY, state->camera, state->windowWidth, state->windowHeight, state->units
-        );
+        Vec3 hit;
+        if (!state->camera.screenToGroundRaycast(mouseX, mouseY,
+                state->windowWidth, state->windowHeight, hit)) return;
+        state->lastClickedWorldPos = hit;
+        state->hasMoveMarker = true;
 
-        if (clickedEnemy) {
-            state->selectionManager.issueAttackOrder(clickedEnemy, state->units);
+        if (state->mode == AppState::Mode::BuildBarracks) {
+            if (!state->game.queuePlayerCommand(RTSCommandKind::Build,hit))
+                std::cout << "[Build] Requires a selected worker nearby, 150 minerals and clear terrain.\n";
+            state->mode = AppState::Mode::Normal;
             return;
         }
-
-        Vec3 hitPoint;
-        if (state->camera.screenToGroundRaycast(mouseX, mouseY, state->windowWidth, state->windowHeight, hitPoint)) {
-            state->lastClickedWorldPos = hitPoint;
-            state->hasMoveMarker = true;
-
-            bool isAttackMove = (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS);
-            state->selectionManager.issueMoveCommand(hitPoint, isAttackMove, state->units);
+        if (state->mode == AppState::Mode::Patrol) {
+            if(!state->game.queuePlayerCommand(RTSCommandKind::Patrol,hit))state->inform("CANNOT QUEUE PATROL");
+            state->mode=AppState::Mode::Normal;
+            return;
         }
+        if (state->mode == AppState::Mode::Move) {
+            if(!state->game.queuePlayerCommand(RTSCommandKind::Move,hit,-1,(mods & GLFW_MOD_SHIFT)!=0))
+                state->inform("NO VALID MOVE ROUTE");
+            state->mode=AppState::Mode::Normal;
+            return;
+        }
+        if (state->mode == AppState::Mode::AttackMove) {
+            state->game.queuePlayerCommand(RTSCommandKind::AttackMove,hit,-1,(mods & GLFW_MOD_SHIFT)!=0);
+            state->mode = AppState::Mode::Normal;
+            return;
+        }
+        Unit* enemy = state->selectionManager.raycastEnemyUnit(
+            mouseX, mouseY, state->camera,
+            state->windowWidth, state->windowHeight, state->game.units,
+            &state->game.vision);
+        // Context targeting is resolved at the authoritative simulation
+        // tick, not against whatever selection happens to exist one frame
+        // later. Enemy identity is captured by stable integer ID.
+        state->game.queuePlayerCommand(RTSCommandKind::Context,hit,
+            enemy?enemy->id:-1,(mods & GLFW_MOD_SHIFT)!=0);
+    }
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"mouseButtonCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"mouseButtonCallback","unknown exception");
     }
 }
 
-int main() {
+
+void characterCallback(GLFWwindow* window,unsigned int codepoint) {
+    try {
+    auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if(ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)return;
+    if(s && (s->editor.panel==EditorSession::Panel::Data ||
+             s->editor.panel==EditorSession::Panel::Triggers ||
+             s->editor.panel==EditorSession::Panel::Scene))
+        s->editor.addChar(codepoint);
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"characterCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"characterCallback","unknown exception");
+    }
+}
+void editorKeyCallback(GLFWwindow* window,int key,int /*scancode*/,int action,int mods) {
+    try {
+    if(action!=GLFW_PRESS && action!=GLFW_REPEAT)return;
+    auto* s=static_cast<AppState*>(glfwGetWindowUserPointer(window));
+    if(!s)return;
+    const bool ctrl=(mods & GLFW_MOD_CONTROL)!=0;
+    if(s->pauseMenu && s->editor.panel==EditorSession::Panel::Play){
+        if(key==GLFW_KEY_ESCAPE && action==GLFW_PRESS)
+            performPauseAction(window,*s,NativeUI::Action::Resume);
+        else if(key==GLFW_KEY_UP || key==GLFW_KEY_W)
+            s->pauseFocus.move(-1,4);
+        else if(key==GLFW_KEY_DOWN || key==GLFW_KEY_S)
+            s->pauseFocus.move(1,4);
+        else if((key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER ||
+                 key==GLFW_KEY_SPACE) && action==GLFW_PRESS){
+            NativeUI::PauseMenu menu(s->windowWidth,s->windowHeight);
+            performPauseAction(window,*s,menu.actionAt(s->pauseFocus.index()));
+        }
+        return;
+    }
+    if(ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard &&
+       !(ctrl && key==GLFW_KEY_S) &&
+       !(key>=GLFW_KEY_F5 && key<=GLFW_KEY_F10))
+        return;
+    auto& edit=s->editor;
+    if(edit.textEditing) {
+        if(ctrl && key==GLFW_KEY_V) {
+            const char* clip=glfwGetClipboardString(window);
+            if(clip)for(const unsigned char* p=reinterpret_cast<const unsigned char*>(clip);
+                         *p;++p)edit.addChar(*p);
+            return;
+        }
+        if(key==GLFW_KEY_ESCAPE){edit.cancelEdit();return;}
+        if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
+            if(action==GLFW_PRESS) {
+                if(edit.filterEditing){
+                    edit.finishCatalogSearch(s->project);
+                    return;
+                }
+                RTSProject backup=s->project;
+                const bool wasModified=edit.modified;
+                bool changed=false;
+                try {
+                    changed=edit.panel==EditorSession::Panel::Triggers
+                        ? edit.finishTriggerEdit(s->project)
+                        : edit.panel==EditorSession::Panel::Scene
+                        ? edit.finishSceneOverrideEdit(s->project)
+                        : edit.renamingCatalog
+                        ? edit.finishCatalogRename(s->project)
+                        : edit.finishEdit(s->project);
+                    if(changed && !edit.textEditing){
+                        TriggerEngine::validate(s->project);
+                        s->reloadFromProject();
+                    }
+                }catch(const std::exception& e){
+                    s->project=std::move(backup);
+                    if(changed)edit.discardRejectedChange();
+                    edit.modified=wasModified;
+                    edit.message=std::string("INVALID EDIT: ")+e.what();
+                    try{s->reloadFromProject();}catch(...) {}
+                }
+            }
+            return;
+        }
+        if(key==GLFW_KEY_BACKSPACE){edit.backspace();return;}
+        return;
+    }
+    if(action==GLFW_REPEAT && key!=GLFW_KEY_LEFT_BRACKET && key!=GLFW_KEY_RIGHT_BRACKET)
+        return;
+    if(ctrl && (mods & GLFW_MOD_SHIFT) && key==GLFW_KEY_L){
+        s->saveReplay();return;
+    }
+    if(ctrl && key==GLFW_KEY_S) {s->saveProject();return;}
+    if(key==GLFW_KEY_F5) {
+        edit.panel=edit.panel==EditorSession::Panel::Terrain?
+            EditorSession::Panel::Play:EditorSession::Panel::Terrain;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F6) {
+        edit.panel=edit.panel==EditorSession::Panel::Triggers?
+            EditorSession::Panel::Play:EditorSession::Panel::Triggers;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F8) {
+        edit.panel=edit.panel==EditorSession::Panel::Scene?
+            EditorSession::Panel::Play:EditorSession::Panel::Scene;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F7) {
+        edit.panel=edit.panel==EditorSession::Panel::Data?
+            EditorSession::Panel::Play:EditorSession::Panel::Data;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_F9) {edit.panel=EditorSession::Panel::Play;s->reloadFromProject();return;}
+    if(key==GLFW_KEY_F10){
+        edit.panel=edit.panel==EditorSession::Panel::Interface?
+            EditorSession::Panel::Play:EditorSession::Panel::Interface;
+        if(edit.panel==EditorSession::Panel::Play)s->reloadFromProject();
+        return;
+    }
+    if(key==GLFW_KEY_ESCAPE) {
+        if(edit.panel!=EditorSession::Panel::Play) {
+            edit.panel=EditorSession::Panel::Play;s->reloadFromProject();
+        }else if(s->mode!=AppState::Mode::Normal) {
+            s->mode=AppState::Mode::Normal;
+            s->inform("COMMAND CANCELLED");
+        }else {
+            s->pauseMenu=true;
+            s->pauseFocus.reset();
+            s->selectionManager.isDragging=false;
+        }
+        return;
+    }
+    if(edit.panel==EditorSession::Panel::Play)return;
+    try{
+        if(ctrl && key==GLFW_KEY_Z) {
+            if(edit.undo(s->project))s->reloadFromProject();
+            return;
+        }
+        if(ctrl && key==GLFW_KEY_Y) {
+            if(edit.redo(s->project))s->reloadFromProject();
+            return;
+        }
+        if(edit.panel==EditorSession::Panel::Scene) {
+            if(key==GLFW_KEY_TAB) {
+                edit.cycleSceneSelection(s->project,(mods & GLFW_MOD_SHIFT)?-1:1);return;
+            }
+            if(ctrl && key==GLFW_KEY_D) {
+                if(edit.duplicateSelectedPlacement(s->project))s->reloadFromProject();return;
+            }
+            if(key==GLFW_KEY_DELETE) {
+                const auto* selected=edit.selectedPlacement(s->project);
+                if(selected && selected->kind=="Region") {
+                    auto triggers=s->project.extensions.find("triggers");
+                    if(triggers!=s->project.extensions.end() &&
+                       triggers->second.is<picojson::array>()) {
+                        for(const auto& rule:triggers->second.get<picojson::array>()){
+                            if(!rule.is<picojson::object>())continue;
+                            const auto& r=rule.get<picojson::object>();
+                            auto event=r.find("event");
+                            if(event==r.end() || !event->second.is<picojson::object>())continue;
+                            const auto& fields=event->second.get<picojson::object>();
+                            auto region=fields.find("region");
+                            if(region!=fields.end() && region->second.is<std::string>() &&
+                               region->second.get<std::string>()==selected->id){
+                                edit.message="REGION IS REFERENCED BY A TRIGGER";return;
+                            }
+                        }
+                    }
+                }
+                if(edit.deleteSelectedPlacement(s->project))s->reloadFromProject();return;
+            }
+            if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
+                edit.beginSceneOverrideEdit(s->project);return;
+            }
+            if(key==GLFW_KEY_P && s->hoveredTerrain) {
+                if(edit.placeSceneMarker(s->project,s->hoveredWorld,false))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_R && s->hoveredTerrain) {
+                if(edit.placeSceneMarker(s->project,s->hoveredWorld,true))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_G && s->hoveredTerrain) {
+                if(edit.moveSelectedPlacement(s->project,s->hoveredWorld))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_J || key==GLFW_KEY_K) {
+                if(edit.rotateSelectedPlacement(s->project,key==GLFW_KEY_J?-15.f:15.f))
+                    s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_COMMA || key==GLFW_KEY_PERIOD) {
+                if(edit.scaleSelectedPlacement(s->project,key==GLFW_KEY_COMMA?.9f:1.1f))
+                    s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_O) {
+                if(edit.toggleSelectedOwner(s->project))s->reloadFromProject();return;
+            }
+            if(key==GLFW_KEY_LEFT_BRACKET || key==GLFW_KEY_RIGHT_BRACKET) {
+                if(edit.adjustSelectedRegionRadius(s->project,
+                   key==GLFW_KEY_LEFT_BRACKET?-.5f:.5f))s->reloadFromProject();
+                return;
+            }
+        }
+        if(edit.panel==EditorSession::Panel::Triggers) {
+            if(ctrl && key==GLFW_KEY_N) {edit.createTrigger(s->project);return;}
+            if(ctrl && key==GLFW_KEY_D) {edit.duplicateTrigger(s->project);return;}
+            if(ctrl && key==GLFW_KEY_C) {
+                const auto json=edit.triggerJSON(s->project,edit.selectedTrigger);
+                if(!json.empty())glfwSetClipboardString(window,json.c_str());
+                return;
+            }
+            if(key==GLFW_KEY_DELETE) {edit.deleteTrigger(s->project);return;}
+            if(key==GLFW_KEY_UP || key==GLFW_KEY_DOWN) {
+                edit.cycleTrigger(s->project,key==GLFW_KEY_UP?-1:1);return;
+            }
+            if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER) {
+                edit.beginTriggerEdit(s->project);return;
+            }
+        }
+        if(edit.panel==EditorSession::Panel::Data) {
+            if(ctrl && key==GLFW_KEY_F){
+                if(mods & GLFW_MOD_SHIFT)edit.clearCatalogSearch(s->project);
+                else edit.beginCatalogSearch();
+                return;
+            }
+            if(ctrl && key==GLFW_KEY_D){edit.duplicateCatalogObject(s->project);return;}
+            if(ctrl && key==GLFW_KEY_R){edit.beginCatalogRename(s->project);return;}
+            if(key==GLFW_KEY_DELETE) {
+                if(edit.deleteCatalogObject(s->project))s->reloadFromProject();
+                return;
+            }
+            if(ctrl && key==GLFW_KEY_N){edit.beginNewField();return;}
+            if(ctrl && key==GLFW_KEY_BACKSPACE) {
+                if(edit.removeLocalOverride(s->project))s->reloadFromProject();
+                return;
+            }
+            if(key==GLFW_KEY_TAB)edit.cycleObject(s->project,
+                                                    (mods & GLFW_MOD_SHIFT)?-1:1);
+            else if(key==GLFW_KEY_UP)edit.cycleField(s->project,-1);
+            else if(key==GLFW_KEY_DOWN)edit.cycleField(s->project,1);
+            else if(key==GLFW_KEY_ENTER || key==GLFW_KEY_KP_ENTER)
+                edit.beginValueEdit(s->project);
+        }else if(edit.panel==EditorSession::Panel::Terrain) {
+            if(key>=GLFW_KEY_1 && key<=GLFW_KEY_7)
+                edit.tool=static_cast<EditorSession::Tool>(key-GLFW_KEY_1);
+            else if(key==GLFW_KEY_8)edit.tool=EditorSession::Tool::PlaceMineral;
+            else if(key==GLFW_KEY_9)edit.tool=EditorSession::Tool::PlaceUnit;
+            else if(key==GLFW_KEY_0)edit.tool=EditorSession::Tool::PlaceDoodad;
+            else if(key==GLFW_KEY_LEFT_BRACKET)
+                edit.brushRadius=std::max(.5f,edit.brushRadius-.5f);
+            else if(key==GLFW_KEY_RIGHT_BRACKET)
+                edit.brushRadius=std::min(32.f,edit.brushRadius+.5f);
+            else if(key==GLFW_KEY_MINUS)
+                edit.brushStrength=std::max(.1f,edit.brushStrength-.1f);
+            else if(key==GLFW_KEY_EQUAL)
+                edit.brushStrength=std::min(10.f,edit.brushStrength+.1f);
+            else if(key==GLFW_KEY_M)edit.materialId=(edit.materialId+1)%8;
+            else if(key==GLFW_KEY_O)edit.placementOwner=1-edit.placementOwner;
+            else if(key==GLFW_KEY_P)
+                edit.cyclePlacementCatalog(s->project,1,(mods & GLFW_MOD_SHIFT)!=0);
+            else if(key==GLFW_KEY_DELETE && s->hoveredTerrain) {
+                if(edit.removeNearest(s->project,s->hoveredWorld))s->reloadFromProject();
+            }
+        }
+    }catch(const std::exception& e) {edit.message=std::string("EDITOR ERROR: ")+e.what();}
+    } catch(const std::exception& e) {
+        reportInputFailure(window,"editorKeyCallback",e.what());
+    } catch(...) {
+        reportInputFailure(window,"editorKeyCallback","unknown exception");
+    }
+}
+
+int main(int argc, char** argv) {
+    // No graphics context needed. CI checks this exact native executable,
+    // not merely the CMake project or a build-info.json written afterward.
+    if(argc>=2 && (std::string(argv[1])=="--version" ||
+                   std::string(argv[1])=="--features")){
+        std::cout<<"RTS_BUILD_COMMIT="<<RTS_SOURCE_COMMIT<<"\n"
+                 <<"RTS_FEATURE_FOG_OF_WAR=1\n"
+                 <<"RTS_FEATURE_GAMEPLAY_HUD=1\n"
+                  <<"RTS_FEATURE_NATIVE_PAUSE_MENU=1\n"
+                 <<"RTS_FEATURE_CREATOR_GUI=1\n"
+                 <<"RTS_FEATURE_TERRAIN_EDITOR=1\n"
+                 <<"RTS_FEATURE_SCENE_EDITOR=1\n"
+                 <<"RTS_FEATURE_DATA_EDITOR=1\n"
+                 <<"RTS_FEATURE_TRIGGER_EDITOR=1\n"
+                 <<"RTS_FEATURE_VISUAL_ECA_EDITOR=1\n"
+                 <<"RTS_FEATURE_TRIGGER_TRACE_MONITOR=1\n"
+                 <<"RTS_FEATURE_DYNAMIC_NAV_REPLAN=1\n"
+                 <<"RTS_FEATURE_STABLE_SIM_ORDER=1\n"
+                 <<"RTS_FEATURE_COMMAND_STREAM=1\n"
+                 <<"RTS_FEATURE_REPLAY_VERIFY=1\n"
+                 <<"RTS_FEATURE_AI_COMMAND_PLANNER=1\n"
+                 <<"RTS_FEATURE_SCRIPT_GLOBALS=1\n"
+                 <<"RTS_FEATURE_SCRIPT_EXPRESSIONS=1\n"
+                 <<"RTS_FEATURE_SCRIPT_CONTROL_FLOW=1\n"
+                 <<"RTS_FEATURE_RECURSIVE_ECA_UI=1\n"
+                 <<"RTS_FEATURE_TIMED_EFFECTS=1\n"
+                 <<"RTS_FEATURE_UNIT_ABILITIES=1\n"
+                 <<"RTS_FEATURE_ABILITY_EDITOR=1\n"
+                 <<"RTS_FEATURE_STATUS_BEHAVIORS=1\n"
+                 <<"RTS_FEATURE_VISUAL_EFFECT_FLOW=1\n"
+                 <<"RTS_FEATURE_GROUND_AREA_ABILITIES=1\n"
+                 <<"RTS_FEATURE_DELAYED_AREA_IMPACTS=1\n"
+                 <<"RTS_FEATURE_AUTHORED_PROJECTILES=1\n"
+                 <<"RTS_FEATURE_PROJECTILE_INTERCEPTION=1\n"
+                 <<"RTS_FEATURE_AREA_SHAPES=1\n"
+                 <<"RTS_FEATURE_AUTHORED_WEAPONS=1\n"
+                 <<"RTS_FEATURE_ARMOR_PENETRATION=1\n"
+                 <<"RTS_FEATURE_WEAPON_PROJECTILES=1\n"
+                 <<"RTS_FEATURE_ACTOR_EVENT_CUES=1\n"
+                 <<"RTS_FEATURE_REQUIREMENT_GRAPHS=1\n"
+                 <<"RTS_FEATURE_UPGRADE_RESEARCH=1\n"
+                 <<"RTS_FEATURE_TECH_SHOW_USE=1\n"
+                 <<"RTS_FEATURE_TECH_DEPENDENCY_MAP=1\n"
+                 <<"RTS_FEATURE_AI_RESEARCH=1\n"
+                 <<"RTS_FEATURE_CREATOR_MODULE_WINDOWS=1\n"
+                 <<"RTS_FEATURE_CREATOR_DPI_SCALING=1\n"
+                 <<"RTS_FEATURE_GAMEPLAY_INTERFACE_EDITOR=1\n"
+                 <<"RTS_FEATURE_UI_FRAME_HIERARCHY=1\n"
+                 <<"RTS_FEATURE_UI_TRIGGER_EVENTS=1\n"
+                 <<"RTS_FEATURE_UI_VARIABLE_BINDINGS=1\n"
+                 <<"RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1\n"
+                 <<"RTS_FEATURE_UI_WRAPPED_LAYOUT=1\n"
+                 <<"RTS_FEATURE_STATIC_GLTF_ASSETS=1\n"
+                 <<"RTS_FEATURE_STATIC_MULTIMATERIAL=1\n"
+                 <<"RTS_FEATURE_NATIVE_GLTF_IMPORT=1\n";
+        return 0;
+    }
+    RTSCrashReporter::install();
+    int smokeFrames = -1;
+    std::string screenshotPath;
+    std::string inputProjectPath;
+    bool startEditor=false;
+    bool startTriggerEditor=false;
+    bool startSceneEditor=false;
+    bool startDataEditor=false;
+    bool startInterfaceEditor=false;
+    bool selectArmyForSmoke=false;
+    bool selectProducerForSmoke=false;
+    bool selectAbilityCasterSmoke=false;
+    bool castSelfAbilityForSmoke=false;
+    bool castGroundAbilityForSmoke=false;
+    bool castProjectileForSmoke=false;
+    bool fixedTickSmoke=false;
+    bool stressEditor=false;
+    bool pauseMenuSmoke=false;
+    bool triggerMonitorSmoke=false;
+    bool liveTriggerMonitorSmoke=false;
+    bool techGraphSmoke=false;
+    bool aiResearchSmoke=false;
+    bool aiResearchPlaySmoke=false;
+    bool moduleWindowsSmoke=false;
+    bool uiFramesSmoke=false;
+    bool uiTriggerSmoke=false;
+    bool importDialogSmoke=false;
+    std::string smokeUIFrameId;
+    double smokeUiScale=0.;
+    std::string smokeTriggerId;
+    std::string smokeCatalogId;
+    std::string smokeResearchUpgrade;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--smoke-frames" && i + 1 < argc)
+            smokeFrames = (std::max)(1, std::atoi(argv[++i]));
+        else if (arg == "--screenshot" && i + 1 < argc)
+            screenshotPath = argv[++i];
+        else if(arg == "--project" && i+1<argc)inputProjectPath=argv[++i];
+        else if(arg == "--editor")startEditor=true;
+        else if(arg == "--trigger-editor")startTriggerEditor=true;
+        else if(arg == "--scene-editor")startSceneEditor=true;
+        else if(arg == "--data-editor")startDataEditor=true;
+        else if(arg == "--smoke-import-dialog")importDialogSmoke=true;
+        else if(arg == "--interface-editor")startInterfaceEditor=true;
+        else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
+        else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
+        else if(arg == "--smoke-research-upgrade" && i+1<argc)
+            smokeResearchUpgrade=argv[++i];
+        else if(arg == "--smoke-select-ability-caster")selectAbilityCasterSmoke=true;
+        else if(arg == "--smoke-cast-self-ability")castSelfAbilityForSmoke=true;
+        else if(arg == "--smoke-cast-ground-ability")castGroundAbilityForSmoke=true;
+        else if(arg == "--smoke-cast-projectile")castProjectileForSmoke=true;
+        else if(arg == "--smoke-fixed-ticks")fixedTickSmoke=true;
+        else if(arg == "--editor-stress-smoke")stressEditor=true;
+        else if(arg == "--smoke-pause-menu")pauseMenuSmoke=true;
+        else if(arg == "--smoke-trigger-monitor")triggerMonitorSmoke=true;
+        else if(arg == "--smoke-live-trigger-monitor")liveTriggerMonitorSmoke=true;
+        else if(arg == "--smoke-tech-graph")techGraphSmoke=true;
+        else if(arg == "--smoke-ai-research")aiResearchSmoke=true;
+        else if(arg == "--smoke-ai-research-play")aiResearchPlaySmoke=true;
+        else if(arg == "--smoke-ui-trigger")uiTriggerSmoke=true;
+        else if(arg == "--smoke-select-ui-frame" && i+1<argc)
+            smokeUIFrameId=argv[++i];
+        else if(arg == "--smoke-ui-frames"){
+            uiFramesSmoke=true;
+            moduleWindowsSmoke=true;
+            startInterfaceEditor=true;
+        }
+        else if(arg == "--smoke-module-windows"){
+            moduleWindowsSmoke=true;
+            startDataEditor=true;
+        }
+        else if(arg == "--smoke-ui-scale" && i+1<argc)
+            smokeUiScale=std::atof(argv[++i]);
+        else if(arg == "--smoke-select-trigger-id" && i+1<argc)
+            smokeTriggerId=argv[++i];
+        else if(arg == "--smoke-select-catalog-id" && i+1<argc)
+            smokeCatalogId=argv[++i];
+    }
+    int renderedFrames = 0;
     try {
         if (!glfwInit()) {
             std::cerr << "Failed to initialize GLFW." << std::endl;
@@ -107,9 +1075,214 @@ int main() {
 #endif
 
         AppState app;
+        if(smokeFrames>0 && smokeUiScale>0.){
+            // Test-only: do not persist accessibility settings from CI.
+            app.uiSettings.uiScale=smokeUiScale;
+            (void)app.uiSettings.effective(1.);
+        }
+        if(moduleWindowsSmoke && smokeFrames>0){
+            app.uiSettings.separateModules=true;
+            app.moduleStartOffset=ImVec2(1300.f,65.f);
+        }
+        if(!inputProjectPath.empty()) {
+            app.project.loadFile(inputProjectPath);
+            app.projectPath=inputProjectPath;
+        }else if(std::filesystem::exists("projects/default.rtsproject.json")) {
+            app.project.loadFile("projects/default.rtsproject.json");
+        }
+        app.recoverAutosave();
+        app.reloadFromProject();
+        if(uiFramesSmoke && smokeFrames>0)
+            CreatorInterfaceEditor::requestFrameTab=true;
+        if(!smokeUIFrameId.empty() && smokeFrames>0)
+            CreatorUIFrameEditor::focusFrameId=smokeUIFrameId;
+        if(uiTriggerSmoke && smokeFrames>0){
+            // Exercise the real geometry admission and authoritative
+            // command path; this is not a fake HUD-data edit.
+            const auto frames=rtsResolveUIFrames(
+                rtsUIFramesFromProject(app.project),app.windowWidth,app.windowHeight,&app.game);
+            const auto found=std::find_if(frames.begin(),frames.end(),
+                [](const RTSUIResolvedFrame& frame){
+                    return frame.source.id=="event_button";
+                });
+            if(found==frames.end())
+                throw std::invalid_argument("UI trigger smoke lacks event_button");
+            const auto hit=rtsUIFrameHit(frames,
+                found->bounds.x+6.f,found->bounds.y+6.f);
+            if(hit.action!="Trigger" || hit.frameId!=found->source.id ||
+               !app.game.queueUIFrameClick(hit.frameId))
+                throw std::runtime_error("UI trigger smoke event scheduling failed");
+        }
+        if((triggerMonitorSmoke || liveTriggerMonitorSmoke) && smokeFrames>0)
+            app.triggerTraceVisible=true;
+        if(techGraphSmoke && smokeFrames>0){
+            CreatorTechGraph::visible=true;
+            CreatorTechGraph::focusSelection=false;
+            CreatorTechGraph::suppressHoverTooltips=true;
+            CreatorCatalogNavigator::visible=false;
+            startDataEditor=true;
+        }
+        if(aiResearchSmoke && smokeFrames>0){
+            CreatorAIResearch::visible=true;
+            CreatorTechGraph::visible=false;
+            CreatorCatalogNavigator::visible=false;
+            startDataEditor=true;
+        }
+        if(aiResearchPlaySmoke && smokeFrames>0)
+            CreatorAIResearch::visible=true;
+        if(selectArmyForSmoke && smokeFrames>0)
+            app.command(HUDCommand::SelectArmy);
+        if(selectAbilityCasterSmoke && smokeFrames>0){
+            bool found=false;
+            for(auto& unit:app.game.units)
+                if(unit.isAlive() && unit.ownerId==0 && !unit.isStructure &&
+                   !unit.isWorker && !unit.catalogId.empty() &&
+                   !unitAbilityIds(app.project.catalog,unit.catalogId).empty()){
+                    for(auto& other:app.game.units)other.isSelected=false;
+                    unit.isSelected=true;
+                    app.camera.focalPoint=unit.position;
+                    app.camera.targetFocalPoint=unit.position;
+                    found=true;
+                    break;
+                }
+            if(!found)throw std::invalid_argument("No playable ability caster in map");
+        }
+        // Screenshot-only scripting of a *real command*, never a synthetic
+        // modifier. If authoring is broken the smoke must fail visibly.
+        if(castSelfAbilityForSmoke && smokeFrames>0){
+            if(!selectAbilityCasterSmoke)
+                throw std::invalid_argument("Self-cast smoke needs an ability caster");
+            const std::string abilityId=app.game.selectedAbilityId(0);
+            const auto definition=compileAbility(app.project.catalog,abilityId);
+            if(definition.target!=AbilityTarget::Self ||
+               !app.game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                                            Vec3{},-1,false,abilityId))
+                throw std::invalid_argument("Smoke cannot cast first authored Self Ability");
+        }
+        if((castGroundAbilityForSmoke || castProjectileForSmoke) && smokeFrames>0){
+            if(!selectAbilityCasterSmoke)
+                throw std::invalid_argument("Ground smoke needs an ability caster");
+            int casterId=-1;
+            for(const auto& u:app.game.units)
+                if(u.isSelected && u.isAlive() && u.ownerId==0){casterId=u.id;break;}
+            if(casterId<=0)throw std::invalid_argument("No selected caster");
+            std::string skill;
+            const auto caster=std::find_if(app.game.units.begin(),
+                app.game.units.end(),
+                [&](const Unit& u){return u.id==casterId;});
+            if(caster==app.game.units.end())
+                throw std::invalid_argument("Smoke caster missing");
+            for(const auto& candidate:unitAbilityIds(
+                    app.project.catalog,caster->catalogId))
+                if(compileAbility(app.project.catalog,candidate).target==
+                   AbilityTarget::Ground &&
+                   (!castProjectileForSmoke ||
+                    !compileAbility(app.project.catalog,candidate).projectileId.empty())){
+                    skill=candidate;break;
+                }
+            if(skill.empty())throw std::invalid_argument(
+                castProjectileForSmoke?"No authored Projectile Ground Ability":
+                                       "No authored Ground Ability");
+            Vec3 point=app.game.units.front().position;
+            for(const auto& u:app.game.units)if(u.ownerId!=0 && u.isAlive() &&
+                  app.game.canCastAbilityAt(casterId,skill,u.position)){
+                point=u.position;break;
+            }
+            if(!app.game.canCastAbilityAt(casterId,skill,point) ||
+               !app.game.queuePlayerCommand(RTSCommandKind::CastAbility,
+                                             point,-1,false,skill))
+                throw std::invalid_argument("Unable to smoke-cast Ground Ability");
+        }
+        if(selectProducerForSmoke && smokeFrames>0) {
+            bool selected=false;
+            for(auto& unit:app.game.units)if(unit.isAlive() && unit.ownerId==0 &&
+                unit.isStructure &&
+                (app.game.trainableUnits(unit.id).size()>3 ||
+                 !app.game.researchableUpgrades(unit.id).empty())){
+                for(auto& other:app.game.units)other.isSelected=false;
+                unit.isSelected=true;
+                app.camera.focalPoint=unit.position;
+                app.camera.targetFocalPoint=unit.position;
+                selected=true;
+                break;
+            }
+            if(!selected)throw std::invalid_argument(
+                "No authorable training/research producer in smoke project");
+        }
+        // Native screenshot integration check: submit an actual player
+        // ResearchUpgrade command and advance its authored fixed duration.
+        // No direct tech-state injection, renderer fakery or wall-clock sleep.
+        if(!smokeResearchUpgrade.empty() && smokeFrames>0){
+            if(!selectProducerForSmoke || app.game.selectedProducerId()<0)
+                throw std::invalid_argument(
+                    "Research smoke needs a selected production structure");
+            const auto upgrade=compileUpgrade(app.project.catalog,
+                                              smokeResearchUpgrade);
+            const int previous=app.game.upgradeLevel(0,smokeResearchUpgrade);
+            if(!app.game.queuePlayerCommand(RTSCommandKind::ResearchUpgrade,
+                    Vec3{},-1,false,smokeResearchUpgrade))
+                throw std::invalid_argument("Unable to queue smoke ResearchUpgrade");
+            for(std::uint32_t tick=0;tick<=upgrade.researchTicks;++tick)
+                app.game.update(1.f/60.f);
+            if(app.game.upgradeLevel(0,smokeResearchUpgrade)!=previous+1)
+                throw std::invalid_argument(
+                    "Research smoke did not complete authored technology");
+        }
+        if(startEditor || startTriggerEditor || startSceneEditor || startDataEditor ||
+           startInterfaceEditor || (stressEditor && smokeFrames>0)) {
+            app.editor.panel=startInterfaceEditor ? EditorSession::Panel::Interface :
+                startDataEditor ? EditorSession::Panel::Data :
+                startSceneEditor ? EditorSession::Panel::Scene :
+                startTriggerEditor ? EditorSession::Panel::Triggers :
+                                     EditorSession::Panel::Terrain;
+            auto preset=app.project.metadata.find("editor_camera");
+            if(preset!=app.project.metadata.end() && preset->second.is<picojson::object>()) {
+                const auto& cam=preset->second.get<picojson::object>();
+                auto read=[&](const char* k,float def) {
+                    auto it=cam.find(k);
+                    return (it!=cam.end() && it->second.is<double>() &&
+                            std::isfinite(it->second.get<double>()))
+                        ? float(it->second.get<double>()) : def;
+                };
+                app.camera.focalPoint=Vec3(read("x",0),0,read("z",0));
+                app.camera.targetFocalPoint=app.camera.focalPoint;
+                app.camera.yawDegrees=read("yaw",0);
+                app.camera.currentZoomDistance=
+                    std::clamp(read("zoom",42),app.camera.minZoomDistance,app.camera.maxZoomDistance);
+                app.camera.targetZoomDistance=app.camera.currentZoomDistance;
+            }
+        }
+        if(importDialogSmoke && smokeFrames>0){
+            app.editor.panel=EditorSession::Panel::Data;
+            CreatorAssetLibrary::requestImportPopup=true;
+        }
+        // Verify F7's actual typed inspector for a named data object;
+        // fail smoke runs on missing catalog objects instead of showing a
+        // misleading default unit selection screenshot.
+        if(smokeFrames>0 && !smokeCatalogId.empty()){
+            if(!app.editor.selectCatalogId(app.project,smokeCatalogId))
+                throw std::invalid_argument("Unknown smoke catalog ID: "+smokeCatalogId);
+            app.editor.panel=EditorSession::Panel::Data;
+        }
+        // Deterministically choose a real authored rule for screenshot
+        // verification; never modify normal editor startup selection.
+        if(smokeFrames>0 && !smokeTriggerId.empty()){
+            bool found=false;
+            const auto& authored=app.game.triggerDiagnostics().rules();
+            for(std::size_t i=0;i<authored.size();++i)
+                if(authored[i].id==smokeTriggerId){
+                    app.editor.selectedTrigger=i;
+                    found=true;
+                    break;
+                }
+            if(!found)
+                throw std::invalid_argument("Unknown smoke trigger ID: "+smokeTriggerId);
+        }
+        if(pauseMenuSmoke && smokeFrames>0 &&
+           app.editor.panel==EditorSession::Panel::Play)app.pauseMenu=true;
         GLFWwindow* window = glfwCreateWindow(
             app.windowWidth, app.windowHeight,
-            "3D RTS Engine - Modular Architecture",
+            "RTS Creator - Game & World Editor",
             nullptr, nullptr
         );
         if (!window) {
@@ -129,9 +1302,45 @@ int main() {
 
         glfwSetWindowUserPointer(window, &app);
         glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+        glfwSetWindowSizeCallback(window, windowSizeCallback);
+        glfwGetWindowSize(window, &app.windowWidth, &app.windowHeight);
+        glfwGetFramebufferSize(window, &app.framebufferWidth, &app.framebufferHeight);
+        glViewport(0, 0, app.framebufferWidth, app.framebufferHeight);
         glfwSetScrollCallback(window, scrollCallback);
         glfwSetCursorPosCallback(window, cursorPosCallback);
         glfwSetMouseButtonCallback(window, mouseButtonCallback);
+        glfwSetKeyCallback(window,editorKeyCallback);
+        glfwSetCharCallback(window,characterCallback);
+        // Screenshot-only cursor placement: default Xvfb cursor coordinates
+        // can hover a graph node and obscure the captured UI with a tooltip.
+        if(techGraphSmoke && smokeFrames>0)
+            glfwSetCursorPos(window,double(app.windowWidth-12),
+                             double(app.windowHeight-12));
+
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        auto& io=ImGui::GetIO();
+        // Native screenshot modes start from a clean floating-pane layout.
+        // Earlier CI smokes save imgui.ini and otherwise override our
+        // FirstUseEver panel geometry; normal creator sessions still
+        // persist custom docking and window sizes as before.
+        if(smokeFrames>0 &&
+           (aiResearchSmoke || aiResearchPlaySmoke || moduleWindowsSmoke))
+            io.IniFilename=nullptr;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        // Desktop editor modules can leave the game window and become
+        // independent native GLFW/OS windows. Classic CI screenshots are
+        // deliberately single-viewport; a separate test exercises the
+        // actual multi-viewport path on Xvfb.
+        if(smokeFrames<=0 || moduleWindowsSmoke)
+            io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        // Init after game callbacks; the official GLFW backend chains them.
+        ImGui_ImplGlfw_InitForOpenGL(window,true);
+        ImGui_ImplOpenGL3_Init("#version 330");
+        CreatorUIRuntime creatorUi;
+        creatorUi.initialize(app.uiSettings,window);
+        app.uiEffectiveScale=creatorUi.scale();
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
@@ -142,39 +1351,41 @@ int main() {
         GLuint ringShader    = compileShaderProgram(RING_VERTEX_SHADER, RING_FRAGMENT_SHADER);
         GLuint hudBoxShader  = compileShaderProgram(HUD_BOX_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
         GLuint lineShader    = compileShaderProgram(LINE_VERTEX_SHADER, HUD_BOX_FRAGMENT_SHADER);
+        RTSStaticMeshRenderer importedMeshes;
+        std::uint64_t uploadedAssetRevision=0;
 
-        UnitData humanMarineData = UnitData::fromTresString(HUMAN_MARINE_TRES);
-        UnitData hybridZealotData = UnitData::fromTresString(HYBRID_ZEALOT_TRES);
+        // Streaming 1-channel vision texture, one texel per terrain cell.
+        // Uploads are revision-gated; this does not rebuild the terrain VBO.
+        GLuint fogTexture=0;
+        glGenTextures(1,&fogTexture);
+        glBindTexture(GL_TEXTURE_2D,fogTexture);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+        glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+        int uploadedFogWidth=0,uploadedFogHeight=0;
+        std::size_t uploadedFogRevision=0;
 
-        std::cout << "--- Loaded Sample .tres UnitData Resources ---\n"
-                  << humanMarineData.toTresString() << "\n"
-                  << hybridZealotData.toTresString()
-                  << "----------------------------------------------\n";
+        // The skirmish owns unit lifetimes and initial spawning; see RTSSkirmish.
 
-        app.units.emplace_back(1, "Marine Alpha",   humanMarineData, Vec3(-8.5f, 0.0f, -3.5f));
-        app.units.emplace_back(2, "Marine Bravo",   humanMarineData, Vec3(-8.5f, 0.0f, -1.2f));
-        app.units.emplace_back(3, "Marine Charlie", humanMarineData, Vec3(-8.5f, 0.0f,  1.2f));
-        app.units.emplace_back(4, "Marine Delta",   humanMarineData, Vec3(-8.5f, 0.0f,  3.5f));
-        app.units.emplace_back(5, "Marine Echo",    humanMarineData, Vec3(-10.5f, 0.0f, -2.0f));
-        app.units.emplace_back(6, "Marine Foxtrot", humanMarineData, Vec3(-10.5f, 0.0f,  2.0f));
-
-        app.units.emplace_back(7, "Zealot Vorazun", hybridZealotData, Vec3(8.5f, 0.0f, -2.5f));
-        app.units.emplace_back(8, "Zealot Karax",   hybridZealotData, Vec3(8.5f, 0.0f,  2.5f));
-
-        // 1. Terrain Geometry
-        const float terrainSize = 120.0f;
-        float terrainVertices[] = {
-            -terrainSize, 0.0f, -terrainSize,  terrainSize, 0.0f, -terrainSize,  terrainSize, 0.0f,  terrainSize,
-            -terrainSize, 0.0f, -terrainSize,  terrainSize, 0.0f,  terrainSize, -terrainSize, 0.0f,  terrainSize
-        };
+        // Editable heightfield mesh: five floats per vertex, updated after brush strokes.
+        std::vector<float> terrainVertices=app.project.terrain.buildMesh(app.terrainSlopeLimit());
+        GLsizei terrainVertexCount=static_cast<GLsizei>(terrainVertices.size()/5);
         GLuint terrainVAO, terrainVBO;
         glGenVertexArrays(1, &terrainVAO);
         glGenBuffers(1, &terrainVBO);
         glBindVertexArray(terrainVAO);
         glBindBuffer(GL_ARRAY_BUFFER, terrainVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(terrainVertices), terrainVertices, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glBufferData(GL_ARRAY_BUFFER, terrainVertices.size()*sizeof(float),
+                     terrainVertices.data(), GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3*sizeof(float)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(4*sizeof(float)));
+        glEnableVertexAttribArray(2);
+        app.project.terrain.clearDirty();
 
         // 2. 3D Unit Mesh Geometry
         float unitVertices[] = {
@@ -235,29 +1446,192 @@ int main() {
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
-        std::cout << "=====================================================================" << std::endl;
-        std::cout << "3D RTS Combat & Resource Engine Ready!" << std::endl;
-        std::cout << " - Left-Click / Drag Box: Select Humanity Marines." << std::endl;
-        std::cout << " - Right-Click Ground: Move (Units auto-attack enemies in aggro range)." << std::endl;
-        std::cout << " - Right-Click Hybrid Zealot: Focus-fire target." << std::endl;
-        std::cout << "=====================================================================" << std::endl;
-
+        std::cout << "RTS Skirmish: LMB select, RMB move/attack/gather, A then RMB attack-move,\n"
+                  << "B then RMB place Barracks (worker needed), T train Ranger, C train Worker,\n"
+                  << "X stop, Q/E rotate, arrows/W/S/D camera, R restart, Esc pause.\n";
+        float accumulator = 0.0f;
+        const float fixedStep = 1.0f / 60.0f;
+        double lastTitleUpdate = 0.0;
         double lastTime = glfwGetTime();
+        double lastAutosave=lastTime;
 
         while (!glfwWindowShouldClose(window)) {
+            // Rebuild crisp fonts and all item padding from the same BASE
+            // theme when user scale or the active monitor DPI changes.
+            creatorUi.apply(app.uiSettings,CreatorUIRuntime::windowDpi(window));
+            app.uiEffectiveScale=creatorUi.scale();
+            if(app.uiSettingsDirty){
+                if(smokeFrames<=0 && !app.uiSettings.save(app.uiSettingsPath))
+                    app.editor.message="COULD NOT SAVE UI PREFERENCES";
+                app.uiSettingsDirty=false;
+            }
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            if(techGraphSmoke && smokeFrames>0)
+                ImGui::GetIO().MousePos=ImVec2(-10000.f,-10000.f);
+            ImGui::NewFrame();
+            if(stressEditor && smokeFrames>0)
+                exerciseEditorLifecycle(app,renderedFrames);
             double currentTime = glfwGetTime();
-            float deltaTime = (std::min)(0.05f, static_cast<float>(currentTime - lastTime));
+            float deltaTime = std::clamp(static_cast<float>(currentTime - lastTime), 0.0f, 0.25f);
             lastTime = currentTime;
-
-            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-                glfwSetWindowShouldClose(window, true);
+            if(currentTime-lastAutosave>=25.0){
+                app.autoSave();
+                lastAutosave=currentTime;
+            }
+            if(app.noticeSeconds>0.f) {
+                app.noticeSeconds=std::max(0.f,app.noticeSeconds-deltaTime);
+                if(app.noticeSeconds==0.f)app.notice.clear();
             }
 
-            app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
-            for (auto& unit : app.units) {
-                unit.update(deltaTime, app.units, app.camera.mapBoundary);
+            auto justPressed = [&](int key, bool& previous) {
+                bool down = glfwGetKey(window, key) == GLFW_PRESS;
+                bool fired = down && !previous;
+                previous = down;
+                return fired;
+            };
+            if(app.editor.panel==EditorSession::Panel::Play && !app.pauseMenu) {
+            if (justPressed(GLFW_KEY_F, app.keyF)) app.command(HUDCommand::CastAbility0);
+            if (justPressed(GLFW_KEY_J, app.keyJ)) app.command(HUDCommand::CastAbility1);
+            if (justPressed(GLFW_KEY_K, app.keyK)) app.command(HUDCommand::CastAbility2);
+            if (justPressed(GLFW_KEY_M, app.keyM)) app.command(HUDCommand::Move);
+            if (justPressed(GLFW_KEY_P, app.keyP)) app.command(HUDCommand::Patrol);
+            if (justPressed(GLFW_KEY_V, app.keyV)) app.command(HUDCommand::CancelQueue);
+            if (justPressed(GLFW_KEY_A, app.keyA)) app.command(HUDCommand::AttackMove);
+            const bool producerSelected=app.game.selectedProducerHasCatalog();
+            if (justPressed(GLFW_KEY_B, app.keyB))
+                app.command(producerSelected?HUDCommand::TrainSlot0:HUDCommand::Build);
+            if (justPressed(GLFW_KEY_T, app.keyT))
+                app.command(producerSelected?HUDCommand::TrainSlot1:HUDCommand::Ranger);
+            if (justPressed(GLFW_KEY_C, app.keyC))
+                app.command(producerSelected?HUDCommand::TrainSlot2:HUDCommand::Worker);
+            if (justPressed(GLFW_KEY_TAB, app.keyTab)){
+                if(producerSelected)app.command(HUDCommand::TrainingPage);
+                else if(app.game.abilityPageCount()>1)
+                    app.command(HUDCommand::AbilityPage);
+            }
+            if (justPressed(GLFW_KEY_X, app.keyX)) app.command(HUDCommand::Stop);
+            if (justPressed(GLFW_KEY_F2, app.keyF2)) app.command(HUDCommand::SelectArmy);
+            if (justPressed(GLFW_KEY_F3, app.keyF3)) app.command(HUDCommand::SelectWorkers);
+            if (justPressed(GLFW_KEY_G, app.keyG)) app.command(HUDCommand::Hold);
+            if (justPressed(GLFW_KEY_H, app.keyH)) app.command(HUDCommand::FocusBase);
+            if (justPressed(GLFW_KEY_R, app.keyR)) {
+                app.game.reset();
+                app.controlGroups = {};
+                app.mode = AppState::Mode::Normal;
+                app.hasMoveMarker = false;
+            }
+            bool controlHeld = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+                               glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+            for(int digit=1;digit<=9;++digit) {
+                if(!justPressed(GLFW_KEY_0+digit,app.digitWasDown[static_cast<size_t>(digit)]))continue;
+                auto& group=app.controlGroups[static_cast<size_t>(digit)];
+                if(controlHeld) {
+                    group.clear();
+                    for(const auto& u:app.game.units)
+                        if(u.isSelected && u.isAlive() && u.ownerId==0)group.push_back(u.id);
+                } else {
+                    for(auto& u:app.game.units) {
+                        u.isSelected=false;
+                        if(u.isAlive() && u.ownerId==0 &&
+                           std::find(group.begin(),group.end(),u.id)!=group.end())
+                            u.isSelected=true;
+                    }
+                }
+            }
+            }
+            if(!app.editor.textEditing && !app.pauseMenu) {
+                if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) app.camera.yawDegrees -= 75.0f * deltaTime;
+                if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) app.camera.yawDegrees += 75.0f * deltaTime;
             }
 
+            if(!app.editor.textEditing && !app.pauseMenu)
+                app.camera.update(deltaTime, window, app.windowWidth, app.windowHeight);
+            if(app.editor.panel==EditorSession::Panel::Play && !app.pauseMenu) {
+                // CI-only deterministic playtest: one fixed 60Hz simulation
+                // step per rendered frame. Actual game/editor timing remains
+                // wall-clock driven unless --smoke-fixed-ticks is explicit.
+                accumulator += fixedTickSmoke && smokeFrames>0?
+                               fixedStep:deltaTime;
+                int steps = 0;
+                while (accumulator >= fixedStep && steps < 8) {
+                    try{
+                        app.game.update(fixedStep);
+                        for(const auto& order:app.game.takeCommandOutcomes())
+                            if(!order.accepted && order.source==0)
+                                app.inform(std::string("COMMAND REJECTED: ")+
+                                           rtsCommandName(order.kind));
+                    }
+                    catch(const std::exception& e) {
+                        // Do not tear down the editor on malformed game scripting.
+                        reportInputFailure(window,"simulation",e.what());
+                        app.editor.panel=EditorSession::Panel::Scene;
+                        accumulator=0.f;break;
+                    }
+                    accumulator -= fixedStep;
+                    ++steps;
+                }
+                if (steps == 8 && accumulator >= fixedStep)
+                    accumulator = std::fmod(accumulator, fixedStep);
+            }else accumulator=0.0f; // normal editor never advances gameplay
+            // Screenshot-only deterministic simulated playtest mode. An
+            // authored trigger monitor may be visible while the F6 tree is
+            // inspected, but regular editing never advances simulation.
+            if(liveTriggerMonitorSmoke && smokeFrames>0 &&
+               app.editor.panel==EditorSession::Panel::Triggers &&
+               app.game.result==MatchResult::Playing){
+                try{
+                    app.game.update(fixedStep);
+                }catch(const std::exception& e){
+                    reportInputFailure(window,"scripted monitor smoke",e.what());
+                    throw;
+                }
+            }
+
+            if (currentTime - lastTitleUpdate > 0.35) {
+                const char* mode = app.mode == AppState::Mode::BuildBarracks ? "PLACE BARRACKS: RMB" :
+                    app.mode == AppState::Mode::AttackMove ? "ATTACK MOVE: RMB" :
+                    app.mode == AppState::Mode::Move ? "MOVE: RMB" :
+                    app.mode == AppState::Mode::Patrol ? "PATROL: RMB" : "COMMAND";
+                std::string title = app.editor.panel==EditorSession::Panel::Play
+                    ? std::string("3D RTS | ")+app.game.statusLine()+" | "+mode
+                    : std::string("3D RTS AUTHORING | ")+app.project.name+
+                      " | "+app.editor.panelName()+(app.editor.modified?" *":"");
+                glfwSetWindowTitle(window, title.c_str());
+                lastTitleUpdate = currentTime;
+            }
+
+            if(app.project.terrain.dirty()) {
+                terrainVertices=app.project.terrain.buildMesh(app.terrainSlopeLimit());
+                terrainVertexCount=static_cast<GLsizei>(terrainVertices.size()/5);
+                glBindVertexArray(terrainVAO);
+                glBindBuffer(GL_ARRAY_BUFFER,terrainVBO);
+                glBufferData(GL_ARRAY_BUFFER,terrainVertices.size()*sizeof(float),
+                             terrainVertices.data(),GL_DYNAMIC_DRAW);
+                app.project.terrain.clearDirty();
+            }
+            const auto& vision=app.game.vision;
+            const int visW=vision.width(),visH=vision.depth();
+            if(visW>0 && visH>0 &&
+               (uploadedFogRevision!=vision.revision() ||
+                uploadedFogWidth!=visW || uploadedFogHeight!=visH)){
+                glBindTexture(GL_TEXTURE_2D,fogTexture);
+                const auto& texels=vision.textureBytes();
+                if(uploadedFogWidth!=visW || uploadedFogHeight!=visH){
+                    glTexImage2D(GL_TEXTURE_2D,0,GL_R8,visW,visH,0,GL_RED,
+                                 GL_UNSIGNED_BYTE,texels.data());
+                    uploadedFogWidth=visW;
+                    uploadedFogHeight=visH;
+                }else{
+                    glTexSubImage2D(GL_TEXTURE_2D,0,0,0,visW,visH,GL_RED,
+                                    GL_UNSIGNED_BYTE,texels.data());
+                }
+                uploadedFogRevision=vision.revision();
+            }
+            if(uploadedAssetRevision!=app.assetRevision){
+                importedMeshes.clear();
+                uploadedAssetRevision=app.assetRevision;
+            }
             glClearColor(0.08f, 0.11f, 0.15f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -270,6 +1644,14 @@ int main() {
 
             // 1. Render Terrain
             glUseProgram(terrainShader);
+            glBindTexture(GL_TEXTURE_2D,fogTexture);
+            glUniform1i(glGetUniformLocation(terrainShader,"uFogMap"),0);
+            glUniform4f(glGetUniformLocation(terrainShader,"uFogSettings"),
+                app.project.terrain.minX(),app.project.terrain.minZ(),
+                app.project.terrain.spacing(),
+                app.editor.panel==EditorSession::Panel::Play?1.f:0.f);
+            glUniform4f(glGetUniformLocation(terrainShader,"uFogSize"),
+                float(visW),float(visH),0.f,0.f);
             Mat4 terrainModel;
             glUniformMatrix4fv(glGetUniformLocation(terrainShader, "uModel"), 1, GL_FALSE, terrainModel.m);
             glUniformMatrix4fv(glGetUniformLocation(terrainShader, "uView"), 1, GL_FALSE, view.m);
@@ -277,14 +1659,22 @@ int main() {
             glUniform3f(glGetUniformLocation(terrainShader, "uClickMarker"),
                         app.lastClickedWorldPos.x, app.lastClickedWorldPos.y, app.lastClickedWorldPos.z);
             glUniform1f(glGetUniformLocation(terrainShader, "uMarkerPulse"), static_cast<float>(currentTime));
-            glUniform1f(glGetUniformLocation(terrainShader, "uHasMarker"), app.hasMoveMarker ? 1.0f : 0.0f);
+            glUniform1f(glGetUniformLocation(terrainShader, "uHasMarker"),
+                        app.hasMoveMarker ? 1.0f : 0.0f);
+            glUniform1f(glGetUniformLocation(terrainShader, "uShowPathing"),
+                        app.editor.panel==EditorSession::Panel::Terrain ? 1.0f : 0.0f);
+            glUniform1f(glGetUniformLocation(terrainShader, "uShowGrid"),
+                        app.editor.panel==EditorSession::Panel::Terrain ? 1.0f : .35f);
 
             glBindVertexArray(terrainVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glDrawArrays(GL_TRIANGLES, 0, terrainVertexCount);
 
             // 2. Render 3D Alive Units, Rings & Weapon Tracers
-            for (const auto& unit : app.units) {
+            for (const auto& unit : app.game.units) {
                 if (!unit.isAlive()) continue;
+                if(app.editor.panel==EditorSession::Panel::Play &&
+                   unit.ownerId!=0 && !app.game.vision.visible(unit.position))
+                    continue;
 
                 if (unit.isSelected) {
                     glUseProgram(ringShader);
@@ -307,16 +1697,22 @@ int main() {
                 float s = unit.data.visual_scale;
                 Mat4 unitModel = Mat4::translate(unit.position)
                                * Mat4::rotateY(unit.facingYawRad)
-                               * Mat4::scale(Vec3(s, s, s));
+                               * Mat4::scale(Vec3(s*unit.modelScale.x,
+                                                  s*unit.modelScale.y,s*unit.modelScale.z));
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"), 1, GL_FALSE, unitModel.m);
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uView"), 1, GL_FALSE, view.m);
                 glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"), 1, GL_FALSE, proj.m);
                 glUniform3f(glGetUniformLocation(unitShader, "uColor"),
                             unit.data.faction_color.x, unit.data.faction_color.y, unit.data.faction_color.z);
                 glUniform1f(glGetUniformLocation(unitShader, "uSelected"), unit.isSelected ? 1.0f : 0.0f);
+                glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),unit.actorOpacity);
 
-                glBindVertexArray(unitVAO);
-                glDrawArrays(GL_TRIANGLES, 0, 33);
+                if(!importedMeshes.draw(unit.actorMesh,app.projectPath,
+                                        unitModel,view,proj,
+                                        unit.data.faction_color,unit.actorOpacity)){
+                    glBindVertexArray(unitVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 33);
+                }
 
                 if (unit.attackFlashTimer > 0.0f) {
                     Vec3 muzzle = unit.position + Vec3(0.0f, unit.height * 0.65f, 0.0f);
@@ -341,6 +1737,278 @@ int main() {
                 }
             }
 
+            // Mineral patches use the placeholder unit mesh until an asset pipeline exists.
+            glUseProgram(unitShader);
+            glUniformMatrix4fv(glGetUniformLocation(unitShader, "uView"), 1, GL_FALSE, view.m);
+            glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"), 1, GL_FALSE, proj.m);
+            glUniform3f(glGetUniformLocation(unitShader, "uColor"), 0.15f, 0.72f, 0.88f);
+            glUniform1f(glGetUniformLocation(unitShader, "uSelected"), 0.0f);
+            glUniform1f(glGetUniformLocation(unitShader, "uOpacity"), 1.0f);
+            glBindVertexArray(unitVAO);
+            for (const auto& node : app.game.minerals) {
+                if(node.remaining<=0)continue;
+                if(app.editor.panel==EditorSession::Panel::Play &&
+                   !app.game.vision.explored(node.position))continue;
+                Mat4 mesh = Mat4::translate(node.position)
+                          * Mat4::scale(Vec3(1.35f, 1.1f, 1.35f));
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"), 1, GL_FALSE, mesh.m);
+                glDrawArrays(GL_TRIANGLES, 0, 33);
+            }
+
+            // Placed doodads resolve their actor color/scale/opacity. Imported mesh
+            // filenames stay in the catalog; procedural placeholders are used until
+            // a dedicated asset pipeline is introduced.
+            for(const auto& placed:app.project.placements) {
+                if(placed.kind!="Doodad")continue;
+                if(app.editor.panel==EditorSession::Panel::Play &&
+                   !app.game.vision.explored(placed.position))continue;
+                const auto visualEntry=app.doodadVisuals.find(placed.id);
+                if(visualEntry==app.doodadVisuals.end())continue;
+                const ActorVisual& visual=visualEntry->second;
+                Vec3 pos=placed.position;
+                pos.y=app.project.terrain.sampleHeight(pos.x,pos.z);
+                Mat4 transform=Mat4::translate(pos)
+                    * Mat4::rotateY(toRadians(placed.rotation.y))
+                    * Mat4::scale(Vec3(placed.scale.x*visual.scale.x,
+                                       placed.scale.y*visual.scale.y,
+                                       placed.scale.z*visual.scale.z));
+                glUseProgram(unitShader);
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uView"),1,GL_FALSE,view.m);
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uProjection"),1,GL_FALSE,proj.m);
+                glUniformMatrix4fv(glGetUniformLocation(unitShader, "uModel"),1,GL_FALSE,transform.m);
+                glUniform3f(glGetUniformLocation(unitShader, "uColor"),
+                            visual.tint.x,visual.tint.y,visual.tint.z);
+                glUniform1f(glGetUniformLocation(unitShader, "uSelected"),0.0f);
+                glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),visual.opacity);
+                if(!importedMeshes.draw(visual.mesh,app.projectPath,transform,
+                                        view,proj,visual.tint,visual.opacity)){
+                    glBindVertexArray(unitVAO);
+                    glDrawArrays(GL_TRIANGLES,0,33);
+                }
+            }
+
+            // Data-authored projectile models use the native procedural mesh
+            // (no copied models/textures). World position comes exclusively
+            // from the authoritative fixed-tick flight snapshot.
+            if(app.editor.panel==EditorSession::Panel::Play) {
+                for(const auto& shot:app.game.areaImpactWatch(128)){
+                    if(!shot.projectileVisible ||
+                       !app.game.vision.explored(shot.projectilePosition))
+                        continue;
+                    const Mat4 projectileModel=Mat4::translate(shot.projectilePosition)
+                        *Mat4::scale(Vec3(shot.projectileScale,
+                                         shot.projectileScale,
+                                         shot.projectileScale));
+                    glUseProgram(unitShader);
+                    glUniformMatrix4fv(glGetUniformLocation(unitShader,"uModel"),
+                                       1,GL_FALSE,projectileModel.m);
+                    glUniformMatrix4fv(glGetUniformLocation(unitShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(unitShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform3f(glGetUniformLocation(unitShader,"uColor"),
+                                shot.projectileTint.x,shot.projectileTint.y,
+                                shot.projectileTint.z);
+                    glUniform1f(glGetUniformLocation(unitShader,"uSelected"),0.f);
+                    glUniform1f(glGetUniformLocation(unitShader,"uOpacity"),1.f);
+                    glBindVertexArray(unitVAO);
+                    glDrawArrays(GL_TRIANGLES,0,33);
+                    const auto& tail=shot.projectileTrailStart;
+                    const auto& head=shot.projectilePosition;
+                    const float lineVerts[]={
+                        tail.x,tail.y,tail.z,head.x,head.y,head.z};
+                    glUseProgram(lineShader);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(lineShader,"uColor"),
+                                shot.projectileTint.x,shot.projectileTint.y,
+                                shot.projectileTint.z,.75f);
+                    glBindVertexArray(lineVAO);
+                    glBindBuffer(GL_ARRAY_BUFFER,lineVBO);
+                    glBufferSubData(GL_ARRAY_BUFFER,0,sizeof(lineVerts),lineVerts);
+                    glDrawArrays(GL_LINES,0,2);
+                }
+            }
+
+            // Rally location marker for currently selected production buildings.
+            for(const auto& building:app.game.units)if(building.isAlive() &&
+                building.isSelected && building.isStructure && building.ownerId==0) {
+                const auto it=app.game.rallyPoints().find(building.id);
+                if(it==app.game.rallyPoints().end())continue;
+                const Vec3 pos=app.project.terrain.clampToMap(it->second);
+                Mat4 marker=Mat4::translate(pos+Vec3(0,.09f,0))
+                    * Mat4::scale(Vec3(1.1f,1.f,1.1f));
+                glUseProgram(ringShader);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader,"uModel"),1,GL_FALSE,marker.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader,"uView"),1,GL_FALSE,view.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader,"uProjection"),1,GL_FALSE,proj.m);
+                glUniform4f(glGetUniformLocation(ringShader,"uColor"),.94f,.84f,.28f,.60f);
+                glBindVertexArray(ringVAO);
+                glDrawArrays(GL_TRIANGLES,0,6);
+            }
+            // Dynamic AoE targeting feedback uses the same ground marker
+            // pipeline as terrain brushes. It is render-only: never
+            // influences the authoritative fixed-step area target resolver.
+            if(app.editor.panel==EditorSession::Panel::Play) {
+                const auto previewRing=[&](const Vec3& ground,float radius,
+                                           float red,float green,float blue,
+                                           float alpha){
+                    const Vec3 pos(ground.x,
+                        app.project.terrain.sampleHeight(ground.x,ground.z),
+                        ground.z);
+                    const Mat4 marker=Mat4::translate(pos+Vec3(0,.10f,0))*
+                        Mat4::scale(Vec3(radius,1.f,radius));
+                    glUseProgram(ringShader);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uModel"),
+                                       1,GL_FALSE,marker.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(ringShader,"uColor"),
+                                red,green,blue,alpha);
+                    glBindVertexArray(ringVAO);
+                    glDrawArrays(GL_TRIANGLES,0,6);
+                };
+                const auto previewShape=[&](const Vec3& center,float radius,
+                                            RTSAreaShape shape,const Vec3& origin,
+                                            float angle,float width,
+                                            float red,float green,float blue,float alpha){
+                    if(shape==RTSAreaShape::Circle){
+                        previewRing(center,radius,red,green,blue,alpha);
+                        return;
+                    }
+                    const auto boundary=rtsAreaOutline(shape,center.x,center.z,
+                        double(center.x)-origin.x,double(center.z)-origin.z,
+                        radius,angle,width);
+                    if(boundary.empty())return;
+                    std::vector<float> vertices;
+                    vertices.reserve(boundary.size()*3);
+                    for(const auto& pos:boundary){
+                        vertices.push_back(float(pos.x));
+                        vertices.push_back(app.project.terrain.sampleHeight(
+                            float(pos.x),float(pos.z))+.11f);
+                        vertices.push_back(float(pos.z));
+                    }
+                    glUseProgram(lineShader);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uView"),
+                                       1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(lineShader,"uProjection"),
+                                       1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(lineShader,"uColor"),
+                                red,green,blue,alpha);
+                    glBindVertexArray(lineVAO);
+                    glBindBuffer(GL_ARRAY_BUFFER,lineVBO);
+                    glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(float),
+                                 vertices.data(),GL_DYNAMIC_DRAW);
+                    glDrawArrays(GL_LINE_STRIP,0,GLsizei(boundary.size()));
+                };
+                for(const auto& impact:app.game.areaImpactWatch())
+                    if(!impact.weaponShot)
+                    previewShape(impact.center,impact.radius,impact.shape,
+                        impact.shapeOrigin,impact.areaAngle,impact.areaWidth,
+                        .98f,.60f,.16f,.85f);
+                // Actor cues are presentation snapshots of headless
+                // combat events. Never feed these rings back to gameplay.
+                for(const auto& cue:app.game.actorCueWatch(96)){
+                    if(!app.game.vision.visible(cue.position))continue;
+                    const float progress=1.f-cue.remainingFraction;
+                    float size=cue.radius;
+                    if(cue.style==RTSActorCueStyle::Pulse)
+                        size*=.55f+progress*.8f;
+                    if(cue.style==RTSActorCueStyle::Beacon){
+                        previewRing(cue.position,size*.32f,
+                            cue.tint.x,cue.tint.y,cue.tint.z,
+                            cue.remainingFraction*.65f);
+                        size*=1.15f;
+                    }
+                    previewRing(cue.position,size,
+                        cue.tint.x,cue.tint.y,cue.tint.z,
+                        cue.remainingFraction*
+                        (cue.style==RTSActorCueStyle::Ring?.42f:.31f));
+                }
+                for(const auto& hit:app.game.impactFlashWatch())
+                    previewRing(hit.center,
+                                hit.radius*(1.08f+(1.f-hit.remainingFraction)*.32f),
+                                hit.applied?.25f:1.f,
+                                hit.applied?.95f:.20f,
+                                hit.applied?.78f:.20f,
+                                hit.remainingFraction*.90f);
+                if(app.mode==AppState::Mode::CastAbility &&
+                   !app.pendingAbilityId.empty()) {
+                    const auto ability=compileAbility(app.project.catalog,
+                                                     app.pendingAbilityId);
+                    if(ability.target==AbilityTarget::Ground){
+                        double mx=0.,my=0.;
+                        glfwGetCursorPos(window,&mx,&my);
+                        Vec3 ground;
+                        if(app.camera.screenToGroundRaycast(
+                                mx,my,app.windowWidth,app.windowHeight,ground) &&
+                           app.project.terrain.insideWorld(ground.x,ground.z)){
+                            int casterId=-1;
+                            for(const auto& unit:app.game.units)
+                                if(unit.isSelected && unit.ownerId==0 &&
+                                   unit.isAlive()){casterId=unit.id;break;}
+                            const bool valid=app.game.canCastAbilityAt(
+                                casterId,app.pendingAbilityId,ground);
+                            Vec3 casterPosition=ground;
+                            for(const auto& unit:app.game.units)
+                                if(unit.id==casterId){casterPosition=unit.position;break;}
+                            previewShape(ground,ability.areaRadius,
+                                         ability.areaShape,casterPosition,
+                                         ability.areaAngle,ability.areaWidth,
+                                         valid?.20f:.90f,valid?.92f:.25f,
+                                         valid?.92f:.30f,.85f);
+                        }
+                    }
+                }
+            }
+
+            if(app.editor.panel==EditorSession::Panel::Terrain && app.hoveredTerrain) {
+                glUseProgram(ringShader);
+                Mat4 brush=Mat4::translate(app.hoveredWorld+Vec3(0,.06f,0))
+                    * Mat4::scale(Vec3(app.editor.brushRadius,1,app.editor.brushRadius));
+                glUniformMatrix4fv(glGetUniformLocation(ringShader, "uModel"),1,GL_FALSE,brush.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader, "uView"),1,GL_FALSE,view.m);
+                glUniformMatrix4fv(glGetUniformLocation(ringShader, "uProjection"),1,GL_FALSE,proj.m);
+                glUniform4f(glGetUniformLocation(ringShader, "uColor"),.94f,.8f,.21f,.77f);
+                glBindVertexArray(ringVAO);
+                glDrawArrays(GL_TRIANGLES,0,6);
+            }
+
+            // Selected scene objects and region extents. A lightweight ground
+            // overlay is used until the editor has proper transform gizmos.
+            if(app.editor.panel==EditorSession::Panel::Scene) {
+                for(const auto& placed:app.project.placements) {
+                    float radius=placed.kind=="Point"?.7f:1.4f;
+                    const bool region=placed.kind=="Region";
+                    if(region){
+                        radius=5.0f;
+                        auto it=placed.overrides.find("radius");
+                        if(it!=placed.overrides.end() && it->second.is<double>())
+                            radius=std::clamp(float(it->second.get<double>()),.5f,64.f);
+                    }
+                    const bool chosen=app.editor.selectedPlacementId==placed.id;
+                    Vec3 pos=placed.position;
+                    pos.y=app.project.terrain.sampleHeight(pos.x,pos.z);
+                    Mat4 marker=Mat4::translate(pos+Vec3(0,.08f,0))
+                        * Mat4::scale(Vec3(radius,1,radius));
+                    glUseProgram(ringShader);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uModel"),1,GL_FALSE,marker.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uView"),1,GL_FALSE,view.m);
+                    glUniformMatrix4fv(glGetUniformLocation(ringShader,"uProjection"),1,GL_FALSE,proj.m);
+                    glUniform4f(glGetUniformLocation(ringShader,"uColor"),
+                        chosen?1.f:region?.16f:.29f,
+                        chosen?.78f:region?.78f:.66f,
+                        chosen?.18f:region?1.f:.86f,
+                        chosen?.55f:region?.13f:.24f);
+                    glBindVertexArray(ringVAO);
+                    glDrawArrays(GL_TRIANGLES,0,6);
+                }
+            }
+
             // 3. Render Floating 2D Screen-Projected Health Bars & Drag-Selection Box
             glDisable(GL_DEPTH_TEST);
             glUseProgram(hudBoxShader);
@@ -351,8 +2019,11 @@ int main() {
                 auto toNdcX = [&](float px) { return (2.0f * px) / static_cast<float>(app.windowWidth) - 1.0f; };
                 auto toNdcY = [&](float py) { return 1.0f - (2.0f * py) / static_cast<float>(app.windowHeight); };
 
-                for (const auto& unit : app.units) {
+                for (const auto& unit : app.game.units) {
                     if (!unit.isAlive()) continue;
+                    if(app.editor.panel==EditorSession::Panel::Play &&
+                       unit.ownerId!=0 && !app.game.vision.visible(unit.position))
+                        continue;
                     Vec2 headScreen;
                     if (app.camera.worldToScreen(unit.position + Vec3(0.0f, unit.height + 0.45f, 0.0f),
                                                  app.windowWidth, app.windowHeight, headScreen)) {
@@ -401,12 +2072,120 @@ int main() {
                     }
                 }
             }
+
+            // Gameplay HUD: classic resource strip, tactical minimap,
+            // selection dossier and clickable command grid.
+            if(app.editor.panel==EditorSession::Panel::Play &&
+               app.windowWidth>0 && app.windowHeight>0) {
+                RTSHUDLayout layout(app.windowWidth,app.windowHeight,
+                                    RTSHUDProfile::fromProject(app.project));
+                RTSHUD hud(hudBoxShader,hudVAO,hudVBO,layout);
+                const int commandMode=app.mode==AppState::Mode::Move?1:
+                    app.mode==AppState::Mode::AttackMove?2:
+                    app.mode==AppState::Mode::BuildBarracks?3:
+                    app.mode==AppState::Mode::Patrol?4:0;
+                hud.draw(app.game,app.project,app.camera,commandMode,app.notice);
+            }
+            // Shared dockable creator tools. Unlike the previous huge debug
+            // text overlay, every tool/property here is mouse-operable.
+            CreatorWorkbench::draw(app);
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            if(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable){
+                // Secondary OS windows have their own shared OpenGL context.
+                // ALWAYS restore the game's primary context before terrain,
+                // HUD or screenshot work; no rendering state may leak.
+                GLFWwindow* previousContext=glfwGetCurrentContext();
+                ImGui::UpdatePlatformWindows();
+                // Screenshot CI reads the DETACHED native window's BACK
+                // buffer before swap. GLX/Xvfb is allowed to discard the
+                // front buffer after swap (which produced a black PNG).
+                // Only the final smoke frame skips the secondary swap.
+                const bool freezeSwap=moduleWindowsSmoke && smokeFrames>0 &&
+                                      renderedFrames+1>=smokeFrames;
+                auto& platformIO=ImGui::GetPlatformIO();
+                const auto originalPlatformSwap=platformIO.Platform_SwapBuffers;
+                const auto originalRendererSwap=platformIO.Renderer_SwapBuffers;
+                if(freezeSwap){
+                    platformIO.Platform_SwapBuffers=nullptr;
+                    platformIO.Renderer_SwapBuffers=nullptr;
+                }
+                ImGui::RenderPlatformWindowsDefault();
+                if(freezeSwap){
+                    platformIO.Platform_SwapBuffers=originalPlatformSwap;
+                    platformIO.Renderer_SwapBuffers=originalRendererSwap;
+                }
+                glfwMakeContextCurrent(previousContext);
+            }
+            if(app.pauseMenu && app.editor.panel==EditorSession::Panel::Play){
+                double mx=-1.,my=-1.;
+                glfwGetCursorPos(window,&mx,&my);
+                glDisable(GL_DEPTH_TEST);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+                NativeUI::PauseMenuGL native(hudBoxShader,hudVAO,hudVBO);
+                native.draw(NativeUI::PauseMenu(app.windowWidth,app.windowHeight),
+                            mx,my,app.pauseFocus.index());
+            }
             glEnable(GL_DEPTH_TEST);
 
+            if (smokeFrames > 0 && ++renderedFrames >= smokeFrames) {
+                if(!screenshotPath.empty()){
+                    GLFWwindow* capture=window;
+                    if(moduleWindowsSmoke){
+                        // Require a REAL platform/GLFW viewport, not a
+                        // simulated panel inside the game framebuffer.
+                        for(const ImGuiViewport* viewport:
+                                ImGui::GetPlatformIO().Viewports)
+                            if(viewport->ID!=ImGui::GetMainViewport()->ID &&
+                               viewport->PlatformHandle){
+                                capture=static_cast<GLFWwindow*>(
+                                    viewport->PlatformHandle);
+                                break;
+                            }
+                        if(capture==window)
+                            throw std::runtime_error(
+                                "Native module smoke did not create an OS viewport");
+                    }
+                    int width=0,height=0;
+                    glfwGetFramebufferSize(capture,&width,&height);
+                    if(width<=0 || height<=0 || width>8192 || height>8192)
+                        throw std::runtime_error("Invalid module screenshot dimensions");
+                    glfwMakeContextCurrent(capture);
+                    glReadBuffer(GL_BACK);
+                    std::vector<unsigned char> pixels(
+                        static_cast<size_t>(width)*height*3);
+                    glPixelStorei(GL_PACK_ALIGNMENT,1);
+                    glReadPixels(0,0,width,height,GL_RGB,GL_UNSIGNED_BYTE,pixels.data());
+                    if(moduleWindowsSmoke){
+                        std::size_t nonBlack=0;
+                        for(std::size_t k=0;k<pixels.size();k+=3)
+                            if(pixels[k] || pixels[k+1] || pixels[k+2])++nonBlack;
+                        if(nonBlack<static_cast<std::size_t>(width)*height/10)
+                            throw std::runtime_error(
+                                "Native module OpenGL frame is blank; screenshot rejected");
+                    }
+                    std::ofstream out(screenshotPath,std::ios::binary);
+                    out<<"P6\n"<<width<<" "<<height<<"\n255\n";
+                    for(int y=height-1;y>=0;--y)
+                        out.write(reinterpret_cast<const char*>(
+                            pixels.data()+static_cast<size_t>(y)*width*3),
+                            static_cast<std::streamsize>(width*3));
+                    if(!out)throw std::runtime_error(
+                        "Failed to save native editor screenshot: "+screenshotPath);
+                    glfwMakeContextCurrent(window);
+                }
+                glfwSetWindowShouldClose(window,true);
+            }
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
 
+        importedMeshes.clear();
+        glDeleteTextures(1,&fogTexture);
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
         glfwDestroyWindow(window);
         glfwTerminate();
     } catch (const std::exception& e) {

@@ -1,37 +1,482 @@
-
 cmake_minimum_required(VERSION 3.16)
 project(RTSCameraTerrain LANGUAGES CXX)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include(FetchContent)
+option(RTS_BUILD_DEMO "Build OpenGL demo application" ON)
+# Every platform compiles the same feature configuration; only platform
+# dependencies differ. The git revision is embedded in the native executable.
+execute_process(COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}" rev-parse HEAD
+    OUTPUT_VARIABLE RTS_SOURCE_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(NOT RTS_SOURCE_COMMIT)
+    set(RTS_SOURCE_COMMIT "unknown")
+endif()
+include(CTest)
+find_package(Python3 COMPONENTS Interpreter QUIET)
 
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.4
-)
+add_library(RTSNavigation STATIC NavigationGrid.cpp)
+target_include_directories(RTSNavigation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+add_library(RTSAuthoring STATIC RTSGltfImport.cpp TerrainMap.cpp DataCatalog.cpp RTSRequirements.cpp RTSUpgrades.cpp RTSProject.cpp EditorSession.cpp SceneEditor.cpp InstanceOverrides.cpp TriggerDefinition.cpp)
+target_include_directories(RTSAuthoring PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-FetchContent_MakeAvailable(glfw)
-
-find_package(OpenGL REQUIRED)
-
-add_executable(RTSCameraTerrain
-    main_entry_point_render_loop.cpp
-    opengl_3_3_core_function_loader_implementation.cpp
-    rts_camera_rig_implementation.cpp
-    selection_manager_implementation.cpp
-    unitdata_resource_implementation.cpp
+add_library(RTSSimulation STATIC
+    RTSSkirmish.cpp
+    RTSCommandStream.cpp
+    RTSAIPlanner.cpp
+    RTSVision.cpp
+    RTSFormation.cpp
+    UnitSpatialIndex.cpp
+    TriggerEngine.cpp
     unit_navigationagent3d_implementation.cpp
+    unitdata_resource_implementation.cpp)
+target_include_directories(RTSSimulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(RTSSimulation PUBLIC RTSNavigation RTSAuthoring)
 
-)
+if(BUILD_TESTING)
+    add_executable(RTSAIPlannerTests tests/ai_planner_tests.cpp)
+    target_link_libraries(RTSAIPlannerTests PRIVATE RTSSimulation)
+    add_test(NAME ai_planner COMMAND RTSAIPlannerTests)
+    add_test(NAME ai_defense_behavior COMMAND RTSAIPlannerTests
+             "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_defense_showcase.rtsproject.json")
+    add_executable(RTSAIResearchTests tests/ai_research_tests.cpp)
+    target_link_libraries(RTSAIResearchTests PRIVATE RTSSimulation)
+    add_executable(RTSCreatorUISettingsTests tests/creator_ui_settings_tests.cpp)
+    target_include_directories(RTSCreatorUISettingsTests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME creator_ui_settings COMMAND RTSCreatorUISettingsTests)
+    add_test(NAME ai_research COMMAND RTSAIResearchTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_research_showcase.rtsproject.json")
+    add_executable(RTSInterfaceEditorTests tests/interface_editor_tests.cpp)
+    target_link_libraries(RTSInterfaceEditorTests PRIVATE RTSSimulation)
+    add_test(NAME interface_editor COMMAND RTSInterfaceEditorTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/interface_studio_showcase.rtsproject.json")
+    add_executable(RTSUIFrameTests tests/ui_frame_tests.cpp)
+    target_link_libraries(RTSUIFrameTests PRIVATE RTSSimulation)
+    add_test(NAME ui_frames COMMAND RTSUIFrameTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ui_frame_studio_showcase.rtsproject.json")
+    add_executable(RTSUITriggerTests tests/ui_trigger_tests.cpp)
+    target_link_libraries(RTSUITriggerTests PRIVATE RTSSimulation)
+    add_test(NAME ui_trigger COMMAND RTSUITriggerTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ui_trigger_showcase.rtsproject.json")
+    add_executable(RTSUIVariableBindingTests tests/ui_variable_binding_tests.cpp)
+    target_link_libraries(RTSUIVariableBindingTests PRIVATE RTSSimulation)
+    add_test(NAME ui_variable_bindings COMMAND RTSUIVariableBindingTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ui_variable_dashboard_showcase.rtsproject.json")
+    add_executable(RTSUIEditorGeometryTests tests/ui_editor_geometry_tests.cpp)
+    target_link_libraries(RTSUIEditorGeometryTests PRIVATE RTSSimulation)
+    add_test(NAME ui_editor_geometry COMMAND RTSUIEditorGeometryTests)
+    add_executable(RTSAssetAuditTests tests/asset_audit_tests.cpp)
+    target_link_libraries(RTSAssetAuditTests PRIVATE RTSAuthoring)
+    add_test(NAME asset_audit COMMAND RTSAssetAuditTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json")
+    add_executable(RTSAssetLibraryTests tests/asset_library_tests.cpp)
+    target_link_libraries(RTSAssetLibraryTests PRIVATE RTSAuthoring)
+    add_test(NAME asset_library COMMAND RTSAssetLibraryTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
+    add_executable(RTSStaticMeshTests tests/static_mesh_tests.cpp)
+    target_include_directories(RTSStaticMeshTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME static_mesh COMMAND RTSStaticMeshTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon_dual.rtsmesh")
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME native_gltf_import COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_native_import.py" $<TARGET_FILE:RTSProjectTool>)
+        add_test(NAME gltf_import COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_asset_pipeline.py")
+    endif()
+    add_executable(RTSUIResponsiveTests tests/ui_responsive_layout_tests.cpp)
+    target_link_libraries(RTSUIResponsiveTests PRIVATE RTSSimulation)
+    add_test(NAME ui_responsive COMMAND RTSUIResponsiveTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ui_responsive_layout_showcase.rtsproject.json")
+    add_executable(RTSCommandReplayTests tests/command_replay_tests.cpp)
+    target_link_libraries(RTSCommandReplayTests PRIVATE RTSSimulation)
+    add_test(NAME command_replay COMMAND RTSCommandReplayTests)
+    set_tests_properties(command_replay PROPERTIES FIXTURES_SETUP replay_fixture)
+    add_test(NAME replay_cli COMMAND RTSProjectTool --verify-replay
+             "${CMAKE_CURRENT_BINARY_DIR}/command_replay_regression.rtsreplay.json")
+    set_tests_properties(replay_cli PROPERTIES FIXTURES_REQUIRED replay_fixture)
 
-target_link_libraries(RTSCameraTerrain PRIVATE
-    glfw
-    OpenGL::GL
-)
+    add_executable(RTSNativeMenuTests tests/native_menu_tests.cpp)
+    target_include_directories(RTSNativeMenuTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME native_menu COMMAND RTSNativeMenuTests)
+    add_executable(RTSDynamicNavigationTests tests/dynamic_navigation_tests.cpp)
+    target_link_libraries(RTSDynamicNavigationTests PRIVATE RTSSimulation)
+    add_test(NAME dynamic_navigation COMMAND RTSDynamicNavigationTests)
+
+    add_executable(RTSNavigationTests tests/navigation_tests.cpp)
+    target_link_libraries(RTSNavigationTests PRIVATE RTSNavigation)
+    add_test(NAME navigation COMMAND RTSNavigationTests)
+
+    add_executable(RTSFormationTests tests/formation_tests.cpp)
+    target_link_libraries(RTSFormationTests PRIVATE RTSSimulation)
+    add_test(NAME formation COMMAND RTSFormationTests)
+
+    add_executable(RTSResourceDeterminismTests tests/resource_determinism_tests.cpp)
+    target_link_libraries(RTSResourceDeterminismTests PRIVATE RTSSimulation)
+    add_test(NAME resource_determinism COMMAND RTSResourceDeterminismTests)
+    add_executable(RTSOrdersTests tests/order_tests.cpp)
+    add_executable(RTSCombatResolutionTests tests/combat_resolution_tests.cpp)
+    target_link_libraries(RTSCombatResolutionTests PRIVATE RTSSimulation)
+    add_test(NAME combat_resolution COMMAND RTSCombatResolutionTests)
+    target_link_libraries(RTSOrdersTests PRIVATE RTSSimulation)
+    add_test(NAME orders COMMAND RTSOrdersTests)
+
+    add_executable(RTSSimulationTests tests/skirmish_tests.cpp)
+    target_link_libraries(RTSSimulationTests PRIVATE RTSSimulation)
+    add_test(NAME skirmish COMMAND RTSSimulationTests)
+
+    add_executable(RTSUnitDataTests tests/unitdata_tests.cpp)
+    target_link_libraries(RTSUnitDataTests PRIVATE RTSSimulation)
+    add_test(NAME unitdata COMMAND RTSUnitDataTests)
+
+    add_executable(RTSChaseTests tests/chase_tests.cpp)
+    target_link_libraries(RTSChaseTests PRIVATE RTSSimulation)
+    add_test(NAME chase COMMAND RTSChaseTests)
+
+    add_executable(RTSTerrainTests tests/terrain_tests.cpp)
+    target_link_libraries(RTSTerrainTests PRIVATE RTSAuthoring)
+    add_test(NAME terrain COMMAND RTSTerrainTests)
+
+    add_executable(RTSCatalogTests tests/catalog_tests.cpp)
+    target_link_libraries(RTSCatalogTests PRIVATE RTSAuthoring)
+    add_test(NAME catalog COMMAND RTSCatalogTests)
+    add_executable(RTSCatalogRenameTests tests/catalog_rename_tests.cpp)
+    target_link_libraries(RTSCatalogRenameTests PRIVATE RTSSimulation)
+    add_test(NAME catalog_rename COMMAND RTSCatalogRenameTests)
+    add_executable(RTSProductionSpawnTests tests/production_spawn_tests.cpp)
+    target_link_libraries(RTSProductionSpawnTests PRIVATE RTSSimulation)
+    add_test(NAME production_spawn COMMAND RTSProductionSpawnTests)
+    add_executable(RTSProductionCatalogTests tests/production_catalog_tests.cpp)
+    target_link_libraries(RTSProductionCatalogTests PRIVATE RTSSimulation)
+    add_test(NAME production_catalog COMMAND RTSProductionCatalogTests)
+    add_executable(RTSCatalogDeletionTests tests/catalog_deletion_tests.cpp)
+    target_link_libraries(RTSCatalogDeletionTests PRIVATE RTSSimulation)
+    add_test(NAME catalog_deletion COMMAND RTSCatalogDeletionTests)
+    add_executable(RTSProjectTests tests/project_tests.cpp)
+    target_link_libraries(RTSProjectTests PRIVATE RTSAuthoring)
+    add_test(NAME project COMMAND RTSProjectTests)
+
+    add_executable(RTSReferenceAuthoringTests tests/reference_authoring_tests.cpp)
+    target_link_libraries(RTSReferenceAuthoringTests PRIVATE RTSAuthoring)
+    add_test(NAME reference_authoring COMMAND RTSReferenceAuthoringTests)
+    add_executable(RTSEditorTests tests/editor_tests.cpp)
+    target_link_libraries(RTSEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME editor COMMAND RTSEditorTests)
+    add_executable(RTSSceneTests tests/scene_tests.cpp)
+    target_link_libraries(RTSSceneTests PRIVATE RTSAuthoring)
+    add_test(NAME scene COMMAND RTSSceneTests)
+
+    add_executable(RTSSpatialTests tests/spatial_tests.cpp)
+    target_link_libraries(RTSSpatialTests PRIVATE RTSSimulation)
+    add_test(NAME spatial COMMAND RTSSpatialTests)
+
+    add_executable(RTSVisionTests tests/vision_tests.cpp)
+    target_link_libraries(RTSVisionTests PRIVATE RTSSimulation)
+    add_test(NAME vision COMMAND RTSVisionTests)
+
+    add_executable(RTSHUDTests tests/hud_tests.cpp)
+    target_link_libraries(RTSHUDTests PRIVATE RTSSimulation)
+    add_test(NAME hud COMMAND RTSHUDTests)
+    add_test(NAME sample_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/default.rtsproject.json")
+    add_test(NAME showcase_project COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/terrain_showcase.rtsproject.json")
+    add_test(NAME production_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/production_showcase.rtsproject.json")
+    add_test(NAME effects_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/effects_showcase.rtsproject.json")
+    add_test(NAME timed_effects_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/timed_effects_showcase.rtsproject.json")
+    add_test(NAME ability_workshop_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ability_workshop_showcase.rtsproject.json")
+    add_test(NAME behavior_workshop_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/behavior_workshop_showcase.rtsproject.json")
+    add_test(NAME ground_impact_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ground_impact_showcase.rtsproject.json")
+    add_test(NAME projectile_forge_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/projectile_forge_showcase.rtsproject.json")
+    add_test(NAME area_shapes_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/area_shapes_showcase.rtsproject.json")
+    add_test(NAME weapon_forge_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/weapon_forge_showcase.rtsproject.json")
+    add_test(NAME actor_events_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/actor_events_showcase.rtsproject.json")
+    add_test(NAME requirements_workshop_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/requirements_workshop_showcase.rtsproject.json")
+    add_test(NAME technology_forge_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/technology_forge_showcase.rtsproject.json")
+    add_test(NAME diagnostics_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/trigger_diagnostics_showcase.rtsproject.json")
+    add_test(NAME ai_defense_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/ai_defense_showcase.rtsproject.json")
+    add_test(NAME script_relay_showcase COMMAND RTSProjectTool --validate "${CMAKE_CURRENT_SOURCE_DIR}/../projects/script_relay_showcase.rtsproject.json")
+    add_executable(RTSModdedProjectTests tests/modded_project_tests.cpp)
+    target_link_libraries(RTSModdedProjectTests PRIVATE RTSSimulation)
+    add_test(NAME modded_project COMMAND RTSModdedProjectTests)
+    add_executable(RTSInstanceOverrideTests tests/instance_override_tests.cpp)
+    target_link_libraries(RTSInstanceOverrideTests PRIVATE RTSAuthoring)
+    add_test(NAME instance_overrides COMMAND RTSInstanceOverrideTests)
+    add_executable(RTSBehaviorRuntimeTests tests/behavior_runtime_tests.cpp)
+    target_link_libraries(RTSBehaviorRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME behavior_runtime COMMAND RTSBehaviorRuntimeTests)
+    add_executable(RTSBehaviorEditorTests tests/behavior_editor_tests.cpp)
+    target_link_libraries(RTSBehaviorEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME behavior_editor COMMAND RTSBehaviorEditorTests)
+    add_executable(RTSProjectileGeometryTests tests/projectile_geometry_tests.cpp)
+    target_include_directories(RTSProjectileGeometryTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME projectile_geometry COMMAND RTSProjectileGeometryTests)
+    add_executable(RTSProjectileRuntimeTests tests/projectile_runtime_tests.cpp)
+    target_link_libraries(RTSProjectileRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME projectile_runtime COMMAND RTSProjectileRuntimeTests)
+    add_executable(RTSProjectileEditorTests tests/projectile_editor_tests.cpp)
+    target_link_libraries(RTSProjectileEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME projectile_editor COMMAND RTSProjectileEditorTests)
+    add_executable(RTSTechVisibilityEditorTests tests/tech_visibility_editor_tests.cpp)
+    target_link_libraries(RTSTechVisibilityEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME tech_visibility_editor COMMAND RTSTechVisibilityEditorTests)
+    add_executable(RTSTechVisibilityRuntimeTests tests/tech_visibility_runtime_tests.cpp)
+    target_link_libraries(RTSTechVisibilityRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME tech_visibility_runtime COMMAND RTSTechVisibilityRuntimeTests)
+    add_executable(RTSUpgradeRuntimeTests tests/upgrade_runtime_tests.cpp)
+    target_link_libraries(RTSUpgradeRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME upgrade_runtime COMMAND RTSUpgradeRuntimeTests)
+    add_executable(RTSUpgradeEditorTests tests/upgrade_editor_tests.cpp)
+    target_link_libraries(RTSUpgradeEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME upgrade_editor COMMAND RTSUpgradeEditorTests)
+    add_executable(RTSRequirementRuntimeTests tests/requirement_runtime_tests.cpp)
+    target_link_libraries(RTSRequirementRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME requirement_runtime COMMAND RTSRequirementRuntimeTests)
+    add_executable(RTSRequirementEditorTests tests/requirement_editor_tests.cpp)
+    target_link_libraries(RTSRequirementEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME requirement_editor COMMAND RTSRequirementEditorTests)
+    add_executable(RTSActorEventRuntimeTests tests/actor_event_runtime_tests.cpp)
+    target_link_libraries(RTSActorEventRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME actor_event_runtime COMMAND RTSActorEventRuntimeTests)
+    add_executable(RTSActorEventEditorTests tests/actor_event_editor_tests.cpp)
+    target_link_libraries(RTSActorEventEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME actor_event_editor COMMAND RTSActorEventEditorTests)
+    add_executable(RTSCatalogValuePreviewTests tests/catalog_value_preview_tests.cpp)
+    target_link_libraries(RTSCatalogValuePreviewTests PRIVATE RTSSimulation)
+    add_test(NAME catalog_value_preview COMMAND RTSCatalogValuePreviewTests)
+    add_executable(RTSCatalogNavigatorTests tests/catalog_navigator_tests.cpp)
+    target_link_libraries(RTSCatalogNavigatorTests PRIVATE RTSAuthoring)
+    add_test(NAME catalog_navigator COMMAND RTSCatalogNavigatorTests)
+    add_executable(RTSTechGraphTests tests/tech_graph_tests.cpp)
+    target_link_libraries(RTSTechGraphTests PRIVATE RTSAuthoring)
+    add_test(NAME tech_graph COMMAND RTSTechGraphTests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/technology_forge_showcase.rtsproject.json")
+    add_executable(RTSWeaponProjectileRuntimeTests tests/weapon_projectile_runtime_tests.cpp)
+    target_link_libraries(RTSWeaponProjectileRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME weapon_projectile_runtime COMMAND RTSWeaponProjectileRuntimeTests)
+    add_executable(RTSWeaponProjectileEditorTests tests/weapon_projectile_editor_tests.cpp)
+    target_link_libraries(RTSWeaponProjectileEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME weapon_projectile_editor COMMAND RTSWeaponProjectileEditorTests)
+    add_executable(RTSWeaponRuntimeTests tests/weapon_runtime_tests.cpp)
+    target_link_libraries(RTSWeaponRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME weapon_runtime COMMAND RTSWeaponRuntimeTests)
+    add_executable(RTSWeaponEditorTests tests/weapon_editor_tests.cpp)
+    target_link_libraries(RTSWeaponEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME weapon_editor COMMAND RTSWeaponEditorTests)
+    add_executable(RTSAreaShapeGeometryTests tests/area_shape_geometry_tests.cpp)
+    target_include_directories(RTSAreaShapeGeometryTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME area_shape_geometry COMMAND RTSAreaShapeGeometryTests)
+    add_executable(RTSAreaShapeRuntimeTests tests/area_shape_runtime_tests.cpp)
+    target_link_libraries(RTSAreaShapeRuntimeTests PRIVATE RTSSimulation)
+    add_test(NAME area_shape_runtime COMMAND RTSAreaShapeRuntimeTests)
+    add_executable(RTSAreaShapeEditorTests tests/area_shape_editor_tests.cpp)
+    target_link_libraries(RTSAreaShapeEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME area_shape_editor COMMAND RTSAreaShapeEditorTests)
+    add_executable(RTSGroundAreaTests tests/ground_area_tests.cpp)
+    target_link_libraries(RTSGroundAreaTests PRIVATE RTSSimulation)
+    add_test(NAME ground_area COMMAND RTSGroundAreaTests)
+    add_executable(RTSGroundAreaEditorTests tests/ground_area_editor_tests.cpp)
+    target_link_libraries(RTSGroundAreaEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME ground_area_editor COMMAND RTSGroundAreaEditorTests)
+    add_executable(RTSAbilityCastTests tests/ability_cast_tests.cpp)
+    target_link_libraries(RTSAbilityCastTests PRIVATE RTSSimulation)
+    add_test(NAME ability_casts COMMAND RTSAbilityCastTests)
+    add_executable(RTSAbilityEditorTests tests/ability_editor_tests.cpp)
+    target_link_libraries(RTSAbilityEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME ability_editor COMMAND RTSAbilityEditorTests)
+    add_executable(RTSCatalogCreationTests tests/catalog_creation_tests.cpp)
+    target_link_libraries(RTSCatalogCreationTests PRIVATE RTSAuthoring)
+    add_test(NAME catalog_creation COMMAND RTSCatalogCreationTests)
+    add_executable(RTSRecursiveTriggerEditorTests tests/recursive_trigger_editor_tests.cpp)
+    target_link_libraries(RTSRecursiveTriggerEditorTests PRIVATE RTSAuthoring)
+    add_test(NAME recursive_trigger_editor COMMAND RTSRecursiveTriggerEditorTests)
+    add_executable(RTSTimedEffectTests tests/timed_effect_tests.cpp)
+    target_link_libraries(RTSTimedEffectTests PRIVATE RTSSimulation)
+    add_test(NAME timed_effects COMMAND RTSTimedEffectTests)
+    add_executable(RTSTriggerAuthoringTests tests/trigger_authoring_tests.cpp)
+    target_link_libraries(RTSTriggerAuthoringTests PRIVATE RTSAuthoring)
+    add_test(NAME trigger_authoring COMMAND RTSTriggerAuthoringTests)
+    add_executable(RTSNestedCatalogReferenceTests tests/nested_catalog_reference_tests.cpp)
+    target_link_libraries(RTSNestedCatalogReferenceTests PRIVATE RTSAuthoring)
+    add_test(NAME nested_catalog_references COMMAND RTSNestedCatalogReferenceTests)
+    add_executable(RTSScriptFlowTests tests/script_flow_tests.cpp)
+    target_link_libraries(RTSScriptFlowTests PRIVATE RTSSimulation)
+    add_test(NAME script_flow COMMAND RTSScriptFlowTests)
+    add_executable(RTSScriptExpressionTests tests/script_expression_tests.cpp)
+    target_link_libraries(RTSScriptExpressionTests PRIVATE RTSSimulation)
+    add_test(NAME script_expressions COMMAND RTSScriptExpressionTests)
+    add_executable(RTSTriggerVariableTests tests/trigger_variable_tests.cpp)
+    target_link_libraries(RTSTriggerVariableTests PRIVATE RTSSimulation)
+    add_test(NAME trigger_variables COMMAND RTSTriggerVariableTests)
+    add_test(NAME script_relay_runtime COMMAND RTSTriggerVariableTests
+             "${CMAKE_CURRENT_SOURCE_DIR}/../projects/script_relay_showcase.rtsproject.json")
+    add_executable(RTSTriggerTraceTests tests/trigger_trace_tests.cpp)
+    target_link_libraries(RTSTriggerTraceTests PRIVATE RTSSimulation)
+    add_test(NAME trigger_trace COMMAND RTSTriggerTraceTests)
+    add_executable(RTSTriggerTests tests/trigger_tests.cpp)
+    target_link_libraries(RTSTriggerTests PRIVATE RTSSimulation)
+    add_test(NAME triggers COMMAND RTSTriggerTests)
+
+    # Preserve assert() checks even when producing optimized Release bundles.
+    foreach(test_target IN ITEMS RTSAIPlannerTests RTSAIResearchTests RTSCreatorUISettingsTests RTSInterfaceEditorTests RTSUIFrameTests RTSUITriggerTests RTSUIVariableBindingTests RTSUIEditorGeometryTests RTSUIResponsiveTests RTSStaticMeshTests RTSAssetAuditTests RTSAssetLibraryTests RTSCommandReplayTests RTSNativeMenuTests RTSNavigationTests RTSDynamicNavigationTests RTSResourceDeterminismTests RTSSimulationTests RTSOrdersTests RTSCombatResolutionTests RTSFormationTests RTSUnitDataTests RTSChaseTests RTSTerrainTests RTSCatalogTests RTSCatalogRenameTests RTSCatalogDeletionTests RTSProductionCatalogTests RTSProductionSpawnTests RTSProjectTests RTSEditorTests RTSSceneTests RTSHUDTests RTSVisionTests RTSSpatialTests RTSModdedProjectTests RTSInstanceOverrideTests RTSTriggerTests RTSTriggerAuthoringTests RTSReferenceAuthoringTests RTSTriggerTraceTests RTSTriggerVariableTests RTSScriptExpressionTests RTSScriptFlowTests RTSNestedCatalogReferenceTests RTSRecursiveTriggerEditorTests RTSTimedEffectTests RTSCatalogCreationTests RTSAbilityCastTests RTSAbilityEditorTests RTSBehaviorRuntimeTests RTSBehaviorEditorTests RTSGroundAreaTests RTSGroundAreaEditorTests RTSProjectileRuntimeTests RTSProjectileEditorTests RTSProjectileGeometryTests RTSAreaShapeGeometryTests RTSAreaShapeRuntimeTests RTSAreaShapeEditorTests RTSWeaponRuntimeTests RTSWeaponEditorTests RTSWeaponProjectileRuntimeTests RTSWeaponProjectileEditorTests RTSCatalogNavigatorTests RTSTechGraphTests RTSCatalogValuePreviewTests RTSActorEventRuntimeTests RTSActorEventEditorTests RTSRequirementRuntimeTests RTSRequirementEditorTests RTSUpgradeRuntimeTests RTSUpgradeEditorTests RTSTechVisibilityRuntimeTests RTSTechVisibilityEditorTests)
+        if(MSVC)
+            target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:/UNDEBUG>)
+        else()
+            target_compile_options(${test_target} PRIVATE $<$<CONFIG:Release>:-UNDEBUG>)
+        endif()
+    endforeach()
+endif()
+
+add_executable(RTSProjectTool "../tools/rts_project_tool.cpp")
+target_link_libraries(RTSProjectTool PRIVATE RTSSimulation)
+if(BUILD_TESTING)
+    add_test(NAME asset_report_cli COMMAND RTSProjectTool --asset-report
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json")
+endif()
+if(BUILD_TESTING)
+    add_test(NAME tech_graph_cli COMMAND RTSProjectTool --tech-graph
+        "${CMAKE_CURRENT_SOURCE_DIR}/../projects/technology_forge_showcase.rtsproject.json")
+endif()
+
+if(RTS_BUILD_DEMO)
+    find_package(glfw3 QUIET)
+    if(NOT TARGET glfw)
+        include(FetchContent)
+        set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+        set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+        set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+        set(GLFW_INSTALL OFF CACHE BOOL "" FORCE) # portable game, not GLFW SDK
+        FetchContent_Declare(glfw
+            GIT_REPOSITORY https://github.com/glfw/glfw.git
+            GIT_TAG 3.4)
+        FetchContent_MakeAvailable(glfw)
+    endif()
+    find_package(OpenGL REQUIRED)
+    include(FetchContent)
+    # Pinned docking-enabled Dear ImGui, cross-platform GLFW/OpenGL3 backends.
+    # Core game/simulation libraries remain independent of the GUI library.
+    FetchContent_Declare(imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.91.9b-docking
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(imgui)
+    add_library(RTSCreatorGui STATIC
+        "${imgui_SOURCE_DIR}/imgui.cpp"
+        "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+        "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+        "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+        "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp")
+    target_include_directories(RTSCreatorGui PUBLIC
+        "${imgui_SOURCE_DIR}"
+        "${imgui_SOURCE_DIR}/backends"
+        "${imgui_SOURCE_DIR}/misc/cpp")
+    target_link_libraries(RTSCreatorGui PUBLIC glfw OpenGL::GL)
+    add_executable(RTSCameraTerrain
+        main_entry_point_render_loop.cpp
+        opengl_3_3_core_function_loader_implementation.cpp
+        rts_camera_rig_implementation.cpp
+        selection_manager_implementation.cpp)
+    target_link_libraries(RTSCameraTerrain PRIVATE glfw OpenGL::GL RTSSimulation RTSCreatorGui)
+    target_compile_definitions(RTSCameraTerrain PRIVATE
+        RTS_SOURCE_COMMIT="${RTS_SOURCE_COMMIT}"
+        RTS_FEATURE_CREATOR_GUI=1 RTS_FEATURE_FOG_OF_WAR=1
+        RTS_FEATURE_GAMEPLAY_HUD=1 RTS_FEATURE_NATIVE_PAUSE_MENU=1
+        RTS_FEATURE_VISUAL_ECA_EDITOR=1 RTS_FEATURE_TRIGGER_TRACE_MONITOR=1
+        RTS_FEATURE_DYNAMIC_NAV_REPLAN=1 RTS_FEATURE_STABLE_SIM_ORDER=1
+        RTS_FEATURE_COMMAND_STREAM=1 RTS_FEATURE_REPLAY_VERIFY=1
+        RTS_FEATURE_AI_COMMAND_PLANNER=1
+        RTS_FEATURE_SCRIPT_GLOBALS=1
+        RTS_FEATURE_SCRIPT_EXPRESSIONS=1 RTS_FEATURE_SCRIPT_CONTROL_FLOW=1
+        RTS_FEATURE_RECURSIVE_ECA_UI=1 RTS_FEATURE_TIMED_EFFECTS=1
+        RTS_FEATURE_UNIT_ABILITIES=1 RTS_FEATURE_ABILITY_EDITOR=1
+        RTS_FEATURE_STATUS_BEHAVIORS=1 RTS_FEATURE_VISUAL_EFFECT_FLOW=1)
+    if(WIN32)
+        target_link_libraries(RTSCameraTerrain PRIVATE dbghelp)
+    endif()
+    if(MSVC)
+        # Keep symbols for native crash dump analysis in Release binaries.
+        target_link_options(RTSCameraTerrain PRIVATE /DEBUG:FULL)
+        install(FILES "$<TARGET_PDB_FILE:RTSCameraTerrain>"
+                DESTINATION "symbols" OPTIONAL)
+    endif()
+endif()
+
+if(MSVC)
+    target_compile_options(RTSNavigation PRIVATE /W4)
+    target_compile_options(RTSSimulation PRIVATE /W4)
+    target_compile_options(RTSAuthoring PRIVATE /W4)
+else()
+    target_compile_options(RTSNavigation PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(RTSSimulation PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(RTSAuthoring PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Installable layout is intentionally identical on Windows and Linux:
+# exe/launcher files beside projects/, docs/, and build manifest.
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon.gltf"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon_dual.gltf"
+    DESTINATION "examples")
+install(TARGETS RTSProjectTool RUNTIME DESTINATION ".")
+if(RTS_BUILD_DEMO)
+    install(TARGETS RTSCameraTerrain RUNTIME DESTINATION ".")
+endif()
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../projects/"
+        DESTINATION "projects" FILES_MATCHING PATTERN "*.rtsproject.json")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/"
+        DESTINATION "projects/assets" FILES_MATCHING PATTERN "*.rtsmesh")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/START_HERE.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE"
+    DESTINATION ".")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AUTHORING.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/ASSET_PIPELINE.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/NATIVE_ASSET_IMPORT.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/ACTOR_EVENT_AUTHORING.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/REQUIREMENT_AUTHORING.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECHNOLOGY_RESEARCH.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECH_SHOW_USE.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TECH_TREE_MAP.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/AI_RESEARCH.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_WINDOWS_ACCESSIBILITY.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/INTERFACE_EDITOR.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_FRAME_HIERARCHY.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_TRIGGER_EVENTS.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_VARIABLE_BINDINGS.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/UI_RESPONSIVE_LAYOUT.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/SC2_FEATURE_MATRIX.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/BUILD_ARTIFACTS.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/CREATOR_ARCHITECTURE.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/TRIGGER_EDITOR.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/RTS_ENGINE_AUDIT.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../docs/REPLAY_COMMANDS.md"
+    DESTINATION "docs")
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PICOJSON_LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/CGLTF_LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/STB_LICENSE"
+    DESTINATION "licenses")
+if(RTS_BUILD_DEMO)
+    install(FILES "${imgui_SOURCE_DIR}/LICENSE.txt"
+            DESTINATION "licenses" RENAME "IMGUI_LICENSE")
+endif()
+if(WIN32)
+    install(FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.bat"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-editor.bat"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-production-lab.bat"
+        DESTINATION ".")
+elseif(UNIX)
+    install(PROGRAMS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-game.sh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-editor.sh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/run-production-lab.sh"
+        DESTINATION ".")
+endif()

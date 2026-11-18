@@ -1,0 +1,715 @@
+# Authoring tutorial: edit maps, actors, terrain and triggers
+
+The current code is a **first editor implementation**, not yet feature-complete
+with SC2's Galaxy Editor. It has one in-window procedural terrain workspace,
+a generic JSON-property inspector, a standalone CLI and a small declarative
+trigger engine.
+
+## Open the game or the editor
+
+From the repository root, after building (see root README):
+
+```sh
+./build/RTSCameraTerrain --project projects/default.rtsproject.json
+./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json
+./build/RTSCameraTerrain --trigger-editor --project projects/terrain_showcase.rtsproject.json
+./build/RTSCameraTerrain --scene-editor --project projects/terrain_showcase.rtsproject.json
+```
+
+Windows multi-config generators: `build/Debug/RTSCameraTerrain.exe`.
+
+The `--editor` flag enters terrain editing with gameplay paused. Editing a
+project loaded with `--project` saves to that exact path with **Ctrl+S**.
+When launching without a project, the built-in/default map loads and the Save
+target is `projects/working.rtsproject.json`.
+
+| Input | In current prototype |
+| --- | --- |
+| F5 | Terrain editor; F5 again to play |
+| F6 | Trigger inspector with JSON rule editing; F6 again to play |
+| F7 | Generic catalog Data Editor; F7 again to play |
+| F8 | Scene object and region editor; F8 again to play |
+| F9 | Test/play the currently authored map |
+| 1–7 (terrain) | Raise, lower, smooth, flatten, paint, block path, clear path |
+| 8, 9, 0 (terrain) | Place mineral, catalog Unit, catalog Actor doodad |
+| Left mouse | Paint or place; right mouse deletes nearest placed object |
+| [ / ] and - / = | Brush radius and strength |
+| M | Cycle terrain material 0–7 |
+| P / Shift+P | Cycle placed unit type / doodad actor type |
+| O | Change placement owner |
+| Ctrl+Z / Ctrl+Y | Undo/redo across terrain, placements, catalog edits and trigger edits (32 snapshots) |
+| Tab / Shift+Tab (data) | Next / previous catalog object |
+| Up / Down (data) | Select a field |
+| Enter (data) | Edit selected field as JSON, or bare text |
+| Ctrl+N (data) | Add a new arbitrary field |
+| Ctrl+D (data) | Create an inherited/derived catalog object |
+| Ctrl+R (data) | Rename catalog ID and update known references (one undo action) |
+| Ctrl+Backspace (data) | Remove the local override of the selected field |
+| Trigger panel: Up/Down | Choose event-condition-action rule |
+| Trigger panel: Ctrl+N / Ctrl+D / Delete | Create, duplicate or remove a rule |
+| Trigger panel: Enter | Edit selected rule as JSON; Ctrl+V pastes JSON, Ctrl+C copies selected rule |
+| Scene: Left-click / Shift+left-click | Select nearest placed object / move selected object onto terrain |
+| Scene: Tab / Shift+Tab | Select next/previous scene object |
+| Scene: P / R | Place Point / Region at terrain cursor |
+| Scene: G / J / K | Move selected to cursor / rotate left / rotate right |
+| Scene: , / . / O | Uniformly scale down/up / cycle owner |
+| Scene: [ / ] | Shrink/grow region radius |
+| Scene: Ctrl+D / Delete | Duplicate/delete selected scene object (referenced regions cannot be deleted) |
+| Scene: Enter | Edit JSON per-instance overrides on the selected object |
+| Ctrl+S | Save project |
+| Esc | Cancel a field edit / leave editing for play |
+
+The renderer currently uses a custom bitmap HUD, **not** a dockable Windows
+property inspector. Scene editor provides viewport selection and simple keyboard-driven transforms
+of placed units, doodads, Points and circular Regions. Region extents are
+drawn as tinted ground overlays. There are no 3D move/rotate/scale gizmos yet.
+Some editor interactions are still rough; notably
+cross-document undo/redo and placing/editing point and region shapes are not
+complete. The runtime renders procedural models even when an actor has a named
+mesh file string.
+
+## Headless map authoring / scripting
+
+The same `.rtsproject.json` is a self-contained machine-readable project;
+there is no requirement to open a GUI.
+
+```sh
+./build/RTSProjectTool --create projects/new.rtsproject.json
+./build/RTSProjectTool --validate projects/new.rtsproject.json
+./build/RTSProjectTool --list projects/new.rtsproject.json Unit
+./build/RTSProjectTool --get projects/new.rtsproject.json ranger damage
+./build/RTSProjectTool --set projects/new.rtsproject.json ranger damage 17
+./build/RTSProjectTool --derive projects/new.rtsproject.json ranger super_ranger
+./build/RTSProjectTool --rename projects/new.rtsproject.json super_ranger ranger
+./build/RTSProjectTool --set projects/new.rtsproject.json super_ranger max_hp 300
+./build/RTSProjectTool --paint-cell projects/new.rtsproject.json 24 24 4.5 2 1
+./build/RTSProjectTool --place projects/new.rtsproject.json Unit super_ranger -6 4 0
+./build/RTSProjectTool --placements projects/new.rtsproject.json
+./build/RTSProjectTool --set-instance projects/new.rtsproject.json ranger_1 scale '[1.5,1,1.5]'
+```
+
+`--set-root` accepts a JSON literal and can replace root-level `triggers`
+or arbitrary custom extension fields. Use a script/JSON editor for complex
+trigger documents; single-shell-argument escaping varies by OS. Project validation
+rejects missing catalog references, invalid terrain, invalid unit stats,
+invalid trigger actions and out-of-bounds spawn positions.
+
+## Data organization
+
+A project contains: `schema_version`, `name`, `description`,
+`terrain` (dimensions/spacing plus sparse painted-height cells),
+`catalog` (typed objects with `id`, `type`, `parent`, `fields`),
+`placements` (instances with `id`, `kind`, `catalog`, owner,
+position/rotation/scale and per-instance overrides), `metadata` and
+preserved arbitrary extension fields.
+
+The `Actor` catalog controls *visuals* and links a `Model` catalog.
+The `Unit` catalog controls gameplay stats and points at an `Actor`.
+This allows a unit to inherit another unit's gameplay while selecting a
+different presentation actor, and allows multiple objects to share a model.
+
+**Per-instance overrides:** each placed Unit or Doodad can override fields
+without affecting its shared catalog. A placed Unit accepts three special
+objects inside `overrides`: `unit` for gameplay fields, `actor` for
+presentation fields and `model` for linked model fields. Example:
+
+```json
+{
+  "id": "custom_elite", "kind": "Unit", "catalog": "ranger",
+  "owner": 0, "name": "Unique elite Ranger",
+  "position": [-8, 0, 7], "rotation": [0, 35, 0], "scale": [1.2, 1, 1],
+  "amount": 0,
+  "overrides": {
+    "unit": {"damage": 23, "max_hp": 150},
+    "actor": {"tint": [1.0, 0.45, 0.12], "opacity": 0.85},
+    "model": {"scale": [1.4, 1.0, 1.2]}
+  }
+}
+```
+
+This actually changes the unique instance's simulation stats, procedural color,
+transparency and scale. Other Rangers are unaffected. The `mesh` asset
+string also resolves independently but still draws a procedural placeholder
+until the model importer is implemented.
+
+**Implemented effect:** Unit health, armor, damage, attack range, cooldown,
+speed, costs, basic worker/structure classification; actor tint, scale and
+opacity; procedural terrain materials; scene positions; bounded triggers.
+**Persisted but not yet used:** most arbitrary fields, real mesh/texture path,
+animation/sound property strings, unknown instance-specific arbitrary overrides and advanced gameplay catalog
+categories. The recognized `unit`, `actor` and `model` sections do apply.
+
+## Declarative trigger code (first iteration)
+
+A trigger has a unique ID, an `event` object, optional `conditions`, a
+list of `actions` and optional `once`. Example:
+
+```json
+{
+  "triggers": [
+    {
+      "id": "begin_mission",
+      "event": {"type": "OnMapStart"},
+      "once": true,
+      "actions": [
+        {"type": "ShowMessage", "text": "Welcome to your custom map"},
+        {"type": "GrantMinerals", "amount": 100}
+      ]
+    },
+    {
+      "id": "enemy_wave",
+      "event": {"type": "After", "seconds": 20},
+      "once": true,
+      "conditions": [
+        {"type": "UnitCountAtLeast", "owner": 1, "count": 1}
+      ],
+      "actions": [
+        {"type": "SpawnUnit", "catalog": "rift_raider", "owner": 1, "x": 20, "z": -10}
+      ]
+    }
+  ]
+}
+```
+
+Supported events: `OnMapStart`, `After`, `Every`, `OnUnitDeath`,
+`OnRegionEnter` (circular region with radius in placement overrides),
+`MineralsBelow`. Conditions: `PlayerMineralsAtLeast`,
+`UnitCountAtLeast`, `UnitTypeCountAtLeast`, `SubjectOwnerIs`.
+Actions: `GrantMinerals`, `SpawnUnit`, `EndMatch`, `ShowMessage`.
+
+The **F6 trigger inspector** supports browsing, adding, duplicating, removing
+and editing the serialized rule JSON. It is a text-based inspector, not
+a drag-and-drop trigger node graph. The inline text buffer is limited
+to 768 ASCII characters: use project JSON files/CLI for larger rule graphs.
+Project reload validates triggers and rejects malformed actions.
+
+The engine **does not execute raw C++, arbitrary OS commands, Lua, or Galaxy**
+from project files. This first trigger runner is intentionally an explicitly
+validated ECA interpreter. The eventual open modding goal needs a sandboxed VM,
+a designer-facing trigger graph editor, typed events, localization, authoring
+autocomplete, profiling and debugger.
+
+## Known limitations
+
+- Navigation now uses cell-by-cell terrain gradients to block slopes above
+  the maximum walkable rise/run, and adds slope costs to weighted A*.
+  Configure `metadata.max_walkable_slope` (default 1.25) and
+  `metadata.slope_cost_multiplier` (default 2). The terrain editor's red
+  blocked-path overlay highlights both manually blocked cells and slopes
+  blocked by the same gameplay threshold. These are global values;
+  per-unit climb ability, ramps/cliffs, physics and water pathing are TBD.
+- Terrain size and material count are currently bounded for simplicity.
+- Arbitrary actor mesh references are preserved but not imported/rendered.
+- The current terrain editor may reload the match after editing placed objects;
+  a future play-in-editor system should preserve selections and state.
+- Editing now uses a single chronological 32-step snapshot history across
+  terrain strokes, placed objects, catalog properties and trigger JSON.
+  Undo/redo applies to all three editor panels. Autosave, transaction
+  coalescing for held keys and recovery after application crashes are TBD.
+- End-game hardcoded enemy waves still coexist with trigger-authored events.
+- Custom triggers are not yet directly editable through a visual graph.
+
+## Editor reliability and crash recovery
+
+Editor input callbacks now catch C++ exceptions locally instead of allowing
+exceptions to escape GLFW's C callback boundary. Errors appear as in-game
+notices and are appended to `rts-editor-error.log` in the current working
+directory. The first run with these guards cannot prevent native graphics
+faults or out-of-memory conditions, so real-machine crash logs still matter.
+
+Edited projects autosave every **25 seconds** to `<project>.autosave`
+when an editor panel is active and the document has unsaved changes. This
+never overwrites the saved project. When a newer autosave exists, the editor
+loads it at startup, marks the document modified, and offers **Ctrl+S** to
+keep the recovery. An ordinary successful Ctrl+S removes the stale autosave.
+Use the launch scripts or open `--project <file>` explicitly to keep the
+correct per-project recovery location. The software OpenGL / CI smoke tests
+are not substitutes for a Windows real-machine crash reproduction.
+
+### Windows native crash dumps
+
+For Windows crashes that bypass the protected GLFW callbacks (for example,
+access violations in the graphics driver or renderer), the application
+installs a last-chance exception handler that writes a **local**
+`rts-crash-YYYYMMDD-HHMMSS.dmp` file in its working directory. The
+application does not upload dumps. Send the matching dump and
+`rts-editor-error.log` privately when reporting a crash, along with
+what editor mode/operation triggered it. Minidumps may contain portions
+of process memory; do not post them publicly without reviewing privacy.
+
+This exception handler records evidence; it is not a fix for arbitrary
+native faults. Other crash handlers or an attached debugger can take
+precedence, so dump generation is best-effort.
+
+### Editable unit sight range
+
+A Unit catalog's `sight_range` controls how many world units it reveals
+around a living player-owned unit or building. Bounds: **0–128**, default
+14 for the ranger. In the Data Editor (F7), select a Unit and edit its
+`sight_range` numeric property. Individual placed instances can override
+it in F8 Scene Editor using `{"unit":{"sight_range":24}}`.
+Heightfield crests interrupt line of sight; explored but not currently
+visible areas remain darkened. F5–F8 editor panels intentionally suppress
+fog. This is the first LOS layer, not yet Spring-style radar/jamming.
+
+### Data Editor object search (F7)
+
+Press **Ctrl+F** while in the Data Editor to filter the catalog by case-
+insensitive **object ID, type, or directly authored name**. Enter applies
+the filter; Tab/Shift+Tab now cycle only matching objects. Press
+**Ctrl+Shift+F** to clear the filter and return to the entire catalog.
+The inspector displays match count and the active search string, and
+retains the previous filter when a new query has no matches.
+
+Filtering is a view-only operation; it never edits serialized data and
+does not create an undo entry. This is groundwork for an eventual
+tree/list property browser, rather than a full SC2 Data Editor UI.
+
+### Formation spacing property
+
+In a project file's top-level `metadata` object, set
+`"formation_spacing_multiplier": 3.2` to widen the spacing of grouped
+move/attack-move/patrol destinations. The current implementation clamps the
+multiplier to **1.5–6.0**. The minimum unit spacing also accounts for the
+largest selected mobile unit's radius. This is a map-wide gameplay setting;
+per-unit formations, selectable squad geometries and a visual formation
+authoring panel remain TBD.
+
+### Catalog object identity
+
+The catalog now indexes object IDs for responsive search and editing as
+projects grow. Use **Data Editor duplicate/derive actions** or the
+`DataCatalog::add/cloneDerived` API to create entries and `setField` to
+author fields. The `entries()` collection is intentionally read-only:
+mutating entry IDs directly would corrupt object references. Safe object
+renaming with reference migration is planned but not yet implemented.
+
+## Catalog-driven production (creator suite foundation)
+
+A producer is any Unit catalog object with `is_structure: true` and an
+inherited or local `trainable_units` list of at most 12 **non-structure**
+Unit catalog IDs. Unit mineral cost, supply, build time, name, actor and
+worker role are resolved from the trained unit's own catalog definition.
+Modify this property in F7 Data Editor as a JSON array, for example:
+
+```json
+"trainable_units": ["ranger", "worker", "field_medic", "raider"]
+```
+
+In play mode, select exactly one friendly producer. The B/T/C command cells
+become its three contextual training slots. **Tab** cycles sets of three when
+there are more units. The selected building owns its individual queue
+(maximum five reserved jobs), rally point, resource costs and cancellation.
+Without a producer selected, legacy B/T/C build/ranger/worker commands
+continue to work. Old project files lacking `trainable_units` retain the
+built-in base/worker and barracks/ranger training roles.
+
+The validator checks every typed reference (existing Unit, no duplicates,
+no structures), maximum 12 slots, and JSON array shape. Catalog renaming
+migrates these typed links; arbitrary custom fields still round-trip.
+This is a real runtime training mechanic, not merely an editable string field.
+Tech prerequisites, upgrades, ability graphs and multiple queue lanes are
+not implemented yet.
+
+### Shipped production lab
+
+Use `run-production-lab.bat` or `run-production-lab.sh` from an installed
+build. `projects/production_showcase.rtsproject.json` demonstrates Unit
+inheritance, actor tint, two distinct training lists, six units (including
+catalog-derived Medic/Guard/Scout/Sniper), pages, rally points and per-building
+queues without editing source code. F7 edits those fields; F9 play-tests.
+
+## Native creator GUI / docking workspace
+
+The editor now has a **real mouse-driven GUI** rather than a text-only HUD.
+Click the **Workspace** menu or the Play/Terrain/Data/Triggers/Scene tabs
+at the top to switch modes. Dock, move and resize the **Creator | Browser**
+and **Creator | Inspector** windows; the central world view remains an
+interactive 3D viewport.
+
+- **Terrain:** click the tool palette to sculpt, smooth, flatten, paint
+  textures, edit blockers, or place Units/Doodads/Minerals. Use brush
+  radius/strength and catalog dropdowns; paint the 3D viewport with LMB.
+- **Data:** search object IDs/types, select definitions in the list, inspect
+  resolved properties, rename/derive, and edit or add JSON values.
+- **Scene:** select placed instances in the hierarchy, change owners, apply
+  numeric position/yaw, scale, duplicate or delete, and edit instance JSON.
+- **Triggers:** select, create, duplicate or remove ECA rules and edit JSON
+  using a multiline input field.
+- **Project:** save, undo or redo from the menu. Ctrl+S, Ctrl+Z and Ctrl+Y
+  remain keyboard accelerators.
+
+These controls invoke the existing **EditorSession** authoring methods. This
+pass is a functional GUI foundation, not yet the full Galaxy Editor's object
+model, trigger wizard, terrain paint layers or visual actor/action graphs.
+
+### Confirming Windows/Linux binary parity
+
+Run `RTSCameraTerrain.exe --version` (Windows), or
+`./RTSCameraTerrain --version` (Linux), from the **extracted release bundle**.
+It reports `RTS_BUILD_COMMIT` and `RTS_FEATURE_*` entries, including
+`FOG_OF_WAR`, `GAMEPLAY_HUD`, and `CREATOR_GUI`. Compare the commit to
+`build-info.json`. The build workflow now executes the **bundled native
+executable** and refuses to upload when commit or required features do not
+match; simply producing a successful compiler exit no longer suffices.
+
+
+## Scene/catalog links and typed fields
+In **F7 Data Editor**, the inspector follows Parent, Unit Actor, Actor Model and trainable-unit references by clicking their links. The incoming-reference section lists recognized references to the selected ID. Inherited fields are shown separately from local overrides. Boolean, number and string fields have direct controls; each accepted change is validated and recorded as one undo transaction. Complex JSON types still use the advanced text editor. In **F8 Scene Editor**, the selected placement's linked catalog ID opens the corresponding F7 entry. Raw extension fields are round-tripped, not silently dropped.
+
+During play, **Esc** opens the engine's custom pause menu. No additional UI dependency is needed for its layout or rendering. The editor itself still uses ImGui pending the native replacement described in `docs/CREATOR_ARCHITECTURE.md`.
+
+
+## Original starter content, legacy projects, and type filtering
+
+The built-in demo is a self-contained original sandbox, **not a StarCraft II map or asset pack**. New project templates use `ranger`, `rift_raider` and `rift_bastion` with authored display names and actor IDs. Prior project JSON files that embed their own older catalog names remain supported through legacy role lookups. The `player_ranger` metadata role is optional for new projects; `player_marine` is accepted only as a compatibility fallback. The Data Editor's type selector lists types from the active catalog, not a hardcoded list, so creators can add new object categories. Object browsing uses clipped visible rows for scalability. References to SC2 Galaxy Editor describe architecture and UX only, never imported content.
+
+
+## Typed Effect graphs (Damage, Heal, Sequence)
+
+The shared project catalog supports `type: "Effect"` entries with:
+- `{"kind":"Damage","amount":12}` — deals damage to a target unit, using normal armor mitigation.
+- `{"kind":"Heal","amount":8}` — heals a living target, clamped to maximum health.
+- `{"kind":"Sequence","children":["kinetic_pulse","restorative_pulse"]}` — executes a bounded list of other Effect IDs in order.
+
+All effect nodes are validated before map load/save: maximum 16 stack depth, at most 64 total visited nodes, 1–8 children per Sequence and a numeric amount in the range 0–100000. Cycles, missing or mismatched referenced Effect IDs, and invalid effect kinds fail validation. Renaming/deleting effects observes graph references, inherited values and typed trigger references.
+
+Trigger ECA gains `ApplyEffect` for **OnRegionEnter** events, operating on the entering subject unit and optionally filtered with `SubjectOwnerIs`. For example, an action can be `{"type":"ApplyEffect","effect":"kinetic_pulse"}`. This is the first concrete data-driven effect executor, not yet a general targeting/ability/weapons system.
+
+Run `RTSCameraTerrain --project projects/effects_showcase.rtsproject.json` (Windows: `RTSCameraTerrain.exe`) to load the included playable example, or `--editor --project projects/effects_showcase.rtsproject.json` to inspect the region, event rule and linked Effect objects through F7/F6/F8. Its region applies a short damage/heal sequence to an entering friendly unit once. Existing custom maps do not require adding these entries.
+
+
+## Visual Trigger Editor (no manual JSON required for standard rules)
+
+Open F6 and select or create a rule in the left Browser. The right Inspector now has the editable **Event / Conditions / Actions** tree, supports typed fields and catalog/region references, and manages order, insertion, deletion and repeat-once behavior. The old raw JSON editor remains under the expandable Advanced panel. Invalid changes (including raw JSON) are rejected **before** they alter or save the project. All UI edits pass through the same undoable, headless C++ authoring API and same ECA validation parser as the runtime.
+
+See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for action types, creation steps, Effect graph examples and limitations.
+
+
+## Editing linked Unit production and Effect sequences
+
+Select **F7 Data Editor**, choose a Unit or Effect catalog entry, then select its `trainable_units` or `children` field in the resolved-property inspector. The panel now shows each target reference with **Open**, **Up**, **Down**, and **Remove** controls. **Add reference** lists compatible Unit/Effect entries from the map's own catalog. A trainable Unit list is limited to twelve eligible units and may not contain duplicate IDs or structures. Sequence children may contain up to eight Effect IDs and must not form reference cycles or an empty Sequence. Editing a reference list creates a single validated undo action; Ctrl+Z restores the previous ordering/contents. The original JSON editor remains available for custom fields. This UI uses the existing temporary ImGui presentation adapter, while the project/schema code stays headless and portable.
+
+
+## Trigger debugger and diagnostic test map
+
+Use **View → Playtest trigger monitor** or the F6 inspector's **Open playtest monitor**. Play a map (F9), inspect captured rule events, search logs, clear trace entries, and click **Open rule** to edit a rule. The monitor logs first-failed conditions and the actions that executed. Script execution is unchanged when capture is disabled. A project reset/edit starts a fresh trace. `projects/trigger_diagnostics_showcase.rtsproject.json` is a new original sample: successful initialization, blocked condition and a region Effect.
+
+See [TRIGGER_EDITOR.md](TRIGGER_EDITOR.md) for operation, limitations, the screenshot smoke command and future debugger scope.
+
+
+## Build/pathing rules for custom terrain
+
+Edited terrain slope/pathing and new or destroyed structures are reflected in the shared navigation grid. On a topology change, in-flight orders check their remaining waypoints and lazily replan if invalid. If a destination becomes completely unreachable, that leg is abandoned; a subsequent queued move command is then attempted. Circular structure/mineral blockers update a local region of the grid. Building placement does not allow placing a footprint over a live mobile unit.
+
+No movement-class, hover/air navigation or hierarchical flow-field solver has been added yet. Maps with many units are better served by the existing grid/cost system until benchmarked upgrades are ready; see [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md).
+
+
+## Spawning from the creator's catalog
+
+The unit display name in a Unit catalog's inherited/resolved `name` field now controls **production-spawned units, AI reinforcements and structures built in gameplay**, not only placed scene instances. For example, deriving a Unit named `Field Medic` and adding it to a producer's `trainable_units` list creates `Field Medic <id>` units. This avoids special cases for the demo's Ranger/Worker/Raider roles and makes custom maps less tied to any example roster. Legacy project IDs and catalog data are preserved.
+
+
+## Replaying authored RTS commands
+
+In Play (F9), issue gameplay orders as normal. They are queued for the next fixed simulation tick. Press **Ctrl+Shift+L** or choose **View → Export playtest replay** to write a `<project-path>.rtsreplay.json` containing the project snapshot, scheduled game commands and 60-tick digests. Open the file with a text editor or verify it headlessly using `RTSProjectTool --verify-replay yourfile.rtsreplay.json`. If terrain editing or external direct order calls occurred during this recording, export is rejected instead of producing a misleading log. Commands rejected for gameplay reasons still appear in the stream and generate a gameplay notification.
+
+This is verification and data portability, **not yet** a cinematic replay viewer or integrated scrub timeline. See [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).
+
+
+## Deterministic combat AI proposal layer
+
+`RTSAIPlanner.hpp/.cpp` is a read-only pure planning layer: given world units, the enemy's base, a strategic target and a simulation tick, it produces sorted, validated **source=1 Attack** commands without touching Unit state. The world enqueues them for the next fixed tick. `RTSCommandStream` permits AI source 1 only for bounded unit-target attack orders, while player actions use source 0. The command dispatcher validates AI ownership and uses stable unit IDs without modifying the human player's selection.
+
+The default combat policy chooses nearby player combat units defending within 14 units of the enemy base, deterministically resolving distance ties by unit ID; otherwise idle enemy units attack the player's base. Content authors control `enemy_ai_guard_radius` in `metadata` (0–80; 0 means base-only attack) and `enemy_ai_enabled` (bool). These fields are validated by `RTSProject::validate`. Enemy reinforcements still spawn as simulation logic; their subsequent combat decisions use the queue. Source-1 commands are recorded in **replay v2**. Replays exported as v1 remain verifiable by switching to the historical direct-AI behavior on playback, while v2 playback disables autonomous planning and consumes the recorded AI input instead.
+
+This is deterministic rule-based opponent combat, **not** a complete economic/strategic AI, and there is no network/security trust boundary for external source IDs yet. See [RTS_ENGINE_AUDIT.md](RTS_ENGINE_AUDIT.md) and [REPLAY_COMMANDS.md](REPLAY_COMMANDS.md).
+
+
+## AI defense sample map
+
+Open `projects/ai_defense_showcase.rtsproject.json`. Two original Frontier scouts are placed closer to the enemy base to exercise the local guard policy. Its `metadata` sets `enemy_ai_enabled=true`, `enemy_ai_guard_radius=16` and a long reinforcement interval to focus on combat behavior. The map is included in Windows and Linux ZIPs, validated with `RTSProjectTool --validate` through CTest, exercised for 180 fixed steps in `ai_defense_behavior` and rendered under Linux software OpenGL for a real screenshot artifact. The simulator retains historical v1 replay support alongside AI-input format v2.
+
+
+## New F7 object creation and effect timelines (November 14)
+
+F7 Data Editor's **New catalog object...** dropdown creates valid
+standalone Units (Combat, Worker, Structure), Actors, Models, and Effects
+(Damage, Heal, PeriodicDamage, PeriodicHeal, Sequence). This is distinct
+from *Derive selected*: the new objects have no parent and can later be
+renamed or used as inheritance roots. IDs are unique and stable.
+A transactional **Effect operation** selector preserves the chosen ID
+while converting operation kind and filling required fields.
+
+Unit catalog fields may include `hp_regen` (default 0, up to 1000 HP/sec).
+Effects may use `kind: PeriodicDamage` or `PeriodicHeal`, with
+`amount` (health per pulse), `interval_ticks` (1–600) and
+`duration_ticks` (1–3600). Fixed 60 Hz simulation makes effect timing
+independent of rendering refresh rates. The number of concurrently scheduled
+effect steps is limited to 256. Applications beyond that limit are rejected
+atomically before any immediate Sequence steps execute.
+
+The example `projects/timed_effects_showcase.rtsproject.json` combines
+a field medic with passive regeneration, an OnRegionEnter event and a
+Sequence of timed damage/healing Effects. Its source assets and IDs are
+original to this project. No external RTS unit art or names are needed.
+
+
+## Ability catalog and per-Unit loadout creation (F7 → F9)
+
+1. In F7 select "New catalog object..." then "Ability | Self",
+   "Ability | Ally target", "Ability | Enemy target", or "Ability | Any
+   unit target". This creates a valid original object using an existing
+   Effect catalog entry. Create the desired Effect first if necessary.
+2. In the F7 Ability inspector select a Target policy and Applied
+   effect from typed dropdowns. The resolved scalar fields include
+   cooldown_ticks (integer 0–36000), cast_range (0–128 world units),
+   mineral_cost (integer 0–100000), and energy_cost (integer 0–10000).
+   The Effect link must refer to an existing, valid Effect graph.
+3. Select a Unit in F7, click "Enable ability slots" if absent, and add
+   Ability references in the Ability loadout inspector. The ordered
+   list accepts up to eight unique IDs, with Open, reorder and remove
+   controls. The editor displays each Ability's target policy, cooldown
+   and energy/mineral costs. These are inherited catalog properties,
+   with validated per-Unit overrides and undo/redo.
+4. Unit fields max_energy (0–10000, default 0) and energy_regen
+   (0–1000 energy/s, default 0) govern the resource used for skill
+   casting. Units start at full energy and regenerate on fixed steps.
+5. Press F9, select one friendly Unit, and use its first three assigned
+   Ability slots via F/J/K. A Self skill casts immediately. For a unit
+   target, left-click a visible target in range or right-click to
+   cancel. The source-0 command stream checks requirements again on
+   the actual gameplay tick; rejected casts spend no resources and
+   do not arm cooldown clocks.
+
+Try projects/ability_workshop_showcase.rtsproject.json for original
+Field Mend and Arc Lance abilities, an energy-equipped Ranger, and a
+nonattacking training dummy. This is intentionally not a copy of any
+existing RTS's units or assets. Current scope omits autocast, terrain/
+AoE targets, projectiles, channeled casts, upgrades and visual behavior
+stacks; those are subsequent engine/editor tasks.
+
+### Playtest all eight Ability slots
+
+The Ability loadout allows eight distinct skill references. If the selected Unit has more than three, the tactical HUD's SKILLS x/y button (or TAB) pages through the command grid in groups of three. F/J/K cast whichever three slots are currently visible. This is pure presentation/selection state; replay commands include the actual Ability catalog ID, not a page index.
+
+
+## Authoring dynamic status Behaviors from F7
+
+Create a **Behavior** via F7 → New catalog object → Behavior |
+Armor shield, Attack focus or Movement slow. These are editable
+templates, not hardcoded game abilities. A Behavior may be authored
+and renamed independently of its triggering Ability and Effect.
+
+The grouped editor lets you set:
+
+| Field | Semantics | Validated range |
+|---|---|---|
+| duration_ticks | Lifetime from application/refresh, at 60 Hz | integer 1–36000 |
+| max_stacks | Number of layers for the same Unit and Behavior ID | integer 1–8 |
+| armor_bonus | Armor gained per stack (may be negative) | -50..50 |
+| damage_bonus | Attack damage gained per stack | -100..100 |
+| speed_multiplier | Relative movement speed per stack (1=normal) | 0.1..3 |
+| refresh_duration | Reapplication renews timer if true | boolean |
+| dispellable | RemoveBehavior can remove it if true | boolean |
+
+Armor and damage bonuses sum by stack and are clamped to bounded
+derived totals. Relative speed modifiers add their departures from
+1, then the final factor is clamped to 0.1–3.0. Multiple Behavior
+IDs can affect the same Unit. A new application at maximum stacks
+does not exceed the cap; it may still renew the timer. Behavior
+expiration restores the immutable original UnitData values.
+
+Create an **Effect | Apply Behavior** (or **Remove Behavior**) and
+choose the linked Behavior in the typed Status reference dropdown.
+Alternatively convert an existing Effect to either kind via its
+Effect operation selector. A Sequence may mix Behavior nodes with
+damage, healing, timed pulses and other sequences. The inspector's
+Visual effect flow is a live traversable tree; click a node's Edit
+button to navigate to its Effect, or use the direct Sequence rows
+to reorder/appended/removed child references.
+
+Create/edit an **Ability** that references this Effect. Give that
+Ability to a Unit via its F7 Ability loadout, then F9 playtest.
+The included behavior_workshop_showcase.rtsproject.json has a
+self-targeted Brace Stance (armor stacking), enemy-targeted Tether
+Bolt (damage and movement slowing), and Break Tether (dispel).
+Effects and Abilities apply the same authored status rules as
+ECA-triggered ApplyEffect actions. No proprietary content is included.
+
+The F6 live trigger monitor shows an optional Active status watch
+of bounded Unit IDs, status names, stacks and time remaining.
+Status graphs are validated when saving; unrecognized extra catalog
+fields still round-trip, but invalid typed links cannot be committed.
+
+
+## Ground Ability creation and editing (F7)
+
+Select New catalog object > Ability | Ground area impact or switch a
+selected Ability's Target policy to Ground. The conversion uses a
+validated, undoable project transaction, including valid cast range,
+radius and impact defaults even when converting a zero-range Self
+Ability. Configure area_radius (0.5..24 world units), area_team
+(Enemy, Ally or Any relative to caster), and impact_delay_ticks
+(an integer 0..300 ticks at 60Hz) in the grouped inspector. The
+Apply ground settings button commits all three as one undo snapshot.
+The existing cast_range (0.5..128), cooldown_ticks, energy_cost,
+mineral_cost and typed Effect reference continue to apply.
+
+Ground effects may contain any compiled Effect Sequence, including
+Damage/Heal and ApplyBehavior/RemoveBehavior. In the original
+ground_impact_showcase.rtsproject.json, Ember Arc damages and
+slows enemies inside a delayed radius, whereas Repair Circle
+heals allied Units immediately. F9: select one Ranger, press F
+for Ember Arc or J for Repair Circle, then left-click visible
+terrain inside range. Right-click cancels. Teal/green radius
+means valid aim; red indicates invalid; orange denotes a pending
+area impact. Unit positions are checked on impact, not cast.
+
+
+## F7 Projectile object workflow
+
+Choose New catalog object > Projectile | Arcing spark or Projectile |
+Intercepting bolt. The selected Projectile opens grouped validated
+fields, committed as one undoable transaction:
+
+- speed: 0.5..100 world units per second.
+- arc_height: 0..24, the extra height at the midpoint of a flight.
+- visual_scale: 0.05..3, size of the procedural in-flight model.
+- collision_radius: 0.05..4, swept contact padding against Units.
+- collide_units: boolean; disabled travels to the target point.
+- tint: three normalized RGB components in [0,1].
+
+The Projectile itself is a reusable catalog entry, not hardwired into
+a Unit. Create an Ability with Target policy **Ground**, pick an
+Effect graph and select this object in the Projectile dropdown.
+Click Edit projectile to jump to the typed object. None reverts to
+the previous timer-based area scheduler. Renaming a Projectile
+rewrites the Ability reference; deletion is blocked while referenced.
+Converting an Ability from Ground to a non-Ground target removes
+its incompatible projectile reference atomically with undo support.
+
+Projectile travel consumes distance/speed, so the Ground Ability's
+impact_delay_ticks is an additional **postflight** hold. The
+Projectile Forge project demonstrates an arcing area blast,
+a swept-contact bolt, and a nonprojectile Repair Circle.
+Unit-targeted Ability casts remain direct for now.
+
+## F7 searchable Ground Ability shapes (November 15)
+
+Use the **Search shape** dropdown on any Ground Ability to select
+Circle, Cone or Line, and apply as one validated undoable edit.
+Cone uses area_angle (opening 10..170 degrees) and the radius
+as its maximum forward reach. Line uses area_width (0.25..12
+world units) to make a rectangular strip of length area_radius.
+Both use the ground impact point as their origin and face
+**away from the caster**, using caster position at cast time.
+Legacy Circle searches ignore these extra controls.
+
+The live game evaluates Unit center positions at impact, not when
+a delayed spell is queued; enemies can dodge by moving outside
+the authored shape. F7 supports inherited catalog overrides,
+F6 shows the pending shape, and F9 renders a read-only outline.
+The original area_shapes_showcase.rtsproject.json gives Fan Surge,
+Rail Line, and the older Repair Circle in one playable project.
+
+### Shape preview in the F7 inspector
+
+The area footprint panel updates when the shape, radius, cone angle or
+line width changes, **before** saving. It uses the same headless area
+search predicate as the runtime to classify example target points
+(green means affected, red means outside). The caster is displayed left
+of the impact origin and the ability faces right. The preview never
+commits a project change: Apply ground settings does that transaction.
+
+## Authorable standard-attack Weapons
+
+In F7, create a Weapon using the Ranged or Melee preset. Adjust damage
+(0..10000), range (0..128 world units), cooldown (.05..60 seconds), and
+armor penetration (0..1000); Apply commits one undoable validated change.
+Select a Unit and choose its Equipped weapon from the typed dropdown.
+The resulting damage/range/cooldown/pierce stats are shown below the
+selector. Choosing Legacy unit stats restores its authored base fields.
+An inherited Unit inherits the Weapon link unless locally overridden
+with an empty string. Weapon rename migrates all linked Unit entries,
+and Weapon deletion refuses dangling references.
+
+A Weapon hit subtracts armor penetration from target mitigation, including
+Behavior armor, before evaluating damage. Generic Effect damage remains
+unmodified. Attack commands, impact order and replay semantics are unchanged.
+The original weapon_forge_showcase.rtsproject.json demonstrates Ranged and
+Melee Weapon authoring and runtime play. Normal attacks remain instant
+two-phase hits; ballistic, homing, multi-target and Actor event pipelines
+are future work.
+
+## Weapon Projectile delivery and F7 object navigation
+
+In F7 create a Projectile, configure speed, visual tint, arc, hit radius
+and collide_units, then create a Weapon and select it in the Projectile
+delivery dropdown. Equip that Weapon on a Unit. The Weapon -> Projectile
+and Unit -> Weapon links are validated, inherited, rename-aware and
+undoable. The Projectile selector's Instant (legacy) option restores
+ordinary direct hits.
+
+F9 fixed-tick attacks now travel to the target position sampled at
+launch, can miss moved targets, and optionally intercept other eligible
+enemy Unit cylinders. Impact applies the Weapon's damage and armor
+penetration; nonprojectile Ability effects retain their own rules.
+In F7, open Creator | Data Navigator to inspect Depends on / Used by
+references, inherited links and search results. Click any object to
+open its editor. The navigator is read-only and does not edit map data.
+
+## Actor Events: typed presentation reactions
+
+Open F7 and select an Actor, or use the Actor | Event-driven visual
+creation preset. Add up to 12 rules triggered by Attack, Launch,
+Impact, Death, Cast, or Status; styles are Pulse, Ring and Beacon.
+Each rule specifies RGB tint, radius .25..12 world units, and
+duration 1..180 ticks (60Hz). Apply commits all rules as one
+validated undoable transaction. Derived Actors inherit or override
+the array; per-placement actor overrides also work.
+
+These visual responses never affect the authoritative simulation.
+F9 renders them from read-only cue snapshots; F6 shows the active
+events. The original Actor Event Laboratory shows projectile
+launch/impact cues without borrowing third-party content. Full
+schema and details: docs/ACTOR_EVENT_AUTHORING.md.
+
+## Gameplay Validators and reusable Requirement graphs
+
+In F7 create a Validator (health, energy, active status, structure
+or owned Unit count). Its subject is Caster or Target. Then create
+Requirement | Single validator to reference it; compose nested
+All, Any or Not Requirement objects as reusable Boolean logic.
+Apply commits validated changes atomically, with undo/redo.
+The Data Navigator shows incoming and outgoing typed links.
+
+Attach a Requirement to any Ability or Unit via the Required graph
+selector. Abilities check the rule at cast admission; Unit gates
+apply to production of that Unit by a producer building. The
+production Caster is the producer, not the uncreated Unit.
+Only Caster predicates are valid for Ground or training gates.
+Missing and invalid IDs, duplicate children, cycles and excessive
+depth are rejected before project save. Existing unlinked objects
+remain playable. See docs/REQUIREMENT_AUTHORING.md for details.
+
+## Upgrade research workflows
+
+F7: create Upgrade | Attack research or Upgrade | Armor research,
+set max level 1..5, per-level cost/time and damage/armor, affected Unit
+and optional Requirement, then link it to a structure through its
+researchable_upgrades typed array. UpgradeLevelAtLeast Validators,
+wrapped inside Requirement graphs, provide real technology unlocks.
+F9: select a completed producer structure for paginated research cards.
+F6: inspect active research. All changes use validated Undo/Redo.
+Detailed schema: docs/TECHNOLOGY_RESEARCH.md.
+
+## Independent command Show and Use requirements
+
+In F7, the Upgrade inspector exposes Show tech when and Use tech when.
+Unit and Ability inspectors expose Show command when alongside their
+Required graph (Use). Caster-scoped Show graphs control whether
+commands appear; Use gates control whether shown commands are
+executable, including targeted Abilities. Hidden options do not
+occupy production pages and cannot be invoked by direct commands.
+See docs/TECH_SHOW_USE.md for complete schema and examples.

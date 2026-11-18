@@ -1,0 +1,149 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "RTS Studio dual-material original static asset"
+  },
+  "buffers": [
+    {
+      "byteLength": 1504,
+      "uri": "data:application/octet-stream;base64,AAAAAAAAAABmZiY/PFPrPgAAAAA8U+s+JDlZPjMzE0AkOVk+AAAAADMzE0CamZk+PFPrPgAAAAA8U+s+ZmYmPwAAAADAjDckmpmZPjMzE0A8bqkjJDlZPjMzE0AkOVk+ZmYmPwAAAADAjDckPFPrPgAAAAA8U+u+JDlZPjMzE0AkOVm+mpmZPjMzE0A8bqkjPFPrPgAAAAA8U+u+wIy3JAAAAABmZia/PG4pJDMzE0CamZm+JDlZPjMzE0AkOVm+wIy3JAAAAABmZia/PFPrvgAAAAA8U+u+JDlZvjMzE0AkOVm+PG4pJDMzE0CamZm+PFPrvgAAAAA8U+u+ZmYmvwAAAACQqQmlmpmZvjMzE0BZJX6kJDlZvjMzE0AkOVm+ZmYmvwAAAACQqQmlPFPrvgAAAAA8U+s+JDlZvjMzE0AkOVk+mpmZvjMzE0BZJX6kPFPrvgAAAAA8U+s+wIw3pQAAAABmZiY/PG6ppDMzE0CamZk+JDlZvjMzE0AkOVk+AAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AACAPwAAAAAAAAAAAAAAAAAAAQACAAAAAgADAAQABQAGAAQABgAHAAgACQAKAAgACgALAAwADQAOAAwADgAPABAAEQASABAAEgATABQAFQAWABQAFgAXABgAGQAaABgAGgAbABwAHQAeABwAHgAfAAAAAAA9ChdARbazPrEmfj49ChdAsSZ+Pt+Z6j0rh2ZA35nqPQAAAAArh2ZAVOMlPrEmfj49ChdAsSZ+PkW2sz49ChdA2jvGI1TjJT4rh2ZALPw2I9+Z6j0rh2ZA35nqPUW2sz49ChdA2jvGI7Emfj49ChdAsSZ+vt+Z6j0rh2ZA35nqvVTjJT4rh2ZALPw2I7Emfj49ChdAsSZ+vto7RiQ9ChdARbazviz8tiMrh2ZAVOMlvt+Z6j0rh2ZA35nqvdo7RiQ9ChdARbazvrEmfr49ChdAsSZ+vt+Z6r0rh2ZA35nqvSz8tiMrh2ZAVOMlvrEmfr49ChdAsSZ+vkW2s749ChdA46yUpFTjJb4rh2ZAIT0JpN+Z6r0rh2ZA35nqvUW2s749ChdA46yUpLEmfr49ChdAsSZ+Pt+Z6r0rh2ZA35nqPVTjJb4rh2ZAIT0JpLEmfr49ChdAsSZ+Pto7xqQ9ChdARbazPiz8NqQrh2ZAVOMlPt+Z6r0rh2ZA35nqPQ=="
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 384
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 384,
+      "byteLength": 384
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 768,
+      "byteLength": 256
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1024,
+      "byteLength": 96
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1120,
+      "byteLength": 384
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 32,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 32,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 32,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 48,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 32,
+      "type": "VEC3",
+      "byteOffset": 0
+    }
+  ],
+  "images": [
+    {
+      "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAHUlEQVR4AQESAO3/ABmX3P8gyPD/AAlVoP8UgND/VQwJw22Wy4kAAAAASUVORK5CYII="
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "baseColorTexture": {
+          "index": 0
+        }
+      }
+    },
+    {
+      "name": "Amber Signal Cap",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.95,
+          0.58,
+          0.14,
+          1
+        ]
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Dual-material Signal Beacon",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Signal Beacon"
+    }
+  ],
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0
+}
