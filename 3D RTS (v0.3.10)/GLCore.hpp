@@ -32,6 +32,9 @@ typedef ptrdiff_t GLintptr;
 #ifndef GL_RED
 #define GL_RED 0x1903
 #endif
+#ifndef GL_TEXTURE0
+#define GL_TEXTURE0 0x84C0
+#endif
 #define GL_ARRAY_BUFFER                   0x8892
 #define GL_ELEMENT_ARRAY_BUFFER           0x8893
 #define GL_DYNAMIC_DRAW                   0x88E8
@@ -47,6 +50,7 @@ typedef ptrdiff_t GLintptr;
 typedef void (APIENTRY *PFNGLDELETEBUFFERSPROC)(GLsizei n,const GLuint *buffers);
 typedef void (APIENTRY *PFNGLDELETEVERTEXARRAYSPROC)(GLsizei n,const GLuint *arrays);
 typedef void (APIENTRY *PFNGLDELETEPROGRAMPROC)(GLuint program);
+typedef void (APIENTRY *PFNGLACTIVETEXTUREPROC)(GLenum texture);
 typedef void (APIENTRY *PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
 typedef void (APIENTRY *PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
 typedef void (APIENTRY *PFNGLBUFFERDATAPROC)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
@@ -77,6 +81,7 @@ typedef void (APIENTRY *PFNGLUNIFORM1IPROC)(GLint location, GLint v0);
 extern PFNGLDELETEBUFFERSPROC glDeleteBuffers;
 extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
 extern PFNGLDELETEPROGRAMPROC glDeleteProgram;
+extern PFNGLACTIVETEXTUREPROC glActiveTexture;
 extern PFNGLGENBUFFERSPROC glGenBuffers;
 extern PFNGLBINDBUFFERPROC glBindBuffer;
 extern PFNGLBUFFERDATAPROC glBufferData;

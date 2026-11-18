@@ -4,6 +4,7 @@
 PFNGLDELETEBUFFERSPROC glDeleteBuffers = nullptr;
 PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = nullptr;
 PFNGLDELETEPROGRAMPROC glDeleteProgram = nullptr;
+PFNGLACTIVETEXTUREPROC glActiveTexture = nullptr;
 PFNGLGENBUFFERSPROC glGenBuffers = nullptr;
 PFNGLBINDBUFFERPROC glBindBuffer = nullptr;
 PFNGLBUFFERDATAPROC glBufferData = nullptr;
@@ -35,6 +36,7 @@ bool loadOpenGLFunctions() {
     glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)glfwGetProcAddress("glDeleteBuffers");
     glDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)glfwGetProcAddress("glDeleteVertexArrays");
     glDeleteProgram = (PFNGLDELETEPROGRAMPROC)glfwGetProcAddress("glDeleteProgram");
+    glActiveTexture = (PFNGLACTIVETEXTUREPROC)glfwGetProcAddress("glActiveTexture");
     glGenBuffers = (PFNGLGENBUFFERSPROC)glfwGetProcAddress("glGenBuffers");
     glBindBuffer = (PFNGLBINDBUFFERPROC)glfwGetProcAddress("glBindBuffer");
     glBufferData = (PFNGLBUFFERDATAPROC)glfwGetProcAddress("glBufferData");
@@ -67,6 +69,7 @@ bool loadOpenGLFunctions() {
     REQUIRE_GL(glDeleteBuffers)
     REQUIRE_GL(glDeleteVertexArrays)
     REQUIRE_GL(glDeleteProgram)
+    REQUIRE_GL(glActiveTexture)
     REQUIRE_GL(glGenBuffers)
     REQUIRE_GL(glBindBuffer)
     REQUIRE_GL(glBufferData)

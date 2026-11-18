@@ -48,11 +48,16 @@ void main(){
 }
 )";
 class RTSStaticMeshRenderer {
-    struct Asset {
-        GLuint vao=0,vbo=0,ebo=0,texture=0;
-        GLsizei triangles=0;
+    struct GPUSurface {
+        GLuint texture=0;
+        GLsizei firstIndex=0,indexCount=0;
         std::array<float,4> color{{1,1,1,1}};
-        bool attempted=false,ready=false;
+    };
+    struct Asset {
+        GLuint vao=0,vbo=0,ebo=0;
+        GLsizei triangles=0;
+        std::vector<GPUSurface> surfaces;
+        bool ready=false;
     };
     std::map<std::string,Asset> assets_;
     GLuint shader_=0;
@@ -81,20 +86,42 @@ class RTSStaticMeshRenderer {
             glVertexAttribPointer(2,2,GL_FLOAT,GL_FALSE,8*sizeof(float),
                                   (void*)(6*sizeof(float)));
             glEnableVertexAttribArray(2);
-            if(!mesh.albedo.empty()){
-                glGenTextures(1,&a.texture);
-                glBindTexture(GL_TEXTURE_2D,a.texture);
-                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-                glPixelStorei(GL_UNPACK_ALIGNMENT,1);
-                glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,
-                    static_cast<GLsizei>(mesh.width),
-                    static_cast<GLsizei>(mesh.height),0,
-                    GL_RGBA,GL_UNSIGNED_BYTE,mesh.albedo.data());
+            const auto upload=[&](std::uint32_t first,std::uint32_t count,
+                                  std::uint32_t width,std::uint32_t height,
+                                  const std::array<float,4>& color,
+                                  const std::vector<unsigned char>& pixels){
+                GPUSurface surface;
+                surface.firstIndex=static_cast<GLsizei>(first);
+                surface.indexCount=static_cast<GLsizei>(count);
+                surface.color=color;
+                if(!pixels.empty()){
+                    glGenTextures(1,&surface.texture);
+                    // Own the handle even if a later GL operation fails.
+                    a.surfaces.emplace_back(surface);
+                    auto& current=a.surfaces.back();
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D,current.texture);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+                    glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+                    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,
+                        static_cast<GLsizei>(width),
+                        static_cast<GLsizei>(height),0,
+                        GL_RGBA,GL_UNSIGNED_BYTE,pixels.data());
+                }else{
+                    a.surfaces.emplace_back(surface);
+                }
+            };
+            if(mesh.surfaces.empty()){
+                upload(0,static_cast<std::uint32_t>(mesh.indices.size()),
+                       mesh.width,mesh.height,mesh.baseColor,mesh.albedo);
+            }else{
+                for(const auto& part:mesh.surfaces)
+                    upload(part.firstIndex,part.indexCount,part.width,
+                           part.height,part.baseColor,part.albedo);
             }
-            a.color=mesh.baseColor;
             a.triangles=static_cast<GLsizei>(mesh.indices.size());
             a.ready=true;
             if(!shader_)shader_=compileShaderProgram(RTS_IMPORTED_VERTEX,
@@ -141,22 +168,28 @@ public:
         glUniformMatrix4fv(glGetUniformLocation(shader_,"uView"),1,GL_FALSE,view.m);
         glUniformMatrix4fv(glGetUniformLocation(shader_,"uProjection"),1,
                             GL_FALSE,projection.m);
-        glUniform4f(glGetUniformLocation(shader_,"uBaseColor"),
-                    a.color[0],a.color[1],a.color[2],a.color[3]);
         glUniform3f(glGetUniformLocation(shader_,"uActorTint"),tint.x,tint.y,tint.z);
         glUniform1f(glGetUniformLocation(shader_,"uOpacity"),opacity);
-        glUniform1i(glGetUniformLocation(shader_,"uHasAlbedo"),a.texture?1:0);
         glUniform1i(glGetUniformLocation(shader_,"uAlbedo"),0);
-        glBindTexture(GL_TEXTURE_2D,a.texture);
         glBindVertexArray(a.vao);
-        glDrawElements(GL_TRIANGLES,a.triangles,GL_UNSIGNED_INT,nullptr);
+        for(const auto& part:a.surfaces){
+            glUniform4f(glGetUniformLocation(shader_,"uBaseColor"),
+                        part.color[0],part.color[1],part.color[2],part.color[3]);
+            glUniform1i(glGetUniformLocation(shader_,"uHasAlbedo"),part.texture?1:0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D,part.texture);
+            glDrawElements(GL_TRIANGLES,part.indexCount,GL_UNSIGNED_INT,
+                reinterpret_cast<const void*>(
+                    static_cast<std::uintptr_t>(part.firstIndex)*sizeof(std::uint32_t)));
+        }
         return true;
     }
     // Must run before destroying GLFW's active context.
     void clear(){
         for(auto& kv:assets_){
             auto& a=kv.second;
-            if(a.texture)glDeleteTextures(1,&a.texture);
+            for(auto& surface:a.surfaces)
+                if(surface.texture)glDeleteTextures(1,&surface.texture);
             if(a.vbo)glDeleteBuffers(1,&a.vbo);
             if(a.ebo)glDeleteBuffers(1,&a.ebo);
             if(a.vao)glDeleteVertexArrays(1,&a.vao);
