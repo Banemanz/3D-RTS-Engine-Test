@@ -81,7 +81,7 @@ typedef void (APIENTRY *PFNGLUNIFORM1IPROC)(GLint location, GLint v0);
 extern PFNGLDELETEBUFFERSPROC glDeleteBuffers;
 extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
 extern PFNGLDELETEPROGRAMPROC glDeleteProgram;
-extern PFNGLACTIVETEXTUREPROC glActiveTexture;
+extern PFNGLACTIVETEXTUREPROC rtsGlActiveTexture;
 extern PFNGLGENBUFFERSPROC glGenBuffers;
 extern PFNGLBINDBUFFERPROC glBindBuffer;
 extern PFNGLBUFFERDATAPROC glBufferData;

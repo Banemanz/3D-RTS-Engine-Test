@@ -57,7 +57,7 @@ class RTSStaticMeshRenderer {
         GLuint vao=0,vbo=0,ebo=0;
         GLsizei triangles=0;
         std::vector<GPUSurface> surfaces;
-        bool ready=false;
+        bool attempted=false,ready=false;
     };
     std::map<std::string,Asset> assets_;
     GLuint shader_=0;
@@ -99,7 +99,7 @@ class RTSStaticMeshRenderer {
                     // Own the handle even if a later GL operation fails.
                     a.surfaces.emplace_back(surface);
                     auto& current=a.surfaces.back();
-                    glActiveTexture(GL_TEXTURE0);
+                    rtsGlActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D,current.texture);
                     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
                     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -176,7 +176,7 @@ public:
             glUniform4f(glGetUniformLocation(shader_,"uBaseColor"),
                         part.color[0],part.color[1],part.color[2],part.color[3]);
             glUniform1i(glGetUniformLocation(shader_,"uHasAlbedo"),part.texture?1:0);
-            glActiveTexture(GL_TEXTURE0);
+            rtsGlActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D,part.texture);
             glDrawElements(GL_TRIANGLES,part.indexCount,GL_UNSIGNED_INT,
                 reinterpret_cast<const void*>(
