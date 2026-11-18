@@ -419,6 +419,16 @@ jobs:
           name: rts-asset-gltf-f9-screenshot
           path: rts-asset-f9.png
           if-no-files-found: error
+      - name: Capture native two-material RTSMESH2 F9 gameplay
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/multi_material_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-dual-material.ppm
+      - name: Convert dual-material 3D screenshot
+        run: python3 tools/ppm_to_png.py rts-dual-material.ppm rts-dual-material.png
+      - name: Upload actual two-material game screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-dual-material-f9-screenshot
+          path: rts-dual-material.png
+          if-no-files-found: error
       - name: Capture actual F10 Interface Editor as a native OS window
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
       - name: Convert native F10 Interface Editor screenshot

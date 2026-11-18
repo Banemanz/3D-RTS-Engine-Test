@@ -50,10 +50,13 @@ def main() -> int:
         "projects/ui_responsive_layout_showcase.rtsproject.json",
         "projects/ui_wrapped_layout_showcase.rtsproject.json",
         "projects/asset_import_showcase.rtsproject.json",
+        "projects/multi_material_showcase.rtsproject.json",
+        "projects/assets/beacon_dual.rtsmesh",
         "projects/assets/beacon.rtsmesh",
         "docs/ASSET_PIPELINE.md",
         "docs/NATIVE_ASSET_IMPORT.md",
         "examples/beacon.gltf",
+        "examples/beacon_dual.gltf",
         "licenses/CGLTF_LICENSE",
         "licenses/STB_LICENSE",
         "docs/AUTHORING.md",
@@ -171,6 +174,7 @@ def main() -> int:
         "RTS_FEATURE_UI_RESPONSIVE_LAYOUT",
         "RTS_FEATURE_UI_WRAPPED_LAYOUT",
         "RTS_FEATURE_STATIC_GLTF_ASSETS",
+        "RTS_FEATURE_STATIC_MULTIMATERIAL",
         "RTS_FEATURE_NATIVE_GLTF_IMPORT",
     )
     missing = [flag for flag in required if features.get(flag) != "1"]

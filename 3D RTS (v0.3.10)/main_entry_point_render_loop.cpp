@@ -976,6 +976,7 @@ int main(int argc, char** argv) {
                  <<"RTS_FEATURE_UI_RESPONSIVE_LAYOUT=1\n"
                  <<"RTS_FEATURE_UI_WRAPPED_LAYOUT=1\n"
                  <<"RTS_FEATURE_STATIC_GLTF_ASSETS=1\n"
+                 <<"RTS_FEATURE_STATIC_MULTIMATERIAL=1\n"
                  <<"RTS_FEATURE_NATIVE_GLTF_IMPORT=1\n";
         return 0;
     }

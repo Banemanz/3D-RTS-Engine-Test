@@ -14,6 +14,7 @@ struct RTSAssetRecord {
     std::uint32_t vertices=0;
     std::uint32_t triangles=0;
     std::uint32_t textureWidth=0,textureHeight=0;
+    std::uint32_t surfaces=0;
     bool valid()const{return error.empty();}
 };
 inline std::vector<RTSAssetRecord> rtsDiscoverStaticAssets(
@@ -48,8 +49,12 @@ inline std::vector<RTSAssetRecord> rtsDiscoverStaticAssets(
                             rtsResolveMeshReference(projectFile,item.reference));
                         item.vertices=static_cast<std::uint32_t>(mesh.vertices.size()/8);
                         item.triangles=static_cast<std::uint32_t>(mesh.indices.size()/3);
-                        item.textureWidth=mesh.width;
-                        item.textureHeight=mesh.height;
+                        item.surfaces=mesh.surfaces.empty()?1u:
+                            static_cast<std::uint32_t>(mesh.surfaces.size());
+                        item.textureWidth=mesh.surfaces.empty()?mesh.width:
+                            mesh.surfaces.front().width;
+                        item.textureHeight=mesh.surfaces.empty()?mesh.height:
+                            mesh.surfaces.front().height;
                     }catch(const std::exception& ex){item.error=ex.what();}
                     out.push_back(std::move(item));
                     if(out.size()>=limit)break;

@@ -132,8 +132,8 @@ bool draw(App& app){
             ImGui::TextColored(ImVec4(1.f,.44f,.38f,1.f),
                 "Invalid: %s",asset.error.c_str());
         }else{
-            ImGui::TextDisabled("%u triangles, %u vertices, texture %u x %u",
-                asset.triangles,asset.vertices,
+            ImGui::TextDisabled("%u tris, %u verts, %u materials, first texture %u x %u",
+                asset.triangles,asset.vertices,asset.surfaces,
                 asset.textureWidth,asset.textureHeight);
             if(ImGui::SmallButton("Register Model + Actor")){
                 if(app.editor.importStaticMesh(app.project,app.projectPath,
