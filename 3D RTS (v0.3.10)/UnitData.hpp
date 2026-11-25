@@ -17,11 +17,18 @@ public:
     std::string resourceName = "UnnamedUnit";
     Faction faction          = Faction::Humanity;
     float max_hp             = 45.0f;
+    float hp_regen           = 0.0f; // hp/second; optional Unit catalog stat
+    float max_energy         = 0.0f;
+    float energy_regen       = 0.0f; // energy/second; fixed simulation tick
     float armor              = 0.0f;
     float damage             = 6.0f;
+    std::string weaponId; // optional reusable Weapon catalog reference
+    std::string projectileId; // compiled from a Weapon, empty for legacy hits
+    float armor_piercing     = 0.0f; // normal attacks only
     float attack_range       = 6.0f;
     float attack_cooldown    = 0.85f;
     float aggro_range        = 11.0f;
+    float sight_range        = 14.0f;
     float move_speed         = 9.5f;
     int supply_cost          = 1;
     int mineral_cost         = 50;
@@ -33,5 +40,5 @@ public:
     std::string toTresString() const;
 };
 
-extern const char* HUMAN_MARINE_TRES;
-extern const char* HYBRID_ZEALOT_TRES;
+extern const char* HUMAN_RANGER_TRES;
+extern const char* HYBRID_RAIDER_TRES;

@@ -1,0 +1,774 @@
+name: Tests + screenshots (NOT executables)
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenGL and GLFW headers
+        run: sudo apt-get update && sudo apt-get install -y libglfw3-dev libgl1-mesa-dev
+      - name: Configure
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Compile
+        run: cmake --build build --parallel 2
+      - name: Unit tests (no display required)
+        run: ctest --test-dir build --output-on-failure
+      - name: Upload Linux replay state fingerprints
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-replay-fingerprint-linux
+          path: |
+            build/command_replay_fingerprint.txt
+            build/ai_defense_fingerprint.txt
+            build/trigger_globals_fingerprint.txt
+            build/script_expression_fingerprint.txt
+            build/script_flow_fingerprint.txt
+            build/timed_effect_fingerprint.txt
+            build/ability_cast_fingerprint.txt
+            build/behavior_fingerprint.txt
+            build/ground_area_fingerprint.txt
+            build/projectile_fingerprint.txt
+            build/area_shapes_fingerprint.txt
+            build/weapon_fingerprint.txt
+            build/weapon_projectile_fingerprint.txt
+            build/actor_cues_fingerprint.txt
+            build/requirement_fingerprint.txt
+            build/upgrade_research_fingerprint.txt
+            build/tech_visibility_fingerprint.txt
+            build/ai_research_fingerprint.txt
+            build/ui_frames_fingerprint.txt
+            build/ui_trigger_fingerprint.txt
+            build/ui_variable_fingerprint.txt
+            build/ui_responsive_fingerprint.txt
+          if-no-files-found: error
+      - name: Install software OpenGL smoke test dependencies
+        run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
+      - name: Run headless OpenGL renderer and capture frame
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-frames 120 --screenshot rts-smoke.ppm
+      - name: Convert screenshot without extra dependencies
+        run: python3 tools/ppm_to_png.py rts-smoke.ppm rts-smoke.png
+      - name: Upload rendered screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-software-opengl-screenshot
+          path: rts-smoke.png
+          if-no-files-found: error
+      - name: Capture AI defense combat laboratory (actual OpenGL renderer)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ai_defense_showcase.rtsproject.json --smoke-frames 180 --screenshot rts-ai-defense.ppm
+      - name: Convert AI defense screenshot
+        run: python3 tools/ppm_to_png.py rts-ai-defense.ppm rts-ai-defense.png
+      - name: Upload rendered AI defense scene
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ai-defense-screenshot
+          path: rts-ai-defense.png
+          if-no-files-found: error
+      - name: Capture native pause menu with software OpenGL
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-pause-menu --smoke-frames 35 --screenshot rts-pause.ppm
+      - name: Convert native UI screenshot
+        run: python3 tools/ppm_to_png.py rts-pause.ppm rts-pause.png
+      - name: Upload native pause UI capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-native-pause-menu-screenshot
+          path: rts-pause.png
+          if-no-files-found: error
+      - name: Smoke test clickable RTS unit selection cards
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-select-army --smoke-frames 80 --screenshot rts-group-hud.ppm
+      - name: Convert group HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-group-hud.ppm rts-group-hud.png
+      - name: Upload group HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-group-selection-hud-screenshot
+          path: rts-group-hud.png
+          if-no-files-found: error
+      - name: Smoke test contextual RTS production HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/production_showcase.rtsproject.json --smoke-select-producer --smoke-frames 80 --screenshot rts-production.ppm
+      - name: Convert production HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-production.ppm rts-production.png
+      - name: Upload contextual production HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-production-hud-screenshot
+          path: rts-production.png
+          if-no-files-found: error
+      - name: Smoke test Data Editor searchable catalog
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 80 --screenshot rts-data.ppm
+      - name: Convert Data Editor screenshot
+        run: python3 tools/ppm_to_png.py rts-data.ppm rts-data.png
+      - name: Upload Data Editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-data-editor-screenshot
+          path: rts-data.png
+          if-no-files-found: error
+      - name: Run interactive-editor OpenGL startup smoke
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-editor.ppm
+      - name: Convert editor screenshot
+        run: python3 tools/ppm_to_png.py rts-editor.ppm rts-editor.png
+      - name: Upload editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-terrain-editor-screenshot
+          path: rts-editor.png
+          if-no-files-found: error
+      - name: Run trigger-editor OpenGL smoke
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --project projects/effects_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-triggers.ppm
+      - name: Convert trigger-editor screenshot
+        run: python3 tools/ppm_to_png.py rts-triggers.ppm rts-triggers.png
+      - name: Upload trigger-editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-trigger-editor-screenshot
+          path: rts-triggers.png
+          if-no-files-found: error
+      - name: Run trigger execution monitor with an authored debug map
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-trigger-monitor --project projects/trigger_diagnostics_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-trigger-monitor.ppm
+      - name: Convert trace monitor screenshot
+        run: python3 tools/ppm_to_png.py rts-trigger-monitor.ppm rts-trigger-monitor.png
+      - name: Upload trace monitor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-trigger-trace-monitor-screenshot
+          path: rts-trigger-monitor.png
+          if-no-files-found: error
+      - name: Capture original scripted relay scenario and live variable watch
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-trigger-monitor --smoke-live-trigger-monitor --project projects/script_relay_showcase.rtsproject.json --smoke-frames 250 --screenshot rts-script-relay.ppm
+      - name: Convert scripted relay screenshot
+        run: python3 tools/ppm_to_png.py rts-script-relay.ppm rts-script-relay.png
+      - name: Upload live script-global debugger screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-scripted-relay-screenshot
+          path: rts-script-relay.png
+          if-no-files-found: error
+      - name: Capture nested trigger branch and formula editing in F6
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-select-trigger-id relay_support_award --project projects/script_relay_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-recursive-editor.ppm
+      - name: Convert recursive ECA screenshot
+        run: python3 tools/ppm_to_png.py rts-recursive-editor.ppm rts-recursive-editor.png
+      - name: Upload recursive visual trigger editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-recursive-trigger-editor-screenshot
+          path: rts-recursive-editor.png
+          if-no-files-found: error
+      - name: Capture live timed-effect game and debugger
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --trigger-editor --smoke-trigger-monitor --smoke-live-trigger-monitor --project projects/timed_effects_showcase.rtsproject.json --smoke-frames 180 --screenshot rts-timed-effects.ppm
+      - name: Convert timed effects screenshot
+        run: python3 tools/ppm_to_png.py rts-timed-effects.ppm rts-timed-effects.png
+      - name: Upload timed combat effects screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-timed-effects-screenshot
+          path: rts-timed-effects.png
+          if-no-files-found: error
+      - name: Smoke test playable authored Unit Ability command HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ability_workshop_showcase.rtsproject.json --smoke-select-ability-caster --smoke-frames 90 --screenshot rts-abilities.ppm
+      - name: Convert Unit Ability HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-abilities.ppm rts-abilities.png
+      - name: Upload real authored Ability HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ability-command-hud-screenshot
+          path: rts-abilities.png
+          if-no-files-found: error
+      - name: Capture F7 native Ability catalog inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ability_workshop_showcase.rtsproject.json --smoke-select-catalog-id arc_lance --smoke-frames 90 --screenshot rts-ability-editor.ppm
+      - name: Convert Ability catalog inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-ability-editor.ppm rts-ability-editor.png
+      - name: Upload Ability inspector screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ability-editor-screenshot
+          path: rts-ability-editor.png
+          if-no-files-found: error
+      - name: Capture F7 Unit loadout assignment editor
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ability_workshop_showcase.rtsproject.json --smoke-select-catalog-id ranger --smoke-frames 90 --screenshot rts-ability-loadout.ppm
+      - name: Convert Unit loadout screenshot
+        run: python3 tools/ppm_to_png.py rts-ability-loadout.ppm rts-ability-loadout.png
+      - name: Upload Unit loadout screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-unit-ability-loadout-screenshot
+          path: rts-ability-loadout.png
+          if-no-files-found: error
+      - name: Capture F7 authored Behavior modifier inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/behavior_workshop_showcase.rtsproject.json --smoke-select-catalog-id brace_field --smoke-frames 90 --screenshot rts-behavior-editor.ppm
+      - name: Convert Behavior inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-behavior-editor.ppm rts-behavior-editor.png
+      - name: Upload Behavior modifier inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-behavior-editor-screenshot
+          path: rts-behavior-editor.png
+          if-no-files-found: error
+      - name: Capture F7 validated Effect Sequence flow with Behavior node
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/behavior_workshop_showcase.rtsproject.json --smoke-select-catalog-id brace_combo --smoke-frames 90 --screenshot rts-effect-flow.ppm
+      - name: Convert visual Effect flow screenshot
+        run: python3 tools/ppm_to_png.py rts-effect-flow.ppm rts-effect-flow.png
+      - name: Upload visual Effect flow
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-effect-flow-screenshot
+          path: rts-effect-flow.png
+          if-no-files-found: error
+      - name: Capture active Behavior in real F9 gameplay HUD
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/behavior_workshop_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-self-ability --smoke-frames 90 --screenshot rts-active-status.ppm
+      - name: Convert active gameplay status screenshot
+        run: python3 tools/ppm_to_png.py rts-active-status.ppm rts-active-status.png
+      - name: Upload active Behavior gameplay screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-active-behavior-hud-screenshot
+          path: rts-active-status.png
+          if-no-files-found: error
+      - name: Capture real F7 multi-level Upgrade inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/technology_forge_showcase.rtsproject.json --smoke-select-catalog-id frontier_tactics --smoke-frames 85 --screenshot rts-upgrade-f7.ppm
+      - name: Convert F7 Upgrade screenshot
+        run: python3 tools/ppm_to_png.py rts-upgrade-f7.ppm rts-upgrade-f7.png
+      - name: Upload real Upgrade editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-upgrade-authoring-f7-screenshot
+          path: rts-upgrade-f7.png
+          if-no-files-found: error
+      - name: Capture genuine F9 structure research command cards
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/technology_forge_showcase.rtsproject.json --smoke-select-producer --smoke-frames 50 --screenshot rts-research-f9.ppm
+      - name: Convert Research HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-research-f9.ppm rts-research-f9.png
+      - name: Upload live research command-card screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-upgrade-research-hud-f9-screenshot
+          path: rts-research-f9.png
+          if-no-files-found: error
+      - name: Capture unlocked research command cards after real tech completion
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/technology_forge_showcase.rtsproject.json --smoke-select-producer --smoke-research-upgrade frontier_tactics --smoke-frames 50 --screenshot rts-research-unlocked-f9.ppm
+      - name: Convert unlocked research screenshot
+        run: python3 tools/ppm_to_png.py rts-research-unlocked-f9.ppm rts-research-unlocked-f9.png
+      - name: Upload real tech Show versus Use HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-tech-show-use-f9-screenshot
+          path: rts-research-unlocked-f9.png
+          if-no-files-found: error
+      - name: Capture F7 opponent AI research authoring
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-ai-research --project projects/ai_research_showcase.rtsproject.json --smoke-select-catalog-id raider_doctrine --smoke-frames 90 --screenshot rts-ai-research-editor.ppm
+      - name: Convert F7 opponent AI research screenshot
+        run: python3 tools/ppm_to_png.py rts-ai-research-editor.ppm rts-ai-research-editor.png
+      - name: Upload real F7 AI research authoring
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ai-research-editor-screenshot
+          path: rts-ai-research-editor.png
+          if-no-files-found: error
+      - name: Capture F9 live enemy research levels and budget
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --smoke-ai-research-play --smoke-fixed-ticks --project projects/ai_research_showcase.rtsproject.json --smoke-frames 125 --screenshot rts-ai-research-play.ppm
+      - name: Convert F9 opponent research monitor screenshot
+        run: python3 tools/ppm_to_png.py rts-ai-research-play.ppm rts-ai-research-play.png
+      - name: Upload actual F9 enemy research monitor
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ai-research-play-screenshot
+          path: rts-ai-research-play.png
+          if-no-files-found: error
+      - name: Capture native F10 script button editor at 150 percent scale
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame event_button --smoke-ui-scale 1.50 --project projects/ui_trigger_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-script-f10.ppm
+      - name: Convert F10 script button editor capture
+        run: python3 tools/ppm_to_png.py rts-ui-script-f10.ppm rts-ui-script-f10.png
+      - name: Upload actual F10 script button authoring screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-trigger-f10-screenshot
+          path: rts-ui-script-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 script button effect using recorded game click
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_trigger_showcase.rtsproject.json --smoke-ui-trigger --smoke-select-army --smoke-frames 95 --screenshot rts-ui-script-f9.ppm
+      - name: Convert F9 mission beacon screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-script-f9.ppm rts-ui-script-f9.png
+      - name: Upload actual F9 fired UI trigger screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-trigger-f9-screenshot
+          path: rts-ui-script-f9.png
+          if-no-files-found: error
+      - name: Capture custom hierarchical F10 UI frame editor at 125 percent
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-ui-scale 1.25 --project projects/ui_frame_studio_showcase.rtsproject.json --smoke-select-army --smoke-frames 95 --screenshot rts-ui-frames-f10.ppm
+      - name: Convert authored UI frame hierarchy editor screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-frames-f10.ppm rts-ui-frames-f10.png
+      - name: Upload genuine F10 nested UI frame editor
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-frames-f10-screenshot
+          path: rts-ui-frames-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 game with nested live UI and actionable buttons
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_frame_studio_showcase.rtsproject.json --smoke-select-army --smoke-frames 95 --screenshot rts-ui-frames-f9.ppm
+      - name: Convert gameplay nested UI screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-frames-f9.ppm rts-ui-frames-f9.png
+      - name: Upload actual F9 custom authored UI
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-frames-f9-screenshot
+          path: rts-ui-frames-f9.png
+          if-no-files-found: error
+      - name: Capture real F10 F6-variable-bound UI designer at 150 percent
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame signal_meter --smoke-ui-scale 1.50 --project projects/ui_variable_dashboard_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-variable-f10.ppm
+      - name: Convert F10 authored variable UI screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-variable-f10.ppm rts-ui-variable-f10.png
+      - name: Upload native F10 live-variable UI authoring
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-variable-f10-screenshot
+          path: rts-ui-variable-f10.png
+          if-no-files-found: error
+      - name: Capture F9 actual variable-driven conditional UI after replay-safe click
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_variable_dashboard_showcase.rtsproject.json --smoke-ui-trigger --smoke-frames 95 --screenshot rts-ui-variable-f9.ppm
+      - name: Convert F9 live variable HUD screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-variable-f9.ppm rts-ui-variable-f9.png
+      - name: Upload real F9 live F6 variable dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-variable-f9-screenshot
+          path: rts-ui-variable-f9.png
+          if-no-files-found: error
+      - name: Capture 150 percent F10 responsive row/column layout authoring
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame signal_panel --smoke-ui-scale 1.50 --project projects/ui_responsive_layout_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-responsive-f10.ppm
+      - name: Convert responsive F10 editor screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-responsive-f10.ppm rts-ui-responsive-f10.png
+      - name: Upload real native responsive F10 editor
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-responsive-f10-screenshot
+          path: rts-ui-responsive-f10.png
+          if-no-files-found: error
+      - name: Capture F9 runtime after conditional flow reflow
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_responsive_layout_showcase.rtsproject.json --smoke-ui-trigger --smoke-frames 95 --screenshot rts-ui-responsive-f9.ppm
+      - name: Convert responsive F9 gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-responsive-f9.ppm rts-ui-responsive-f9.png
+      - name: Upload real F9 responsive game UI
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-responsive-f9-screenshot
+          path: rts-ui-responsive-f9.png
+          if-no-files-found: error
+      - name: Capture real F10 wrapped toolbar designer at 150 percent
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-ui-frames --smoke-select-ui-frame command_strip --smoke-ui-scale 1.50 --project projects/ui_wrapped_layout_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-ui-wrapped-f10.ppm
+      - name: Convert wrapped toolbar F10 screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-wrapped-f10.ppm rts-ui-wrapped-f10.png
+      - name: Upload actual native F10 WrapRow editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-wrapped-f10-screenshot
+          path: rts-ui-wrapped-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 wrapped buttons after recorded F6 signal
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ui_wrapped_layout_showcase.rtsproject.json --smoke-ui-trigger --smoke-frames 95 --screenshot rts-ui-wrapped-f9.ppm
+      - name: Convert wrapped toolbar F9 screenshot
+        run: python3 tools/ppm_to_png.py rts-ui-wrapped-f9.ppm rts-ui-wrapped-f9.png
+      - name: Upload actual native F9 WrapRow HUD screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ui-wrapped-f9-screenshot
+          path: rts-ui-wrapped-f9.png
+          if-no-files-found: error
+      - name: Capture native glTF import dialog
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-import-dialog --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-native-import.ppm
+      - name: Convert native import capture
+        if: runner.os == 'Linux'
+        run: python3 tools/ppm_to_png.py rts-native-import.ppm rts-native-import.png
+      - name: Upload native import dialog screenshot
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-native-import-dialog-screenshot
+          path: rts-native-import.png
+      - name: Capture real F7 imported-asset library editor panel
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-assets-f7.ppm
+      - name: Convert F7 asset library capture
+        run: python3 tools/ppm_to_png.py rts-assets-f7.ppm rts-assets-f7.png
+      - name: Upload F7 imported-asset library capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-asset-library-f7-screenshot
+          path: rts-assets-f7.png
+          if-no-files-found: error
+      - name: Capture actual source dependency status in F7
+        run: |
+          mkdir -p projects/sources
+          cp assets/source/beacon.gltf projects/sources/beacon.gltf
+          ./build/RTSProjectTool --track-gltf projects/sources/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/beacon.rtsmesh
+          ./build/RTSProjectTool --source-report projects/asset_import_showcase.rtsproject.json --strict
+          python3 -c "import json; from pathlib import Path; p=Path('projects/sources/beacon.gltf'); d=json.loads(p.read_text()); d['nodes'][0]['translation']=[1,0,0]; p.write_text(json.dumps(d))"
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-source-dependencies --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-source-dependencies.ppm
+          python3 tools/ppm_to_png.py rts-source-dependencies.ppm rts-source-dependencies.png
+          rm projects/sources/beacon.gltf projects/assets/beacon.rtsmesh.source.json
+          rmdir projects/sources
+      - name: Upload actual source dependency inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-source-dependencies-f7-screenshot
+          path: rts-source-dependencies.png
+          if-no-files-found: error
+      - name: Capture real F8 imported model scene palette
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --scene-editor --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-assets-f8.ppm
+      - name: Convert F8 scene palette capture
+        run: python3 tools/ppm_to_png.py rts-assets-f8.ppm rts-assets-f8.png
+      - name: Upload F8 scene palette capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-asset-scene-f8-screenshot
+          path: rts-assets-f8.png
+          if-no-files-found: error
+      - name: Capture real textured glTF asset in game and scene
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/asset_import_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-asset-f9.ppm
+      - name: Convert genuine imported mesh OpenGL screenshot
+        run: python3 tools/ppm_to_png.py rts-asset-f9.ppm rts-asset-f9.png
+      - name: Upload real textured glTF F9 asset screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-asset-gltf-f9-screenshot
+          path: rts-asset-f9.png
+          if-no-files-found: error
+      - name: Capture native two-material RTSMESH2 F9 gameplay
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/multi_material_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-dual-material.ppm
+      - name: Convert dual-material 3D screenshot
+        run: python3 tools/ppm_to_png.py rts-dual-material.ppm rts-dual-material.png
+      - name: Upload actual two-material game screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-dual-material-f9-screenshot
+          path: rts-dual-material.png
+          if-no-files-found: error
+      - name: Render native imported static node assembly in the game
+        run: |
+          ./build/RTSProjectTool --validate projects/model_studio_showcase.rtsproject.json
+          ./build/RTSProjectTool --asset-report projects/model_studio_showcase.rtsproject.json
+          ./build/RTSProjectTool --model-info projects/model_studio_showcase.rtsproject.json assets/beacon_assembly.rtsmesh "Amber cap"
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-model-nodes --project projects/model_studio_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-model-nodes-f7.ppm
+          python3 tools/ppm_to_png.py rts-model-nodes-f7.ppm rts-model-nodes-f7.png
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/model_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-assembly-f9.ppm
+          python3 tools/ppm_to_png.py rts-assembly-f9.ppm rts-assembly-f9.png
+      - name: Upload real retained model node inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-model-nodes-f7-screenshot
+          path: rts-model-nodes-f7.png
+          if-no-files-found: error
+      - name: Upload actual native scene assembly capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-assembly-f9-screenshot
+          path: rts-assembly-f9.png
+          if-no-files-found: error
+      - name: Capture actual animated model timeline and fixed-tick gameplay
+        run: |
+          ./build/RTSProjectTool --asset-report projects/rigid_animation_showcase.rtsproject.json
+          ./build/RTSProjectTool --actor-pose projects/rigid_animation_showcase.rtsproject.json dual_beacon_actor 1.5
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-model-nodes --project projects/rigid_animation_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-rigid-preview.ppm
+          python3 tools/ppm_to_png.py rts-rigid-preview.ppm rts-rigid-preview.png
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/rigid_animation_showcase.rtsproject.json --smoke-fixed-ticks --smoke-frames 90 --screenshot rts-rigid-game.ppm
+          python3 tools/ppm_to_png.py rts-rigid-game.ppm rts-rigid-game.png
+      - name: Upload actual rigid animation screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-rigid-animation-screenshots
+          path: |
+            rts-rigid-preview.png
+            rts-rigid-game.png
+          if-no-files-found: error
+      - name: Capture actual F10 Interface Editor as a native OS window
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
+      - name: Convert native F10 Interface Editor screenshot
+        run: python3 tools/ppm_to_png.py rts-interface-f10.ppm rts-interface-f10.png
+      - name: Upload actual F10 Interface Editor native OS window
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-interface-editor-f10-screenshot
+          path: rts-interface-f10.png
+          if-no-files-found: error
+      - name: Capture actual F9 authored interface from playable engine
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 85 --screenshot rts-interface-f9.ppm
+      - name: Convert native F9 authored interface screenshot
+        run: python3 tools/ppm_to_png.py rts-interface-f9.ppm rts-interface-f9.png
+      - name: Upload native engine F9 authored interface
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-authored-interface-f9-screenshot
+          path: rts-interface-f9.png
+          if-no-files-found: error
+      - name: Capture native Technology Map dependency graph
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-tech-graph --project projects/technology_forge_showcase.rtsproject.json --smoke-select-catalog-id frontier_tactics --smoke-frames 85 --screenshot rts-technology-map.ppm
+      - name: Convert Technology Map capture
+        run: python3 tools/ppm_to_png.py rts-technology-map.ppm rts-technology-map.png
+      - name: Upload actual F7 Technology Map
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-technology-map-f7-screenshot
+          path: rts-technology-map.png
+          if-no-files-found: error
+      - name: Capture separated native Data Editor OS window at 150% scale
+        run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-module-windows --smoke-ui-scale 1.50 --project projects/ai_research_showcase.rtsproject.json --smoke-select-catalog-id raider_doctrine --smoke-frames 95 --screenshot rts-module-150.ppm
+      - name: Convert genuine detached module window framebuffer
+        run: python3 tools/ppm_to_png.py rts-module-150.ppm rts-module-150.png
+      - name: Upload separately rendered native Data Editor OS window
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-native-module-window-dpi150-screenshot
+          path: rts-module-150.png
+          if-no-files-found: error
+      - name: Capture large-font 175 percent Data Editor accessibility view
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-ui-scale 1.75 --project projects/technology_forge_showcase.rtsproject.json --smoke-select-catalog-id frontier_tactics --smoke-frames 80 --screenshot rts-data-dpi175.ppm
+      - name: Convert large-font Data Editor view
+        run: python3 tools/ppm_to_png.py rts-data-dpi175.ppm rts-data-dpi175.png
+      - name: Upload actual Data Editor at 175 percent scale
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-data-editor-dpi175-screenshot
+          path: rts-data-dpi175.png
+          if-no-files-found: error
+      - name: Capture real F7 Requirement graph inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id r_arc_gate --smoke-frames 85 --screenshot rts-requirement-f7.ppm
+      - name: Convert F7 Requirement screenshot
+        run: python3 tools/ppm_to_png.py rts-requirement-f7.ppm rts-requirement-f7.png
+      - name: Upload actual F7 Requirement graph inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-requirements-f7-screenshot
+          path: rts-requirement-f7.png
+          if-no-files-found: error
+      - name: Capture actual F7 Validator predicate inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id v_target_wounded --smoke-frames 85 --screenshot rts-validator-f7.ppm
+      - name: Convert F7 Validator screenshot
+        run: python3 tools/ppm_to_png.py rts-validator-f7.ppm rts-validator-f7.png
+      - name: Upload actual F7 Validator inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-validator-f7-screenshot
+          path: rts-validator-f7.png
+          if-no-files-found: error
+      - name: Capture F7 Ability's typed Requirement field
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/requirements_workshop_showcase.rtsproject.json --smoke-select-catalog-id arc_lance --smoke-frames 85 --screenshot rts-requirement-ability-f7.ppm
+      - name: Convert linked Ability inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-requirement-ability-f7.ppm rts-requirement-ability-f7.png
+      - name: Upload actual Ability to Requirement F7 screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-requirement-ability-link-f7-screenshot
+          path: rts-requirement-ability-f7.png
+          if-no-files-found: error
+      - name: Capture actual F7 Actor event rule inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/actor_events_showcase.rtsproject.json --smoke-select-catalog-id ranger_actor --smoke-frames 85 --screenshot rts-actor-events-f7.ppm
+      - name: Convert F7 Actor event screenshot
+        run: python3 tools/ppm_to_png.py rts-actor-events-f7.ppm rts-actor-events-f7.png
+      - name: Upload native Actor event inspector screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-actor-event-editor-screenshot
+          path: rts-actor-events-f7.png
+          if-no-files-found: error
+      - name: Capture real Actor cue on normal projectile launch
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/actor_events_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 35 --screenshot rts-actor-events-f9.ppm
+      - name: Convert F9 Actor event screenshot
+        run: python3 tools/ppm_to_png.py rts-actor-events-f9.ppm rts-actor-events-f9.png
+      - name: Upload native Actor event gameplay screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-actor-event-gameplay-screenshot
+          path: rts-actor-events-f9.png
+          if-no-files-found: error
+      - name: Capture reusable Weapon F7 inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-catalog-id piercer_rifle --smoke-frames 90 --screenshot rts-weapon-f7.ppm
+      - name: Convert Weapon inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-weapon-f7.ppm rts-weapon-f7.png
+      - name: Upload real F7 Weapon screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-weapon-f7-screenshot
+          path: rts-weapon-f7.png
+          if-no-files-found: error
+      - name: Capture genuine in-flight normal attack Projectile
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 35 --screenshot rts-weapon-projectile.ppm
+      - name: Convert normal attack Projectile screenshot
+        run: python3 tools/ppm_to_png.py rts-weapon-projectile.ppm rts-weapon-projectile.png
+      - name: Upload real Weapon Projectile flight screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-weapon-projectile-flight-screenshot
+          path: rts-weapon-projectile.png
+          if-no-files-found: error
+      - name: Capture original Weapon-equipped gameplay
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/weapon_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-fixed-ticks --smoke-frames 110 --screenshot rts-weapon-play.ppm
+      - name: Convert Weapon gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-weapon-play.ppm rts-weapon-play.png
+      - name: Upload real Weapon gameplay screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-weapon-gameplay-screenshot
+          path: rts-weapon-play.png
+          if-no-files-found: error
+      - name: Capture F7 Cone authoring inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/area_shapes_showcase.rtsproject.json --smoke-select-catalog-id fan_surge --smoke-frames 70 --screenshot rts-shapes-editor.ppm
+      - name: Convert area shape editor screenshot
+        run: python3 tools/ppm_to_png.py rts-shapes-editor.ppm rts-shapes-editor.png
+      - name: Upload real Cone creator screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-area-shapes-editor-screenshot
+          path: rts-shapes-editor.png
+          if-no-files-found: error
+      - name: Capture native F9 Cone impact telegraph
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/area_shapes_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-ground-ability --smoke-fixed-ticks --smoke-frames 40 --screenshot rts-shapes-play.ppm
+      - name: Convert area shape gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-shapes-play.ppm rts-shapes-play.png
+      - name: Upload native area search outline screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-area-shapes-playtest-screenshot
+          path: rts-shapes-play.png
+          if-no-files-found: error
+      - name: Capture F7 Ground Ability radius/team/delay inspector
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/ground_impact_showcase.rtsproject.json --smoke-select-catalog-id ember_arc --smoke-frames 90 --screenshot rts-ground-editor.ppm
+      - name: Convert Ground Ability inspector
+        run: python3 tools/ppm_to_png.py rts-ground-editor.ppm rts-ground-editor.png
+      - name: Upload ground AoE creator inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-ground-ability-editor-screenshot
+          path: rts-ground-editor.png
+          if-no-files-found: error
+      - name: Capture native delayed impact telegraph from a real queued ground cast
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/ground_impact_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-ground-ability --smoke-frames 90 --screenshot rts-ground-impact.ppm
+      - name: Convert delayed area impact screenshot
+        run: python3 tools/ppm_to_png.py rts-ground-impact.ppm rts-ground-impact.png
+      - name: Upload live impact telegraph
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-delayed-area-impact-screenshot
+          path: rts-ground-impact.png
+          if-no-files-found: error
+      - name: Capture F7 authored Projectile settings (native OpenGL)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --project projects/projectile_forge_showcase.rtsproject.json --smoke-select-catalog-id aether_spark --smoke-frames 90 --screenshot rts-projectile-editor.ppm
+      - name: Convert Projectile inspector screenshot
+        run: python3 tools/ppm_to_png.py rts-projectile-editor.ppm rts-projectile-editor.png
+      - name: Upload authored Projectile editor
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-projectile-editor-screenshot
+          path: rts-projectile-editor.png
+          if-no-files-found: error
+      - name: Capture 3D projectile in actual fixed-tick flight
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/projectile_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-projectile --smoke-fixed-ticks --smoke-frames 75 --screenshot rts-projectile-flight.ppm
+      - name: Convert in-flight gameplay screenshot
+        run: python3 tools/ppm_to_png.py rts-projectile-flight.ppm rts-projectile-flight.png
+      - name: Upload 3D projectile native gameplay
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-projectile-flight-screenshot
+          path: rts-projectile-flight.png
+          if-no-files-found: error
+      - name: Capture actual projectile arrival and area impact flash
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/projectile_forge_showcase.rtsproject.json --smoke-select-ability-caster --smoke-cast-projectile --smoke-fixed-ticks --smoke-frames 107 --screenshot rts-projectile-impact.ppm
+      - name: Convert projectile impact screenshot
+        run: python3 tools/ppm_to_png.py rts-projectile-impact.ppm rts-projectile-impact.png
+      - name: Upload projectile impact feedback
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-projectile-impact-screenshot
+          path: rts-projectile-impact.png
+          if-no-files-found: error
+      - name: Stress editor lifecycle across terrain, scene, triggers and data
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --editor-stress-smoke --project projects/terrain_showcase.rtsproject.json --smoke-frames 240
+      - name: Smoke test object and region scene editor
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --scene-editor --project projects/terrain_showcase.rtsproject.json --smoke-frames 120 --screenshot rts-scene.ppm
+      - name: Convert scene screenshot
+        run: python3 tools/ppm_to_png.py rts-scene.ppm rts-scene.png
+      - name: Upload scene editor screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-scene-editor-screenshot
+          path: rts-scene.png
+          if-no-files-found: error
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S "3D RTS (v0.3.10)" -B build -DRTS_BUILD_DEMO=ON
+      - name: Compile
+        run: cmake --build build --config Debug
+      - name: Unit tests
+        run: ctest --test-dir build -C Debug --output-on-failure
+      - name: Upload Windows replay state fingerprints
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-replay-fingerprint-windows
+          path: |
+            build/command_replay_fingerprint.txt
+            build/ai_defense_fingerprint.txt
+            build/trigger_globals_fingerprint.txt
+            build/script_expression_fingerprint.txt
+            build/script_flow_fingerprint.txt
+            build/timed_effect_fingerprint.txt
+            build/ability_cast_fingerprint.txt
+            build/behavior_fingerprint.txt
+            build/ground_area_fingerprint.txt
+            build/projectile_fingerprint.txt
+            build/area_shapes_fingerprint.txt
+            build/weapon_fingerprint.txt
+            build/weapon_projectile_fingerprint.txt
+            build/actor_cues_fingerprint.txt
+            build/requirement_fingerprint.txt
+            build/upgrade_research_fingerprint.txt
+            build/tech_visibility_fingerprint.txt
+            build/ai_research_fingerprint.txt
+            build/ui_frames_fingerprint.txt
+            build/ui_trigger_fingerprint.txt
+            build/ui_variable_fingerprint.txt
+            build/ui_responsive_fingerprint.txt
+          if-no-files-found: error
+
+  replay-parity:
+    runs-on: ubuntu-latest
+    needs: [linux, windows]
+    steps:
+      - name: Download Windows state fingerprints
+        uses: actions/download-artifact@v4
+        with:
+          name: rts-replay-fingerprint-windows
+          path: fingerprints/windows
+      - name: Download Linux state fingerprints
+        uses: actions/download-artifact@v4
+        with:
+          name: rts-replay-fingerprint-linux
+          path: fingerprints/linux
+      - name: Require identical replay state checkpoints across operating systems
+        run: |
+          diff -u fingerprints/linux/command_replay_fingerprint.txt fingerprints/windows/command_replay_fingerprint.txt
+          diff -u fingerprints/linux/ai_defense_fingerprint.txt fingerprints/windows/ai_defense_fingerprint.txt
+          diff -u fingerprints/linux/trigger_globals_fingerprint.txt fingerprints/windows/trigger_globals_fingerprint.txt
+          diff -u fingerprints/linux/script_expression_fingerprint.txt fingerprints/windows/script_expression_fingerprint.txt
+          diff -u fingerprints/linux/script_flow_fingerprint.txt fingerprints/windows/script_flow_fingerprint.txt
+          diff -u fingerprints/linux/timed_effect_fingerprint.txt fingerprints/windows/timed_effect_fingerprint.txt
+          diff -u fingerprints/linux/ability_cast_fingerprint.txt fingerprints/windows/ability_cast_fingerprint.txt
+          diff -u fingerprints/linux/behavior_fingerprint.txt fingerprints/windows/behavior_fingerprint.txt
+          diff -u fingerprints/linux/ground_area_fingerprint.txt fingerprints/windows/ground_area_fingerprint.txt
+          diff -u fingerprints/linux/projectile_fingerprint.txt fingerprints/windows/projectile_fingerprint.txt
+          diff -u fingerprints/linux/area_shapes_fingerprint.txt fingerprints/windows/area_shapes_fingerprint.txt
+          diff -u fingerprints/linux/weapon_fingerprint.txt fingerprints/windows/weapon_fingerprint.txt
+          diff -u fingerprints/linux/weapon_projectile_fingerprint.txt fingerprints/windows/weapon_projectile_fingerprint.txt
+          diff -u fingerprints/linux/actor_cues_fingerprint.txt fingerprints/windows/actor_cues_fingerprint.txt
+          diff -u fingerprints/linux/requirement_fingerprint.txt fingerprints/windows/requirement_fingerprint.txt
+          diff -u fingerprints/linux/upgrade_research_fingerprint.txt fingerprints/windows/upgrade_research_fingerprint.txt
+          diff -u fingerprints/linux/tech_visibility_fingerprint.txt fingerprints/windows/tech_visibility_fingerprint.txt
+          diff -u fingerprints/linux/ai_research_fingerprint.txt fingerprints/windows/ai_research_fingerprint.txt
+          diff -u fingerprints/linux/ui_frames_fingerprint.txt fingerprints/windows/ui_frames_fingerprint.txt
+          diff -u fingerprints/linux/ui_trigger_fingerprint.txt fingerprints/windows/ui_trigger_fingerprint.txt
+          diff -u fingerprints/linux/ui_variable_fingerprint.txt fingerprints/windows/ui_variable_fingerprint.txt
+          diff -u fingerprints/linux/ui_responsive_fingerprint.txt fingerprints/windows/ui_responsive_fingerprint.txt

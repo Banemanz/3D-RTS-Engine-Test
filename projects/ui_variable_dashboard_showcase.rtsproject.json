@@ -1,0 +1,804 @@
+{
+  "schema_version": 1,
+  "name": "Signal Dashboard - F6 Variable Live HUD",
+  "description": "Original nested F10 variable-driven GUI with F6 replay-safe click event. SEND SIGNAL increments an F6 counter, fills a custom progress bar and reveals an acknowledgement label.",
+  "terrain": {
+    "width": 49,
+    "depth": 49,
+    "spacing": 2,
+    "min_x": -48,
+    "min_z": -48,
+    "cells": []
+  },
+  "catalog": [
+    {
+      "type": "Model",
+      "id": "procedural_soldier",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "material": "default"
+      }
+    },
+    {
+      "type": "Model",
+      "id": "procedural_building",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "ranger_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.22,
+          0.58,
+          0.96
+        ],
+        "opacity": 1
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "worker_actor",
+      "parent": "ranger_actor",
+      "fields": {
+        "tint": [
+          0.2,
+          0.9,
+          0.65
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "rift_raider_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.76,
+          0.24,
+          0.88
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "human_building_actor",
+      "fields": {
+        "model": "procedural_building",
+        "tint": [
+          0.24,
+          0.61,
+          0.86
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "hybrid_building_actor",
+      "parent": "human_building_actor",
+      "fields": {
+        "tint": [
+          0.72,
+          0.24,
+          0.85
+        ]
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "ranger",
+      "fields": {
+        "name": "Frontier Ranger",
+        "actor": "ranger_actor",
+        "faction": "Humanity",
+        "max_hp": 45,
+        "armor": 0,
+        "damage": 7,
+        "attack_range": 6.5,
+        "attack_cooldown": 0.75,
+        "aggro_range": 10.5,
+        "move_speed": 9.5,
+        "supply_cost": 1,
+        "mineral_cost": 50,
+        "build_time": 6,
+        "visual_scale": 0.92
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "worker",
+      "parent": "ranger",
+      "fields": {
+        "name": "Human Worker",
+        "actor": "worker_actor",
+        "max_hp": 40,
+        "damage": 2,
+        "attack_range": 1.5,
+        "attack_cooldown": 1.3,
+        "move_speed": 7,
+        "visual_scale": 0.72,
+        "mineral_cost": 40,
+        "is_worker": true,
+        "build_time": 4.5
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "rift_raider",
+      "fields": {
+        "name": "Rift Raider",
+        "actor": "rift_raider_actor",
+        "faction": "Hybrid",
+        "max_hp": 160,
+        "armor": 3,
+        "damage": 18,
+        "attack_range": 1.85,
+        "attack_cooldown": 1.05,
+        "aggro_range": 11,
+        "move_speed": 8.2,
+        "supply_cost": 3,
+        "mineral_cost": 150,
+        "visual_scale": 1.28
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "command_center",
+      "parent": "ranger",
+      "fields": {
+        "name": "Command Center",
+        "actor": "human_building_actor",
+        "max_hp": 700,
+        "armor": 2,
+        "damage": 0,
+        "attack_range": 0,
+        "aggro_range": 0,
+        "visual_scale": 2.8,
+        "supply_cost": 0,
+        "is_structure": true
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "rift_bastion",
+      "parent": "command_center",
+      "fields": {
+        "name": "Rift Bastion",
+        "actor": "hybrid_building_actor",
+        "faction": "Hybrid"
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "barracks",
+      "parent": "command_center",
+      "fields": {
+        "name": "Barracks",
+        "max_hp": 350,
+        "visual_scale": 2,
+        "build_time": 9,
+        "mineral_cost": 150
+      }
+    },
+    {
+      "id": "restorative_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Heal",
+        "amount": 8
+      }
+    },
+    {
+      "id": "kinetic_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Damage",
+        "amount": 12
+      }
+    }
+  ],
+  "placements": [
+    {
+      "id": "human_base",
+      "kind": "Unit",
+      "catalog": "command_center",
+      "name": "Command Center",
+      "owner": 0,
+      "position": [
+        -22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "enemy_base",
+      "kind": "Unit",
+      "catalog": "rift_bastion",
+      "name": "Rift Bastion",
+      "owner": 1,
+      "position": [
+        22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_1",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 1",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_2",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 2",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_3",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 3",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_4",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 4",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_1",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 1",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        -5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_2",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 2",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "rift_raider_1",
+      "kind": "Unit",
+      "catalog": "rift_raider",
+      "name": "Raider 1",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        -3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "rift_raider_2",
+      "kind": "Unit",
+      "catalog": "rift_raider",
+      "name": "Raider 2",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_north",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals North",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        -12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_south",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals South",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_center",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals Center",
+      "owner": -1,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 1000,
+      "overrides": {}
+    }
+  ],
+  "metadata": {
+    "player_starting_minerals": 220,
+    "player_supply_cap": 18,
+    "enemy_spawn_interval": 16,
+    "player_ranger": "ranger",
+    "hud_profile": {
+      "bottom_extra": 34,
+      "minimap_scale": 1.18,
+      "minimap_inset": 18,
+      "command_width": 360,
+      "command_inset": 20,
+      "resource_top": 25,
+      "resource_height": 52
+    },
+    "ui_frames": [
+      {
+        "id": "mission_console",
+        "parent": "",
+        "kind": "Panel",
+        "anchor": "TopRight",
+        "x": -25,
+        "y": 110,
+        "width": 304,
+        "height": 238,
+        "text": "",
+        "binding": "None",
+        "action": "None",
+        "palette": "Navy",
+        "consume_input": true
+      },
+      {
+        "id": "header",
+        "parent": "mission_console",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "x": 13,
+        "y": 13,
+        "width": 273,
+        "height": 32,
+        "text": "TACTICAL DIRECTIVES",
+        "binding": "None",
+        "action": "None",
+        "palette": "Teal",
+        "consume_input": false
+      },
+      {
+        "id": "mineral_readout",
+        "parent": "mission_console",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "x": 14,
+        "y": 58,
+        "width": 118,
+        "height": 29,
+        "text": "BANK",
+        "binding": "Minerals",
+        "action": "None",
+        "palette": "Slate",
+        "consume_input": false
+      },
+      {
+        "id": "supply_readout",
+        "parent": "mission_console",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "x": 150,
+        "y": 58,
+        "width": 132,
+        "height": 29,
+        "text": "SP",
+        "binding": "Supply",
+        "action": "None",
+        "palette": "Slate",
+        "consume_input": false
+      },
+      {
+        "id": "unit_armor",
+        "parent": "mission_console",
+        "kind": "Bar",
+        "anchor": "TopLeft",
+        "x": 14,
+        "y": 100,
+        "width": 270,
+        "height": 35,
+        "text": "SELECTED HP",
+        "binding": "SelectedHealth",
+        "action": "None",
+        "palette": "Teal",
+        "consume_input": false
+      },
+      {
+        "id": "army_button",
+        "parent": "mission_console",
+        "kind": "Button",
+        "anchor": "TopLeft",
+        "x": 14,
+        "y": 154,
+        "width": 126,
+        "height": 42,
+        "text": "ARMY",
+        "binding": "None",
+        "action": "SelectArmy",
+        "palette": "Cobalt",
+        "consume_input": true
+      },
+      {
+        "id": "worker_button",
+        "parent": "mission_console",
+        "kind": "Button",
+        "anchor": "TopLeft",
+        "x": 157,
+        "y": 154,
+        "width": 126,
+        "height": 42,
+        "text": "WORKERS",
+        "binding": "None",
+        "action": "SelectWorkers",
+        "palette": "Cobalt",
+        "consume_input": true
+      },
+      {
+        "id": "status_footer",
+        "parent": "mission_console",
+        "kind": "Panel",
+        "anchor": "BottomLeft",
+        "x": 13,
+        "y": -6,
+        "width": 272,
+        "height": 31,
+        "text": "",
+        "binding": "None",
+        "action": "None",
+        "palette": "Slate",
+        "consume_input": false
+      },
+      {
+        "id": "status_label",
+        "parent": "status_footer",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "x": 10,
+        "y": 5,
+        "width": 243,
+        "height": 20,
+        "text": "DAY TICK",
+        "binding": "Ticks",
+        "action": "None",
+        "palette": "Teal",
+        "consume_input": false
+      },
+      {
+        "id": "focus_base",
+        "parent": "",
+        "kind": "Button",
+        "anchor": "TopLeft",
+        "x": 28,
+        "y": 122,
+        "width": 182,
+        "height": 37,
+        "text": "FOCUS HQ",
+        "binding": "None",
+        "action": "FocusBase",
+        "palette": "Amber",
+        "consume_input": true
+      },
+      {
+        "id": "event_button",
+        "parent": "",
+        "kind": "Button",
+        "anchor": "TopLeft",
+        "palette": "Amber",
+        "text": "SEND SIGNAL",
+        "binding": "None",
+        "action": "Trigger",
+        "x": 28,
+        "y": 174,
+        "width": 192,
+        "height": 42,
+        "consume_input": true
+      },
+      {
+        "id": "event_status",
+        "parent": "",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "palette": "Teal",
+        "text": "STATUS",
+        "binding": "Message",
+        "action": "None",
+        "x": 28,
+        "y": 224,
+        "width": 420,
+        "height": 30,
+        "consume_input": false
+      },
+      {
+        "id": "signal_meter",
+        "parent": "",
+        "kind": "Bar",
+        "anchor": "TopLeft",
+        "palette": "Teal",
+        "text": "SIGNAL",
+        "binding": "Variable",
+        "action": "None",
+        "x": 28,
+        "y": 282,
+        "width": 350,
+        "height": 38,
+        "consume_input": false,
+        "variable": "signal_count",
+        "bar_min": 0,
+        "bar_max": 3
+      },
+      {
+        "id": "signal_counter",
+        "parent": "",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "palette": "Cobalt",
+        "text": "BEACONS",
+        "binding": "Variable",
+        "action": "None",
+        "x": 28,
+        "y": 330,
+        "width": 260,
+        "height": 28,
+        "consume_input": false,
+        "variable": "signal_count"
+      },
+      {
+        "id": "signal_ack",
+        "parent": "",
+        "kind": "Label",
+        "anchor": "TopLeft",
+        "palette": "Cobalt",
+        "text": "UPLINK ACKNOWLEDGED",
+        "binding": "None",
+        "action": "None",
+        "x": 28,
+        "y": 373,
+        "width": 420,
+        "height": 32,
+        "consume_input": false,
+        "visible_variable": "signal_count",
+        "visible_at_least": 1
+      }
+    ]
+  },
+  "triggers": [
+    {
+      "id": "on_beacon_signal",
+      "event": {
+        "type": "OnUIFrameClicked",
+        "frame": "event_button"
+      },
+      "once": false,
+      "conditions": [],
+      "actions": [
+        {
+          "type": "GrantMinerals",
+          "amount": 75
+        },
+        {
+          "type": "ShowMessage",
+          "text": "BEACON SIGNAL RECEIVED"
+        },
+        {
+          "type": "AddVariable",
+          "variable": "signal_count",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "trigger_variables": {
+    "signal_count": 0
+  }
+}

@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_WIN32) && !defined(NOMINMAX)
+#define NOMINMAX
+#endif
+
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
 #include <cstddef>
@@ -19,7 +23,20 @@ typedef char GLchar;
 typedef ptrdiff_t GLsizeiptr;
 typedef ptrdiff_t GLintptr;
 
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
+#ifndef GL_R8
+#define GL_R8 0x8229
+#endif
+#ifndef GL_RED
+#define GL_RED 0x1903
+#endif
+#ifndef GL_TEXTURE0
+#define GL_TEXTURE0 0x84C0
+#endif
 #define GL_ARRAY_BUFFER                   0x8892
+#define GL_ELEMENT_ARRAY_BUFFER           0x8893
 #define GL_DYNAMIC_DRAW                   0x88E8
 #define GL_STATIC_DRAW                    0x88E4
 #define GL_FRAGMENT_SHADER                0x8B30
@@ -30,6 +47,10 @@ typedef ptrdiff_t GLintptr;
 #define GL_SRC_ALPHA                      0x0302
 #define GL_ONE_MINUS_SRC_ALPHA            0x0303
 
+typedef void (APIENTRY *PFNGLDELETEBUFFERSPROC)(GLsizei n,const GLuint *buffers);
+typedef void (APIENTRY *PFNGLDELETEVERTEXARRAYSPROC)(GLsizei n,const GLuint *arrays);
+typedef void (APIENTRY *PFNGLDELETEPROGRAMPROC)(GLuint program);
+typedef void (APIENTRY *PFNGLACTIVETEXTUREPROC)(GLenum texture);
 typedef void (APIENTRY *PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
 typedef void (APIENTRY *PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
 typedef void (APIENTRY *PFNGLBUFFERDATAPROC)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
@@ -57,6 +78,10 @@ typedef void (APIENTRY *PFNGLUNIFORM3FPROC)(GLint location, GLfloat v0, GLfloat 
 typedef void (APIENTRY *PFNGLUNIFORM1FPROC)(GLint location, GLfloat v0);
 typedef void (APIENTRY *PFNGLUNIFORM1IPROC)(GLint location, GLint v0);
 
+extern PFNGLDELETEBUFFERSPROC glDeleteBuffers;
+extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+extern PFNGLDELETEPROGRAMPROC glDeleteProgram;
+extern PFNGLACTIVETEXTUREPROC rtsGlActiveTexture;
 extern PFNGLGENBUFFERSPROC glGenBuffers;
 extern PFNGLBINDBUFFERPROC glBindBuffer;
 extern PFNGLBUFFERDATAPROC glBufferData;
@@ -83,5 +108,26 @@ extern PFNGLUNIFORM4FPROC glUniform4f;
 extern PFNGLUNIFORM3FPROC glUniform3f;
 extern PFNGLUNIFORM1FPROC glUniform1f;
 extern PFNGLUNIFORM1IPROC glUniform1i;
+
+using RTSGLGenFramebuffersProc=void (APIENTRY *)(GLsizei,GLuint*);
+extern RTSGLGenFramebuffersProc rtsGlGenFramebuffers;
+using RTSGLBindFramebufferProc=void (APIENTRY *)(GLenum,GLuint);
+extern RTSGLBindFramebufferProc rtsGlBindFramebuffer;
+using RTSGLDeleteFramebuffersProc=void (APIENTRY *)(GLsizei,const GLuint*);
+extern RTSGLDeleteFramebuffersProc rtsGlDeleteFramebuffers;
+using RTSGLFramebufferTexture2DProc=void (APIENTRY *)(GLenum,GLenum,GLenum,GLuint,GLint);
+extern RTSGLFramebufferTexture2DProc rtsGlFramebufferTexture2D;
+using RTSGLCheckFramebufferStatusProc=GLenum (APIENTRY *)(GLenum);
+extern RTSGLCheckFramebufferStatusProc rtsGlCheckFramebufferStatus;
+using RTSGLGenRenderbuffersProc=void (APIENTRY *)(GLsizei,GLuint*);
+extern RTSGLGenRenderbuffersProc rtsGlGenRenderbuffers;
+using RTSGLBindRenderbufferProc=void (APIENTRY *)(GLenum,GLuint);
+extern RTSGLBindRenderbufferProc rtsGlBindRenderbuffer;
+using RTSGLRenderbufferStorageProc=void (APIENTRY *)(GLenum,GLenum,GLsizei,GLsizei);
+extern RTSGLRenderbufferStorageProc rtsGlRenderbufferStorage;
+using RTSGLFramebufferRenderbufferProc=void (APIENTRY *)(GLenum,GLenum,GLenum,GLuint);
+extern RTSGLFramebufferRenderbufferProc rtsGlFramebufferRenderbuffer;
+using RTSGLDeleteRenderbuffersProc=void (APIENTRY *)(GLsizei,const GLuint*);
+extern RTSGLDeleteRenderbuffersProc rtsGlDeleteRenderbuffers;
 
 bool loadOpenGLFunctions();

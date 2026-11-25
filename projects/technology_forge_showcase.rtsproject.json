@@ -1,0 +1,825 @@
+{
+  "schema_version": 1,
+  "name": "Technology Forge Laboratory",
+  "description": "Original Galaxy-style Show versus Use technology laboratory. In F9, only Frontier Tactics is initially shown on a Command Center. Research level 1 to reveal Worker training, Layered Plating and Arc Lance (visible but Use-locked until their requirements pass). Research Frontier Tactics level 2 to unlock Workers and Layered Plating; level 3 hides Frontier Tactics when fully complete. F7 edit each Upgrade/Unit/Ability's independent Show and Use Requirement graph.",
+  "terrain": {
+    "width": 49,
+    "depth": 49,
+    "spacing": 2,
+    "min_x": -48,
+    "min_z": -48,
+    "cells": []
+  },
+  "catalog": [
+    {
+      "type": "Model",
+      "id": "procedural_soldier",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "material": "default"
+      }
+    },
+    {
+      "type": "Model",
+      "id": "procedural_building",
+      "fields": {
+        "mesh": "procedural.unit",
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "ranger_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.22,
+          0.58,
+          0.96
+        ],
+        "opacity": 1
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "worker_actor",
+      "parent": "ranger_actor",
+      "fields": {
+        "tint": [
+          0.2,
+          0.9,
+          0.65
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "rift_raider_actor",
+      "fields": {
+        "model": "procedural_soldier",
+        "tint": [
+          0.76,
+          0.24,
+          0.88
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "human_building_actor",
+      "fields": {
+        "model": "procedural_building",
+        "tint": [
+          0.24,
+          0.61,
+          0.86
+        ]
+      }
+    },
+    {
+      "type": "Actor",
+      "id": "hybrid_building_actor",
+      "parent": "human_building_actor",
+      "fields": {
+        "tint": [
+          0.72,
+          0.24,
+          0.85
+        ]
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "ranger",
+      "fields": {
+        "name": "Frontier Ranger",
+        "actor": "ranger_actor",
+        "faction": "Humanity",
+        "max_hp": 45,
+        "armor": 0,
+        "damage": 7,
+        "attack_range": 6.5,
+        "attack_cooldown": 0.75,
+        "aggro_range": 10.5,
+        "move_speed": 9.5,
+        "supply_cost": 1,
+        "mineral_cost": 50,
+        "build_time": 6,
+        "visual_scale": 0.92,
+        "abilities": [
+          "field_mend",
+          "arc_lance"
+        ],
+        "max_energy": 100,
+        "energy_regen": 4
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "worker",
+      "parent": "ranger",
+      "fields": {
+        "name": "Human Worker",
+        "actor": "worker_actor",
+        "max_hp": 40,
+        "damage": 2,
+        "attack_range": 1.5,
+        "attack_cooldown": 1.3,
+        "move_speed": 7,
+        "visual_scale": 0.72,
+        "mineral_cost": 40,
+        "is_worker": true,
+        "build_time": 4.5,
+        "requirement": "r_two_tactics",
+        "show_requirement": "r_has_tactics"
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "rift_raider",
+      "fields": {
+        "name": "Rift Raider",
+        "actor": "rift_raider_actor",
+        "faction": "Hybrid",
+        "max_hp": 160,
+        "armor": 3,
+        "damage": 18,
+        "attack_range": 1.85,
+        "attack_cooldown": 1.05,
+        "aggro_range": 11,
+        "move_speed": 8.2,
+        "supply_cost": 3,
+        "mineral_cost": 150,
+        "visual_scale": 1.28
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "command_center",
+      "parent": "ranger",
+      "fields": {
+        "name": "Command Center",
+        "actor": "human_building_actor",
+        "max_hp": 700,
+        "armor": 2,
+        "damage": 0,
+        "attack_range": 0,
+        "aggro_range": 0,
+        "visual_scale": 2.8,
+        "supply_cost": 0,
+        "is_structure": true,
+        "abilities": [],
+        "researchable_upgrades": [
+          "frontier_tactics",
+          "layered_plating"
+        ]
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "rift_bastion",
+      "parent": "command_center",
+      "fields": {
+        "name": "Rift Bastion",
+        "actor": "hybrid_building_actor",
+        "faction": "Hybrid",
+        "researchable_upgrades": []
+      }
+    },
+    {
+      "type": "Unit",
+      "id": "barracks",
+      "parent": "command_center",
+      "fields": {
+        "name": "Barracks",
+        "max_hp": 350,
+        "visual_scale": 2,
+        "build_time": 9,
+        "mineral_cost": 150,
+        "researchable_upgrades": []
+      }
+    },
+    {
+      "id": "restorative_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Heal",
+        "amount": 8
+      }
+    },
+    {
+      "id": "kinetic_pulse",
+      "type": "Effect",
+      "fields": {
+        "kind": "Damage",
+        "amount": 12
+      }
+    },
+    {
+      "id": "field_mend",
+      "type": "Ability",
+      "fields": {
+        "name": "Field Mend",
+        "effect": "restorative_pulse",
+        "target": "Self",
+        "cooldown_ticks": 120,
+        "cast_range": 0,
+        "mineral_cost": 5,
+        "energy_cost": 15
+      }
+    },
+    {
+      "id": "arc_lance",
+      "type": "Ability",
+      "fields": {
+        "name": "Arc Lance",
+        "effect": "kinetic_pulse",
+        "target": "Enemy",
+        "cooldown_ticks": 90,
+        "cast_range": 13,
+        "mineral_cost": 10,
+        "energy_cost": 25,
+        "requirement": "r_arc_tech",
+        "show_requirement": "r_has_tactics"
+      }
+    },
+    {
+      "id": "training_dummy",
+      "type": "Unit",
+      "parent": "rift_raider",
+      "fields": {
+        "name": "Training Dummy",
+        "max_hp": 300,
+        "damage": 0,
+        "aggro_range": 0,
+        "move_speed": 0,
+        "sight_range": 0,
+        "armor": 0
+      }
+    },
+    {
+      "id": "v_target_wounded",
+      "type": "Validator",
+      "fields": {
+        "kind": "HealthBelowPercent",
+        "subject": "Target",
+        "value": 50
+      }
+    },
+    {
+      "id": "v_target_structure",
+      "type": "Validator",
+      "fields": {
+        "kind": "IsStructure",
+        "subject": "Target"
+      }
+    },
+    {
+      "id": "v_energy_ready",
+      "type": "Validator",
+      "fields": {
+        "kind": "EnergyAtLeast",
+        "subject": "Caster",
+        "value": 20
+      }
+    },
+    {
+      "id": "v_owned_rangers",
+      "type": "Validator",
+      "fields": {
+        "kind": "OwnerUnitCountAtLeast",
+        "subject": "Caster",
+        "value": 5,
+        "unit": "ranger"
+      }
+    },
+    {
+      "id": "r_wounded",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_target_wounded"
+      }
+    },
+    {
+      "id": "r_structure",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_target_structure"
+      }
+    },
+    {
+      "id": "r_energy",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_energy_ready"
+      }
+    },
+    {
+      "id": "r_ranger_count",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_owned_rangers"
+      }
+    },
+    {
+      "id": "r_not_structure",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Not",
+        "children": [
+          "r_structure"
+        ]
+      }
+    },
+    {
+      "id": "r_any_finish",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Any",
+        "children": [
+          "r_wounded",
+          "r_structure"
+        ]
+      }
+    },
+    {
+      "id": "r_arc_gate",
+      "type": "Requirement",
+      "fields": {
+        "kind": "All",
+        "children": [
+          "r_any_finish",
+          "r_not_structure",
+          "r_energy"
+        ]
+      }
+    },
+    {
+      "id": "frontier_tactics",
+      "type": "Upgrade",
+      "fields": {
+        "name": "Frontier Tactics",
+        "max_level": 3,
+        "mineral_cost": 45,
+        "research_ticks": 180,
+        "damage_per_level": 3,
+        "armor_per_level": 1,
+        "unit": "ranger",
+        "levels": [
+          {"mineral_cost": 45, "research_ticks": 180, "damage_bonus": 3, "armor_bonus": 1},
+          {"mineral_cost": 65, "research_ticks": 240, "damage_bonus": 4, "armor_bonus": 2},
+          {"mineral_cost": 90, "research_ticks": 300, "damage_bonus": 5, "armor_bonus": 3}
+        ],
+        "show_requirement": "r_not_max_tactics"
+      }
+    },
+    {
+      "id": "layered_plating",
+      "type": "Upgrade",
+      "fields": {
+        "name": "Layered Plating",
+        "max_level": 2,
+        "mineral_cost": 35,
+        "research_ticks": 150,
+        "damage_per_level": 0,
+        "armor_per_level": 2,
+        "unit": "worker",
+        "requirement": "r_two_tactics",
+        "show_requirement": "r_has_tactics"
+      }
+    },
+    {
+      "id": "v_tactics_level",
+      "type": "Validator",
+      "fields": {
+        "kind": "UpgradeLevelAtLeast",
+        "subject": "Caster",
+        "value": 1,
+        "upgrade": "frontier_tactics"
+      }
+    },
+    {
+      "id": "r_has_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_tactics_level"
+      }
+    },
+    {
+      "id": "r_arc_tech",
+      "type": "Requirement",
+      "fields": {
+        "kind": "All",
+        "children": [
+          "r_arc_gate",
+          "r_has_tactics"
+        ]
+      }
+    },
+    {
+      "id": "v_two_tactics",
+      "type": "Validator",
+      "fields": {
+        "kind": "UpgradeLevelAtLeast",
+        "subject": "Caster",
+        "value": 2,
+        "upgrade": "frontier_tactics"
+      }
+    },
+    {
+      "id": "r_two_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_two_tactics"
+      }
+    },
+    {
+      "id": "v_max_tactics",
+      "type": "Validator",
+      "fields": {
+        "kind": "UpgradeLevelAtLeast",
+        "subject": "Caster",
+        "value": 3,
+        "upgrade": "frontier_tactics"
+      }
+    },
+    {
+      "id": "r_max_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Predicate",
+        "validator": "v_max_tactics"
+      }
+    },
+    {
+      "id": "r_not_max_tactics",
+      "type": "Requirement",
+      "fields": {
+        "kind": "Not",
+        "children": [
+          "r_max_tactics"
+        ]
+      }
+    }
+  ],
+  "placements": [
+    {
+      "id": "human_base",
+      "kind": "Unit",
+      "catalog": "command_center",
+      "name": "Command Center",
+      "owner": 0,
+      "position": [
+        -22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "enemy_base",
+      "kind": "Unit",
+      "catalog": "rift_bastion",
+      "name": "Rift Bastion",
+      "owner": 1,
+      "position": [
+        22,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_1",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 1",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_2",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 2",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_3",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 3",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "ranger_4",
+      "kind": "Unit",
+      "catalog": "ranger",
+      "name": "Ranger 4",
+      "owner": 0,
+      "position": [
+        -13,
+        0,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_1",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 1",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        -5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "worker_2",
+      "kind": "Unit",
+      "catalog": "worker",
+      "name": "Worker 2",
+      "owner": 0,
+      "position": [
+        -18,
+        0,
+        5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "rift_raider_1",
+      "kind": "Unit",
+      "catalog": "rift_raider",
+      "name": "Raider 1",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        -3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "rift_raider_2",
+      "kind": "Unit",
+      "catalog": "rift_raider",
+      "name": "Raider 2",
+      "owner": 1,
+      "position": [
+        13,
+        0,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_north",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals North",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        -12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_south",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals South",
+      "owner": -1,
+      "position": [
+        -3,
+        0,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 750,
+      "overrides": {}
+    },
+    {
+      "id": "mineral_center",
+      "kind": "Mineral",
+      "catalog": "",
+      "name": "Minerals Center",
+      "owner": -1,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 1000,
+      "overrides": {}
+    },
+    {
+      "id": "ability_dummy",
+      "kind": "Unit",
+      "catalog": "training_dummy",
+      "name": "Ability Practice Target",
+      "owner": 1,
+      "position": [
+        -5,
+        0,
+        -4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "amount": 0,
+      "overrides": {}
+    }
+  ],
+  "metadata": {
+    "player_starting_minerals": 220,
+    "player_supply_cap": 18,
+    "enemy_spawn_interval": 999,
+    "player_ranger": "ranger",
+    "enemy_ai_enabled": false
+  }
+}
