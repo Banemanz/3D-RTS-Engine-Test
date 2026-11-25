@@ -647,3 +647,12 @@ regression verifies nested nonuniform scale and 45-degree rotation,
 inverse-transpose normals, repeated index ranges, GLB parity, unreachable
 nodes and invalid graph rejection. See [Native asset import](docs/NATIVE_ASSET_IMPORT.md)
 for the current contract.
+
+### Retained static model nodes
+
+Multi-node glTF/GLB imports now use **RTSMESH3**, which keeps the original
+node names, parent relationships, local transforms and material ownership
+alongside baked geometry. F7's model-node inspector displays the hierarchy
+and model-space transform; `RTSProjectTool --model-info` exposes the same
+data to tools. Single-node v1/v2 assets remain compatible. This is the
+foundation for named sockets, not a complete runtime animation system.

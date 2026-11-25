@@ -18,6 +18,7 @@ struct RTSAssetRecord {
     std::array<float,3> minimum{{0,0,0}},maximum{{0,0,0}};
     std::uint64_t imageBytes=0;
     std::uint32_t texturedSurfaces=0;
+    std::vector<RTSModelNode> nodes;
     bool valid()const{return error.empty();}
 };
 // Locale-independent ASCII filtering matches the portable asset path rules.
@@ -73,6 +74,7 @@ inline std::vector<RTSAssetRecord> rtsDiscoverStaticAssets(
                                 item.minimum[a]=std::min(item.minimum[a],mesh.vertices[v+a]);
                                 item.maximum[a]=std::max(item.maximum[a],mesh.vertices[v+a]);
                             }
+                        item.nodes=mesh.nodes;
                         item.imageBytes=mesh.albedo.size();
                         item.texturedSurfaces=mesh.albedo.empty()?0u:1u;
                         for(const auto& part:mesh.surfaces){

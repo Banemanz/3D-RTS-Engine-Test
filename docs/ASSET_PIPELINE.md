@@ -166,3 +166,13 @@ regression verifies nested nonuniform scale and 45-degree rotation,
 inverse-transpose normals, repeated index ranges, GLB parity, unreachable
 nodes and invalid graph rejection. See [Native asset import](NATIVE_ASSET_IMPORT.md)
 for the current contract.
+
+## Retained static model nodes
+
+RTSMESH3 extends the multi-material cache with validated parent-first node
+records, local matrices, names and per-node surface ranges. Model-space
+matrices reconstruct on read. Existing one-node RTSMESH1/2 outputs and
+renderer behavior stay compatible. F7 has a read-only model-node inspector;
+the headless `--model-info` command exposes JSON and unique-name lookup.
+This establishes socket metadata, not skeletal animation or runtime
+articulation. See [Native asset import](NATIVE_ASSET_IMPORT.md).

@@ -18,6 +18,7 @@ static void usage() {
       << "RTSProjectTool --create path\n"
       << "RTSProjectTool --validate path\n"
       << "RTSProjectTool --asset-report path  # Verify all referenced mesh files\n"
+      << "RTSProjectTool --model-info project-path assets/name.rtsmesh [unique-node-name]\n"
       << "RTSProjectTool --list path [catalog-type]\n"
       << "RTSProjectTool --get path object-id field\n"
       << "RTSProjectTool --set path object-id field json-value\n"
@@ -37,6 +38,42 @@ int main(int argc,char** argv) {
             if(argc!=5){usage();return 2;}
             rtsImportGltf(path,argv[3],argv[4]);
             std::cout<<"Imported "<<argv[4]<<"; register it in F7 to add Model + Actor\n";
+            return 0;
+        }
+        if(action=="--model-info"){
+            if(argc!=4 && argc!=5){usage();return 2;}
+            const auto mesh=rtsReadStaticMesh(rtsResolveMeshReference(path,argv[3]));
+            std::optional<std::size_t> only;
+            if(argc==5){
+                only=rtsFindUniqueModelNode(mesh.nodes,argv[4]);
+                if(!only)throw std::invalid_argument("Missing or ambiguous model node name");
+            }
+            const auto matrixJson=[](const std::array<float,16>& m){
+                picojson::array out;
+                for(float v:m)out.emplace_back(double(v));
+                return picojson::value(out);
+            };
+            picojson::array nodes;
+            for(std::size_t i=0;i<mesh.nodes.size();++i){
+                if(only && i!=*only)continue;
+                const auto& n=mesh.nodes[i];
+                picojson::object row{
+                    {"index",picojson::value(double(i))},
+                    {"parent",picojson::value(n.parent==RTS_MODEL_ROOT?-1.0:double(n.parent))},
+                    {"name",picojson::value(n.name)},
+                    {"firstSurface",picojson::value(double(n.firstSurface))},
+                    {"surfaceCount",picojson::value(double(n.surfaceCount))},
+                    {"local",matrixJson(n.local)},{"model",matrixJson(n.model)}
+                };
+                nodes.emplace_back(row);
+            }
+            picojson::object result{
+                {"vertices",picojson::value(double(mesh.vertices.size()/8))},
+                {"triangles",picojson::value(double(mesh.indices.size()/3))},
+                {"surfaces",picojson::value(double(mesh.surfaces.empty()?1:mesh.surfaces.size()))},
+                {"nodes",picojson::value(nodes)}
+            };
+            std::cout<<picojson::value(result).serialize()<<"\n";
             return 0;
         }
         if(action=="--verify-replay"){

@@ -11,6 +11,7 @@
 
 namespace CreatorAssetLibrary {
 inline bool requestImportPopup=false;
+inline bool requestNodeInspector=false;
 struct Browser {
     std::string projectPath;
     std::vector<RTSAssetRecord> records;
@@ -19,6 +20,8 @@ struct Browser {
     char output[128]="imported_model";
     char filter[128]{};
     bool invalidOnly=false;
+    std::string nodeAsset;
+    std::size_t selectedNode=0;
     std::string importNotice;
     std::filesystem::path folder;
     std::vector<std::filesystem::directory_entry> files;
@@ -104,6 +107,7 @@ bool draw(App& app){
         browser.ready=false;
         browser.folder.clear();browser.importNotice.clear();
         browser.filter[0]='\0';browser.invalidOnly=false;
+        browser.nodeAsset.clear();browser.selectedNode=0;
     }
     if(!ImGui::CollapsingHeader("Imported 3D asset library",
                                ImGuiTreeNodeFlags_DefaultOpen))return false;
@@ -131,6 +135,7 @@ bool draw(App& app){
         ImVec2(0,std::min(215.f*ImGui::GetFontSize()/16.5f,
                           std::max(170.f*ImGui::GetFontSize()/16.5f,avail*.45f))),true);
     std::size_t matched=0;
+    bool openNodes=false;
     for(std::size_t i=0;i<browser.records.size();++i){
         const auto& asset=browser.records[i];
         if(!rtsAssetMatches(asset,browser.filter) ||
@@ -158,6 +163,15 @@ bool draw(App& app){
                     asset.texturedSurfaces,double(asset.imageBytes)/(1024.0*1024.0));
                 ImGui::TreePop();
             }
+            if(!asset.nodes.empty()){
+                if(ImGui::SmallButton("Inspect model nodes")){
+                    browser.nodeAsset=asset.reference;
+                    browser.selectedNode=0;
+                    openNodes=true;
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("%zu retained nodes",asset.nodes.size());
+            }
             if(ImGui::SmallButton("Register Model + Actor")){
                 if(app.editor.importStaticMesh(app.project,app.projectPath,
                                                asset.reference)){
@@ -173,6 +187,72 @@ bool draw(App& app){
     if(!matched)ImGui::TextDisabled("No matching assets.");
     ImGui::EndChild();
     ImGui::TextDisabled("Catalog registration is one undo step. Imported files remain on disk.");
+    if(requestNodeInspector){
+        requestNodeInspector=false;
+        for(const auto& asset:browser.records)if(asset.valid() && !asset.nodes.empty()){
+            browser.nodeAsset=asset.reference;
+            browser.selectedNode=asset.nodes.size()-1;
+            openNodes=true;break;
+        }
+        if(!openNodes)throw std::runtime_error("Smoke model node inspector: no retained nodes");
+    }
+    if(openNodes)ImGui::OpenPopup("Model node inspector");
+    ImGui::SetNextWindowSize(ImVec2(650,455),ImGuiCond_FirstUseEver);
+    if(ImGui::BeginPopupModal("Model node inspector",nullptr,ImGuiWindowFlags_NoSavedSettings)){
+        const auto found=std::find_if(browser.records.begin(),browser.records.end(),
+            [&](const RTSAssetRecord& a){return a.reference==browser.nodeAsset;});
+        if(found==browser.records.end() || !found->valid() || found->nodes.empty())
+            ImGui::TextWrapped("This asset is unavailable or has no retained node metadata.");
+        else{
+            const auto& asset=*found;
+            ImGui::TextWrapped("%s",asset.reference.c_str());
+            ImGui::TextDisabled("%zu nodes | %u material surfaces | baked static geometry",
+                                asset.nodes.size(),asset.surfaces);
+            ImGui::Separator();
+            if(browser.selectedNode>=asset.nodes.size())browser.selectedNode=0;
+            // Parent-first binary storage; render depth-first for the familiar
+            // model browser tree, with a selectable row for each named node.
+            ImGui::BeginChild("##modelNodeTree",ImVec2(275,270),true);
+            const auto drawNode=[&](const auto& self,std::size_t index)->void{
+                const auto& n=asset.nodes[index];
+                ImGui::PushID(static_cast<int>(index));
+                const std::string label=std::to_string(index)+"  "+
+                    (n.name.empty()?"(unnamed)":n.name);
+                if(ImGui::Selectable(label.c_str(),browser.selectedNode==index))
+                    browser.selectedNode=index;
+                ImGui::Indent(14.f);
+                for(std::size_t child=index+1;child<asset.nodes.size();++child)
+                    if(asset.nodes[child].parent==index)self(self,child);
+                ImGui::Unindent(14.f);
+                ImGui::PopID();
+            };
+            for(std::size_t n=0;n<asset.nodes.size();++n)
+                if(asset.nodes[n].parent==RTS_MODEL_ROOT)drawNode(drawNode,n);
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("##nodeProperties",ImVec2(0,270),true);
+            const auto& node=asset.nodes[browser.selectedNode];
+            ImGui::TextWrapped("%s",node.name.empty()?"(unnamed)":node.name.c_str());
+            ImGui::Text("Index: %zu",browser.selectedNode);
+            if(node.parent==RTS_MODEL_ROOT)ImGui::TextUnformatted("Parent: root");
+            else ImGui::Text("Parent index: %u",node.parent);
+            ImGui::Text("Material range: %u + %u",node.firstSurface,node.surfaceCount);
+            ImGui::TextUnformatted("Local translation");
+            ImGui::Text("%.3f, %.3f, %.3f",node.local[12],node.local[13],node.local[14]);
+            ImGui::TextUnformatted("Model-space origin");
+            ImGui::Text("%.3f, %.3f, %.3f",node.model[12],node.model[13],node.model[14]);
+            ImGui::SeparatorText("Model-space basis");
+            for(int r=0;r<3;++r)
+                ImGui::Text("% .3f   % .3f   % .3f",node.model[r],node.model[4+r],node.model[8+r]);
+            const auto unique=rtsFindUniqueModelNode(asset.nodes,node.name);
+            ImGui::TextWrapped("%s",unique?"Unique named node (socket candidate)":
+                               "Unnamed or ambiguous node; no unique socket lookup.");
+            ImGui::EndChild();
+            ImGui::TextWrapped("Read-only static hierarchy. This does not animate or attach objects yet.");
+        }
+        if(ImGui::Button("Close"))ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
     return false;
 }
 } // namespace CreatorAssetLibrary

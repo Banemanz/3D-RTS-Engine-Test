@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <utility>
+#include <optional>
 
 struct RTSStaticSurface {
     std::uint32_t firstIndex=0,indexCount=0;
@@ -16,13 +18,58 @@ struct RTSStaticSurface {
     std::array<float,4> baseColor{{1,1,1,1}};
     std::vector<unsigned char> albedo;
 };
+// Parent-first model nodes: local matrices are serialized; model matrices
+// are reconstructed at load time from the same composition as the compiler.
+// Geometry remains baked into model space, not articulated at runtime.
+inline constexpr std::uint32_t RTS_MODEL_ROOT=0xffffffffu;
+struct RTSModelNode {
+    std::uint32_t parent=RTS_MODEL_ROOT;
+    std::uint32_t firstSurface=0,surfaceCount=0;
+    std::string name;
+    std::array<float,16> local{},model{};
+};
+inline std::array<float,16> rtsComposeModelMatrix(
+    const std::array<float,16>& parent,const std::array<float,16>& local){
+    std::array<float,16> out{};
+    for(int c=0;c<4;++c)for(int r=0;r<4;++r){
+        double sum=0;
+        for(int k=0;k<4;++k)sum+=double(parent[k*4+r])*local[c*4+k];
+        out[c*4+r]=static_cast<float>(sum);
+    }
+    return out;
+}
+inline bool rtsValidNodeMatrix(const std::array<float,16>& m){
+    for(float f:m)if(!std::isfinite(f) || std::abs(f)>=1e7f)return false;
+    if(m[3]!=0 || m[7]!=0 || m[11]!=0 || m[15]!=1)return false;
+    const double det=double(m[0])*(double(m[5])*m[10]-double(m[9])*m[6])
+                    -double(m[4])*(double(m[1])*m[10]-double(m[9])*m[2])
+                    +double(m[8])*(double(m[1])*m[6]-double(m[5])*m[2]);
+    return std::isfinite(det) && det>0;
+}
+inline bool rtsValidModelNodeName(const std::string& name){
+    if(name.size()>255)return false;
+    // Reject embedded control characters. Names need not be unique.
+    for(unsigned char c:name)if(c<32 || c==127)return false;
+    return true;
+}
+inline std::optional<std::size_t> rtsFindUniqueModelNode(
+    const std::vector<RTSModelNode>& nodes,const std::string& name){
+    if(name.empty())return std::nullopt;
+    std::optional<std::size_t> found;
+    for(std::size_t i=0;i<nodes.size();++i)if(nodes[i].name==name){
+        if(found)return std::nullopt; // ambiguous names cannot be sockets
+        found=i;
+    }
+    return found;
+}
 struct RTSStaticMesh {
     std::vector<float> vertices;              // XYZ, normal XYZ, UV0 XY
     std::vector<std::uint32_t> indices;        // triangles
     std::vector<unsigned char> albedo;         // legacy RTSMESH1 only
     std::uint32_t width=0,height=0;            // legacy RTSMESH1 only
     std::array<float,4> baseColor{{1,1,1,1}};  // legacy RTSMESH1 only
-    std::vector<RTSStaticSurface> surfaces;    // RTSMESH2 only
+    std::vector<RTSStaticSurface> surfaces;    // RTSMESH2/3
+    std::vector<RTSModelNode> nodes;           // RTSMESH3 only
 };
 inline bool rtsSafeMeshReference(const std::string& name){
     if(name.size()<16 || name.size()>180 || name.compare(0,7,"assets/")!=0 ||
@@ -74,7 +121,7 @@ inline RTSStaticMesh rtsReadStaticMesh(const std::filesystem::path& path){
     char magic[8]{};
     read(magic,8);
     const std::string version(magic,8);
-    if(version!="RTSMESH1" && version!="RTSMESH2")
+    if(version!="RTSMESH1" && version!="RTSMESH2" && version!="RTSMESH3")
         throw std::invalid_argument("Unrecognized RTS mesh version");
     std::uint32_t vertices=0,indices=0,third=0,fourth=0;
     read(&vertices,4);read(&indices,4);read(&third,4);read(&fourth,4);
@@ -97,8 +144,10 @@ inline RTSStaticMesh rtsReadStaticMesh(const std::filesystem::path& path){
         if(size!=expected)
             throw std::invalid_argument("RTSMESH1 length mismatch or trailing bytes");
         mesh.width=third;mesh.height=fourth;
-    }else if(fourth!=0 || third==0 || third>32)
-        throw std::invalid_argument("RTSMESH2 requires 1..32 surfaces and zero reserved field");
+    }else if(third==0 || third>32 ||
+             (version=="RTSMESH2" && fourth!=0) ||
+             (version=="RTSMESH3" && (fourth<2 || fourth>128)))
+        throw std::invalid_argument("Invalid RTSMESH2/3 surface or node counts");
     const std::uint64_t geometryBytes=
         static_cast<std::uint64_t>(vertices)*32+
         static_cast<std::uint64_t>(indices)*4;
@@ -148,7 +197,43 @@ inline RTSStaticMesh rtsReadStaticMesh(const std::filesystem::path& path){
         coveredIndices+=part.indexCount;
         mesh.surfaces.emplace_back(std::move(part));
     }
-    if(coveredIndices!=indices || consumed!=size)
-        throw std::invalid_argument("RTSMESH2 triangle coverage or file length mismatch");
+    if(coveredIndices!=indices)
+        throw std::invalid_argument("RTSMESH2/3 triangle coverage mismatch");
+    if(version=="RTSMESH3"){
+        mesh.nodes.reserve(fourth);
+        std::uint32_t coveredSurfaces=0;
+        for(std::uint32_t n=0;n<fourth;++n){
+            // parent, firstSurface, surfaceCount, name bytes, local matrix.
+            if(size-consumed<80)
+                throw std::invalid_argument("Truncated RTSMESH3 node record");
+            RTSModelNode node;
+            std::uint32_t nameBytes=0;
+            read(&node.parent,4);read(&node.firstSurface,4);
+            read(&node.surfaceCount,4);read(&nameBytes,4);
+            read(node.local.data(),64);
+            consumed+=80;
+            if((node.parent!=RTS_MODEL_ROOT && node.parent>=n) ||
+               node.firstSurface!=coveredSurfaces ||
+               node.surfaceCount>third-coveredSurfaces ||
+               nameBytes>255 || nameBytes>size-consumed ||
+               !rtsValidNodeMatrix(node.local))
+                throw std::invalid_argument("Invalid RTSMESH3 node relationship, range or transform");
+            node.name.resize(nameBytes);
+            read(node.name.data(),nameBytes);
+            consumed+=nameBytes;
+            if(!rtsValidModelNodeName(node.name))
+                throw std::invalid_argument("Invalid RTSMESH3 node name");
+            node.model=node.parent==RTS_MODEL_ROOT?node.local:
+                rtsComposeModelMatrix(mesh.nodes[node.parent].model,node.local);
+            if(!rtsValidNodeMatrix(node.model))
+                throw std::invalid_argument("Invalid RTSMESH3 composed node transform");
+            coveredSurfaces+=node.surfaceCount;
+            mesh.nodes.emplace_back(std::move(node));
+        }
+        if(coveredSurfaces!=third)
+            throw std::invalid_argument("RTSMESH3 node surface coverage mismatch");
+    }
+    if(consumed!=size)
+        throw std::invalid_argument("RTS mesh file length mismatch");
     return mesh;
 }

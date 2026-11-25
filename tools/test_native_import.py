@@ -95,8 +95,8 @@ with tempfile.TemporaryDirectory() as tmp:
     hierarchy['scenes']=[{'nodes':[0]}]
     hierarchy['scene']=0
     nested=compile_data(hierarchy,'hierarchy').read_bytes()
-    assert nested[:8]==b'RTSMESH2'
-    assert struct.unpack_from('<IIII',nested,8)==(64,96,2,0)
+    assert nested[:8]==b'RTSMESH3'
+    assert struct.unpack_from('<IIII',nested,8)==(64,96,2,3)
     for j in range(vertex_count):
         a=struct.unpack_from('<8f',result,40+j*32)
         b=struct.unpack_from('<8f',nested,24+j*32)
@@ -126,9 +126,55 @@ with tempfile.TemporaryDirectory() as tmp:
     # Original scene fixture separates the two beacon primitives into nodes.
     assembly=run(root/'assets/source/beacon_assembly.gltf',project,
                  'assets/assembly.rtsmesh').read_bytes()
-    assert assembly[:8]==b'RTSMESH2'
-    assert struct.unpack_from('<IIII',assembly,8)==(64,96,2,0)
+    assert assembly[:8]==b'RTSMESH3'
+    assert struct.unpack_from('<IIII',assembly,8)==(64,96,2,4)
     assert struct.unpack_from('<IIII',assembly,24+64*32+96*4)==(0,48,2,2)
+    # The actual native loader exposes retained local/model node transforms,
+    # independently of the source glTF file and authoritative map loading.
+    def info(reference, name=None, ok=True):
+        args=[exe,'--model-info',str(project),reference]
+        if name is not None:args.append(name)
+        p=subprocess.run(args,capture_output=True,text=True,timeout=15)
+        assert (p.returncode==0)==ok,p.stdout+p.stderr
+        return json.loads(p.stdout) if ok else None
+    graph=info('assets/assembly.rtsmesh')
+    assert (graph['vertices'],graph['triangles'],graph['surfaces'])==(64,32,2)
+    assert [n['name'] for n in graph['nodes']]==[
+        'Beacon assembly','Signal body','Cap support','Amber cap']
+    assert [n['parent'] for n in graph['nodes']]==[-1,0,0,2]
+    assert [n['surfaceCount'] for n in graph['nodes']]==[0,1,0,1]
+    assert [n['firstSurface'] for n in graph['nodes']]==[0,0,1,1]
+    cap=info('assets/assembly.rtsmesh','Amber cap')['nodes'][0]
+    assert cap['local'][12:15]==[0,0,0]
+    assert all(abs(a-b)<1e-6 for a,b in zip(cap['model'][12:15],[.35,.35,0]))
+    assert info('assets/model.rtsmesh')['nodes']==[]
+    info('assets/assembly.rtsmesh','missing',False)
+    duplicate=copy.deepcopy(hierarchy)
+    duplicate['nodes'][1]['name']=duplicate['nodes'][2]['name']='Shared'
+    compile_data(duplicate,'duplicate_name')
+    info('assets/duplicate_name.rtsmesh','Shared',False)
+    # Even an assembly with just one geometry primitive retains group nodes.
+    grouped=copy.deepcopy(fixture)
+    grouped['nodes']=[{'name':'Group','children':[1]},
+                      {'name':'Body','mesh':0}]
+    grouped['scenes']=[{'nodes':[0]}]
+    one=compile_data(grouped,'one_surface').read_bytes()
+    assert struct.unpack_from('<8sIIII',one)==(b'RTSMESH3',32,48,1,2)
+    assert len(info('assets/one_surface.rtsmesh')['nodes'])==2
+    # The geometry/material bytes are identical in layout to v2. Reject
+    # corrupt node records via the production runtime reader and CLI.
+    off=24+64*32+96*4+32+16+32
+    def reject_node(blob):
+        bad_path=project.parent/'assets/bad_node.rtsmesh'
+        bad_path.write_bytes(blob)
+        info('assets/bad_node.rtsmesh',ok=False)
+    bad=bytearray(assembly);struct.pack_into('<I',bad,20,129);reject_node(bad)
+    bad=bytearray(assembly);struct.pack_into('<I',bad,off,0);reject_node(bad)
+    bad=bytearray(assembly);struct.pack_into('<I',bad,off+4,1);reject_node(bad)
+    bad=bytearray(assembly);struct.pack_into('<I',bad,off+12,256);reject_node(bad)
+    bad=bytearray(assembly);struct.pack_into('<f',bad,off+16,float('nan'));reject_node(bad)
+    bad=bytearray(assembly);bad[off+80]=0;reject_node(bad)
+    reject_node(assembly[:-1]);reject_node(assembly+b'!')
     # Different source mesh objects, not only instances of a shared mesh.
     separate=copy.deepcopy(hierarchy)
     separate['meshes'].append(copy.deepcopy(separate['meshes'][0]))

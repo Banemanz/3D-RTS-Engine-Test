@@ -2689,3 +2689,22 @@ headless library and CLI tests cover the behavior. No simulation change.
 Check exact-head CI on Windows/Linux and inspect any new capture before
 claiming success. Next: native model preview, retained source manifests
 and named sockets, material/sRGB pipeline, animation and rig runtime.
+
+## November 25 — retained static model nodes and inspection
+
+Started exact 959fbcbc696cec36325f53f16ce1c097679eb063. All three prior
+workflows 45705563910 / 45705564007 / 45705577828 completed successfully.
+Keep same open, unmerged draft PR #1. Introduced RTSMESH3 for multi-node
+static imports only, with parent-first names, local matrices, derived
+model-space matrices and contiguous node/material ownership. Existing
+single-node v1/v2 output is byte-identical. Shared composition and
+validation in RTSStaticMesh.hpp; unique nonempty node lookup rejects
+duplicates. F7 modal uses real compiled metadata with selectable
+depth-first rows and local/model transform details. CLI --model-info
+project reference [unique-node-name] returns JSON. New native tests
+exercise actual imported four-node assembly, one-surface grouped model,
+duplicate names and corrupt node records. CI captures actual inspector
+and game from same compiled asset. No runtime attachments, animation,
+persistent node GUIDs, source-linked reimport or true model preview yet.
+Check exact-head CI before marking green. Next: rendered model viewer,
+actor socket resolution at draw time, source reimport and animation.

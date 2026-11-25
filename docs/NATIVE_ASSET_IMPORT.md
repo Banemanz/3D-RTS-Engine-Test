@@ -152,3 +152,28 @@ F7 adds case-insensitive path search, invalid-only filter, optional model
 bounds and decoded image memory totals. Scan remains explicit, not per frame.
 Nested TRS and repeated-mesh index rebasing have independent numerical CLI
 regressions. Older single-root limitations in the preceding text are historical.
+
+## November 25 — retained static nodes (RTSMESH3)
+
+For scenes containing two or more nodes, the native compiler now produces
+RTSMESH3. The 24-byte header and geometry/material ranges match RTSMESH2,
+except the last u32 is the node count (2..128). After all surfaces, each
+node stores four little-endian u32 values (parent index, first surface,
+surface count, name byte length), 16 column-major float32 local matrix
+elements, then exactly that many name bytes (0..255). Root parent is
+0xffffffff; all other parents must precede the node. Each node owns a
+contiguous range of surfaces (group nodes own zero), and all ranges must
+cover the surface table. Model-space matrices are recomposed from local
+matrices by the shared parent-first function. Invalid indices, transforms,
+control characters, ranges, truncated records or trailing bytes reject
+the asset. Single-node imports still produce byte-identical RTSMESH1/2.
+
+F7 > Inspect model nodes opens a real selectable hierarchy and model-space
+origin/basis inspector. Unique nonempty node names can be resolved through
+`rtsFindUniqueModelNode`; duplicates are deliberately ambiguous. CLI:
+`RTSProjectTool --model-info map.json assets/name.rtsmesh [node-name]`
+returns JSON without loading the map, including both local and model
+matrices. Named nodes are socket candidates, not yet live attachments.
+Geometry remains baked; the engine does not animate these node transforms
+or store skin weights. Model names are stable for the same import order,
+not persistent GUIDs across arbitrary source edits.

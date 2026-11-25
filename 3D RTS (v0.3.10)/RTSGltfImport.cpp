@@ -103,11 +103,12 @@ void writeMesh(const RTSStaticMesh& mesh,const std::filesystem::path& path){
     }else{
         // RTSMESH2: magic, geometry/primitive counts, indexed geometry,
         // then contiguous draw ranges with independent opaque RGBA materials.
-        write("RTSMESH2",8);
+        write(mesh.nodes.empty()?"RTSMESH2":"RTSMESH3",8);
         const std::uint32_t counts[]={
             static_cast<std::uint32_t>(mesh.vertices.size()/8),
             static_cast<std::uint32_t>(mesh.indices.size()),
-            static_cast<std::uint32_t>(mesh.surfaces.size()),0};
+            static_cast<std::uint32_t>(mesh.surfaces.size()),
+            static_cast<std::uint32_t>(mesh.nodes.size())};
         write(counts,sizeof(counts));
         write(mesh.vertices.data(),mesh.vertices.size()*sizeof(float));
         write(mesh.indices.data(),mesh.indices.size()*sizeof(std::uint32_t));
@@ -118,6 +119,13 @@ void writeMesh(const RTSStaticMesh& mesh,const std::filesystem::path& path){
             write(surface.baseColor.data(),16);
             if(!surface.albedo.empty())
                 write(surface.albedo.data(),surface.albedo.size());
+        }
+        for(const auto& node:mesh.nodes){
+            const std::uint32_t fields[]={node.parent,node.firstSurface,
+                node.surfaceCount,static_cast<std::uint32_t>(node.name.size())};
+            write(fields,sizeof(fields));
+            write(node.local.data(),64);
+            if(!node.name.empty())write(node.name.data(),node.name.size());
         }
     }
     out.close();need(bool(out),"Unable to finish compiled asset");
@@ -220,10 +228,11 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     // Preflight arithmetic before calling parser helpers that read accessor memory.
     for(std::size_t i=0;i<d.accessors_count;++i)checkAccessor(d.accessors[i]);
     need(cgltf_validate(&d)==cgltf_result_success,"glTF validation failed");
-    // Flatten the forest into static model-space geometry. Named nodes and
-    // local transforms remain in the authoring glTF, not in RTSMESH1/2.
+    // Bake static geometry while retaining model nodes for multi-node assets.
+    // Single-node assets keep the historical byte-exact v1/v2 contract.
     // Parent-first order avoids recursive traversal of attacker-authored data.
     std::map<const cgltf_node*,std::array<float,16>> transforms;
+    std::map<const cgltf_node*,std::uint32_t> nodeIndices;
     RTSStaticMesh result;
     result.surfaces.reserve(totalSurfaces);
     std::size_t decodedBytes=0;
@@ -241,19 +250,28 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
         std::array<float,16> local{},matrix{};
         cgltf_node_transform_local(&node,local.data());
         for(float f:local)need(std::isfinite(f),"Invalid node transform");
-        if(node.parent){
-            const auto& parent=transforms.at(node.parent);
-            for(int c=0;c<4;++c)for(int r=0;r<4;++r){
-                double sum=0;
-                for(int k=0;k<4;++k)
-                    sum+=double(parent[k*4+r])*local[c*4+k];
-                matrix[c*4+r]=static_cast<float>(sum);
-            }
-        }else matrix=local;
+        if(node.parent)
+            matrix=rtsComposeModelMatrix(transforms.at(node.parent),local);
+        else matrix=local;
         for(float f:matrix)
             need(std::isfinite(f) && std::abs(f)<1e7f,
                  "Invalid or oversized world transform");
         transforms.emplace(nodePtr,matrix);
+        if(order.size()>1){
+            RTSModelNode retained;
+            retained.parent=node.parent?nodeIndices.at(node.parent):RTS_MODEL_ROOT;
+            retained.firstSurface=static_cast<std::uint32_t>(result.surfaces.size());
+            retained.surfaceCount=node.mesh?
+                static_cast<std::uint32_t>(node.mesh->primitives_count):0u;
+            retained.name=node.name?node.name:"";
+            need(rtsValidModelNodeName(retained.name),
+                 "Node names must be <=255 bytes without control characters");
+            retained.local=local;retained.model=matrix;
+            need(rtsValidNodeMatrix(local) && rtsValidNodeMatrix(matrix),
+                 "Invalid retained static model node transform");
+            nodeIndices.emplace(nodePtr,static_cast<std::uint32_t>(result.nodes.size()));
+            result.nodes.emplace_back(std::move(retained));
+        }
         if(!node.mesh)continue;
         // Inverse transpose of the full composed 3x3, including shear
         // introduced by nested rotations and nonuniform scales. Columns
@@ -430,7 +448,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
         result.surfaces.emplace_back(std::move(surface));
         }
     }
-    if(result.surfaces.size()==1){
+    if(result.surfaces.size()==1 && result.nodes.empty()){
         // Single primitive is deliberately serialized in historic RTSMESH1.
         // Native import of all old samples must remain bit-identical.
         auto& surface=result.surfaces.front();

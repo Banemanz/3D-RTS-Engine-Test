@@ -1007,6 +1007,7 @@ int main(int argc, char** argv) {
     bool uiFramesSmoke=false;
     bool uiTriggerSmoke=false;
     bool importDialogSmoke=false;
+    bool nodeInspectorSmoke=false;
     std::string smokeUIFrameId;
     double smokeUiScale=0.;
     std::string smokeTriggerId;
@@ -1024,6 +1025,7 @@ int main(int argc, char** argv) {
         else if(arg == "--scene-editor")startSceneEditor=true;
         else if(arg == "--data-editor")startDataEditor=true;
         else if(arg == "--smoke-import-dialog")importDialogSmoke=true;
+        else if(arg == "--smoke-model-nodes")nodeInspectorSmoke=true;
         else if(arg == "--interface-editor")startInterfaceEditor=true;
         else if(arg == "--smoke-select-army")selectArmyForSmoke=true;
         else if(arg == "--smoke-select-producer")selectProducerForSmoke=true;
@@ -1251,6 +1253,10 @@ int main(int argc, char** argv) {
                     std::clamp(read("zoom",42),app.camera.minZoomDistance,app.camera.maxZoomDistance);
                 app.camera.targetZoomDistance=app.camera.currentZoomDistance;
             }
+        }
+        if(nodeInspectorSmoke && smokeFrames>0){
+            app.editor.panel=EditorSession::Panel::Data;
+            CreatorAssetLibrary::requestNodeInspector=true;
         }
         if(importDialogSmoke && smokeFrames>0){
             app.editor.panel=EditorSession::Panel::Data;

@@ -435,9 +435,18 @@ jobs:
           python3 -c "from pathlib import Path; p=Path('projects/multi_material_showcase.rtsproject.json'); Path('projects/assembly_ci.rtsproject.json').write_text(p.read_text().replace('assets/beacon_dual.rtsmesh','assets/assembly_ci.rtsmesh'))"
           ./build/RTSProjectTool --validate projects/assembly_ci.rtsproject.json
           ./build/RTSProjectTool --asset-report projects/assembly_ci.rtsproject.json
+          ./build/RTSProjectTool --model-info projects/assembly_ci.rtsproject.json assets/assembly_ci.rtsmesh "Amber cap"
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-model-nodes --project projects/assembly_ci.rtsproject.json --smoke-frames 75 --screenshot rts-model-nodes-f7.ppm
+          python3 tools/ppm_to_png.py rts-model-nodes-f7.ppm rts-model-nodes-f7.png
           xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/assembly_ci.rtsproject.json --smoke-frames 95 --screenshot rts-assembly-f9.ppm
           python3 tools/ppm_to_png.py rts-assembly-f9.ppm rts-assembly-f9.png
           rm projects/assembly_ci.rtsproject.json projects/assets/assembly_ci.rtsmesh
+      - name: Upload real retained model node inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-model-nodes-f7-screenshot
+          path: rts-model-nodes-f7.png
+          if-no-files-found: error
       - name: Upload actual native scene assembly capture
         uses: actions/upload-artifact@v4
         with:
