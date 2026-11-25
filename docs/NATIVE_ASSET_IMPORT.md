@@ -307,3 +307,14 @@ A successful rebuild invalidates the existing GPU asset cache through
 assetRevision on the next refresh. Runtime meshes and simulation/replay
 serialization are unchanged. Receipts are optional authoring metadata;
 a portable game bundle without the original sources can still play.
+
+Project-wide gate: `RTSProjectTool --source-report project [--strict]`
+returns sorted asset status rows and problem/untracked totals. It finds
+compiled assets and orphaned receipts (deleted compiled caches), ignores
+private staging directories, and fails rather than silently truncating
+after 512 assets or 8192 directory entries. Untracked legacy assets do
+not count as problems; --strict returns nonzero for stale or invalid
+tracked assets. This gate does not replace the existing --asset-report
+runtime dependency validation. Full scans are explicitly requested.
+Windows/Linux installed-tool tests link and rebuild the original beacon;
+Linux CI captures F7 with a deliberately modified source.

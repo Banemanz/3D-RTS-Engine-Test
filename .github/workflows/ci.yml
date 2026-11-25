@@ -399,6 +399,23 @@ jobs:
           name: rts-asset-library-f7-screenshot
           path: rts-assets-f7.png
           if-no-files-found: error
+      - name: Capture actual source dependency status in F7
+        run: |
+          mkdir -p projects/sources
+          cp assets/source/beacon.gltf projects/sources/beacon.gltf
+          ./build/RTSProjectTool --track-gltf projects/sources/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/beacon.rtsmesh
+          ./build/RTSProjectTool --source-report projects/asset_import_showcase.rtsproject.json --strict
+          python3 -c "import json; from pathlib import Path; p=Path('projects/sources/beacon.gltf'); d=json.loads(p.read_text()); d['nodes'][0]['translation']=[1,0,0]; p.write_text(json.dumps(d))"
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-source-dependencies --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-source-dependencies.ppm
+          python3 tools/ppm_to_png.py rts-source-dependencies.ppm rts-source-dependencies.png
+          rm projects/sources/beacon.gltf projects/assets/beacon.rtsmesh.source.json
+          rmdir projects/sources
+      - name: Upload actual source dependency inspector
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-source-dependencies-f7-screenshot
+          path: rts-source-dependencies.png
+          if-no-files-found: error
       - name: Capture real F8 imported model scene palette
         run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --scene-editor --project projects/asset_import_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-assets-f8.ppm
       - name: Convert F8 scene palette capture

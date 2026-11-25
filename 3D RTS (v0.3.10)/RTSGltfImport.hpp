@@ -22,3 +22,10 @@ void rtsTrackGltf(const std::filesystem::path& source,
 RTSAssetSourceStatus rtsInspectTrackedGltf(const std::filesystem::path& project,
                                          const std::string& reference);
 void rtsRebuildTrackedGltf(const std::filesystem::path& project,const std::string& reference);
+
+// Bounded, sorted inspection of compiled assets AND orphaned receipts.
+struct RTSAssetSourceRow {
+    std::string reference;
+    RTSAssetSourceStatus status;
+};
+std::vector<RTSAssetSourceRow> rtsReportTrackedGltf(const std::filesystem::path& project);

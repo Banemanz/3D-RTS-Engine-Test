@@ -2770,3 +2770,7 @@ are detected; no filesystem undo, automatic watcher or source copying.
 See docs/NATIVE_ASSET_IMPORT.md. Check latest CI and no new PR/merge.
 Remaining: imported native animation channels/multiple clips, playback
 state/blending, skeletons, material pipeline, background asset jobs.
+
+Additional production gates: --source-report [--strict] sorted batch report,
+including orphaned receipts; strict trailing JSON validation; installed
+Windows/Linux source link/rebuild tests and actual F7 stale-source capture.

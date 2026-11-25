@@ -15,6 +15,7 @@
 namespace CreatorAssetLibrary {
 inline bool requestImportPopup=false;
 inline bool requestNodeInspector=false;
+inline bool requestSourceInspector=false;
 struct Browser {
     std::string projectPath;
     std::vector<RTSAssetRecord> records;
@@ -200,6 +201,13 @@ bool draw(App& app){
                     asset.texturedSurfaces,double(asset.imageBytes)/(1024.0*1024.0));
                 ImGui::TreePop();
             }
+            if(requestSourceInspector && asset.reference=="assets/beacon.rtsmesh"){
+                browser.sourceStatus[asset.reference]=rtsInspectTrackedGltf(app.projectPath,asset.reference);
+                if(browser.sourceStatus[asset.reference].state!="source_changed")
+                    throw std::runtime_error("Source inspector smoke requires a changed beacon source");
+                ImGui::SetNextItemOpen(true,ImGuiCond_Always);
+                requestSourceInspector=false;
+            }
             if(ImGui::TreeNode("Source dependencies")){
                 if(ImGui::SmallButton("Check source status"))
                     browser.sourceStatus[asset.reference]=
@@ -235,6 +243,8 @@ bool draw(App& app){
                                 browser.ready=false;
                             }catch(const std::exception& ex){browser.importNotice=ex.what();}
                             browser.sourceStatus[asset.reference]=rtsInspectTrackedGltf(app.projectPath,asset.reference);
+                            // A publication failure after the mesh rename still needs GPU refresh.
+                            if(browser.sourceStatus[asset.reference].state=="cache_changed")browser.ready=false;
                         }
                     }
                 }

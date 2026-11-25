@@ -584,8 +584,11 @@ Receipt readReceipt(const fs::path& path){
     need(size>0 && size<=128*1024,"Oversized source receipt");
     std::ifstream in(path,std::ios::binary);std::string bytes(static_cast<std::size_t>(size),'\0');
     need(bool(in.read(bytes.data(),bytes.size())),"Cannot read source receipt");
-    picojson::value v;const auto err=picojson::parse(v,bytes);
-    need(err.empty()&&v.is<picojson::object>(),"Invalid source receipt JSON");
+    picojson::value v;std::string err;
+    const auto end=picojson::parse(v,bytes.cbegin(),bytes.cend(),&err);
+    need(err.empty()&&v.is<picojson::object>() &&
+         std::all_of(end,bytes.cend(),[](char c){return c==' '||c=='\t'||c=='\r'||c=='\n';}),
+         "Invalid source receipt JSON or trailing data");
     const auto& obj=v.get<picojson::object>();
     need(str(obj,"format")=="rts-source-1-fnv64","Unsupported source receipt version");
     Receipt r;r.source=str(obj,"source");
@@ -742,4 +745,32 @@ void rtsRebuildTrackedGltf(const fs::path& project,const std::string& reference)
     catch(const std::exception&){
         throw std::runtime_error("Mesh rebuilt, but source receipt publication failed; re-track the source");
     }
+}
+
+
+std::vector<RTSAssetSourceRow> rtsReportTrackedGltf(const fs::path& project){
+    const auto root=projectRoot(project),assets=root/"assets";
+    std::vector<RTSAssetSourceRow> out;
+    if(!fs::exists(assets))return out;
+    need(!fs::is_symlink(assets)&&fs::is_directory(assets),"Invalid project assets directory");
+    std::set<std::string> references;
+    std::size_t visited=0;
+    for(fs::recursive_directory_iterator it(assets),end;it!=end;++it){
+        need(++visited<=8192,"Source report scan limit exceeded (8192 entries)");
+        if(it->is_symlink())it.disable_recursion_pending();
+        if(it->is_directory()){
+            // Never inspect active or abandoned private import staging folders.
+            if(it->path().extension()==".importing")it.disable_recursion_pending();
+            continue;
+        }
+        auto name=it->path().lexically_relative(root).generic_u8string();
+        const std::string suffix=".source.json";
+        if(name.size()>=suffix.size() && name.compare(name.size()-suffix.size(),suffix.size(),suffix)==0)
+            name.resize(name.size()-suffix.size());
+        if(!rtsSafeMeshReference(name))continue;
+        references.insert(name);
+        need(references.size()<=512,"Source report asset limit exceeded (512)");
+    }
+    for(const auto& reference:references)out.push_back({reference,rtsInspectTrackedGltf(project,reference)});
+    return out;
 }

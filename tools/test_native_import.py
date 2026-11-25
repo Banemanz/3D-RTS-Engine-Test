@@ -325,6 +325,20 @@ with tempfile.TemporaryDirectory() as tmp:
     relocated=folder/'relocated'
     shutil.copytree(project.parent,relocated)
     assert status(relocated/project.name)['state']=='current'
+    report=json.loads(command('--source-report',project,'--strict'))
+    assert report['problems']==0 and report['untracked']>0
+    assert any(r['reference']==reference and r['state']=='current' for r in report['assets'])
+    # A deleted compiled cache with an existing receipt remains reportable.
+    new_cache=cache.read_bytes()
+    cache.unlink()
+    report=json.loads(command('--source-report',project,'--strict',ok=False))
+    assert report['problems']==1
+    assert any(r['reference']==reference and r['state']=='cache_changed' for r in report['assets'])
+    cache.write_bytes(new_cache)
+    receipt_clean=receipt.read_bytes()
+    receipt.write_bytes(receipt_clean+b' garbage')
+    assert status()['state']=='invalid_receipt'
+    receipt.write_bytes(receipt_clean)
     cache.write_bytes(old_cache)
     assert status()['state']=='cache_changed'
     command('--rebuild-gltf',project,reference,ok=False)

@@ -115,7 +115,14 @@ jobs:
           ./RTSProjectTool --actor-pose projects/rigid_animation_showcase.rtsproject.json dual_beacon_actor 1.5
           ./RTSProjectTool --import-gltf examples/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
           cmp projects/assets/beacon.rtsmesh projects/assets/native_smoke.rtsmesh
-          rm projects/assets/native_smoke.rtsmesh
+          mkdir -p projects/sources
+          cp examples/beacon.gltf projects/sources/native_smoke.gltf
+          ./RTSProjectTool --track-gltf projects/sources/native_smoke.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
+          ./RTSProjectTool --source-report projects/asset_import_showcase.rtsproject.json --strict
+          ./RTSProjectTool --rebuild-gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
+          cmp projects/assets/beacon.rtsmesh projects/assets/native_smoke.rtsmesh
+          rm projects/assets/native_smoke.rtsmesh projects/assets/native_smoke.rtsmesh.source.json projects/sources/native_smoke.gltf
+          rmdir projects/sources
           ./RTSProjectTool --import-gltf examples/beacon_dual.gltf projects/multi_material_showcase.rtsproject.json assets/native_dual_smoke.rtsmesh
           cmp projects/assets/beacon_dual.rtsmesh projects/assets/native_dual_smoke.rtsmesh
           rm projects/assets/native_dual_smoke.rtsmesh
@@ -159,7 +166,17 @@ jobs:
           .\RTSProjectTool.exe --import-gltf examples/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
           if ($LASTEXITCODE -ne 0) { throw "Native glTF import failed" }
           if ((Get-FileHash projects/assets/beacon.rtsmesh).Hash -ne (Get-FileHash projects/assets/native_smoke.rtsmesh).Hash) { throw "Native import bytes differ" }
-          Remove-Item projects/assets/native_smoke.rtsmesh
+          New-Item -ItemType Directory -Force projects/sources | Out-Null
+          Copy-Item examples/beacon.gltf projects/sources/native_smoke.gltf
+          .\RTSProjectTool.exe --track-gltf projects/sources/native_smoke.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
+          if ($LASTEXITCODE -ne 0) { throw "Source tracking failed" }
+          .\RTSProjectTool.exe --source-report projects/asset_import_showcase.rtsproject.json --strict
+          if ($LASTEXITCODE -ne 0) { throw "Source report failed" }
+          .\RTSProjectTool.exe --rebuild-gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
+          if ($LASTEXITCODE -ne 0) { throw "Tracked rebuild failed" }
+          if ((Get-FileHash projects/assets/beacon.rtsmesh).Hash -ne (Get-FileHash projects/assets/native_smoke.rtsmesh).Hash) { throw "Tracked rebuild differs" }
+          Remove-Item projects/assets/native_smoke.rtsmesh,projects/assets/native_smoke.rtsmesh.source.json,projects/sources/native_smoke.gltf
+          Remove-Item projects/sources
           .\RTSProjectTool.exe --import-gltf examples/beacon_dual.gltf projects/multi_material_showcase.rtsproject.json assets/native_dual_smoke.rtsmesh
           if ($LASTEXITCODE -ne 0) { throw "Native dual-material import failed" }
           if ((Get-FileHash projects/assets/beacon_dual.rtsmesh).Hash -ne (Get-FileHash projects/assets/native_dual_smoke.rtsmesh).Hash) { throw "RTSMESH2 bytes differ" }

@@ -12,12 +12,19 @@
 
 // Headless editing/validation interface for automation, modding pipelines and
 // users who prefer code/text edits over the live property inspector.
+static picojson::object sourceStatusJson(const RTSAssetSourceStatus& status){
+    picojson::array changed;for(const auto& p:status.changed)changed.emplace_back(p);
+    return {{"state",picojson::value(status.state)},
+        {"source",picojson::value(status.source)},{"detail",picojson::value(status.detail)},
+        {"dependencies",picojson::value(double(status.dependencies))},{"changed",picojson::value(changed)}};
+}
 static void usage() {
     std::cerr
       << "RTSProjectTool --import-gltf source.glb project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --reimport-gltf source.glb project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --track-gltf source.glb project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --source-status project-path assets/name.rtsmesh\n"
+      << "RTSProjectTool --source-report project-path [--strict]\n"
       << "RTSProjectTool --rebuild-gltf project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --create path\n"
       << "RTSProjectTool --validate path\n"
@@ -59,12 +66,23 @@ int main(int argc,char** argv) {
         if(action=="--source-status"){
             if(argc!=4){usage();return 2;}
             const auto status=rtsInspectTrackedGltf(std::filesystem::u8path(path),argv[3]);
-            picojson::array changed;for(const auto& p:status.changed)changed.emplace_back(p);
-            picojson::object row{{"state",picojson::value(status.state)},
-                {"source",picojson::value(status.source)},{"detail",picojson::value(status.detail)},
-                {"dependencies",picojson::value(double(status.dependencies))},{"changed",picojson::value(changed)}};
-            std::cout<<picojson::value(row).serialize()<<"\n";
+            std::cout<<picojson::value(sourceStatusJson(status)).serialize()<<"\n";
             return 0; // status is data, including stale and invalid receipts
+        }
+        if(action=="--source-report"){
+            if(argc!=3 && (argc!=4 || std::string(argv[3])!="--strict")){usage();return 2;}
+            picojson::array rows;std::size_t problems=0,untracked=0;
+            for(const auto& item:rtsReportTrackedGltf(std::filesystem::u8path(path))){
+                auto row=sourceStatusJson(item.status);
+                row.emplace("reference",picojson::value(item.reference));
+                if(item.status.state=="untracked")++untracked;
+                else if(item.status.state!="current")++problems;
+                rows.emplace_back(row);
+            }
+            picojson::object result{{"assets",picojson::value(rows)},
+                {"problems",picojson::value(double(problems))},{"untracked",picojson::value(double(untracked))}};
+            std::cout<<picojson::value(result).serialize()<<"\n";
+            return argc==4 && problems?1:0;
         }
         if(action=="--model-info"){
             if(argc!=4 && argc!=5){usage();return 2;}
