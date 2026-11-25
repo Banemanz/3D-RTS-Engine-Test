@@ -2,6 +2,7 @@
 // Isolated model viewport using the production textured mesh renderer.
 #include "RTSStaticMeshGL.hpp"
 #include "RTSAssetLibrary.hpp"
+#include "DataCatalog.hpp"
 #include "imgui.h"
 #include <algorithm>
 #include <cmath>
@@ -66,7 +67,8 @@ public:
         if(depth)rtsGlDeleteRenderbuffers(1,&depth);if(color)glDeleteTextures(1,&color);
         fb=color=depth=0;width=height=0;key.clear();
     }
-    void draw(const RTSAssetRecord& asset,const std::string& project,std::uint64_t generation,std::size_t selected){
+    void draw(const RTSAssetRecord& asset,const std::string& project,std::uint64_t generation,std::size_t selected,
+              const ActorVisual* visual=nullptr,float time=0){
         const std::string next=project+"|"+asset.reference;
         const float dw=std::max(120.f,ImGui::GetContentRegionAvail().x),
                     dh=std::clamp(dw*.67f,190.f,350.f);
@@ -79,6 +81,13 @@ public:
         const float y=toRadians(yaw),p=toRadians(pitch);
         const Vec3 eye(zoom*std::cos(p)*std::sin(y),zoom*std::sin(p),zoom*std::cos(p)*std::cos(y));
         const Mat4 view=Mat4::lookAt(eye,Vec3(),Vec3(0,1,0)),proj=Mat4::perspective(toRadians(43),float(w)/h,.05f,40);
+        const auto* clip=visual?&visual->rigidClip:nullptr;
+        // A loop wraps exactly at duration. When scrubbing to the right
+        // edge, preview the last frame rather than jump back to zero.
+        const double sample=clip && clip->loop && time>=clip->duration?
+            std::nextafter(double(clip->duration),0.0):double(time);
+        std::optional<RTSRigidPose> pose;
+        if(clip && !clip->tracks.empty())pose.emplace(rtsSampleRigidPose(asset.nodes,RTSRigidRig(asset.nodes),*clip,sample));
         bool rendered=false;
         {
             State guard;
@@ -93,7 +102,9 @@ public:
                 if(highlight && selected<asset.nodes.size()){
                     first=int(asset.nodes[selected].firstSurface);count=int(asset.nodes[selected].surfaceCount);
                 }
-                rendered=renderer.draw(asset.reference,project,model,view,proj,Vec3(1,1,1),1,first,count);
+                rendered=renderer.draw(asset.reference,project,model,view,proj,
+                    visual?visual->tint:Vec3(1,1,1),visual?visual->opacity:1,first,count,
+                    clip,sample,visual?&visual->attachments:nullptr);
             }
         }
         if(!rendered){ImGui::TextWrapped("Model viewport could not render this asset.");return;}
@@ -119,9 +130,10 @@ public:
             for(int i=0;i<8;++i)for(int bit:{1,2,4})if(!(i&bit))line(corners[i],corners[i|bit],IM_COL32(105,170,205,155),1);
         }
         if(axes && selected<asset.nodes.size()){
-            const auto& m=asset.nodes[selected].model;const Vec3 o(m[12],m[13],m[14]);
+            const auto m=pose && pose->valid?pose->model[selected]:rtsNodeMatrix(asset.nodes[selected].model);
+            const Vec3 o(m.m[12],m.m[13],m.m[14]);
             const ImU32 colors[]={IM_COL32(255,90,90,255),IM_COL32(90,240,130,255),IM_COL32(75,155,255,255)};
-            for(int a=0;a<3;++a)line(o,o+Vec3(m[a*4],m[a*4+1],m[a*4+2]).normalized()*(radius*.32f),colors[a],2);
+            for(int a=0;a<3;++a)line(o,o+Vec3(m.m[a*4],m.m[a*4+1],m.m[a*4+2]).normalized()*(radius*.32f),colors[a],2);
             ImVec2 pt;if(projectPoint(o,pt))dl->AddCircleFilled(pt,3,IM_COL32(255,220,90,255));
         }
         dl->PopClipRect();ImGui::TextDisabled("Drag to orbit | wheel to zoom");

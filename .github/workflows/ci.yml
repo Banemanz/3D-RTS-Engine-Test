@@ -450,6 +450,22 @@ jobs:
           name: rts-assembly-f9-screenshot
           path: rts-assembly-f9.png
           if-no-files-found: error
+      - name: Capture actual animated model timeline and fixed-tick gameplay
+        run: |
+          ./build/RTSProjectTool --asset-report projects/rigid_animation_showcase.rtsproject.json
+          ./build/RTSProjectTool --actor-pose projects/rigid_animation_showcase.rtsproject.json dual_beacon_actor 1.5
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-model-nodes --project projects/rigid_animation_showcase.rtsproject.json --smoke-frames 75 --screenshot rts-rigid-preview.ppm
+          python3 tools/ppm_to_png.py rts-rigid-preview.ppm rts-rigid-preview.png
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/rigid_animation_showcase.rtsproject.json --smoke-fixed-ticks --smoke-frames 90 --screenshot rts-rigid-game.ppm
+          python3 tools/ppm_to_png.py rts-rigid-game.ppm rts-rigid-game.png
+      - name: Upload actual rigid animation screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-rigid-animation-screenshots
+          path: |
+            rts-rigid-preview.png
+            rts-rigid-game.png
+          if-no-files-found: error
       - name: Capture actual F10 Interface Editor as a native OS window
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
       - name: Convert native F10 Interface Editor screenshot

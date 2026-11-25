@@ -9,6 +9,7 @@
 #include "CreatorTechGraph.hpp"
 #include "CreatorAIResearch.hpp"
 #include "CreatorAssetLibrary.hpp"
+#include "CreatorRigidClip.hpp"
 #include "CreatorUISettings.hpp"
 #include "CreatorInterfaceEditor.hpp"
 #include "RTSCatalogValuePreview.hpp"
@@ -440,6 +441,9 @@ void inspector(App& app){
                     endPane();return;
                 }
                 if(entry->type=="Actor"){
+                    if(CreatorRigidClip::draw(ed,project,app.projectPath,entry->id)){
+                        refresh(app,true);endPane();return;
+                    }
                     if(ImGui::CollapsingHeader("Model attachments | named sockets")){
                         static std::string editingAttachments;
                         static std::vector<RTSModelAttachment> draftAttachments;

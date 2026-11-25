@@ -20,6 +20,7 @@ static void usage() {
       << "RTSProjectTool --validate path\n"
       << "RTSProjectTool --asset-report path  # Verify all referenced mesh files\n"
       << "RTSProjectTool --model-info project-path assets/name.rtsmesh [unique-node-name]\n"
+      << "RTSProjectTool --actor-pose project-path actor-id seconds\n"
       << "RTSProjectTool --list path [catalog-type]\n"
       << "RTSProjectTool --get path object-id field\n"
       << "RTSProjectTool --set path object-id field json-value\n"
@@ -95,6 +96,36 @@ int main(int argc,char** argv) {
         RTSProject project;
         project.loadFile(path);
         TriggerEngine::validate(project);
+        if(action=="--actor-pose"){
+            if(argc!=5){usage();return 2;}
+            std::size_t parsed=0;const std::string time=argv[4];
+            const double seconds=std::stod(time,&parsed);
+            if(parsed!=time.size() || !std::isfinite(seconds))
+                throw std::invalid_argument("Pose time must be finite");
+            const auto actor=actorFromCatalog(project.catalog,argv[3]);
+            const auto mesh=rtsReadStaticMesh(rtsResolveMeshReference(path,actor.mesh));
+            const auto pose=rtsSampleRigidPose(mesh.nodes,RTSRigidRig(mesh.nodes),actor.rigidClip,seconds);
+            if(!pose.valid)throw std::invalid_argument("Actor has no valid rigid animation pose");
+            const auto matrix=[](const Mat4& m){
+                picojson::array out;for(float v:m.m)out.emplace_back(double(v));return picojson::value(out);
+            };
+            picojson::array nodes,surfaces,attachments;
+            for(std::size_t i=0;i<mesh.nodes.size();++i)
+                nodes.emplace_back(picojson::object{{"name",picojson::value(mesh.nodes[i].name)},
+                    {"model",matrix(pose.model[i])}});
+            for(std::size_t i=0;i<mesh.surfaces.size();++i)surfaces.emplace_back(matrix(pose.surfaceDelta[i]));
+            for(const auto& a:actor.attachments){
+                const auto transform=rtsPosedAttachment(mesh.nodes,&pose,Mat4(),a);
+                if(!transform)throw std::invalid_argument("Missing attachment socket: "+a.socket);
+                attachments.emplace_back(picojson::object{{"socket",picojson::value(a.socket)},
+                    {"model",picojson::value(a.modelId)},{"transform",matrix(*transform)}});
+            }
+            std::cout<<picojson::value(picojson::object{
+                {"time",picojson::value(double(rtsClipTime(actor.rigidClip,seconds)))},
+                {"nodes",picojson::value(nodes)},{"surfaceDeltas",picojson::value(surfaces)},
+                {"attachments",picojson::value(attachments)}}).serialize()<<"\n";
+            return 0;
+        }
         if(action=="--tech-graph") {
             if(argc!=3){usage();return 2;}
             project.validate();

@@ -110,6 +110,9 @@ jobs:
           ./RTSProjectTool --asset-report projects/multi_material_showcase.rtsproject.json
           ./RTSProjectTool --validate projects/model_studio_showcase.rtsproject.json
           ./RTSProjectTool --asset-report projects/model_studio_showcase.rtsproject.json
+          ./RTSProjectTool --validate projects/rigid_animation_showcase.rtsproject.json
+          ./RTSProjectTool --asset-report projects/rigid_animation_showcase.rtsproject.json
+          ./RTSProjectTool --actor-pose projects/rigid_animation_showcase.rtsproject.json dual_beacon_actor 1.5
           ./RTSProjectTool --import-gltf examples/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
           cmp projects/assets/beacon.rtsmesh projects/assets/native_smoke.rtsmesh
           rm projects/assets/native_smoke.rtsmesh
@@ -150,6 +153,9 @@ jobs:
           .\RTSProjectTool.exe --asset-report projects/multi_material_showcase.rtsproject.json
           .\RTSProjectTool.exe --validate projects/model_studio_showcase.rtsproject.json
           .\RTSProjectTool.exe --asset-report projects/model_studio_showcase.rtsproject.json
+          .\RTSProjectTool.exe --validate projects/rigid_animation_showcase.rtsproject.json
+          .\RTSProjectTool.exe --asset-report projects/rigid_animation_showcase.rtsproject.json
+          .\RTSProjectTool.exe --actor-pose projects/rigid_animation_showcase.rtsproject.json dual_beacon_actor 1.5
           .\RTSProjectTool.exe --import-gltf examples/beacon.gltf projects/asset_import_showcase.rtsproject.json assets/native_smoke.rtsmesh
           if ($LASTEXITCODE -ne 0) { throw "Native glTF import failed" }
           if ((Get-FileHash projects/assets/beacon.rtsmesh).Hash -ne (Get-FileHash projects/assets/native_smoke.rtsmesh).Hash) { throw "Native import bytes differ" }

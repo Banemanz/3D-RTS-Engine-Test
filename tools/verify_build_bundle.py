@@ -52,6 +52,7 @@ def main() -> int:
         "projects/asset_import_showcase.rtsproject.json",
         "projects/multi_material_showcase.rtsproject.json",
         "projects/model_studio_showcase.rtsproject.json",
+        "projects/rigid_animation_showcase.rtsproject.json",
         "projects/assets/beacon_assembly.rtsmesh",
         "projects/assets/beacon_dual.rtsmesh",
         "projects/assets/beacon.rtsmesh",

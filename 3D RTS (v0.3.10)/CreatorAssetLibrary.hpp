@@ -3,6 +3,7 @@
 #include "RTSAssetLibrary.hpp"
 #include "RTSGltfImport.hpp"
 #include "CreatorModelPreview.hpp"
+#include "DataCatalog.hpp"
 #include "imgui.h"
 #include <algorithm>
 #include <cctype>
@@ -24,6 +25,10 @@ struct Browser {
     bool replaceExisting=false;
     std::string nodeAsset;
     std::size_t selectedNode=0;
+    std::vector<std::pair<std::string,ActorVisual>> previewActors;
+    std::size_t previewActor=0; // 0 = bind pose, otherwise index + 1
+    float previewTime=0;
+    bool previewPlaying=false;
     std::string importNotice;
     std::filesystem::path folder;
     std::vector<std::filesystem::directory_entry> files;
@@ -193,6 +198,7 @@ bool draw(App& app){
     if(!matched)ImGui::TextDisabled("No matching assets.");
     ImGui::EndChild();
     ImGui::TextDisabled("Catalog registration is one undo step. Imported files remain on disk.");
+    const bool smokeInspector=requestNodeInspector;
     if(requestNodeInspector){
         requestNodeInspector=false;
         for(const auto& asset:browser.records)if(asset.valid() && !asset.nodes.empty()){
@@ -202,7 +208,23 @@ bool draw(App& app){
         }
         if(!openNodes)throw std::runtime_error("Smoke model node inspector: no retained nodes");
     }
-    if(openNodes)ImGui::OpenPopup("Model viewer");
+    if(openNodes){
+        browser.previewActors.clear();browser.previewActor=0;
+        browser.previewTime=0;browser.previewPlaying=false;
+        // Build this list once on opening rather than scan the whole catalog
+        // and resolve inheritance on every preview frame.
+        for(const auto& entry:app.project.catalog.entries())if(entry.type=="Actor"){
+            const auto visual=actorFromCatalog(app.project.catalog,entry.id);
+            if(visual.mesh==browser.nodeAsset && browser.previewActors.size()<128){
+                browser.previewActors.emplace_back(entry.id,visual);
+                if(smokeInspector && browser.previewActor==0 && !visual.rigidClip.tracks.empty()){
+                    browser.previewActor=browser.previewActors.size();
+                    browser.previewTime=visual.rigidClip.duration*.375f;
+                }
+            }
+        }
+        ImGui::OpenPopup("Model viewer");
+    }
     ImGui::SetNextWindowSize(ImVec2(1040,620),ImGuiCond_FirstUseEver);
     if(ImGui::BeginPopupModal("Model viewer",nullptr,ImGuiWindowFlags_NoSavedSettings)){
         const auto found=std::find_if(browser.records.begin(),browser.records.end(),
@@ -212,8 +234,42 @@ bool draw(App& app){
         else{
             const auto& asset=*found;
             ImGui::TextWrapped("%s",asset.reference.c_str());
-            ImGui::TextDisabled("%zu nodes | %u material surfaces | baked static geometry",
+            ImGui::TextDisabled("%zu nodes | %u material surfaces | retained bind geometry",
                                 asset.nodes.size(),asset.surfaces);
+            const char* actorLabel=browser.previewActor?
+                browser.previewActors[browser.previewActor-1].first.c_str():"Bind pose (raw model)";
+            ImGui::SetNextItemWidth(320);
+            if(ImGui::BeginCombo("Preview Actor",actorLabel)){
+                if(ImGui::Selectable("Bind pose (raw model)",browser.previewActor==0)){
+                    browser.previewActor=0;browser.previewPlaying=false;browser.previewTime=0;
+                }
+                for(std::size_t i=0;i<browser.previewActors.size();++i){
+                    if(ImGui::Selectable(browser.previewActors[i].first.c_str(),browser.previewActor==i+1)){
+                        browser.previewActor=i+1;browser.previewTime=0;browser.previewPlaying=false;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            const ActorVisual* preview=browser.previewActor?&browser.previewActors[browser.previewActor-1].second:nullptr;
+            if(preview && !preview->rigidClip.tracks.empty()){
+                const auto& clip=preview->rigidClip;
+                if(browser.previewPlaying){
+                    browser.previewTime+=std::min(ImGui::GetIO().DeltaTime,.1f);
+                    if(browser.previewTime>=clip.duration){
+                        if(clip.loop)browser.previewTime=rtsClipTime(clip,browser.previewTime);
+                        else{browser.previewTime=clip.duration;browser.previewPlaying=false;}
+                    }
+                }
+                if(ImGui::SmallButton(browser.previewPlaying?"Pause":"Play")){
+                    if(!browser.previewPlaying && browser.previewTime>=clip.duration)browser.previewTime=0;
+                    browser.previewPlaying=!browser.previewPlaying;
+                }
+                ImGui::SameLine();if(ImGui::SmallButton("Rewind")){browser.previewTime=0;browser.previewPlaying=false;}
+                ImGui::SameLine();ImGui::SetNextItemWidth(285);
+                if(ImGui::SliderFloat("Time (s)",&browser.previewTime,0,clip.duration,"%.3f"))
+                    browser.previewPlaying=false;
+                ImGui::SameLine();ImGui::TextDisabled("%zu tracks | %s",clip.tracks.size(),clip.loop?"Loop":"Once");
+            }
             ImGui::Separator();
             if(browser.selectedNode>=asset.nodes.size())browser.selectedNode=0;
             // Parent-first binary storage; render depth-first for the familiar
@@ -238,7 +294,8 @@ bool draw(App& app){
             ImGui::EndChild();
             ImGui::SameLine();
             ImGui::BeginChild("##modelViewport",ImVec2(std::max(300.f,ImGui::GetContentRegionAvail().x*.62f),430),true);
-            CreatorModelPreview::viewer.draw(asset,browser.projectPath,app.assetRevision,browser.selectedNode);
+            CreatorModelPreview::viewer.draw(asset,browser.projectPath,app.assetRevision,browser.selectedNode,
+                                             preview,browser.previewTime);
             ImGui::EndChild();
             ImGui::SameLine();
             ImGui::BeginChild("##nodeProperties",ImVec2(0,430),true);
@@ -262,7 +319,7 @@ bool draw(App& app){
                                "Unnamed or ambiguous node; no unique socket lookup.");
             }
             ImGui::EndChild();
-            ImGui::TextWrapped("Static preview uses the production mesh renderer. Bounds and axes are inspection overlays.");
+            ImGui::TextWrapped("Production mesh preview. Bounds are bind-pose bounds; selected axes follow the sampled animation.");
         }
         if(ImGui::Button("Close"))ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
