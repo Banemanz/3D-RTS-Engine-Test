@@ -2726,3 +2726,9 @@ CI renders original assembled beacon with child mesh and F7 model viewer.
 Check exact HEAD CI and screenshots. No full PBR, rig/animation, source
 manifests, persistent node GUIDs, recursive Actor graphs, or non-ImGui
 editor backend.
+
+Packaged original showcase: projects/model_studio_showcase.rtsproject.json
+and assets/beacon_assembly.rtsmesh. Compiled locally with the previously
+verified 45394870 Linux RTSProjectTool and verified in native byte-parity
+regression. Fixed dynamic string diagnostic compile error in staged
+reimport, protected legacy audit diagnostics, added positive showcase audit.

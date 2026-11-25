@@ -31,5 +31,10 @@ int main(int argc,char** argv){
     assert(project.renameCatalogObject(a.modelId,"renamed_attachment_model"));
     assert(actorFromCatalog(project.catalog,"dual_beacon_actor").attachments[0].modelId=="renamed_attachment_model");
     assert(!rtsAuditProjectAssets(project,argv[2]).valid());
+    const auto showcase=std::filesystem::path(argv[2]).parent_path()/"model_studio_showcase.rtsproject.json";
+    RTSProject demo;demo.loadFile(showcase.string());
+    assert(rtsAuditProjectAssets(demo,showcase).valid());
+    const auto assembled=actorFromCatalog(demo.catalog,"dual_beacon_actor");
+    assert(assembled.attachments.size()==1 && assembled.attachments[0].socket=="Amber cap");
     std::cout<<"Attachment transform, typed catalog validation, undo, rename and socket audit passed\n";
 }

@@ -97,14 +97,25 @@ inline RTSAssetAudit rtsAuditProjectAssets(
             }
         }
     };
-    for(const auto& entry:project.catalog.entries())if(entry.type=="Actor")
-        verifyAttachments(actorFromCatalog(project.catalog,entry.id),entry.id);
-    for(const auto& placed:project.placements)if(!placed.overrides.empty()){
-        if(placed.kind=="Doodad")verifyAttachments(resolvePlacedDoodad(project,placed),placed.id);
-        else if(placed.kind=="Unit"){
-            const auto unit=resolvePlacedUnit(project,placed);
-            if(unit.hasActor)verifyAttachments(unit.actor,placed.id);
+    const auto diagnose=[&](const std::string& id,const auto& resolve){
+        try{verifyAttachments(resolve(),id);}
+        catch(const std::exception& ex){
+            RTSAssetAuditRow row;row.modelId=id;row.error=ex.what();
+            report.rows.push_back(std::move(row));
         }
+    };
+    for(const auto& entry:project.catalog.entries())if(entry.type=="Actor"){
+        const auto fields=project.catalog.resolvedFields(entry.id);
+        const auto it=fields.find("attachments");
+        if(it==fields.end() || (it->second.is<picojson::array>() &&
+                               it->second.get<picojson::array>().empty()))continue;
+        diagnose(entry.id,[&]{return actorFromCatalog(project.catalog,entry.id);});
+    }
+    for(const auto& placed:project.placements)if(!placed.overrides.empty()){
+        if(placed.kind=="Doodad")
+            diagnose(placed.id,[&]{return resolvePlacedDoodad(project,placed);});
+        else if(placed.kind=="Unit")
+            diagnose(placed.id,[&]{return resolvePlacedUnit(project,placed).actor;});
     }
     report.uniqueFiles=cache.size();
     return report;

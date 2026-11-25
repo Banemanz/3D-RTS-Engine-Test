@@ -461,10 +461,13 @@ void inspector(App& app){
                                     if(ImGui::Selectable(c.id.c_str(),a.modelId==c.id))a.modelId=c.id;
                                 ImGui::EndCombo();
                             }
-                            ImGui::InputFloat3("Offset",&a.offset.x);
-                            ImGui::InputFloat3("Scale",&a.scale.x);
+                            float offset[3]={a.offset.x,a.offset.y,a.offset.z};
+                            if(ImGui::InputFloat3("Offset",offset))a.offset=Vec3(offset[0],offset[1],offset[2]);
+                            float scale[3]={a.scale.x,a.scale.y,a.scale.z};
+                            if(ImGui::InputFloat3("Scale",scale))a.scale=Vec3(scale[0],scale[1],scale[2]);
                             ImGui::InputFloat("Yaw degrees",&a.yaw);
-                            ImGui::ColorEdit3("Tint",&a.tint.x);
+                            float tint[3]={a.tint.x,a.tint.y,a.tint.z};
+                            if(ImGui::ColorEdit3("Tint",tint))a.tint=Vec3(tint[0],tint[1],tint[2]);
                             ImGui::SliderFloat("Opacity",&a.opacity,0,1);
                             if(ImGui::SmallButton("Remove attachment")){
                                 draftAttachments.erase(draftAttachments.begin()+static_cast<std::ptrdiff_t>(i));

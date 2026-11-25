@@ -482,7 +482,7 @@ void publishGltf(const std::filesystem::path& source,const std::filesystem::path
         for(const auto& node:previous.nodes)
             if(rtsFindUniqueModelNode(previous.nodes,node.name))
                 need(bool(rtsFindUniqueModelNode(validated.nodes,node.name)),
-                     "Reimport would remove or ambiguate a unique node: "+node.name);
+                     ("Reimport would remove or ambiguate a unique node: "+node.name).c_str());
         // Same-filesystem rename replaces the existing file atomically.
         // Failed validation or rename leaves the old asset intact.
         std::filesystem::rename(temp,destination);

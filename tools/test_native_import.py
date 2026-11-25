@@ -156,6 +156,7 @@ with tempfile.TemporaryDirectory() as tmp:
         p=subprocess.run(args,capture_output=True,text=True,timeout=15)
         assert (p.returncode==0)==ok,p.stdout+p.stderr
         return json.loads(p.stdout) if ok else None
+    assert assembly==(root/'projects/assets/beacon_assembly.rtsmesh').read_bytes()
     graph=info('assets/assembly.rtsmesh')
     assert (graph['vertices'],graph['triangles'],graph['surfaces'])==(64,32,2)
     assert [n['name'] for n in graph['nodes']]==[

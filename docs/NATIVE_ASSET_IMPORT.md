@@ -205,3 +205,7 @@ A failed compile leaves the existing file untouched. All old unique named
 nodes must remain uniquely resolvable in the replacement. No source
 manifest or automatic dependency tracking yet. Asset file replacement is
 not part of map undo. Keep original source files separately.
+
+Open `projects/model_studio_showcase.rtsproject.json` in the portable
+bundle to inspect the four-node assembly, independently rendered mounted
+child model, and F7 Model Viewer without preparing assets manually.
