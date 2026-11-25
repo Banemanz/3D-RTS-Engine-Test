@@ -32,7 +32,28 @@ PFNGLUNIFORM3FPROC glUniform3f = nullptr;
 PFNGLUNIFORM1FPROC glUniform1f = nullptr;
 PFNGLUNIFORM1IPROC glUniform1i = nullptr;
 
+RTSGLGenFramebuffersProc rtsGlGenFramebuffers=nullptr;
+RTSGLBindFramebufferProc rtsGlBindFramebuffer=nullptr;
+RTSGLDeleteFramebuffersProc rtsGlDeleteFramebuffers=nullptr;
+RTSGLFramebufferTexture2DProc rtsGlFramebufferTexture2D=nullptr;
+RTSGLCheckFramebufferStatusProc rtsGlCheckFramebufferStatus=nullptr;
+RTSGLGenRenderbuffersProc rtsGlGenRenderbuffers=nullptr;
+RTSGLBindRenderbufferProc rtsGlBindRenderbuffer=nullptr;
+RTSGLRenderbufferStorageProc rtsGlRenderbufferStorage=nullptr;
+RTSGLFramebufferRenderbufferProc rtsGlFramebufferRenderbuffer=nullptr;
+RTSGLDeleteRenderbuffersProc rtsGlDeleteRenderbuffers=nullptr;
+
 bool loadOpenGLFunctions() {
+    rtsGlGenFramebuffers=reinterpret_cast<RTSGLGenFramebuffersProc>(glfwGetProcAddress("glGenFramebuffers"));
+    rtsGlBindFramebuffer=reinterpret_cast<RTSGLBindFramebufferProc>(glfwGetProcAddress("glBindFramebuffer"));
+    rtsGlDeleteFramebuffers=reinterpret_cast<RTSGLDeleteFramebuffersProc>(glfwGetProcAddress("glDeleteFramebuffers"));
+    rtsGlFramebufferTexture2D=reinterpret_cast<RTSGLFramebufferTexture2DProc>(glfwGetProcAddress("glFramebufferTexture2D"));
+    rtsGlCheckFramebufferStatus=reinterpret_cast<RTSGLCheckFramebufferStatusProc>(glfwGetProcAddress("glCheckFramebufferStatus"));
+    rtsGlGenRenderbuffers=reinterpret_cast<RTSGLGenRenderbuffersProc>(glfwGetProcAddress("glGenRenderbuffers"));
+    rtsGlBindRenderbuffer=reinterpret_cast<RTSGLBindRenderbufferProc>(glfwGetProcAddress("glBindRenderbuffer"));
+    rtsGlRenderbufferStorage=reinterpret_cast<RTSGLRenderbufferStorageProc>(glfwGetProcAddress("glRenderbufferStorage"));
+    rtsGlFramebufferRenderbuffer=reinterpret_cast<RTSGLFramebufferRenderbufferProc>(glfwGetProcAddress("glFramebufferRenderbuffer"));
+    rtsGlDeleteRenderbuffers=reinterpret_cast<RTSGLDeleteRenderbuffersProc>(glfwGetProcAddress("glDeleteRenderbuffers"));
     glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)glfwGetProcAddress("glDeleteBuffers");
     glDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)glfwGetProcAddress("glDeleteVertexArrays");
     glDeleteProgram = (PFNGLDELETEPROGRAMPROC)glfwGetProcAddress("glDeleteProgram");
@@ -66,6 +87,16 @@ bool loadOpenGLFunctions() {
 
     bool ok = true;
 #define REQUIRE_GL(fn) if (!(fn)) { std::cerr << "Missing OpenGL function: " #fn << '\n'; ok = false; }
+    REQUIRE_GL(rtsGlGenFramebuffers)
+    REQUIRE_GL(rtsGlBindFramebuffer)
+    REQUIRE_GL(rtsGlDeleteFramebuffers)
+    REQUIRE_GL(rtsGlFramebufferTexture2D)
+    REQUIRE_GL(rtsGlCheckFramebufferStatus)
+    REQUIRE_GL(rtsGlGenRenderbuffers)
+    REQUIRE_GL(rtsGlBindRenderbuffer)
+    REQUIRE_GL(rtsGlRenderbufferStorage)
+    REQUIRE_GL(rtsGlFramebufferRenderbuffer)
+    REQUIRE_GL(rtsGlDeleteRenderbuffers)
     REQUIRE_GL(glDeleteBuffers)
     REQUIRE_GL(glDeleteVertexArrays)
     REQUIRE_GL(glDeleteProgram)

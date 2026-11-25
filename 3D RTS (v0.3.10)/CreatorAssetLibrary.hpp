@@ -2,6 +2,7 @@
 // F7 presentation adapter; catalog changes occur in headless EditorSession.
 #include "RTSAssetLibrary.hpp"
 #include "RTSGltfImport.hpp"
+#include "CreatorModelPreview.hpp"
 #include "imgui.h"
 #include <algorithm>
 #include <cctype>
@@ -163,15 +164,13 @@ bool draw(App& app){
                     asset.texturedSurfaces,double(asset.imageBytes)/(1024.0*1024.0));
                 ImGui::TreePop();
             }
-            if(!asset.nodes.empty()){
-                if(ImGui::SmallButton("Inspect model nodes")){
-                    browser.nodeAsset=asset.reference;
-                    browser.selectedNode=0;
-                    openNodes=true;
-                }
-                ImGui::SameLine();
-                ImGui::TextDisabled("%zu retained nodes",asset.nodes.size());
+            if(ImGui::SmallButton("Model viewer")){
+                browser.nodeAsset=asset.reference;
+                browser.selectedNode=0;
+                openNodes=true;
             }
+            ImGui::SameLine();
+            ImGui::TextDisabled("%zu retained nodes",asset.nodes.size());
             if(ImGui::SmallButton("Register Model + Actor")){
                 if(app.editor.importStaticMesh(app.project,app.projectPath,
                                                asset.reference)){
@@ -196,13 +195,13 @@ bool draw(App& app){
         }
         if(!openNodes)throw std::runtime_error("Smoke model node inspector: no retained nodes");
     }
-    if(openNodes)ImGui::OpenPopup("Model node inspector");
-    ImGui::SetNextWindowSize(ImVec2(650,455),ImGuiCond_FirstUseEver);
-    if(ImGui::BeginPopupModal("Model node inspector",nullptr,ImGuiWindowFlags_NoSavedSettings)){
+    if(openNodes)ImGui::OpenPopup("Model viewer");
+    ImGui::SetNextWindowSize(ImVec2(1040,620),ImGuiCond_FirstUseEver);
+    if(ImGui::BeginPopupModal("Model viewer",nullptr,ImGuiWindowFlags_NoSavedSettings)){
         const auto found=std::find_if(browser.records.begin(),browser.records.end(),
             [&](const RTSAssetRecord& a){return a.reference==browser.nodeAsset;});
-        if(found==browser.records.end() || !found->valid() || found->nodes.empty())
-            ImGui::TextWrapped("This asset is unavailable or has no retained node metadata.");
+        if(found==browser.records.end() || !found->valid())
+            ImGui::TextWrapped("This asset is unavailable.");
         else{
             const auto& asset=*found;
             ImGui::TextWrapped("%s",asset.reference.c_str());
@@ -212,7 +211,8 @@ bool draw(App& app){
             if(browser.selectedNode>=asset.nodes.size())browser.selectedNode=0;
             // Parent-first binary storage; render depth-first for the familiar
             // model browser tree, with a selectable row for each named node.
-            ImGui::BeginChild("##modelNodeTree",ImVec2(275,270),true);
+            ImGui::BeginChild("##modelNodeTree",ImVec2(210,430),true);
+            if(asset.nodes.empty())ImGui::TextWrapped("Legacy mesh: no retained hierarchy.");
             const auto drawNode=[&](const auto& self,std::size_t index)->void{
                 const auto& n=asset.nodes[index];
                 ImGui::PushID(static_cast<int>(index));
@@ -230,7 +230,13 @@ bool draw(App& app){
                 if(asset.nodes[n].parent==RTS_MODEL_ROOT)drawNode(drawNode,n);
             ImGui::EndChild();
             ImGui::SameLine();
-            ImGui::BeginChild("##nodeProperties",ImVec2(0,270),true);
+            ImGui::BeginChild("##modelViewport",ImVec2(std::max(300.f,ImGui::GetContentRegionAvail().x*.62f),430),true);
+            CreatorModelPreview::viewer.draw(asset,browser.projectPath,app.assetRevision,browser.selectedNode);
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("##nodeProperties",ImVec2(0,430),true);
+            if(asset.nodes.empty())ImGui::TextWrapped("No retained nodes in this mesh.");
+            else{
             const auto& node=asset.nodes[browser.selectedNode];
             ImGui::TextWrapped("%s",node.name.empty()?"(unnamed)":node.name.c_str());
             ImGui::Text("Index: %zu",browser.selectedNode);
@@ -247,8 +253,9 @@ bool draw(App& app){
             const auto unique=rtsFindUniqueModelNode(asset.nodes,node.name);
             ImGui::TextWrapped("%s",unique?"Unique named node (socket candidate)":
                                "Unnamed or ambiguous node; no unique socket lookup.");
+            }
             ImGui::EndChild();
-            ImGui::TextWrapped("Read-only static hierarchy. This does not animate or attach objects yet.");
+            ImGui::TextWrapped("Static preview uses the production mesh renderer. Bounds and axes are inspection overlays.");
         }
         if(ImGui::Button("Close"))ImGui::CloseCurrentPopup();
         ImGui::EndPopup();

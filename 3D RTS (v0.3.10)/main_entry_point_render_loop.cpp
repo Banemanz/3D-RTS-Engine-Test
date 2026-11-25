@@ -2187,6 +2187,7 @@ int main(int argc, char** argv) {
             glfwPollEvents();
         }
 
+        CreatorModelPreview::viewer.clear();
         importedMeshes.clear();
         glDeleteTextures(1,&fogTexture);
         ImGui_ImplOpenGL3_Shutdown();

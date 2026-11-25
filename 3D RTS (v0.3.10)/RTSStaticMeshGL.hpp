@@ -142,7 +142,7 @@ public:
     bool draw(const std::string& reference,
               const std::filesystem::path& projectFile,
               const Mat4& model,const Mat4& view,const Mat4& projection,
-              const Vec3& tint,float opacity){
+              const Vec3& tint,float opacity,int first=-1,int count=0){
         if(reference=="procedural.unit" || !rtsSafeMeshReference(reference))
             return false;
         // Cache by reference + project root, so reloading another map with
@@ -172,7 +172,11 @@ public:
         glUniform1f(glGetUniformLocation(shader_,"uOpacity"),opacity);
         glUniform1i(glGetUniformLocation(shader_,"uAlbedo"),0);
         glBindVertexArray(a.vao);
-        for(const auto& part:a.surfaces){
+        for(std::size_t i=0;i<a.surfaces.size();++i){
+            const auto& part=a.surfaces[i];
+            const bool highlight=first>=0 && int(i)>=first && int(i)<first+count;
+            glUniform3f(glGetUniformLocation(shader_,"uActorTint"),
+                highlight?1.f:tint.x,highlight?.72f:tint.y,highlight?.24f:tint.z);
             glUniform4f(glGetUniformLocation(shader_,"uBaseColor"),
                         part.color[0],part.color[1],part.color[2],part.color[3]);
             glUniform1i(glGetUniformLocation(shader_,"uHasAlbedo"),part.texture?1:0);

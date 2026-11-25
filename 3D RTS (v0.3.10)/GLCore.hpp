@@ -109,4 +109,25 @@ extern PFNGLUNIFORM3FPROC glUniform3f;
 extern PFNGLUNIFORM1FPROC glUniform1f;
 extern PFNGLUNIFORM1IPROC glUniform1i;
 
+using RTSGLGenFramebuffersProc=void (APIENTRY *)(GLsizei,GLuint*);
+extern RTSGLGenFramebuffersProc rtsGlGenFramebuffers;
+using RTSGLBindFramebufferProc=void (APIENTRY *)(GLenum,GLuint);
+extern RTSGLBindFramebufferProc rtsGlBindFramebuffer;
+using RTSGLDeleteFramebuffersProc=void (APIENTRY *)(GLsizei,const GLuint*);
+extern RTSGLDeleteFramebuffersProc rtsGlDeleteFramebuffers;
+using RTSGLFramebufferTexture2DProc=void (APIENTRY *)(GLenum,GLenum,GLenum,GLuint,GLint);
+extern RTSGLFramebufferTexture2DProc rtsGlFramebufferTexture2D;
+using RTSGLCheckFramebufferStatusProc=GLenum (APIENTRY *)(GLenum);
+extern RTSGLCheckFramebufferStatusProc rtsGlCheckFramebufferStatus;
+using RTSGLGenRenderbuffersProc=void (APIENTRY *)(GLsizei,GLuint*);
+extern RTSGLGenRenderbuffersProc rtsGlGenRenderbuffers;
+using RTSGLBindRenderbufferProc=void (APIENTRY *)(GLenum,GLuint);
+extern RTSGLBindRenderbufferProc rtsGlBindRenderbuffer;
+using RTSGLRenderbufferStorageProc=void (APIENTRY *)(GLenum,GLenum,GLsizei,GLsizei);
+extern RTSGLRenderbufferStorageProc rtsGlRenderbufferStorage;
+using RTSGLFramebufferRenderbufferProc=void (APIENTRY *)(GLenum,GLenum,GLenum,GLuint);
+extern RTSGLFramebufferRenderbufferProc rtsGlFramebufferRenderbuffer;
+using RTSGLDeleteRenderbuffersProc=void (APIENTRY *)(GLsizei,const GLuint*);
+extern RTSGLDeleteRenderbuffersProc rtsGlDeleteRenderbuffers;
+
 bool loadOpenGLFunctions();
