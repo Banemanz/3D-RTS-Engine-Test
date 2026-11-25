@@ -634,3 +634,16 @@ textured primitives** via a backwards-compatible `RTSMESH2` cache. There is
 still no animation, scene hierarchy or full PBR. The original
 [dual-material beacon showcase](projects/multi_material_showcase.rtsproject.json)
 demonstrates a PNG-textured blue body and a separate amber upper section. See [native import](docs/NATIVE_ASSET_IMPORT.md).
+
+## November 25 — static scene assemblies and searchable asset inspection
+
+The native importer now bakes a bounded glTF node forest into the existing
+RTSMESH1/2 geometry and material draw ranges. Group nodes, child transforms
+and repeated meshes are supported. The original authored scene stays glTF;
+compiled files do not retain node names or runtime animation/attachment
+transforms. F7 adds asset path search, an invalid-only filter and expandable
+model-space bounds and decoded texture byte counts. The headless CLI
+regression verifies nested nonuniform scale and 45-degree rotation,
+inverse-transpose normals, repeated index ranges, GLB parity, unreachable
+nodes and invalid graph rejection. See [Native asset import](docs/NATIVE_ASSET_IMPORT.md)
+for the current contract.

@@ -57,6 +57,7 @@ def main() -> int:
         "docs/NATIVE_ASSET_IMPORT.md",
         "examples/beacon.gltf",
         "examples/beacon_dual.gltf",
+        "examples/beacon_assembly.gltf",
         "licenses/CGLTF_LICENSE",
         "licenses/STB_LICENSE",
         "docs/AUTHORING.md",

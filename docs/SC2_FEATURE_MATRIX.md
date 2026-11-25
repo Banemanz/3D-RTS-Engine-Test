@@ -515,3 +515,13 @@ import cross-platform regressions cover both cache versions. Original
 blue/amber surfaces. This still falls short of a Galaxy-style model data
 module: there is no hierarchy, articulated rig, animation controller,
 material graph, attachment socket authoring, or full imported-scene editor.
+
+## November 25 — static assembly import and F7 geometry details
+
+The native model pipeline accepts a bounded tree of static scene nodes,
+including group transforms and repeated mesh instances. F7 now offers
+path search, invalid-only filtering, and expandable actual compiled model
+bounds/material image totals. These are concrete steps toward a model
+inspection module, not a complete Galaxy Model Data Viewer: runtime node
+identities, attachment editing, animation preview and material graphs
+remain missing.

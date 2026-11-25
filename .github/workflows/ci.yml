@@ -429,6 +429,21 @@ jobs:
           name: rts-dual-material-f9-screenshot
           path: rts-dual-material.png
           if-no-files-found: error
+      - name: Render native imported static node assembly in the game
+        run: |
+          ./build/RTSProjectTool --import-gltf assets/source/beacon_assembly.gltf projects/multi_material_showcase.rtsproject.json assets/assembly_ci.rtsmesh
+          python3 -c "from pathlib import Path; p=Path('projects/multi_material_showcase.rtsproject.json'); Path('projects/assembly_ci.rtsproject.json').write_text(p.read_text().replace('assets/beacon_dual.rtsmesh','assets/assembly_ci.rtsmesh'))"
+          ./build/RTSProjectTool --validate projects/assembly_ci.rtsproject.json
+          ./build/RTSProjectTool --asset-report projects/assembly_ci.rtsproject.json
+          xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/assembly_ci.rtsproject.json --smoke-frames 95 --screenshot rts-assembly-f9.ppm
+          python3 tools/ppm_to_png.py rts-assembly-f9.ppm rts-assembly-f9.png
+          rm projects/assembly_ci.rtsproject.json projects/assets/assembly_ci.rtsmesh
+      - name: Upload actual native scene assembly capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: rts-assembly-f9-screenshot
+          path: rts-assembly-f9.png
+          if-no-files-found: error
       - name: Capture actual F10 Interface Editor as a native OS window
         run: xvfb-run -a -s "-screen 0 2600x1050x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --interface-editor --smoke-module-windows --smoke-ui-scale 1.25 --project projects/interface_studio_showcase.rtsproject.json --smoke-frames 95 --screenshot rts-interface-f10.ppm
       - name: Convert native F10 Interface Editor screenshot

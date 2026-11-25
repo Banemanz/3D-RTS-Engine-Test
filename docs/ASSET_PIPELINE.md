@@ -153,3 +153,16 @@ layout in [Native Import](NATIVE_ASSET_IMPORT.md).
 maps, normal maps, scene animation/skeletons, streaming and production LOD.
 Older sections above document the historic single-primitive milestone;
 the native multi-material stage here supersedes those limitations.
+
+## November 25 — static scene assemblies and searchable asset inspection
+
+The native importer now bakes a bounded glTF node forest into the existing
+RTSMESH1/2 geometry and material draw ranges. Group nodes, child transforms
+and repeated meshes are supported. The original authored scene stays glTF;
+compiled files do not retain node names or runtime animation/attachment
+transforms. F7 adds asset path search, an invalid-only filter and expandable
+model-space bounds and decoded texture byte counts. The headless CLI
+regression verifies nested nonuniform scale and 45-degree rotation,
+inverse-transpose normals, repeated index ranges, GLB parity, unreachable
+nodes and invalid graph rejection. See [Native asset import](NATIVE_ASSET_IMPORT.md)
+for the current contract.

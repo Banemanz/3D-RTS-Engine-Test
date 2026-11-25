@@ -264,7 +264,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
         const double cof[9]={e*i0-f*h,c*h-b*i0,b*f-c*e,
                              f*g-d0*i0,a*i0-c*g,c*d0-a*f,
                              d0*h-e*g,b*g-a*h,a*e-b*d0};
-        // cof above is inverse-transpose in row-major order.
+        // cof stores the cofactor (inverse-transpose numerator) in column-major order.
         const double det=a*cof[0]+b*cof[3]+c*cof[6];
         need(std::isfinite(det) && det>1e-18,
              "Singular or mirrored composed node transform");

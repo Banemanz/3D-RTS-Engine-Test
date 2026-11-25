@@ -421,6 +421,7 @@ endif()
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon.gltf"
     "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon_dual.gltf"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon_assembly.gltf"
     DESTINATION "examples")
 install(TARGETS RTSProjectTool RUNTIME DESTINATION ".")
 if(RTS_BUILD_DEMO)

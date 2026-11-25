@@ -27,12 +27,15 @@ RTSProjectTool --import-gltf examples/beacon.gltf projects/my_map.rtsproject.jso
 
 ## Supported contract
 
-- glTF 2.0 JSON and binary GLB, **one root mesh node with 1–32 triangle
-  primitives**, each with its own opaque material and optional PNG/JPEG albedo.
+- glTF 2.0 JSON and binary GLB, one scene with up to 128 nodes, 32 distinct
+  meshes and 32 combined triangle primitive draws. Each draw has its own
+  opaque material and optional PNG/JPEG albedo. Empty groups and repeated
+  mesh instances are supported; every node must be reachable exactly once.
 - POSITION and NORMAL float32 attributes; optional UV0 (float or normalized
   unsigned byte/short). Indexed unsigned byte/short/int or nonindexed triangles.
 - Translation, normalized quaternion rotation and positive nonuniform scale.
-  Positions are baked; normals use the inverse transpose then normalization.
+  Parent transforms compose before positions are baked; normals use the full
+  composed inverse transpose then normalization.
 - Base color tint and optional PNG/JPEG image, embedded URI, GLB bufferView
   or relative external file. One opaque single-sided material, repeat wrapping
   and linear filtering. glTF OPAQUE ignores image/factor alpha. An imported
@@ -46,7 +49,7 @@ RTSProjectTool --import-gltf examples/beacon.gltf projects/my_map.rtsproject.jso
 ambient/diffuse preview; scalar metallic/roughness values have no effect.
 Normal/occlusion/emissive/metallic-roughness maps, nondefault samplers,
 material extensions, alpha blending/cutout, double-sided rendering,
-hierarchy, matrices, mirrored/singular scales, skins,
+node matrices, mirrored/singular scales, skins,
 animations, morphs, sparse accessors and extra vertex attributes are rejected.
 The Python converter remains available with its older, narrower transform
 and image contract; native import is now the preferred creator workflow.
@@ -127,10 +130,10 @@ Recoil source was copied:
 https://recoilengine.org/docs/guides/getting-started/blender-gltf-import/
 https://github.com/beyond-all-reason/RecoilEngine/blob/master/rts/Rendering/Models/GLTFParser.cpp
 
-Next: scene node hierarchy, preview turntable/bounds, source manifest/content
-hash/reimport, background import jobs, GPU material texture deduplication,
+Next: retained node identities and sockets, rendered preview turntable, source
+manifest/content hash/reimport, background import jobs, texture deduplication,
 PBR/sRGB/alpha rendering, then skeletons/clips and actor animation events.
-Multi-primitive static import is implemented; full glTF/PBR parity is not.
+Static scene assembly import is implemented; full glTF/PBR parity is not.
 
 ## November 25 — static scene assemblies and asset inspection
 

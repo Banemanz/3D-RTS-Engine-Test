@@ -90,7 +90,7 @@ with tempfile.TemporaryDirectory() as tmp:
     hierarchy['nodes']=[
         {'name':'Assembly','translation':[3,4,5],'scale':[2,3,4],'children':[1,2]},
         {'name':'Rotated body','mesh':0,'translation':[1,2,3],
-         'rotation':[0,math.sqrt(.5),0,math.sqrt(.5)]},
+         'rotation':[0,math.sin(math.pi/8),0,math.cos(math.pi/8)]},
         {'name':'Second instance','mesh':0,'translation':[-2,0,0]}]
     hierarchy['scenes']=[{'nodes':[0]}]
     hierarchy['scene']=0
@@ -100,8 +100,10 @@ with tempfile.TemporaryDirectory() as tmp:
     for j in range(vertex_count):
         a=struct.unpack_from('<8f',result,40+j*32)
         b=struct.unpack_from('<8f',nested,24+j*32)
-        expected=(3+2*(a[2]+1),4+3*(a[1]+2),5+4*(-a[0]+3))
-        normal=(a[5]/2,a[4]/3,-a[3]/4)
+        c=math.sqrt(.5)
+        expected=(3+2*(c*(a[0]+a[2])+1),4+3*(a[1]+2),
+                  5+4*(c*(-a[0]+a[2])+3))
+        normal=(c*(a[3]+a[5])/2,a[4]/3,c*(-a[3]+a[5])/4)
         length=math.sqrt(sum(x*x for x in normal))
         expected+=tuple(x/length for x in normal)+a[6:]
         assert all(abs(x-y)<2e-5 for x,y in zip(expected,b)),(expected,b)
@@ -110,6 +112,23 @@ with tempfile.TemporaryDirectory() as tmp:
         assert all(abs(x-y)<2e-5 for x,y in zip(expected2,second[:3]))
     idx=struct.unpack_from('<96I',nested,24+64*32)
     assert all(idx[j]+32==idx[48+j] for j in range(48))
+    # Binary GLB follows the identical assembly path.
+    hierarchy_glb=copy.deepcopy(hierarchy)
+    body=base64.b64decode(hierarchy_glb['buffers'][0].pop('uri').split(',')[1])
+    doc=json.dumps(hierarchy_glb).encode()
+    doc+=b' '*(-len(doc)%4)
+    body+=b'\0'*(-len(body)%4)
+    hierarchy_file=folder/'hierarchy.glb'
+    hierarchy_file.write_bytes(b'glTF'+struct.pack('<II',2,28+len(doc)+len(body))+
+        struct.pack('<I4s',len(doc),b'JSON')+doc+
+        struct.pack('<I4s',len(body),b'BIN\0')+body)
+    assert run(hierarchy_file,project,'assets/hierarchy_glb.rtsmesh').read_bytes()==nested
+    # Original scene fixture separates the two beacon primitives into nodes.
+    assembly=run(root/'assets/source/beacon_assembly.gltf',project,
+                 'assets/assembly.rtsmesh').read_bytes()
+    assert assembly[:8]==b'RTSMESH2'
+    assert struct.unpack_from('<IIII',assembly,8)==(64,96,2,0)
+    assert struct.unpack_from('<IIII',assembly,24+64*32+96*4)==(0,48,2,2)
     # Different source mesh objects, not only instances of a shared mesh.
     separate=copy.deepcopy(hierarchy)
     separate['meshes'].append(copy.deepcopy(separate['meshes'][0]))
