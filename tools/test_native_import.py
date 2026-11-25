@@ -302,4 +302,26 @@ with tempfile.TemporaryDirectory() as tmp:
     for ref in ('../escape.rtsmesh','assets/../escape.rtsmesh','assets/bad name.rtsmesh'):
         run(source, project, ref, False)
     assert not list(project.parent.rglob('*.importing'))
+# Native command-line pose export: independently verify the authored 1.5s
+# sample, loop wrapping, unchanged body surface, and mounted child position.
+showcase=root/'projects/rigid_animation_showcase.rtsproject.json'
+def actor_pose(seconds,ok=True):
+    process=subprocess.run([exe,'--actor-pose',str(showcase),'dual_beacon_actor',str(seconds)],
+                           capture_output=True,text=True,timeout=15)
+    assert (process.returncode==0)==ok,process.stdout+process.stderr
+    return json.loads(process.stdout) if ok else None
+pose=actor_pose(1.5)
+assert abs(pose['time']-1.5)<1e-6
+assert [n['name'] for n in pose['nodes']]==['Beacon assembly','Signal body','Cap support','Amber cap']
+support=pose['nodes'][2]['model']
+assert all(abs(a-b)<1e-5 for a,b in zip(support[12:15],[.625,.95,0])),support
+assert pose['surfaceDeltas'][0]==[1 if i%5==0 else 0 for i in range(16)]
+assert pose['attachments'][0]['socket']=='Amber cap'
+cap=pose['nodes'][3]['model']
+# Local attachment offset is exactly [0,1,0], so child origin equals
+# the cap's transformed Y basis plus its translation.
+assert all(abs(pose['attachments'][0]['transform'][12+i]-(cap[12+i]+cap[4+i]))<1e-5 for i in range(3))
+assert actor_pose(5.5)==pose
+actor_pose('nan',False)
+actor_pose('1.5junk',False)
 print('Native glTF/GLB: byte parity, transforms, local resources, no overwrite and malformed-input rollback passed')

@@ -78,7 +78,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/asset_import_showcase.rtsproject.json"
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/assets/beacon.rtsmesh")
     add_executable(RTSRigidAnimationTests tests/rigid_animation_tests.cpp)
-    target_link_libraries(RTSRigidAnimationTests PRIVATE RTSAuthoring)
+    target_link_libraries(RTSRigidAnimationTests PRIVATE RTSSimulation)
     add_test(NAME rigid_animation COMMAND RTSRigidAnimationTests
         "${CMAKE_CURRENT_SOURCE_DIR}/../assets/source/beacon_assembly.gltf"
         "${CMAKE_CURRENT_SOURCE_DIR}/../projects/model_studio_showcase.rtsproject.json")

@@ -209,3 +209,50 @@ not part of map undo. Keep original source files separately.
 Open `projects/model_studio_showcase.rtsproject.json` in the portable
 bundle to inspect the four-node assembly, independently rendered mounted
 child model, and F7 Model Viewer without preparing assets manually.
+
+## November 25 — rigid animation and live model sockets
+
+The existing RTSMESH3 bind geometry and retained node matrices support
+rigid part animation without a binary format change. Actor field
+`rigid_clip` is an inherited object with `duration` (0.05..600 seconds),
+`loop` (boolean) and up to 16 uniquely named node tracks. Each track
+contains 1..64 strictly increasing keyframe times in the clip interval,
+with local translation offset, Euler XYZ angles (degrees, explicitly
+interpolated even across a full 360 degree rotation) and positive scale.
+Missing transform components default to zero offset/rotation and unit
+scale. No source glTF animation channels, skeletons or vertex skinning
+are imported yet.
+
+A track transforms the original node local matrix by T * Rz * Ry * Rx * S.
+Parent-first composition yields the posed model matrix; each owned
+surface draws baked vertices through posedModel * inverseBindModel.
+Unaffected surfaces use an exact identity delta. Child attachments use
+the same posed socket matrices. Inverse bind matrices are precomputed
+when the renderer loads its asset; the pose uses bounded stack arrays.
+Unresolvable or numerically invalid poses fall back to the bind model.
+The project asset audit diagnoses missing/ambiguous animation nodes and
+noninvertible bind matrices. Runtime animation is presentation only,
+sampled on the global fixed simulation clock (60 ticks/s); all matching
+actors share that clock. Nonloop clips clamp, rather than restart.
+The simulation does not store or hash pose matrices.
+
+F7 Actor properties contain a typed keyframe editor with node picker,
+duration/loop, track and key add/delete, sortable key times, and
+transactional Apply. The Model Viewer can choose a matching Actor,
+display its attached models, play/pause/rewind and scrub the clip while
+selected axes follow the sampled pose. Bounds shown remain bind-pose
+bounds. The preview has an independent clock and does not advance the
+game. Preview caches at most one parent and its eight child Model assets.
+`RTSProjectTool --actor-pose project actor-id seconds` emits JSON with
+posed node matrices, surface deltas and mounted child transforms.
+`projects/rigid_animation_showcase.rtsproject.json` demonstrates
+a rotating, translating, tilting cap assembly with a moving attachment.
+The old static showcase is unchanged.
+
+Regression coverage: affine inverse and propagation, interpolation and
+loop/clamp, static surface preservation, posed attachment origins,
+invalid track/node handling, undo/redo, independent CLI expectations,
+same simulation hashes with animation enabled/disabled and replay
+verification. CI captures the actual preview and fixed-tick F9 game.
+Next major work: imported quaternion TRS channels and multiple named
+clips, per-Actor playback/event state and blending, then skinning/rigs.

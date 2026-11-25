@@ -684,3 +684,13 @@ A failed compile leaves the existing file untouched. All old unique named
 nodes must remain uniquely resolvable in the replacement. No source
 manifest or automatic dependency tracking yet. Asset file replacement is
 not part of map undo. Keep original source files separately.
+
+### Rigid part animation
+
+Author and preview local transform keyframes for retained RTSMESH3
+model nodes in F7. Animated surfaces and attached Models move together,
+without changing authoritative gameplay. Open
+`projects/rigid_animation_showcase.rtsproject.json`; use F7 Model
+Viewer and select the Actor for playback/scrubbing. The headless
+`RTSProjectTool --actor-pose` command exposes numerical poses.
+See [asset pipeline](docs/ASSET_PIPELINE.md) for limitations and schema.

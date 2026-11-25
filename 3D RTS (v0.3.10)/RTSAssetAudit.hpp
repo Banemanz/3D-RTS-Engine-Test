@@ -88,6 +88,11 @@ inline RTSAssetAudit rtsAuditProjectAssets(
         if(parent!=cache.end() && parent->second.error.empty())nodes=&parent->second.nodes;
         else try{extra=rtsReadStaticMesh(rtsResolveMeshReference(projectPath,actor.mesh)).nodes;nodes=&extra;}
              catch(const std::exception&){}
+        if(!actor.rigidClip.tracks.empty() && nodes && !RTSRigidRig(*nodes).valid){
+            RTSAssetAuditRow row;row.modelId=id;row.reference=actor.mesh;
+            row.error="Animation bind transforms cannot be inverted";
+            report.rows.push_back(std::move(row));
+        }
         for(const auto& track:actor.rigidClip.tracks){
             if(!nodes || !rtsFindUniqueModelNode(*nodes,track.node)){
                 RTSAssetAuditRow row;row.modelId=id;row.reference=actor.mesh;

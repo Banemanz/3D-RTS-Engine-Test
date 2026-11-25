@@ -109,8 +109,12 @@ inline RTSRigidPose rtsSampleRigidPose(const std::vector<RTSModelNode>& nodes,
         if(tracks[j])local=local*rtsRigidDelta(rtsSampleRigidTrack(*tracks[j],time));
         pose.model[j]=n.parent==RTS_MODEL_ROOT?local:pose.model[n.parent]*local;
         const Mat4 delta=pose.model[j]*rig.inverseBind[j];
-        for(float f:pose.model[j].m)if(!std::isfinite(f)||std::abs(f)>1e9f)return RTSRigidPose{};
-        for(float f:delta.m)if(!std::isfinite(f)||std::abs(f)>1e9f)return RTSRigidPose{};
+        // Protect the shader's inverse-transpose normal calculation even
+        // when valid individual key scales compose into an extreme hierarchy.
+        std::array<float,16> modelArray{},deltaArray{};
+        std::copy_n(pose.model[j].m,16,modelArray.begin());
+        std::copy_n(delta.m,16,deltaArray.begin());
+        if(!rtsValidNodeMatrix(modelArray)||!rtsValidNodeMatrix(deltaArray))return RTSRigidPose{};
         for(std::uint32_t s=0;s<n.surfaceCount;++s)pose.surfaceDelta[n.firstSurface+s]=delta;
     }
     pose.valid=true;return pose;

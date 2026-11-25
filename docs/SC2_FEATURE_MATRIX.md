@@ -534,3 +534,12 @@ reference migration and socket audit. Manual explicit reimport preserves
 the existing asset path and old unique socket names. Still missing full
 material editor, rig/animation, articulation, automatic source dependency
 tracking, and non-ImGui editor backend.
+
+## Rigid part animation milestone
+
+Actor-authored keyframe clips animate retained RTSMESH3 nodes and their
+descendant geometry/socket-mounted Models. F7 typed track/key editing
+and Model Viewer playback/scrubbing are real, plus headless pose export.
+Still absent: imported animation sequences, skeletal skinning,
+multiple clips and event-driven transition state, animation graphs,
+a standalone native editor backend and material/PBR parity.

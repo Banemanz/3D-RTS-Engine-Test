@@ -225,7 +225,7 @@ bool draw(App& app){
         }
         ImGui::OpenPopup("Model viewer");
     }
-    ImGui::SetNextWindowSize(ImVec2(1040,620),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(1040,650),ImGuiCond_FirstUseEver);
     if(ImGui::BeginPopupModal("Model viewer",nullptr,ImGuiWindowFlags_NoSavedSettings)){
         const auto found=std::find_if(browser.records.begin(),browser.records.end(),
             [&](const RTSAssetRecord& a){return a.reference==browser.nodeAsset;});

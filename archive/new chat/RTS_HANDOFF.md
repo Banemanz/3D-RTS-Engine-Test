@@ -2732,3 +2732,23 @@ and assets/beacon_assembly.rtsmesh. Compiled locally with the previously
 verified 45394870 Linux RTSProjectTool and verified in native byte-parity
 regression. Fixed dynamic string diagnostic compile error in staged
 reimport, protected legacy audit diagnostics, added positive showcase audit.
+
+## November 25 — rigid animation runtime and model studio timeline
+
+Starting exact ef3c6cd5; all three previous workflows
+45710210004 / 45710209958 / 45710226048 green. Same draft PR #1.
+b8ddd259 added RTSRigidAnimation.hpp with cached inverse bind matrices,
+bounded pose arrays, local TRS deltas, hierarchy propagation, per-surface
+model deltas and synchronized posed attachments. Actor.rigid_clip typed
+catalog, instance override and Unit initialization integration; audit
+checks node names. fb95902f added CreatorRigidClip.hpp typed F7 tracks
+and keyframes, Actor selection/timeline in Model Viewer, CLI
+--actor-pose, packaged rigid_animation_showcase and screenshot gates.
+This followup expands regression to compare animated/static Unit
+simulation hashes and verify replay, tests CLI numerical output and
+protects against extreme composed affine transforms. See asset docs.
+No RTSMESH format change. Runtime uses global 60Hz clock; preview own
+clock. One rigid clip per Actor, no native glTF animation import,
+skeletal skinning, clip state transitions or blending yet. Next pass
+should handle those rather than repeat rigid articulation. Check exact
+HEAD workflows and genuine screenshots; no new PR and no merge.
