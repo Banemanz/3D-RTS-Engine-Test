@@ -15,8 +15,19 @@ struct RTSAssetRecord {
     std::uint32_t triangles=0;
     std::uint32_t textureWidth=0,textureHeight=0;
     std::uint32_t surfaces=0;
+    std::array<float,3> minimum{{0,0,0}},maximum{{0,0,0}};
+    std::uint64_t imageBytes=0;
+    std::uint32_t texturedSurfaces=0;
     bool valid()const{return error.empty();}
 };
+// Locale-independent ASCII filtering matches the portable asset path rules.
+inline bool rtsAssetMatches(const RTSAssetRecord& asset,const std::string& query){
+    const auto fold=[](std::string s){
+        for(char& c:s)if(c>='A' && c<='Z')c=char(c-'A'+'a');
+        return s;
+    };
+    return fold(asset.reference).find(fold(query))!=std::string::npos;
+}
 inline std::vector<RTSAssetRecord> rtsDiscoverStaticAssets(
     const std::filesystem::path& projectFile,std::size_t limit=192){
     namespace fs=std::filesystem;
@@ -55,6 +66,19 @@ inline std::vector<RTSAssetRecord> rtsDiscoverStaticAssets(
                             mesh.surfaces.front().width;
                         item.textureHeight=mesh.surfaces.empty()?mesh.height:
                             mesh.surfaces.front().height;
+                        for(int a=0;a<3;++a)
+                            item.minimum[a]=item.maximum[a]=mesh.vertices[a];
+                        for(std::size_t v=0;v<mesh.vertices.size();v+=8)
+                            for(int a=0;a<3;++a){
+                                item.minimum[a]=std::min(item.minimum[a],mesh.vertices[v+a]);
+                                item.maximum[a]=std::max(item.maximum[a],mesh.vertices[v+a]);
+                            }
+                        item.imageBytes=mesh.albedo.size();
+                        item.texturedSurfaces=mesh.albedo.empty()?0u:1u;
+                        for(const auto& part:mesh.surfaces){
+                            item.imageBytes+=part.albedo.size();
+                            if(!part.albedo.empty())++item.texturedSurfaces;
+                        }
                     }catch(const std::exception& ex){item.error=ex.what();}
                     out.push_back(std::move(item));
                     if(out.size()>=limit)break;

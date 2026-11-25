@@ -13,6 +13,8 @@
 #include <cstdlib>
 #include <memory>
 #include <set>
+#include <array>
+#include <map>
 
 namespace {
 constexpr std::size_t maxBytes=64*1024*1024;
@@ -144,14 +146,53 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     auto& d=*parsed;
     need(d.extensions_used_count==0 && d.extensions_required_count==0,"glTF extensions are not supported by this static compiler");
     need(!d.skins_count && !d.animations_count,"Skins and animation require the future animated asset pipeline");
-    need(d.meshes_count==1 && d.meshes[0].primitives_count>=1 &&
-         d.meshes[0].primitives_count<=32,
-         "Static import supports one mesh containing 1..32 triangle primitives");
-    need(d.nodes_count==1 && d.nodes[0].mesh==&d.meshes[0] &&
-         !d.nodes[0].children_count && !d.nodes[0].skin && !d.nodes[0].has_mesh_gpu_instancing,
-         "Export one root mesh node; scene hierarchies are not yet supported");
-    need(d.scenes_count<=1 && (!d.scenes_count ||
-         (d.scenes[0].nodes_count==1 && d.scenes[0].nodes[0]==&d.nodes[0])),"Export a single scene containing the mesh");
+    need(d.meshes_count>=1 && d.meshes_count<=32 &&
+         d.nodes_count>=1 && d.nodes_count<=128,
+         "Static scenes support 1..128 nodes and 1..32 meshes");
+    need(d.scenes_count<=1,"Export one scene at a time");
+    // Traverse an explicitly bounded forest before cgltf validation or
+    // world-transform helpers. Every node must occur exactly once.
+    std::vector<const cgltf_node*> order;
+    std::set<const cgltf_node*> visited;
+    const auto addNode=[&](const cgltf_node* n){
+        need(n && visited.insert(n).second,
+             "Repeated node or cycle in static scene");
+        order.push_back(n);
+    };
+    if(d.scenes_count){
+        const auto& scene=d.scenes[0];
+        for(std::size_t i=0;i<scene.nodes_count;++i){
+            need(scene.nodes[i] && !scene.nodes[i]->parent,
+                 "Scene root cannot have a parent");
+            addNode(scene.nodes[i]);
+        }
+    }else{
+        for(std::size_t i=0;i<d.nodes_count;++i)
+            if(!d.nodes[i].parent)addNode(&d.nodes[i]);
+    }
+    for(std::size_t i=0;i<order.size();++i){
+        const auto* n=order[i];
+        need(!n->skin && !n->has_mesh_gpu_instancing && !n->weights_count,
+             "Skinning, morph weights and GPU instancing are unsupported");
+        for(std::size_t c=0;c<n->children_count;++c){
+            need(n->children[c] && n->children[c]->parent==n,
+                 "Invalid node parent relationship");
+            addNode(n->children[c]);
+        }
+    }
+    need(order.size()==d.nodes_count,"Scene contains unreachable nodes or a cycle");
+    std::set<const cgltf_mesh*> usedMeshes;
+    std::size_t totalSurfaces=0;
+    for(const auto* n:order){
+        if(!n->mesh)continue;
+        usedMeshes.insert(n->mesh);
+        need(n->mesh->primitives_count>=1 &&
+             n->mesh->primitives_count<=32-totalSurfaces,
+             "Combined static scene exceeds 32 material surfaces");
+        totalSurfaces+=n->mesh->primitives_count;
+    }
+    need(totalSurfaces>0 && usedMeshes.size()==d.meshes_count,
+         "Scene must reference every mesh and contain geometry");
     need(!d.cameras_count && !d.lights_count,"Export mesh selection without cameras or lights");
     need(d.buffers_count>0 && d.buffers_count<=32 && d.buffer_views_count<=256 && d.accessors_count<=256,
          "Too many buffers, views or accessors");
@@ -179,28 +220,60 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     // Preflight arithmetic before calling parser helpers that read accessor memory.
     for(std::size_t i=0;i<d.accessors_count;++i)checkAccessor(d.accessors[i]);
     need(cgltf_validate(&d)==cgltf_result_success,"glTF validation failed");
-    const auto& node=d.nodes[0];
-    need(!node.has_matrix,"Bake node matrices to TRS before import");
-    double rotationLength=0;
-    for(float f:node.rotation){
-        need(std::isfinite(f),"Invalid node rotation");
-        rotationLength+=double(f)*f;
-    }
-    need(std::abs(rotationLength-1)<0.001,"Node quaternion must be normalized");
-    for(float f:node.scale)
-        need(std::isfinite(f) && f>0,"Node scale must be finite and positive");
-    float matrix[16];
-    cgltf_node_transform_local(&node,matrix);
-    for(float f:matrix)need(std::isfinite(f),"Invalid node transform");
-
+    // Flatten the forest into static model-space geometry. Named nodes and
+    // local transforms remain in the authoring glTF, not in RTSMESH1/2.
+    // Parent-first order avoids recursive traversal of attacker-authored data.
+    std::map<const cgltf_node*,std::array<float,16>> transforms;
     RTSStaticMesh result;
-    result.surfaces.reserve(d.meshes[0].primitives_count);
-    for(std::size_t primitiveIndex=0;
-        primitiveIndex<d.meshes[0].primitives_count;++primitiveIndex){
-        const auto& p=d.meshes[0].primitives[primitiveIndex];
+    result.surfaces.reserve(totalSurfaces);
+    std::size_t decodedBytes=0;
+    for(const auto* nodePtr:order){
+        const auto& node=*nodePtr;
+        need(!node.has_matrix,"Bake node matrices to TRS before import");
+        double rotationLength=0;
+        for(float f:node.rotation){
+            need(std::isfinite(f),"Invalid node rotation");
+            rotationLength+=double(f)*f;
+        }
+        need(std::abs(rotationLength-1)<0.001,"Node quaternion must be normalized");
+        for(float f:node.scale)
+            need(std::isfinite(f) && f>0,"Node scale must be finite and positive");
+        std::array<float,16> local{},matrix{};
+        cgltf_node_transform_local(&node,local.data());
+        for(float f:local)need(std::isfinite(f),"Invalid node transform");
+        if(node.parent){
+            const auto& parent=transforms.at(node.parent);
+            for(int c=0;c<4;++c)for(int r=0;r<4;++r){
+                double sum=0;
+                for(int k=0;k<4;++k)
+                    sum+=double(parent[k*4+r])*local[c*4+k];
+                matrix[c*4+r]=static_cast<float>(sum);
+            }
+        }else matrix=local;
+        for(float f:matrix)
+            need(std::isfinite(f) && std::abs(f)<1e7f,
+                 "Invalid or oversized world transform");
+        transforms.emplace(nodePtr,matrix);
+        if(!node.mesh)continue;
+        // Inverse transpose of the full composed 3x3, including shear
+        // introduced by nested rotations and nonuniform scales. Columns
+        // are cross products of the other two matrix columns.
+        const double a=matrix[0],b=matrix[4],c=matrix[8],
+                     d0=matrix[1],e=matrix[5],f=matrix[9],
+                     g=matrix[2],h=matrix[6],i0=matrix[10];
+        const double cof[9]={e*i0-f*h,c*h-b*i0,b*f-c*e,
+                             f*g-d0*i0,a*i0-c*g,c*d0-a*f,
+                             d0*h-e*g,b*g-a*h,a*e-b*d0};
+        // cof above is inverse-transpose in row-major order.
+        const double det=a*cof[0]+b*cof[3]+c*cof[6];
+        need(std::isfinite(det) && det>1e-18,
+             "Singular or mirrored composed node transform");
+        for(std::size_t primitiveIndex=0;
+            primitiveIndex<node.mesh->primitives_count;++primitiveIndex){
+        const auto& p=node.mesh->primitives[primitiveIndex];
         need(p.type==cgltf_primitive_type_triangles &&
              !p.has_draco_mesh_compression && !p.targets_count &&
-             !d.meshes[0].weights_count,
+             !node.mesh->weights_count,
              "Only static triangle primitives are supported");
         const cgltf_accessor *positions=nullptr,*normals=nullptr,*uvs=nullptr;
         for(std::size_t i=0;i<p.attributes_count;++i){
@@ -253,7 +326,17 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
                 out[r]=matrix[12+r];
                 for(int c=0;c<3;++c){
                     out[r]+=matrix[c*4+r]*v[c];
-                    out[3+r]+=matrix[c*4+r]*n[c]/(node.scale[c]*node.scale[c]);
+                    // Keep historic root TRS arithmetic for exact v1/v2 bytes.
+                    if(!node.parent)
+                        out[3+r]+=matrix[c*4+r]*n[c]/(node.scale[c]*node.scale[c]);
+                }
+            }
+            if(node.parent){
+                for(int r=0;r<3;++r){
+                    double normal=0;
+                    for(int c=0;c<3;++c)
+                        normal+=cof[c*3+r]*n[c]/det;
+                    out[3+r]=static_cast<float>(normal);
                 }
             }
             const double length=std::sqrt(double(out[3])*out[3]+
@@ -325,6 +408,12 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
                          static_cast<int>(bytes.size()),&w,&h,&channels) &&
                      w>0 && h>0 && w<=2048 && h<=2048,
                      "Invalid PNG/JPEG image or dimensions exceed 2048");
+                const auto imageBytes=static_cast<std::size_t>(w)*h*4;
+                // Reject before decoding: 32 references to a large texture
+                // must not consume hundreds of MiB before the writer notices.
+                need(imageBytes<=118ull*1024*1024-decodedBytes,
+                     "Combined decoded material images exceed static asset budget");
+                decodedBytes+=imageBytes;
                 stbi_uc* pixels=stbi_load_from_memory(
                     bytes.data(),static_cast<int>(bytes.size()),&w,&h,&channels,4);
                 need(pixels,"PNG/JPEG decode failed");
@@ -339,6 +428,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
             }
         }
         result.surfaces.emplace_back(std::move(surface));
+        }
     }
     if(result.surfaces.size()==1){
         // Single primitive is deliberately serialized in historic RTSMESH1.

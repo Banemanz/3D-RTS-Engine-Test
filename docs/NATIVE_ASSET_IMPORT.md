@@ -131,3 +131,21 @@ Next: scene node hierarchy, preview turntable/bounds, source manifest/content
 hash/reimport, background import jobs, GPU material texture deduplication,
 PBR/sRGB/alpha rendering, then skeletons/clips and actor animation events.
 Multi-primitive static import is implemented; full glTF/PBR parity is not.
+
+## November 25 — static scene assemblies and asset inspection
+
+Native import now accepts one scene containing up to 128 TRS nodes, 32
+distinct meshes and 32 combined primitive draw surfaces, including empty
+group nodes and multiple instances of one source mesh. Parent transforms
+are composed before geometry is baked; nested rotated/nonuniformly scaled
+normals use the full inverse transpose. All nodes must be reachable once;
+cycles, repeated roots, disconnected nodes, unused meshes, matrices,
+skinning and animation are rejected. Legacy single-root bytes remain
+unchanged. Both RTSMESH1/2 remain unchanged; node names and transforms
+are **not** retained in the compiled resource, so this is static assembly
+import, not a runtime skeleton or attachment system. Aggregate decoded
+image storage is bounded before allocation (118 MiB plus bounded geometry).
+F7 adds case-insensitive path search, invalid-only filter, optional model
+bounds and decoded image memory totals. Scan remains explicit, not per frame.
+Nested TRS and repeated-mesh index rebasing have independent numerical CLI
+regressions. Older single-root limitations in the preceding text are historical.

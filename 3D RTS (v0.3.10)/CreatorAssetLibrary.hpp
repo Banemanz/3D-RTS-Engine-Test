@@ -17,6 +17,8 @@ struct Browser {
     bool ready=false;
     char source[2048]{};
     char output[128]="imported_model";
+    char filter[128]{};
+    bool invalidOnly=false;
     std::string importNotice;
     std::filesystem::path folder;
     std::vector<std::filesystem::directory_entry> files;
@@ -31,7 +33,7 @@ inline void drawImport(Browser& browser){
     }
     ImGui::SetNextWindowSize(ImVec2(620,540),ImGuiCond_FirstUseEver);
     if(!ImGui::BeginPopupModal("Import static model",nullptr,ImGuiWindowFlags_NoSavedSettings))return;
-    ImGui::TextWrapped("Choose a static mesh with normals and one material. PNG/JPEG base color is supported. Animation, hierarchies and PBR maps are not yet supported.");
+    ImGui::TextWrapped("Choose a static glTF scene with normals, up to 128 nodes and 32 material surfaces. PNG/JPEG base color is supported. Node TRS is baked; animation and PBR maps are not yet supported.");
     ImGui::TextWrapped("Folder: %s",browser.folder.u8string().c_str());
     if(ImGui::Button("Parent folder")){
         browser.folder=browser.folder.parent_path();browser.folderDirty=true;
@@ -101,6 +103,7 @@ bool draw(App& app){
         browser.projectPath=app.projectPath;
         browser.ready=false;
         browser.folder.clear();browser.importNotice.clear();
+        browser.filter[0]='\0';browser.invalidOnly=false;
     }
     if(!ImGui::CollapsingHeader("Imported 3D asset library",
                                ImGuiTreeNodeFlags_DefaultOpen))return false;
@@ -120,12 +123,19 @@ bool draw(App& app){
         "Native import and compiled assets require no Python installation.");
     if(browser.records.empty())
         ImGui::TextDisabled("No compiled models yet. Put them beside the map in assets/.");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputTextWithHint("##assetFilter","Search asset paths...",browser.filter,sizeof(browser.filter));
+    ImGui::Checkbox("Invalid assets only",&browser.invalidOnly);
     const float avail=ImGui::GetContentRegionAvail().y;
     ImGui::BeginChild("##compiledMeshLibrary",
         ImVec2(0,std::min(215.f*ImGui::GetFontSize()/16.5f,
-                          std::max(120.f*ImGui::GetFontSize()/16.5f,avail*.35f))),true);
+                          std::max(170.f*ImGui::GetFontSize()/16.5f,avail*.45f))),true);
+    std::size_t matched=0;
     for(std::size_t i=0;i<browser.records.size();++i){
         const auto& asset=browser.records[i];
+        if(!rtsAssetMatches(asset,browser.filter) ||
+           (browser.invalidOnly && asset.valid()))continue;
+        ++matched;
         ImGui::PushID(static_cast<int>(i));
         ImGui::TextWrapped("%s",asset.reference.c_str());
         if(!asset.valid()){
@@ -135,6 +145,19 @@ bool draw(App& app){
             ImGui::TextDisabled("%u tris, %u verts, %u materials, first texture %u x %u",
                 asset.triangles,asset.vertices,asset.surfaces,
                 asset.textureWidth,asset.textureHeight);
+            if(ImGui::TreeNode("Geometry details")){
+                ImGui::Text("Size: %.2f x %.2f x %.2f",
+                    asset.maximum[0]-asset.minimum[0],
+                    asset.maximum[1]-asset.minimum[1],
+                    asset.maximum[2]-asset.minimum[2]);
+                ImGui::Text("Min: %.2f, %.2f, %.2f",
+                    asset.minimum[0],asset.minimum[1],asset.minimum[2]);
+                ImGui::Text("Max: %.2f, %.2f, %.2f",
+                    asset.maximum[0],asset.maximum[1],asset.maximum[2]);
+                ImGui::Text("%u textured surfaces / %.2f MiB RGBA",
+                    asset.texturedSurfaces,double(asset.imageBytes)/(1024.0*1024.0));
+                ImGui::TreePop();
+            }
             if(ImGui::SmallButton("Register Model + Actor")){
                 if(app.editor.importStaticMesh(app.project,app.projectPath,
                                                asset.reference)){
@@ -147,6 +170,7 @@ bool draw(App& app){
         ImGui::Separator();
         ImGui::PopID();
     }
+    if(!matched)ImGui::TextDisabled("No matching assets.");
     ImGui::EndChild();
     ImGui::TextDisabled("Catalog registration is one undo step. Imported files remain on disk.");
     return false;

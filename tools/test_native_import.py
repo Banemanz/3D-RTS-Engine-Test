@@ -82,6 +82,54 @@ with tempfile.TemporaryDirectory() as tmp:
         expected += tuple(x/length for x in normal) + a[6:]
         assert all(abs(x-y) < 3e-6 for x,y in zip(expected,b)), (expected,b)
 
+
+    # Nested transforms: a parent nonuniform scale and rotated child
+    # create shear in model space. Independent analytic expectations
+    # verify positions, inverse-transpose normals and instance index bases.
+    hierarchy=copy.deepcopy(fixture)
+    hierarchy['nodes']=[
+        {'name':'Assembly','translation':[3,4,5],'scale':[2,3,4],'children':[1,2]},
+        {'name':'Rotated body','mesh':0,'translation':[1,2,3],
+         'rotation':[0,math.sqrt(.5),0,math.sqrt(.5)]},
+        {'name':'Second instance','mesh':0,'translation':[-2,0,0]}]
+    hierarchy['scenes']=[{'nodes':[0]}]
+    hierarchy['scene']=0
+    nested=compile_data(hierarchy,'hierarchy').read_bytes()
+    assert nested[:8]==b'RTSMESH2'
+    assert struct.unpack_from('<IIII',nested,8)==(64,96,2,0)
+    for j in range(vertex_count):
+        a=struct.unpack_from('<8f',result,40+j*32)
+        b=struct.unpack_from('<8f',nested,24+j*32)
+        expected=(3+2*(a[2]+1),4+3*(a[1]+2),5+4*(-a[0]+3))
+        normal=(a[5]/2,a[4]/3,-a[3]/4)
+        length=math.sqrt(sum(x*x for x in normal))
+        expected+=tuple(x/length for x in normal)+a[6:]
+        assert all(abs(x-y)<2e-5 for x,y in zip(expected,b)),(expected,b)
+        second=struct.unpack_from('<8f',nested,24+(vertex_count+j)*32)
+        expected2=(3+2*(a[0]-2),4+3*a[1],5+4*a[2])
+        assert all(abs(x-y)<2e-5 for x,y in zip(expected2,second[:3]))
+    idx=struct.unpack_from('<96I',nested,24+64*32)
+    assert all(idx[j]+32==idx[48+j] for j in range(48))
+    # Different source mesh objects, not only instances of a shared mesh.
+    separate=copy.deepcopy(hierarchy)
+    separate['meshes'].append(copy.deepcopy(separate['meshes'][0]))
+    separate['nodes'][2]['mesh']=1
+    assert compile_data(separate,'separate').read_bytes()==nested
+    # Disconnected nodes, repeated roots, over-budget instances and cycles.
+    disconnected=copy.deepcopy(hierarchy)
+    disconnected['nodes'].append({'name':'orphan'})
+    compile_data(disconnected,'disconnected',False)
+    repeated=copy.deepcopy(hierarchy)
+    repeated['scenes'][0]['nodes']=[0,0]
+    compile_data(repeated,'duplicate_root',False)
+    cycle=copy.deepcopy(hierarchy)
+    cycle['nodes'][1]['children']=[0]
+    compile_data(cycle,'cycle',False)
+    oversized=copy.deepcopy(fixture)
+    oversized['nodes']=[{'mesh':0} for _ in range(33)]
+    oversized['scenes']=[{'nodes':list(range(33))}]
+    compile_data(oversized,'too_many_surfaces',False)
+
     # Original solid-color JPEG fixture; no imaging library required to run tests.
     jpeg = copy.deepcopy(fixture)
     jpeg['images'][0]['uri'] = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAIBAQEBAQIBAQECAgICAgQDAgICAgUEBAMEBgUGBgYFBgYGBwkIBgcJBwYGCAsICQoKCgoKBggLDAsKDAkKCgr/2wBDAQICAgICAgUDAwUKBwYHCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgr/wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDg6KKK/kM/0UP/2Q=='

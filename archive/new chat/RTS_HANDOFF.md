@@ -2670,3 +2670,22 @@ Verification: MUST check latest exact HEAD Windows/Linux Release 99/99,
 Debug 99/99 and cross-platform replay and manually inspect dual-material
 screenshot; the PR must stay open, draft and unmerged. If tests fail, read
 job logs, patch same branch and rerun.
+
+## November 25 — static hierarchy import and model inspection
+
+Started from exact verified bab5bc936989b6b7049ff0d48aaf9b6dfc44f4e8
+on SAME open, unmerged draft PR #1. Reviewed recent commits, latest
+handoff, Galaxy Model Data Viewer/Data Editor/Importer screenshots and
+Recoil Blender glTF guide; see docs/EDITOR_REFERENCE_RESEARCH.md.
+Native compiler now validates a bounded single-scene forest (128 nodes,
+32 meshes, 32 total primitive draws), flattens repeated mesh instances
+and distinct meshes with parent-first TRS and composed inverse-transpose
+normal math, preserving historic root arithmetic and RTSMESH1/2 formats.
+All nodes must be reachable exactly once. Matrix nodes, animation and
+skin remain explicitly unsupported; compiled node identities are NOT
+retained. Texture image memory capped before decoding. F7 search,
+invalid-only filter and optional geometry bounds/texture statistics;
+headless library and CLI tests cover the behavior. No simulation change.
+Check exact-head CI on Windows/Linux and inspect any new capture before
+claiming success. Next: native model preview, retained source manifests
+and named sockets, material/sRGB pipeline, animation and rig runtime.

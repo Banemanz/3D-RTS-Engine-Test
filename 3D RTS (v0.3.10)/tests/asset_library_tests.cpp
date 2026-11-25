@@ -17,6 +17,15 @@ int main(int argc,char** argv){
     assert(found!=assets.end() && found->valid());
     assert(found->vertices==32 && found->triangles==16);
     assert(found->textureWidth==2 && found->textureHeight==2);
+    assert(found->imageBytes==16 && found->texturedSurfaces==1);
+    assert(found->maximum[1]>found->minimum[1]);
+    assert(rtsAssetMatches(*found,"BEACON"));
+    assert(!rtsAssetMatches(*found,"missing_name"));
+    const auto dual=std::find_if(assets.begin(),assets.end(),
+        [](const RTSAssetRecord& a){return a.reference=="assets/beacon_dual.rtsmesh";});
+    assert(dual!=assets.end() && dual->valid());
+    assert(dual->surfaces==2 && dual->texturedSurfaces==1 && dual->imageBytes==16);
+    assert(dual->maximum[1]>found->maximum[1]);
     assert(rtsDiscoverStaticAssets(file,0).empty());
     RTSProject p=RTSProject::defaults();
     EditorSession e;

@@ -165,3 +165,24 @@ implementations. See docs/UI_TRIGGER_EVENTS.md.
 ## Responsive Panel containers (November 16)
 
 In addition to named anchors and F6 dialog events, modern authoring requires composable layouts that do not force every widget into absolute coordinates. The original RTS Creator now implements bounded StackRow/StackColumn Panels with padding/gap, cross-axis stretch and F6-variable-driven visible-child reflow. This is a homegrown C++17 layout math model rather than copied Galaxy XML or GPL engines. It intentionally does not yet implement full constraint solving, wrapping, text autosize or texture-based frames. See `docs/UI_RESPONSIVE_LAYOUT.md`.
+
+## Model inspection and scene assemblies (November 25)
+
+Reviewed the Galaxy Model Data Viewer tutorial screenshots (geometry,
+materials and attachment-point tree alongside the model), Data Editor
+Introduction (typed searchable catalogs), and Importer (asset paths).
+https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/068_Model_Data_Viewer/
+https://s2editor-guides.readthedocs.io/New_Tutorials/04_Data_Editor/058_Data_Editor_Introduction/
+https://s2editor-guides.readthedocs.io/New_Tutorials/01_Introduction/014_The_Importer/
+
+Recoil's Blender glTF guide describes the model node/piece hierarchy and
+engine model coordinate frame:
+https://recoilengine.org/docs/guides/getting-started/blender-gltf-import/
+0 A.D. entity documentation distinguishes actor visuals from model-based
+selection bounds: https://docs.wildfiregames.com/entity-docs/a27.html
+
+Original implementation: F7 searchable compiled assets, invalid-only filter,
+expandable model bounds/texture memory details, and bounded native static
+glTF scene flattening with parent TRS and inverse-transpose normals. It
+does not yet retain a runtime node tree or display a rendered model viewer,
+animation timeline or attachments. No third-party art or GPL code copied.
