@@ -2752,3 +2752,21 @@ clock. One rigid clip per Actor, no native glTF animation import,
 skeletal skinning, clip state transitions or blending yet. Next pass
 should handle those rather than repeat rigid articulation. Check exact
 HEAD workflows and genuine screenshots; no new PR and no merge.
+
+## November 25 — portable asset source management
+
+Started from a6b7a8dcd57a; all three exact-head workflows 45713339692 /
+45713331008 / 45713330917 green. Rigid animation and timeline already
+implemented; do not repeat. Same open draft PR #1. 41def38e adds optional
+project-relative source receipts with fingerprints of the actual consumed
+glTF/GLB and external resources, exact compiled-byte match on initial
+tracking, source status and guarded rebuild. F7 Source dependencies
+controls link/check/rebuild; refresh invalidates GPU caches. CLI
+--track-gltf, --source-status, --rebuild-gltf. Tests cover external
+buffer/image dependencies, invalid decode rollback, relocated project,
+cache mismatch, traversal and socket preservation. FNV-1a is for change
+detection only. Two file publication is not atomic; mismatched receipts
+are detected; no filesystem undo, automatic watcher or source copying.
+See docs/NATIVE_ASSET_IMPORT.md. Check latest CI and no new PR/merge.
+Remaining: imported native animation channels/multiple clips, playback
+state/blending, skeletons, material pipeline, background asset jobs.

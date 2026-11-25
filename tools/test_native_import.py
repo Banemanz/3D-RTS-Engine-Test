@@ -334,6 +334,21 @@ with tempfile.TemporaryDirectory() as tmp:
     receipt.write_text(json.dumps(bad_receipt))
     assert status()['state']=='invalid_receipt'
     command('--track-gltf',source,project,reference,ok=False)
+    # Tracked replacement must preserve the existing unique model sockets.
+    linked_assembly=sources/'assembly.gltf'
+    linked_assembly.write_bytes((root/'assets/source/beacon_assembly.gltf').read_bytes())
+    assembly_ref='assets/tracked_assembly.rtsmesh'
+    assembly_cache=run(linked_assembly,project,assembly_ref)
+    command('--track-gltf',linked_assembly,project,assembly_ref)
+    before=assembly_cache.read_bytes()
+    assembly_receipt=Path(str(assembly_cache)+'.source.json')
+    before_receipt=assembly_receipt.read_bytes()
+    assembly_json=json.loads(linked_assembly.read_text())
+    assembly_json['nodes'][3]['name']='Different name'
+    linked_assembly.write_text(json.dumps(assembly_json))
+    command('--rebuild-gltf',project,assembly_ref,ok=False)
+    assert assembly_cache.read_bytes()==before and assembly_receipt.read_bytes()==before_receipt
+    assert json.loads(command('--source-status',project,assembly_ref))['state']=='source_changed'
     assert not list(project.parent.rglob('*.importing'))
 
     mutations = [

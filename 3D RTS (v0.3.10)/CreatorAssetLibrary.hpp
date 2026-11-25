@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace CreatorAssetLibrary {
 inline bool requestImportPopup=false;
@@ -23,6 +24,8 @@ struct Browser {
     char filter[128]{};
     bool invalidOnly=false;
     bool replaceExisting=false;
+    std::string trackReference;
+    std::map<std::string,RTSAssetSourceStatus> sourceStatus;
     std::string nodeAsset;
     std::size_t selectedNode=0;
     std::vector<std::pair<std::string,ActorVisual>> previewActors;
@@ -35,7 +38,9 @@ struct Browser {
     bool folderDirty=true;
 };
 inline void drawImport(Browser& browser){
-    if(ImGui::Button("Import glTF / GLB...") || requestImportPopup){
+    const bool newImport=ImGui::Button("Import glTF / GLB...");
+    if(newImport)browser.trackReference.clear();
+    if(newImport || requestImportPopup){
         requestImportPopup=false;
         browser.replaceExisting=false;
         if(browser.folder.empty())browser.folder=std::filesystem::absolute(browser.projectPath).parent_path();
@@ -80,35 +85,52 @@ inline void drawImport(Browser& browser){
                 if(path.size()<sizeof(browser.source))std::snprintf(browser.source,sizeof(browser.source),"%s",path.c_str());
                 auto stem=file.path().stem().u8string();
                 for(char& c:stem)if(!((c>='A'&&c<='Z')||(c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='_'||c=='-'))c='_';
-                std::snprintf(browser.output,sizeof(browser.output),"%s",stem.c_str());
+                if(browser.trackReference.empty())
+                    std::snprintf(browser.output,sizeof(browser.output),"%s",stem.c_str());
             }
         }
     }
     ImGui::EndChild();
     ImGui::TextUnformatted("Source file (full path, or relative to this map)");
     ImGui::SetNextItemWidth(-1);ImGui::InputText("##sourcePath",browser.source,sizeof(browser.source));
-    ImGui::TextUnformatted("Output name (without extension)");
-    ImGui::SetNextItemWidth(-1);ImGui::InputText("##outputName",browser.output,sizeof(browser.output));
-    ImGui::Checkbox("Explicitly replace an existing compiled asset",&browser.replaceExisting);
-    ImGui::TextWrapped("Target: assets/%s.rtsmesh. Replacement preserves unique node names; asset files are not part of map undo.",browser.output);
-    if(ImGui::Button(browser.replaceExisting?"Replace compiled asset":"Import model")){
+    const bool tracking=!browser.trackReference.empty();
+    if(tracking){
+        ImGui::TextWrapped("Track source for %s",browser.trackReference.c_str());
+        ImGui::TextWrapped("Choose the original glTF/GLB inside this project folder. It must reproduce the existing compiled model byte for byte. No mesh replacement occurs.");
+    }else{
+        ImGui::TextUnformatted("Output name (without extension)");
+        ImGui::SetNextItemWidth(-1);ImGui::InputText("##outputName",browser.output,sizeof(browser.output));
+        ImGui::Checkbox("Explicitly replace an existing compiled asset",&browser.replaceExisting);
+        ImGui::TextWrapped("Target: assets/%s.rtsmesh. Replacement preserves unique node names; asset files are not part of map undo.",browser.output);
+    }
+    if(ImGui::Button(tracking?"Link source":browser.replaceExisting?"Replace compiled asset":"Import model")){
         try{
             auto source=std::filesystem::u8path(browser.source);
             if(source.is_relative())source=std::filesystem::absolute(browser.projectPath).parent_path()/source;
-            const std::string name=browser.output;
-            if(name.empty() || name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
-                throw std::invalid_argument("Use letters, numbers, underscores or hyphens for the output name");
-            if(browser.replaceExisting)
-                rtsReimportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
-            else rtsImportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
-            browser.ready=false;
-            browser.importNotice=browser.replaceExisting?
-                "Replaced assets/"+name+".rtsmesh; existing Model and Actor links are retained.":
-                "Imported assets/"+name+".rtsmesh. Register it below to create Model + Actor.";
+            if(tracking){
+                rtsTrackGltf(source,browser.projectPath,browser.trackReference);
+                browser.sourceStatus[browser.trackReference]=
+                    rtsInspectTrackedGltf(browser.projectPath,browser.trackReference);
+                browser.importNotice="Linked portable source receipt for "+browser.trackReference;
+                browser.trackReference.clear();
+            }else{
+                const std::string name=browser.output;
+                if(name.empty() || name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
+                    throw std::invalid_argument("Use letters, numbers, underscores or hyphens for the output name");
+                if(browser.replaceExisting)
+                    rtsReimportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
+                else rtsImportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
+                browser.ready=false;
+                browser.importNotice=browser.replaceExisting?
+                    "Replaced assets/"+name+".rtsmesh; existing Model and Actor links are retained.":
+                    "Imported assets/"+name+".rtsmesh. Register it below to create Model + Actor.";
+            }
             ImGui::CloseCurrentPopup();
         }catch(const std::exception& e){browser.importNotice=e.what();}
     }
-    ImGui::SameLine();if(ImGui::Button("Close"))ImGui::CloseCurrentPopup();
+    ImGui::SameLine();if(ImGui::Button("Close")){
+        browser.trackReference.clear();ImGui::CloseCurrentPopup();
+    }
     if(!browser.importNotice.empty())ImGui::TextWrapped("%s",browser.importNotice.c_str());
     ImGui::EndPopup();
 };
@@ -121,6 +143,7 @@ bool draw(App& app){
         browser.folder.clear();browser.importNotice.clear();
         browser.filter[0]='\0';browser.invalidOnly=false;
         browser.nodeAsset.clear();browser.selectedNode=0;
+        browser.trackReference.clear();browser.sourceStatus.clear();
     }
     if(!ImGui::CollapsingHeader("Imported 3D asset library",
                                ImGuiTreeNodeFlags_DefaultOpen))return false;
@@ -130,6 +153,7 @@ bool draw(App& app){
     const bool refresh=ImGui::SmallButton("Scan / refresh assets");
     if(refresh || !browser.ready){
         browser.records=rtsDiscoverStaticAssets(app.projectPath);
+        browser.sourceStatus.clear();
         browser.ready=true;
         ++app.assetRevision; // next world frame explicitly reloads GPU cache
     }
@@ -174,6 +198,46 @@ bool draw(App& app){
                     asset.maximum[0],asset.maximum[1],asset.maximum[2]);
                 ImGui::Text("%u textured surfaces / %.2f MiB RGBA",
                     asset.texturedSurfaces,double(asset.imageBytes)/(1024.0*1024.0));
+                ImGui::TreePop();
+            }
+            if(ImGui::TreeNode("Source dependencies")){
+                if(ImGui::SmallButton("Check source status"))
+                    browser.sourceStatus[asset.reference]=
+                        rtsInspectTrackedGltf(app.projectPath,asset.reference);
+                ImGui::SameLine();
+                if(ImGui::SmallButton("Link source...")){
+                    browser.trackReference=asset.reference;
+                    browser.importNotice.clear();
+                    browser.source[0]='\0';
+                    requestImportPopup=true;
+                }
+                const auto status=browser.sourceStatus.find(asset.reference);
+                if(status==browser.sourceStatus.end()){
+                    ImGui::TextDisabled("Not checked. No source hashing occurs during normal rendering.");
+                }else{
+                    const auto& s=status->second;
+                    const bool current=s.state=="current";
+                    const auto label=current?"Current":s.state=="untracked"?"Untracked":
+                        s.state=="source_changed"?"Source changed":
+                        s.state=="source_unavailable"?"Source unavailable":
+                        s.state=="cache_changed"?"Compiled cache changed":"Invalid source receipt";
+                    ImGui::TextColored(current?ImVec4(.48f,.85f,.58f,1):ImVec4(.95f,.77f,.43f,1),
+                                       "%s",label);
+                    if(!s.source.empty())ImGui::TextWrapped("Source: %s (%zu files)",s.source.c_str(),s.dependencies);
+                    if(!s.detail.empty())ImGui::TextWrapped("%s",s.detail.c_str());
+                    for(const auto& dep:s.changed)ImGui::BulletText("%s",dep.c_str());
+                    if(s.state=="source_changed" || s.state=="source_unavailable"){
+                        ImGui::TextWrapped("Rebuild replaces the compiled asset, preserves unique sockets, and is outside map undo.");
+                        if(ImGui::SmallButton("Rebuild from linked source")){
+                            try{
+                                rtsRebuildTrackedGltf(app.projectPath,asset.reference);
+                                browser.importNotice="Rebuilt "+asset.reference+"; GPU cache will refresh.";
+                                browser.ready=false;
+                            }catch(const std::exception& ex){browser.importNotice=ex.what();}
+                            browser.sourceStatus[asset.reference]=rtsInspectTrackedGltf(app.projectPath,asset.reference);
+                        }
+                    }
+                }
                 ImGui::TreePop();
             }
             if(ImGui::SmallButton("Model viewer")){

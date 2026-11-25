@@ -694,3 +694,7 @@ without changing authoritative gameplay. Open
 Viewer and select the Actor for playback/scrubbing. The headless
 `RTSProjectTool --actor-pose` command exposes numerical poses.
 See [asset pipeline](docs/ASSET_PIPELINE.md) for limitations and schema.
+
+### Source-linked asset rebuilding
+
+F7 Source dependencies links an existing compiled model to project-local glTF/GLB sources, checks for changed external buffers/images and explicitly rebuilds while preserving named sockets. See [native asset import](docs/NATIVE_ASSET_IMPORT.md) for CLI commands and limits.

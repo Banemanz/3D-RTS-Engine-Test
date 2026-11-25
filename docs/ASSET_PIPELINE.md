@@ -251,3 +251,55 @@ same simulation hashes with animation enabled/disabled and replay
 verification. CI captures the actual preview and fixed-tick F9 game.
 Next major work: imported quaternion TRS channels and multiple named
 clips, per-Actor playback/event state and blending, then skinning/rigs.
+
+
+## Portable source dependency receipts and tracked rebuilds
+
+Production sources can live in a `sources/` directory beside the map.
+Import normally, then link the source to its existing compiled asset:
+
+```text
+RTSProjectTool --track-gltf projects/sources/building.gltf projects/map.rtsproject.json assets/building.rtsmesh
+RTSProjectTool --source-status projects/map.rtsproject.json assets/building.rtsmesh
+RTSProjectTool --rebuild-gltf projects/map.rtsproject.json assets/building.rtsmesh
+```
+
+Tracking compiles the source into a private staging directory and compares
+the complete result byte-for-byte against the existing cache. It refuses
+a different output rather than silently replacing it. The sidecar
+`building.rtsmesh.source.json` records the project-relative source and
+all actually read external buffer/image files, including filenames with
+spaces. Data URIs and GLB embedded resources are covered by the original
+source fingerprint. Source paths outside the project and symlink escapes
+are rejected. No absolute workstation paths are written. Source files
+must be copied into the project by the creator; tracking does not copy
+or modify them.
+
+Receipts use format `rts-source-1-fnv64`, with byte sizes and 64-bit FNV-1a
+content fingerprints. These are change-detection hints, not signatures
+or cryptographic integrity guarantees. The compiler captures fingerprints
+from the actual input bytes it consumed. Status reports JSON with state,
+source, dependency count, changed paths and diagnostic. States:
+`untracked`, `current`, `source_changed`, `source_unavailable`,
+`cache_changed`, `invalid_receipt`. Status returns zero for a valid
+command even when the reported state is stale; scripts must examine state.
+Explicit checks are bounded to 65 files, 64 MiB per source file,
+256 MiB aggregate source bytes, and 130 MiB compiled cache. No background
+watcher or per-frame source scanning is performed.
+
+Rebuild acquires the existing per-asset staging lock, refuses a cache
+modified independently of its receipt, compiles/validates all source
+inputs, preserves unique socket names, stages the receipt and replaces
+the compiled file and receipt separately by same-filesystem rename.
+Compile or socket-validation failures leave both files untouched.
+Publication is not a two-file atomic transaction: interruption between
+renames can leave a stale receipt, which is diagnosed as cache_changed
+when the compiled bytes differ; explicitly re-track the matching source.
+External concurrent edits are not locked. No map undo for disk changes.
+
+F7 > Imported 3D asset library > Source dependencies offers explicit
+status checks, source linking and guarded rebuild of changed sources.
+A successful rebuild invalidates the existing GPU asset cache through
+assetRevision on the next refresh. Runtime meshes and simulation/replay
+serialization are unchanged. Receipts are optional authoring metadata;
+a portable game bundle without the original sources can still play.

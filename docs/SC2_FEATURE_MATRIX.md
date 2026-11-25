@@ -543,3 +543,7 @@ and Model Viewer playback/scrubbing are real, plus headless pose export.
 Still absent: imported animation sequences, skeletal skinning,
 multiple clips and event-driven transition state, animation graphs,
 a standalone native editor backend and material/PBR parity.
+
+## Source dependency tracking
+
+The asset library now supports opt-in portable source receipts, exact initial cache verification, explicit content-based status checks and guarded source rebuilds. No automatic watcher, dependency graph across assets, or background compilation yet.
