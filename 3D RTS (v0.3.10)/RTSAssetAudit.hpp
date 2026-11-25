@@ -2,6 +2,7 @@
 // Headless pre-package verification: all externally referenced Model meshes
 // resolve under the map's directory and pass the exact runtime mesh reader.
 #include "RTSProject.hpp"
+#include "InstanceOverrides.hpp"
 #include "RTSStaticMesh.hpp"
 #include <cstdint>
 #include <map>
@@ -31,6 +32,7 @@ inline RTSAssetAudit rtsAuditProjectAssets(
     struct Cached {
         std::string error;
         std::uint32_t vertices=0,triangles=0;
+        std::vector<RTSModelNode> nodes;
     };
     std::map<std::string,Cached> cache;
     for(const auto& entry:project.catalog.entries()){
@@ -65,6 +67,7 @@ inline RTSAssetAudit rtsAuditProjectAssets(
                     mesh.vertices.size()/8);
                 compiled.triangles=static_cast<std::uint32_t>(
                     mesh.indices.size()/3);
+                compiled.nodes=mesh.nodes;
                 report.uniqueTriangles+=compiled.triangles;
             }catch(const std::exception& e){
                 compiled.error=e.what();
@@ -76,6 +79,32 @@ inline RTSAssetAudit rtsAuditProjectAssets(
         row.triangles=found->second.triangles;
         report.triangleInstances+=row.triangles;
         report.rows.push_back(std::move(row));
+    }
+    const auto verifyAttachments=[&](const ActorVisual& actor,const std::string& id){
+        if(actor.attachments.empty())return;
+        auto parent=cache.find(actor.mesh);
+        std::vector<RTSModelNode> extra;
+        const std::vector<RTSModelNode>* nodes=nullptr;
+        if(parent!=cache.end() && parent->second.error.empty())nodes=&parent->second.nodes;
+        else try{extra=rtsReadStaticMesh(rtsResolveMeshReference(projectPath,actor.mesh)).nodes;nodes=&extra;}
+             catch(const std::exception&){}
+        for(const auto& a:actor.attachments){
+            if(!nodes || !rtsFindUniqueModelNode(*nodes,a.socket)){
+                RTSAssetAuditRow row;
+                row.modelId=id;row.reference=actor.mesh;
+                row.error="Missing or ambiguous attachment socket: "+a.socket;
+                report.rows.push_back(std::move(row));
+            }
+        }
+    };
+    for(const auto& entry:project.catalog.entries())if(entry.type=="Actor")
+        verifyAttachments(actorFromCatalog(project.catalog,entry.id),entry.id);
+    for(const auto& placed:project.placements)if(!placed.overrides.empty()){
+        if(placed.kind=="Doodad")verifyAttachments(resolvePlacedDoodad(project,placed),placed.id);
+        else if(placed.kind=="Unit"){
+            const auto unit=resolvePlacedUnit(project,placed);
+            if(unit.hasActor)verifyAttachments(unit.actor,placed.id);
+        }
     }
     report.uniqueFiles=cache.size();
     return report;

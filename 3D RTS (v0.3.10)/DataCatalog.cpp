@@ -91,6 +91,8 @@ bool DataCatalog::rename(const std::string& oldId,const std::string& newId) {
                field->second.get<std::string>()==oldId)
                 field->second=picojson::value(newId);
         }
+        if(type=="Model" && entry.type=="Actor")
+            renameModelAttachmentLinks(entry.fields,oldId,newId);
         if(type=="Weapon" && entry.type=="Unit"){
             auto field=entry.fields.find("weapon");
             if(field!=entry.fields.end() && field->second.is<std::string>() &&
@@ -546,7 +548,10 @@ void DataCatalog::validate()const {
         if(e.type=="Upgrade")(void)compileUpgrade(*this,e.id);
         if(e.type=="Validator")(void)compileValidator(*this,e.id);
         if(e.type=="Requirement")(void)compileRequirement(*this,e.id);
-        if(e.type=="Actor")(void)compileActorCues(*this,e.id);
+        if(e.type=="Actor"){
+            (void)compileActorCues(*this,e.id);
+            (void)compileModelAttachments(*this,e.id);
+        }
         if(e.type=="Weapon")(void)compileWeapon(*this,e.id);
         if(e.type=="Projectile")(void)compileProjectile(*this,e.id);
         if(e.type=="Behavior")(void)compileBehavior(*this,e.id);
@@ -804,6 +809,71 @@ std::vector<RTSActorCueDefinition> compileActorCues(
     }
     return result;
 }
+std::vector<RTSModelAttachment> compileModelAttachments(
+    const DataCatalog& catalog,const std::string& actorId){
+    const auto fields=catalog.resolvedFields(actorId);
+    const auto it=fields.find("attachments");
+    if(it==fields.end())return {};
+    if(!it->second.is<picojson::array>() || it->second.get<picojson::array>().size()>8)
+        throw std::invalid_argument("Actor attachments must contain at most eight entries");
+    std::vector<RTSModelAttachment> out;
+    for(const auto& value:it->second.get<picojson::array>()){
+        if(!value.is<picojson::object>())throw std::invalid_argument("Attachment must be an object");
+        const auto& row=value.get<picojson::object>();
+        RTSModelAttachment a;
+        a.socket=stringField(row,"socket","");a.modelId=stringField(row,"model","");
+        if(a.socket.empty() || !rtsValidModelNodeName(a.socket))
+            throw std::invalid_argument("Attachment requires a valid nonempty node name");
+        const auto* model=catalog.find(a.modelId);
+        if(!model || model->type!="Model")throw std::invalid_argument("Attachment requires a Model link");
+        const auto m=catalog.resolvedFields(a.modelId);
+        a.mesh=stringField(m,"mesh","");
+        if(!rtsSafeMeshReference(a.mesh))throw std::invalid_argument("Attachment Model requires a compiled mesh");
+        a.offset=vec3Field(row,"offset",a.offset);
+        a.scale=vec3Field(row,"scale",a.scale);
+        a.modelScale=vec3Field(m,"scale",a.modelScale);
+        a.tint=vec3Field(row,"tint",a.tint);a.yaw=float(numeric(row,"yaw",0));
+        a.opacity=float(numeric(row,"opacity",1));
+        for(float v:{a.offset.x,a.offset.y,a.offset.z,a.yaw})
+            if(!std::isfinite(v)||std::abs(v)>10000)throw std::invalid_argument("Attachment offset/yaw out of range");
+        for(float v:{a.scale.x,a.scale.y,a.scale.z,a.modelScale.x,a.modelScale.y,a.modelScale.z,
+                     a.scale.x*a.modelScale.x,a.scale.y*a.modelScale.y,a.scale.z*a.modelScale.z})
+            if(!std::isfinite(v)||v<.001f||v>100)throw std::invalid_argument("Attachment scale out of range");
+        for(float v:{a.tint.x,a.tint.y,a.tint.z,a.opacity})
+            if(!std::isfinite(v)||v<0||v>1)throw std::invalid_argument("Attachment tint/opacity out of range");
+        out.push_back(std::move(a));
+    }
+    return out;
+}
+picojson::value serializeModelAttachments(const std::vector<RTSModelAttachment>& attachments){
+    picojson::array result;
+    for(const auto& a:attachments)result.emplace_back(picojson::object{
+        {"socket",picojson::value(a.socket)},{"model",picojson::value(a.modelId)},
+        {"offset",vector3(a.offset.x,a.offset.y,a.offset.z)},
+        {"scale",vector3(a.scale.x,a.scale.y,a.scale.z)},
+        {"tint",vector3(a.tint.x,a.tint.y,a.tint.z)},
+        {"yaw",picojson::value(double(a.yaw))},{"opacity",picojson::value(double(a.opacity))}
+    });
+    return picojson::value(result);
+}
+void renameModelAttachmentLinks(picojson::object& fields,const std::string& oldId,const std::string& newId){
+    auto it=fields.find("attachments");
+    if(it==fields.end() || !it->second.is<picojson::array>())return;
+    for(auto& value:it->second.get<picojson::array>())if(value.is<picojson::object>()){
+        auto& row=value.get<picojson::object>();auto model=row.find("model");
+        if(model!=row.end() && model->second.is<std::string>() && model->second.get<std::string>()==oldId)
+            model->second=picojson::value(newId);
+    }
+}
+bool hasModelAttachmentLink(const picojson::object& fields,const std::string& id){
+    const auto it=fields.find("attachments");
+    if(it==fields.end() || !it->second.is<picojson::array>())return false;
+    for(const auto& value:it->second.get<picojson::array>())if(value.is<picojson::object>()){
+        const auto& row=value.get<picojson::object>();auto model=row.find("model");
+        if(model!=row.end() && model->second.is<std::string>() && model->second.get<std::string>()==id)return true;
+    }
+    return false;
+}
 ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actorId) {
     const auto* entry=catalog.find(actorId);
     if(!entry || entry->type!="Actor")throw std::invalid_argument("Not an Actor: "+actorId);
@@ -815,6 +885,7 @@ ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actor
     v.animation=stringField(f,"animation","");
     v.sound=stringField(f,"sound","");
     v.cues=compileActorCues(catalog,actorId);
+    v.attachments=compileModelAttachments(catalog,actorId);
     auto modelId=stringField(f,"model","");
     if(!modelId.empty()){
         auto m=catalog.resolvedFields(modelId);
@@ -823,6 +894,8 @@ ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actor
         Vec3 modelScale=vec3Field(m,"scale",{1,1,1});
         v.scale=Vec3(v.scale.x*modelScale.x,v.scale.y*modelScale.y,v.scale.z*modelScale.z);
     }
+    if(!v.attachments.empty() && !rtsSafeMeshReference(v.mesh))
+        throw std::invalid_argument("Attached Actor requires a compiled parent mesh");
     if(v.opacity<0 || v.opacity>1 || v.scale.x<=0 || v.scale.y<=0 || v.scale.z<=0)
         throw std::invalid_argument("Invalid visual scale or opacity: "+actorId);
     return v;

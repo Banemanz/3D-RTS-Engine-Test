@@ -2,6 +2,7 @@
 #include "UnitData.hpp"
 #include "RTSAreaShape.hpp"
 #include "RTSActorCue.hpp"
+#include "RTSModelAttachment.hpp"
 #include "third_party/picojson.h"
 #include <stdexcept>
 #include <cstdint>
@@ -133,6 +134,11 @@ std::vector<RTSActorCueDefinition> compileActorCues(
 
 // Typed runtime adapters. Unknown catalog fields are not deleted or discarded.
 UnitData unitFromCatalog(const DataCatalog& catalog,const std::string& id);
+std::vector<RTSModelAttachment> compileModelAttachments(
+    const DataCatalog& catalog,const std::string& actorId);
+picojson::value serializeModelAttachments(const std::vector<RTSModelAttachment>& attachments);
+void renameModelAttachmentLinks(picojson::object& fields,const std::string& oldId,const std::string& newId);
+bool hasModelAttachmentLink(const picojson::object& fields,const std::string& id);
 struct ActorVisual {
     Vec3 tint{1.f,1.f,1.f};
     Vec3 scale{1.f,1.f,1.f};
@@ -142,5 +148,6 @@ struct ActorVisual {
     std::string animation;
     std::string sound;
     std::vector<RTSActorCueDefinition> cues;
+    std::vector<RTSModelAttachment> attachments;
 };
 ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actorId);

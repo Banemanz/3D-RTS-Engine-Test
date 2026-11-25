@@ -5,6 +5,7 @@
 #include "NavigationGrid.hpp"
 #include "UnitData.hpp"
 #include "RTSActorCue.hpp"
+#include "RTSModelAttachment.hpp"
 #include <string>
 #include <cstddef>
 #include <vector>
@@ -75,6 +76,7 @@ public:
     std::string actorMesh = "procedural.unit";
     // Spawn-time Actor presentation snapshot (including instance overrides).
     std::vector<RTSActorCueDefinition> actorCues;
+    std::vector<RTSModelAttachment> actorAttachments;
 
     float currentHp = 45.0f;
     float currentEnergy = 0.0f;

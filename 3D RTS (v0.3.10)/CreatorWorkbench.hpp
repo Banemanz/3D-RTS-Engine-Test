@@ -440,6 +440,47 @@ void inspector(App& app){
                     endPane();return;
                 }
                 if(entry->type=="Actor"){
+                    if(ImGui::CollapsingHeader("Model attachments | named sockets")){
+                        static std::string editingAttachments;
+                        static std::vector<RTSModelAttachment> draftAttachments;
+                        const std::string key=app.projectPath+"|"+entry->id;
+                        if(editingAttachments!=key){
+                            draftAttachments=compileModelAttachments(project.catalog,entry->id);
+                            editingAttachments=key;
+                        }
+                        ImGui::TextWrapped("Attach a compiled Model to a unique retained node of the parent model. Cosmetic only; no weapon or collision changes.");
+                        if(draftAttachments.size()<8 && ImGui::SmallButton("Add attachment"))
+                            draftAttachments.emplace_back();
+                        for(std::size_t i=0;i<draftAttachments.size();++i){
+                            ImGui::PushID(static_cast<int>(i));
+                            auto& a=draftAttachments[i];
+                            ImGui::SeparatorText(("Attachment "+std::to_string(i+1)).c_str());
+                            ImGui::InputText("Socket name",&a.socket);
+                            if(ImGui::BeginCombo("Child model",a.modelId.empty()?"Select Model":a.modelId.c_str())){
+                                for(const auto& c:project.catalog.entries())if(c.type=="Model")
+                                    if(ImGui::Selectable(c.id.c_str(),a.modelId==c.id))a.modelId=c.id;
+                                ImGui::EndCombo();
+                            }
+                            ImGui::InputFloat3("Offset",&a.offset.x);
+                            ImGui::InputFloat3("Scale",&a.scale.x);
+                            ImGui::InputFloat("Yaw degrees",&a.yaw);
+                            ImGui::ColorEdit3("Tint",&a.tint.x);
+                            ImGui::SliderFloat("Opacity",&a.opacity,0,1);
+                            if(ImGui::SmallButton("Remove attachment")){
+                                draftAttachments.erase(draftAttachments.begin()+static_cast<std::ptrdiff_t>(i));
+                                ImGui::PopID();break;
+                            }
+                            ImGui::PopID();
+                        }
+                        if(ImGui::Button("Apply attachments")){
+                            if(ed.setCatalogField(project,"attachments",serializeModelAttachments(draftAttachments))){
+                                editingAttachments.clear();refresh(app,true);endPane();return;
+                            }
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::SmallButton("Reload attachment draft"))
+                            draftAttachments=compileModelAttachments(project.catalog,entry->id);
+                    }
                     ImGui::SeparatorText("Actor event rules | Presentation only");
                     static std::string editingActorCues;
                     static std::vector<RTSActorCueDefinition> draftCues;

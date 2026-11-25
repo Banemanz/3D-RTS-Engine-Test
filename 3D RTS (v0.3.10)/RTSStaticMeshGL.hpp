@@ -4,6 +4,7 @@
 #include "GLCore.hpp"
 #include "Math3D.hpp"
 #include "RTSStaticMesh.hpp"
+#include "RTSModelAttachment.hpp"
 #include "Shaders.hpp"
 #include <cstdint>
 #include <iostream>
@@ -57,6 +58,7 @@ class RTSStaticMeshRenderer {
         GLuint vao=0,vbo=0,ebo=0;
         GLsizei triangles=0;
         std::vector<GPUSurface> surfaces;
+        std::vector<RTSModelNode> nodes;
         bool attempted=false,ready=false;
     };
     std::map<std::string,Asset> assets_;
@@ -66,6 +68,7 @@ class RTSStaticMeshRenderer {
         a.attempted=true;
         try {
             const RTSStaticMesh mesh=rtsReadStaticMesh(filename);
+            a.nodes=mesh.nodes;
             glGenVertexArrays(1,&a.vao);
             glGenBuffers(1,&a.vbo);
             glGenBuffers(1,&a.ebo);
@@ -187,6 +190,21 @@ public:
                     static_cast<std::uintptr_t>(part.firstIndex)*sizeof(std::uint32_t)));
         }
         return true;
+    }
+    // Resolve sockets from the cached parent, without frame-time filesystem IO.
+    // Only one level of children is drawn; Model children cannot recurse.
+    void drawAttachments(const std::string& reference,
+                         const std::filesystem::path& projectFile,
+                         const Mat4& parent,const Mat4& view,const Mat4& projection,
+                         const std::vector<RTSModelAttachment>& attachments,float opacity){
+        if(attachments.empty())return;
+        const auto it=assets_.find(projectFile.lexically_normal().generic_string()+"|"+reference);
+        if(it==assets_.end() || !it->second.ready)return;
+        for(const auto& child:attachments){
+            const auto transform=rtsAttachmentTransform(it->second.nodes,parent,child);
+            if(transform)draw(child.mesh,projectFile,*transform,view,projection,
+                              child.tint,opacity*child.opacity);
+        }
     }
     // Must run before destroying GLFW's active context.
     void clear(){

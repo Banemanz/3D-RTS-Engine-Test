@@ -365,6 +365,7 @@ bool RTSProject::renameCatalogObject(const std::string& oldId,const std::string&
         auto category=placement.overrides.find(section);
         if(category==placement.overrides.end() || !category->second.is<picojson::object>())continue;
         auto& overrides=category->second.get<picojson::object>();
+        if(type=="Model")renameModelAttachmentLinks(overrides,oldId,newId);
         auto field=overrides.find(property);
         if(field!=overrides.end() && field->second.is<std::string>() &&
            field->second.get<std::string>()==oldId)
@@ -448,6 +449,8 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
                it->second.get<std::string>()==id)
                 refs.push_back(entry.id+"."+typed);
         }
+        if(original->type=="Model" && entry.type=="Actor" &&
+           hasModelAttachmentLink(properties,id))refs.push_back(entry.id+".attachments");
         if(original->type=="Ability" && entry.type=="Unit"){
             const auto abilityLinks=properties.find("abilities");
             if(abilityLinks!=properties.end() && abilityLinks->second.is<picojson::array>())
@@ -577,6 +580,8 @@ std::vector<std::string> RTSProject::catalogReferences(const std::string& id) co
         if(category==placement.overrides.end() ||
            !category->second.is<picojson::object>())continue;
         const auto& fields=category->second.get<picojson::object>();
+        if(original->type=="Model" && hasModelAttachmentLink(fields,id))
+            refs.push_back("placement "+placement.id+".actor.attachments");
         auto it=fields.find(property);
         if(it!=fields.end() && it->second.is<std::string>() &&
            it->second.get<std::string>()==id)

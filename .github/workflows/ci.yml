@@ -436,6 +436,9 @@ jobs:
           ./build/RTSProjectTool --validate projects/assembly_ci.rtsproject.json
           ./build/RTSProjectTool --asset-report projects/assembly_ci.rtsproject.json
           ./build/RTSProjectTool --model-info projects/assembly_ci.rtsproject.json assets/assembly_ci.rtsmesh "Amber cap"
+          python3 -c "import json; from pathlib import Path; p=Path('projects/assembly_ci.rtsproject.json'); d=json.loads(p.read_text()); next(c for c in d['catalog'] if c['id']=='dual_beacon_actor')['fields']['attachments']=[dict(socket='Amber cap',model='imported_beacon_model',offset=[0,1.0,0],scale=[.45,.45,.45],tint=[1,1,1])]; p.write_text(json.dumps(d))"
+          ./build/RTSProjectTool --validate projects/assembly_ci.rtsproject.json
+          ./build/RTSProjectTool --asset-report projects/assembly_ci.rtsproject.json
           xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --data-editor --smoke-model-nodes --project projects/assembly_ci.rtsproject.json --smoke-frames 75 --screenshot rts-model-nodes-f7.ppm
           python3 tools/ppm_to_png.py rts-model-nodes-f7.ppm rts-model-nodes-f7.png
           xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ./build/RTSCameraTerrain --project projects/assembly_ci.rtsproject.json --smoke-frames 95 --screenshot rts-assembly-f9.ppm

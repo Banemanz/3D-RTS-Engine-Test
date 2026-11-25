@@ -1718,7 +1718,8 @@ int main(int argc, char** argv) {
                                         unit.data.faction_color,unit.actorOpacity)){
                     glBindVertexArray(unitVAO);
                     glDrawArrays(GL_TRIANGLES, 0, 33);
-                }
+                }else importedMeshes.drawAttachments(unit.actorMesh,app.projectPath,
+                    unitModel,view,proj,unit.actorAttachments,unit.actorOpacity);
 
                 if (unit.attackFlashTimer > 0.0f) {
                     Vec3 muzzle = unit.position + Vec3(0.0f, unit.height * 0.65f, 0.0f);
@@ -1790,7 +1791,8 @@ int main(int argc, char** argv) {
                                         view,proj,visual.tint,visual.opacity)){
                     glBindVertexArray(unitVAO);
                     glDrawArrays(GL_TRIANGLES,0,33);
-                }
+                }else importedMeshes.drawAttachments(visual.mesh,app.projectPath,
+                    transform,view,proj,visual.attachments,visual.opacity);
             }
 
             // Data-authored projectile models use the native procedural mesh
