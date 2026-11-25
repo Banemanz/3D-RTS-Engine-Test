@@ -1715,11 +1715,12 @@ int main(int argc, char** argv) {
 
                 if(!importedMeshes.draw(unit.actorMesh,app.projectPath,
                                         unitModel,view,proj,
-                                        unit.data.faction_color,unit.actorOpacity)){
+                                        unit.data.faction_color,unit.actorOpacity,-1,0,
+                                        &unit.actorRigidClip,double(app.game.simulationTick())/60.0,
+                                        &unit.actorAttachments)){
                     glBindVertexArray(unitVAO);
                     glDrawArrays(GL_TRIANGLES, 0, 33);
-                }else importedMeshes.drawAttachments(unit.actorMesh,app.projectPath,
-                    unitModel,view,proj,unit.actorAttachments,unit.actorOpacity);
+                }
 
                 if (unit.attackFlashTimer > 0.0f) {
                     Vec3 muzzle = unit.position + Vec3(0.0f, unit.height * 0.65f, 0.0f);
@@ -1788,11 +1789,12 @@ int main(int argc, char** argv) {
                 glUniform1f(glGetUniformLocation(unitShader, "uSelected"),0.0f);
                 glUniform1f(glGetUniformLocation(unitShader, "uOpacity"),visual.opacity);
                 if(!importedMeshes.draw(visual.mesh,app.projectPath,transform,
-                                        view,proj,visual.tint,visual.opacity)){
+                                        view,proj,visual.tint,visual.opacity,-1,0,
+                                        &visual.rigidClip,double(app.game.simulationTick())/60.0,
+                                        &visual.attachments)){
                     glBindVertexArray(unitVAO);
                     glDrawArrays(GL_TRIANGLES,0,33);
-                }else importedMeshes.drawAttachments(visual.mesh,app.projectPath,
-                    transform,view,proj,visual.attachments,visual.opacity);
+                }
             }
 
             // Data-authored projectile models use the native procedural mesh

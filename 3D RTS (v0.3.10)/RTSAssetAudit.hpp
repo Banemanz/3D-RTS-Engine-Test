@@ -81,13 +81,20 @@ inline RTSAssetAudit rtsAuditProjectAssets(
         report.rows.push_back(std::move(row));
     }
     const auto verifyAttachments=[&](const ActorVisual& actor,const std::string& id){
-        if(actor.attachments.empty())return;
+        if(actor.attachments.empty() && actor.rigidClip.tracks.empty())return;
         auto parent=cache.find(actor.mesh);
         std::vector<RTSModelNode> extra;
         const std::vector<RTSModelNode>* nodes=nullptr;
         if(parent!=cache.end() && parent->second.error.empty())nodes=&parent->second.nodes;
         else try{extra=rtsReadStaticMesh(rtsResolveMeshReference(projectPath,actor.mesh)).nodes;nodes=&extra;}
              catch(const std::exception&){}
+        for(const auto& track:actor.rigidClip.tracks){
+            if(!nodes || !rtsFindUniqueModelNode(*nodes,track.node)){
+                RTSAssetAuditRow row;row.modelId=id;row.reference=actor.mesh;
+                row.error="Missing or ambiguous animation node: "+track.node;
+                report.rows.push_back(std::move(row));
+            }
+        }
         for(const auto& a:actor.attachments){
             if(!nodes || !rtsFindUniqueModelNode(*nodes,a.socket)){
                 RTSAssetAuditRow row;
@@ -107,8 +114,9 @@ inline RTSAssetAudit rtsAuditProjectAssets(
     for(const auto& entry:project.catalog.entries())if(entry.type=="Actor"){
         const auto fields=project.catalog.resolvedFields(entry.id);
         const auto it=fields.find("attachments");
-        if(it==fields.end() || (it->second.is<picojson::array>() &&
-                               it->second.get<picojson::array>().empty()))continue;
+        if(!fields.count("rigid_clip") &&
+           (it==fields.end() || (it->second.is<picojson::array>() &&
+                               it->second.get<picojson::array>().empty())))continue;
         diagnose(entry.id,[&]{return actorFromCatalog(project.catalog,entry.id);});
     }
     for(const auto& placed:project.placements)if(!placed.overrides.empty()){

@@ -6,6 +6,7 @@
 #include "UnitData.hpp"
 #include "RTSActorCue.hpp"
 #include "RTSModelAttachment.hpp"
+#include "RTSRigidAnimation.hpp"
 #include <string>
 #include <cstddef>
 #include <vector>
@@ -77,6 +78,7 @@ public:
     // Spawn-time Actor presentation snapshot (including instance overrides).
     std::vector<RTSActorCueDefinition> actorCues;
     std::vector<RTSModelAttachment> actorAttachments;
+    RTSRigidClip actorRigidClip;
 
     float currentHp = 45.0f;
     float currentEnergy = 0.0f;

@@ -551,6 +551,7 @@ void DataCatalog::validate()const {
         if(e.type=="Actor"){
             (void)compileActorCues(*this,e.id);
             (void)compileModelAttachments(*this,e.id);
+            (void)compileRigidClip(*this,e.id);
         }
         if(e.type=="Weapon")(void)compileWeapon(*this,e.id);
         if(e.type=="Projectile")(void)compileProjectile(*this,e.id);
@@ -874,6 +875,71 @@ bool hasModelAttachmentLink(const picojson::object& fields,const std::string& id
     }
     return false;
 }
+RTSRigidClip compileRigidClip(const DataCatalog& catalog,const std::string& actorId){
+    RTSRigidClip clip;
+    const auto fields=catalog.resolvedFields(actorId);
+    const auto it=fields.find("rigid_clip");
+    if(it==fields.end())return clip;
+    if(!it->second.is<picojson::object>())throw std::invalid_argument("rigid_clip must be an object");
+    const auto& row=it->second.get<picojson::object>();
+    clip.duration=float(numeric(row,"duration",2));
+    if(!std::isfinite(clip.duration)||clip.duration<.05f||clip.duration>600)
+        throw std::invalid_argument("Rigid clip duration must be .05..600 seconds");
+    const auto loop=row.find("loop");
+    if(loop!=row.end()){
+        if(!loop->second.is<bool>())throw std::invalid_argument("Rigid clip loop must be bool");
+        clip.loop=loop->second.get<bool>();
+    }
+    const auto tracks=row.find("tracks");
+    if(tracks==row.end())return clip;
+    if(!tracks->second.is<picojson::array>()||tracks->second.get<picojson::array>().size()>16)
+        throw std::invalid_argument("Rigid clip supports up to 16 tracks");
+    std::set<std::string> names;
+    for(const auto& val:tracks->second.get<picojson::array>()){
+        if(!val.is<picojson::object>())throw std::invalid_argument("Rigid track must be an object");
+        const auto& data=val.get<picojson::object>();
+        RTSRigidTrack track;track.node=stringField(data,"node","");
+        if(track.node.empty()||!rtsValidModelNodeName(track.node)||!names.insert(track.node).second)
+            throw std::invalid_argument("Rigid track requires a distinct nonempty node name");
+        const auto keys=data.find("keys");
+        if(keys==data.end()||!keys->second.is<picojson::array>()||
+           keys->second.get<picojson::array>().empty()||keys->second.get<picojson::array>().size()>64)
+            throw std::invalid_argument("Rigid track requires 1..64 keys");
+        float previous=-1;
+        for(const auto& item:keys->second.get<picojson::array>()){
+            if(!item.is<picojson::object>())throw std::invalid_argument("Rigid key must be an object");
+            const auto& k=item.get<picojson::object>();
+            RTSRigidKey key;
+            key.time=float(numeric(k,"time",0));
+            key.offset=vec3Field(k,"offset",key.offset);
+            key.rotation=vec3Field(k,"rotation",key.rotation);
+            key.scale=vec3Field(k,"scale",key.scale);
+            if(!std::isfinite(key.time)||key.time<0||key.time>clip.duration||key.time<=previous)
+                throw std::invalid_argument("Rigid key times must be strictly increasing inside clip");
+            previous=key.time;
+            for(float x:{key.offset.x,key.offset.y,key.offset.z,key.rotation.x,key.rotation.y,key.rotation.z})
+                if(!std::isfinite(x)||std::abs(x)>10000)throw std::invalid_argument("Rigid key offset/rotation out of range");
+            for(float x:{key.scale.x,key.scale.y,key.scale.z})
+                if(!std::isfinite(x)||x<.01f||x>10)throw std::invalid_argument("Rigid key scale out of range");
+            track.keys.push_back(key);
+        }
+        clip.tracks.push_back(std::move(track));
+    }
+    return clip;
+}
+picojson::value serializeRigidClip(const RTSRigidClip& clip){
+    picojson::array tracks;
+    for(const auto& t:clip.tracks){
+        picojson::array keys;
+        for(const auto& k:t.keys)keys.emplace_back(picojson::object{
+            {"time",picojson::value(double(k.time))},{"offset",vector3(k.offset.x,k.offset.y,k.offset.z)},
+            {"rotation",vector3(k.rotation.x,k.rotation.y,k.rotation.z)},{"scale",vector3(k.scale.x,k.scale.y,k.scale.z)}
+        });
+        tracks.emplace_back(picojson::object{{"node",picojson::value(t.node)},{"keys",picojson::value(keys)}});
+    }
+    return picojson::value(picojson::object{{"duration",picojson::value(double(clip.duration))},
+        {"loop",picojson::value(clip.loop)},{"tracks",picojson::value(tracks)}});
+}
 ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actorId) {
     const auto* entry=catalog.find(actorId);
     if(!entry || entry->type!="Actor")throw std::invalid_argument("Not an Actor: "+actorId);
@@ -886,6 +952,7 @@ ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actor
     v.sound=stringField(f,"sound","");
     v.cues=compileActorCues(catalog,actorId);
     v.attachments=compileModelAttachments(catalog,actorId);
+    v.rigidClip=compileRigidClip(catalog,actorId);
     auto modelId=stringField(f,"model","");
     if(!modelId.empty()){
         auto m=catalog.resolvedFields(modelId);
@@ -894,7 +961,7 @@ ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actor
         Vec3 modelScale=vec3Field(m,"scale",{1,1,1});
         v.scale=Vec3(v.scale.x*modelScale.x,v.scale.y*modelScale.y,v.scale.z*modelScale.z);
     }
-    if(!v.attachments.empty() && !rtsSafeMeshReference(v.mesh))
+    if((!v.attachments.empty() || !v.rigidClip.tracks.empty()) && !rtsSafeMeshReference(v.mesh))
         throw std::invalid_argument("Attached Actor requires a compiled parent mesh");
     if(v.opacity<0 || v.opacity>1 || v.scale.x<=0 || v.scale.y<=0 || v.scale.z<=0)
         throw std::invalid_argument("Invalid visual scale or opacity: "+actorId);

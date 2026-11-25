@@ -5,6 +5,7 @@
 #include "Math3D.hpp"
 #include "RTSStaticMesh.hpp"
 #include "RTSModelAttachment.hpp"
+#include "RTSRigidAnimation.hpp"
 #include "Shaders.hpp"
 #include <cstdint>
 #include <iostream>
@@ -59,6 +60,7 @@ class RTSStaticMeshRenderer {
         GLsizei triangles=0;
         std::vector<GPUSurface> surfaces;
         std::vector<RTSModelNode> nodes;
+        RTSRigidRig rig{nodes};
         bool attempted=false,ready=false;
     };
     std::map<std::string,Asset> assets_;
@@ -69,6 +71,7 @@ class RTSStaticMeshRenderer {
         try {
             const RTSStaticMesh mesh=rtsReadStaticMesh(filename);
             a.nodes=mesh.nodes;
+            a.rig=RTSRigidRig(a.nodes);
             glGenVertexArrays(1,&a.vao);
             glGenBuffers(1,&a.vbo);
             glGenBuffers(1,&a.ebo);
@@ -145,7 +148,9 @@ public:
     bool draw(const std::string& reference,
               const std::filesystem::path& projectFile,
               const Mat4& model,const Mat4& view,const Mat4& projection,
-              const Vec3& tint,float opacity,int first=-1,int count=0){
+              const Vec3& tint,float opacity,int first=-1,int count=0,
+              const RTSRigidClip* clip=nullptr,double seconds=0,
+              const std::vector<RTSModelAttachment>* attachments=nullptr){
         if(reference=="procedural.unit" || !rtsSafeMeshReference(reference))
             return false;
         // Cache by reference + project root, so reloading another map with
@@ -166,6 +171,10 @@ public:
         }
         const Asset& a=it->second;
         if(!a.ready)return false;
+        // Avoid building any pose for normal static assets. The optional
+        // stack pose is shared by geometry and attached children.
+        std::optional<RTSRigidPose> pose;
+        if(clip && !clip->tracks.empty())pose.emplace(rtsSampleRigidPose(a.nodes,a.rig,*clip,seconds));
         glUseProgram(shader_);
         glUniformMatrix4fv(glGetUniformLocation(shader_,"uModel"),1,GL_FALSE,model.m);
         glUniformMatrix4fv(glGetUniformLocation(shader_,"uView"),1,GL_FALSE,view.m);
@@ -177,6 +186,10 @@ public:
         glBindVertexArray(a.vao);
         for(std::size_t i=0;i<a.surfaces.size();++i){
             const auto& part=a.surfaces[i];
+            if(pose && pose->valid){
+                const Mat4 surfaceModel=model*pose->surfaceDelta[i];
+                glUniformMatrix4fv(glGetUniformLocation(shader_,"uModel"),1,GL_FALSE,surfaceModel.m);
+            }
             const bool highlight=first>=0 && int(i)>=first && int(i)<first+count;
             glUniform3f(glGetUniformLocation(shader_,"uActorTint"),
                 highlight?1.f:tint.x,highlight?.72f:tint.y,highlight?.24f:tint.z);
@@ -189,22 +202,12 @@ public:
                 reinterpret_cast<const void*>(
                     static_cast<std::uintptr_t>(part.firstIndex)*sizeof(std::uint32_t)));
         }
-        return true;
-    }
-    // Resolve sockets from the cached parent, without frame-time filesystem IO.
-    // Only one level of children is drawn; Model children cannot recurse.
-    void drawAttachments(const std::string& reference,
-                         const std::filesystem::path& projectFile,
-                         const Mat4& parent,const Mat4& view,const Mat4& projection,
-                         const std::vector<RTSModelAttachment>& attachments,float opacity){
-        if(attachments.empty())return;
-        const auto it=assets_.find(projectFile.lexically_normal().generic_string()+"|"+reference);
-        if(it==assets_.end() || !it->second.ready)return;
-        for(const auto& child:attachments){
-            const auto transform=rtsAttachmentTransform(it->second.nodes,parent,child);
+        if(attachments)for(const auto& child:*attachments){
+            const auto transform=rtsPosedAttachment(a.nodes,pose?&*pose:nullptr,model,child);
             if(transform)draw(child.mesh,projectFile,*transform,view,projection,
                               child.tint,opacity*child.opacity);
         }
+        return true;
     }
     // Must run before destroying GLFW's active context.
     void clear(){

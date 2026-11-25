@@ -90,6 +90,7 @@ Unit& RTSSkirmish::spawn(const UnitData& d,const Vec3& at,int owner,
             u.actorMesh=visual.mesh;
             u.actorCues=visual.cues;
             u.actorAttachments=visual.attachments;
+            u.actorRigidClip=visual.rigidClip;
         }
     }
     u.position.y=project_.terrain.sampleHeight(at.x,at.z);
@@ -165,6 +166,7 @@ void RTSSkirmish::reset() {
             instance.actorMesh=resolved.actor.mesh;
             instance.actorCues=resolved.actor.cues;
             instance.actorAttachments=resolved.actor.attachments;
+            instance.actorRigidClip=resolved.actor.rigidClip;
         }
         instance.modelScale=Vec3(instance.modelScale.x*placement.scale.x,
                                  instance.modelScale.y*placement.scale.y,

@@ -3,6 +3,7 @@
 #include "RTSAreaShape.hpp"
 #include "RTSActorCue.hpp"
 #include "RTSModelAttachment.hpp"
+#include "RTSRigidAnimation.hpp"
 #include "third_party/picojson.h"
 #include <stdexcept>
 #include <cstdint>
@@ -139,6 +140,8 @@ std::vector<RTSModelAttachment> compileModelAttachments(
 picojson::value serializeModelAttachments(const std::vector<RTSModelAttachment>& attachments);
 void renameModelAttachmentLinks(picojson::object& fields,const std::string& oldId,const std::string& newId);
 bool hasModelAttachmentLink(const picojson::object& fields,const std::string& id);
+RTSRigidClip compileRigidClip(const DataCatalog& catalog,const std::string& actorId);
+picojson::value serializeRigidClip(const RTSRigidClip& clip);
 struct ActorVisual {
     Vec3 tint{1.f,1.f,1.f};
     Vec3 scale{1.f,1.f,1.f};
@@ -149,5 +152,6 @@ struct ActorVisual {
     std::string sound;
     std::vector<RTSActorCueDefinition> cues;
     std::vector<RTSModelAttachment> attachments;
+    RTSRigidClip rigidClip;
 };
 ActorVisual actorFromCatalog(const DataCatalog& catalog,const std::string& actorId);
