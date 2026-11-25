@@ -277,6 +277,65 @@ with tempfile.TemporaryDirectory() as tmp:
     external['buffers'][0]['uri'] = 'https://example.invalid/mesh.bin'
     compile_data(external, 'network', False)
 
+    # Portable source receipts capture exactly the dependencies the compiler
+    # read, including external binary and texture data. No wall-clock reliance.
+    import shutil
+    sources=project.parent/'sources'
+    sources.mkdir()
+    tracked=sources/'tracked.gltf'
+    tracked_data=copy.deepcopy(fixture)
+    (sources/'mesh data.bin').write_bytes(buffer)
+    tracked_data['buffers'][0]['uri']='mesh data.bin'
+    png_bytes=base64.b64decode(tracked_data['images'][0]['uri'].split(',')[1])
+    (sources/'color.png').write_bytes(png_bytes)
+    tracked_data['images'][0]['uri']='color.png'
+    tracked.write_text(json.dumps(tracked_data))
+    reference='assets/tracked.rtsmesh'
+    cache=run(tracked,project,reference)
+    receipt=Path(str(cache)+'.source.json')
+    def command(action,*args,ok=True):
+        p=subprocess.run([exe,action,*map(str,args)],capture_output=True,text=True,timeout=15)
+        assert (p.returncode==0)==ok,p.stdout+p.stderr
+        return p.stdout
+    def status(proj=project):
+        return json.loads(command('--source-status',proj,reference))
+    assert status()['state']=='untracked'
+    command('--track-gltf',tracked,project,reference)
+    assert status()['state']=='current' and status()['dependencies']==3
+    record=json.loads(receipt.read_text())
+    assert record['source']=='sources/tracked.gltf'
+    assert {d['path'] for d in record['files']}=={
+        'sources/tracked.gltf','sources/mesh data.bin','sources/color.png'}
+    old_cache=cache.read_bytes();old_receipt=receipt.read_bytes()
+    (sources/'color.png').write_bytes(b'broken')
+    assert status()['state']=='source_changed' and status()['changed']==['sources/color.png']
+    command('--rebuild-gltf',project,reference,ok=False)
+    assert cache.read_bytes()==old_cache and receipt.read_bytes()==old_receipt
+    (sources/'color.png').unlink()
+    assert status()['state']=='source_unavailable'
+    (sources/'color.png').write_bytes(png_bytes)
+    assert status()['state']=='current'
+    tracked_data['nodes'][0]['translation']=[2,0,0]
+    tracked.write_text(json.dumps(tracked_data))
+    assert status()['state']=='source_changed'
+    command('--track-gltf',tracked,project,reference,ok=False)
+    assert receipt.read_bytes()==old_receipt
+    command('--rebuild-gltf',project,reference)
+    assert cache.read_bytes()!=old_cache and status()['state']=='current'
+    relocated=folder/'relocated'
+    shutil.copytree(project.parent,relocated)
+    assert status(relocated/project.name)['state']=='current'
+    cache.write_bytes(old_cache)
+    assert status()['state']=='cache_changed'
+    command('--rebuild-gltf',project,reference,ok=False)
+    assert cache.read_bytes()==old_cache
+    bad_receipt=json.loads(receipt.read_text())
+    bad_receipt['files'][0]['path']='../outside.bin'
+    receipt.write_text(json.dumps(bad_receipt))
+    assert status()['state']=='invalid_receipt'
+    command('--track-gltf',source,project,reference,ok=False)
+    assert not list(project.parent.rglob('*.importing'))
+
     mutations = [
         lambda d: d.update(animations=[{'channels':[], 'samplers':[]}]),
         lambda d: d['nodes'].append({'children':[0]}),

@@ -16,6 +16,9 @@ static void usage() {
     std::cerr
       << "RTSProjectTool --import-gltf source.glb project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --reimport-gltf source.glb project-path assets/name.rtsmesh\n"
+      << "RTSProjectTool --track-gltf source.glb project-path assets/name.rtsmesh\n"
+      << "RTSProjectTool --source-status project-path assets/name.rtsmesh\n"
+      << "RTSProjectTool --rebuild-gltf project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --create path\n"
       << "RTSProjectTool --validate path\n"
       << "RTSProjectTool --asset-report path  # Verify all referenced mesh files\n"
@@ -42,6 +45,26 @@ int main(int argc,char** argv) {
             else rtsImportGltf(path,argv[3],argv[4]);
             std::cout<<"Imported "<<argv[4]<<"; register it in F7 to add Model + Actor\n";
             return 0;
+        }
+        if(action=="--track-gltf"){
+            if(argc!=5){usage();return 2;}
+            rtsTrackGltf(std::filesystem::u8path(path),std::filesystem::u8path(argv[3]),argv[4]);
+            std::cout<<"Tracked "<<argv[4]<<"\n";return 0;
+        }
+        if(action=="--rebuild-gltf"){
+            if(argc!=4){usage();return 2;}
+            rtsRebuildTrackedGltf(std::filesystem::u8path(path),argv[3]);
+            std::cout<<"Rebuilt "<<argv[3]<<"\n";return 0;
+        }
+        if(action=="--source-status"){
+            if(argc!=4){usage();return 2;}
+            const auto status=rtsInspectTrackedGltf(std::filesystem::u8path(path),argv[3]);
+            picojson::array changed;for(const auto& p:status.changed)changed.emplace_back(p);
+            picojson::object row{{"state",picojson::value(status.state)},
+                {"source",picojson::value(status.source)},{"detail",picojson::value(status.detail)},
+                {"dependencies",picojson::value(double(status.dependencies))},{"changed",picojson::value(changed)}};
+            std::cout<<picojson::value(row).serialize()<<"\n";
+            return 0; // status is data, including stale and invalid receipts
         }
         if(action=="--model-info"){
             if(argc!=4 && argc!=5){usage();return 2;}

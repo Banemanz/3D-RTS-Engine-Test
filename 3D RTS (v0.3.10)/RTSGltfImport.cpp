@@ -15,6 +15,9 @@
 #include <set>
 #include <array>
 #include <map>
+#include <iomanip>
+#include <sstream>
+#include "third_party/picojson.h"
 
 namespace {
 constexpr std::size_t maxBytes=64*1024*1024;
@@ -29,8 +32,90 @@ std::vector<unsigned char> readFile(const std::filesystem::path& path){
     need(bool(stream.read(reinterpret_cast<char*>(bytes.data()),bytes.size())),"Cannot read source resource");
     return bytes;
 }
+// Fingerprints detect ordinary source/cache changes, not adversarial tampering.
+// Hash the bytes actually used by the compiler, not a second read after import.
+struct Fingerprint {
+    std::uint64_t size=0,hash=14695981039346656037ull;
+    void add(const unsigned char* p,std::size_t n){
+        size+=n;for(std::size_t i=0;i<n;++i){hash^=p[i];hash*=1099511628211ull;}
+    }
+    std::string hex()const{
+        std::ostringstream out;out<<std::hex<<std::setfill('0')<<std::setw(16)<<hash;
+        return out.str();
+    }
+};
+namespace fs=std::filesystem;
+constexpr std::uint64_t cacheLimit=130ull*1024*1024;
+constexpr std::uint64_t sourceBudget=256ull*1024*1024;
+struct FileStamp {std::uint64_t size=0;std::string hash;};
+FileStamp stamp(const std::vector<unsigned char>& bytes){
+    Fingerprint f;f.add(bytes.data(),bytes.size());return {f.size,f.hex()};
+}
+FileStamp stampFile(const fs::path& path,std::uint64_t limit){
+    const auto size=fs::file_size(path);
+    need(size>0 && size<=limit,"Missing, empty or oversized tracked file");
+    std::ifstream in(path,std::ios::binary);need(bool(in),"Cannot open tracked file");
+    std::array<unsigned char,65536> bytes{};Fingerprint fp;
+    while(in){
+        in.read(reinterpret_cast<char*>(bytes.data()),bytes.size());
+        const auto n=static_cast<std::size_t>(in.gcount());
+        need(n<=limit-fp.size,"Tracked file exceeds byte limit");
+        fp.add(bytes.data(),n);
+    }
+    need(in.eof() && !in.bad() && fp.size==size,"Tracked file changed while reading");
+    return {fp.size,fp.hex()};
+}
+bool same(const FileStamp& a,const FileStamp& b){return a.size==b.size&&a.hash==b.hash;}
+fs::path projectRoot(const fs::path& project){
+    return fs::weakly_canonical(fs::absolute(project).parent_path());
+}
+bool portableRelative(const std::string& name){
+    if(name.empty()||name.size()>1024||name.front()=='/'||
+       name.find_first_of(":\\")!=std::string::npos)return false;
+    for(unsigned char c:name)if(c<32||c==127)return false;
+    std::size_t start=0;
+    for(;;){
+        const auto end=name.find('/',start);
+        const auto part=name.substr(start,end-start);
+        if(part.empty()||part=="."||part=="..")return false;
+        if(end==std::string::npos)break;
+        start=end+1;
+    }
+    return true;
+}
+fs::path checkedPath(const fs::path& root,const std::string& name){
+    need(portableRelative(name),"Tracked path must be project-relative");
+    const auto lexical=root/fs::u8path(name);
+    const auto canonical=fs::weakly_canonical(lexical);
+    const auto rel=canonical.lexically_relative(root);
+    need(!rel.empty()&&!rel.is_absolute(),"Tracked path escapes project");
+    for(const auto& part:rel)need(part!="..","Tracked path escapes project");
+    return lexical; // retain the authored path, including safe symlinks
+}
+std::string relativeSource(const fs::path& root,const fs::path& path){
+    const auto relative=fs::absolute(path).lexically_normal().lexically_relative(root).generic_u8string();
+    (void)checkedPath(root,relative);
+    return relative;
+}
+struct SourceCapture{
+    fs::path root;
+    std::string source;
+    std::map<std::string,FileStamp> files;
+    std::uint64_t total=0;
+    void record(const fs::path& path,const std::vector<unsigned char>& bytes){
+        const auto name=relativeSource(root,path);
+        const auto current=stamp(bytes);
+        const auto found=files.find(name);
+        if(found!=files.end()){
+            need(same(found->second,current),"Source dependency changed during compilation");
+            return;
+        }
+        need(files.size()<65 && current.size<=sourceBudget-total,"Tracked source dependency budget exceeded");
+        total+=current.size;files.emplace(name,current);
+    }
+};
 // Strict base64 length/padding validation before any decoder reads the input.
-std::vector<unsigned char> resource(const char* uri,const std::filesystem::path& source){
+std::vector<unsigned char> resource(const char* uri,const std::filesystem::path& source,SourceCapture* capture){
     need(uri && *uri,"Missing resource URI");
     const std::string name(uri);
     if(name.compare(0,5,"data:")==0){
@@ -69,7 +154,9 @@ std::vector<unsigned char> resource(const char* uri,const std::filesystem::path&
     const auto rel=path.lexically_relative(root);
     need(!rel.empty() && !rel.is_absolute(),"Resource escapes source directory");
     for(const auto& part:rel)need(part!="..","Resource escapes source directory");
-    return readFile(path);
+    auto bytes=readFile(path);
+    if(capture)capture->record(root/std::filesystem::u8path(name),bytes);
+    return bytes;
 }
 void checkAccessor(const cgltf_accessor& a){
     need(!a.is_sparse && a.buffer_view,"Sparse or absent accessors must be baked before import");
@@ -132,11 +219,12 @@ void writeMesh(const RTSStaticMesh& mesh,const std::filesystem::path& path){
 }
 }
 
-RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
+static RTSStaticMesh compileGltf(const std::filesystem::path& source,SourceCapture* capture){
     auto ext=source.extension().string();
     std::transform(ext.begin(),ext.end(),ext.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
     need(ext==".gltf" || ext==".glb","Choose a .gltf or .glb model");
     const auto raw=readFile(source);
+    if(capture)capture->record(source,raw);
     // Bound parser allocations as well as input bytes. Monotonic accounting
     // also limits allocation churn on malformed documents.
     std::size_t allocated=0;
@@ -211,7 +299,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
         auto& b=d.buffers[i];
         need(b.size>0 && b.size<=maxBytes-total,"Combined buffers exceed 64 MiB");
         total+=b.size;
-        if(b.uri)buffers[i]=resource(b.uri,source);
+        if(b.uri)buffers[i]=resource(b.uri,source,capture);
         else{
             need(i==0 && d.bin && d.bin_size>=b.size,"Missing GLB binary data");
             const auto* p=static_cast<const unsigned char*>(d.bin);
@@ -411,7 +499,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
                           tex.sampler->min_filter==cgltf_filter_type_linear),
                          "Only repeat wrapping with linear filtering is supported");
                 std::vector<unsigned char> bytes;
-                if(tex.image->uri)bytes=resource(tex.image->uri,source);
+                if(tex.image->uri)bytes=resource(tex.image->uri,source,capture);
                 else{
                     need(tex.image->buffer_view,"Image has no URI or bufferView");
                     const auto& v=*tex.image->buffer_view;
@@ -461,7 +549,102 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     return result;
 }
 
+RTSStaticMesh rtsCompileGltf(const fs::path& source){return compileGltf(source,nullptr);}
+
 namespace {
+struct Receipt {
+    std::string source;
+    FileStamp cache;
+    std::map<std::string,FileStamp> files;
+};
+fs::path receiptPath(const fs::path& destination){
+    auto p=destination;p+=".source.json";return p;
+}
+const picojson::value& field(const picojson::object& obj,const std::string& key){
+    const auto it=obj.find(key);need(it!=obj.end(),"Missing source receipt field");return it->second;
+}
+std::string str(const picojson::object& obj,const std::string& key){
+    const auto& v=field(obj,key);need(v.is<std::string>(),"Invalid source receipt string");return v.get<std::string>();
+}
+FileStamp readStamp(const picojson::object& obj,std::uint64_t cap){
+    const auto& v=field(obj,"bytes");
+    need(v.is<double>(),"Invalid source receipt byte count");
+    const double n=v.get<double>();
+    need(std::isfinite(n)&&n>=1&&n<=double(cap)&&std::floor(n)==n,"Invalid source receipt byte count");
+    const auto hash=str(obj,"fingerprint");
+    need(hash.size()==16&&hash.find_first_not_of("0123456789abcdef")==std::string::npos,"Invalid source fingerprint");
+    return {static_cast<std::uint64_t>(n),hash};
+}
+picojson::object stampJson(const FileStamp& f){
+    return {{"bytes",picojson::value(double(f.size))},{"fingerprint",picojson::value(f.hash)}};
+}
+Receipt readReceipt(const fs::path& path){
+    need(!fs::is_symlink(path)&&fs::is_regular_file(path),"Invalid source receipt path");
+    const auto size=fs::file_size(path);
+    need(size>0 && size<=128*1024,"Oversized source receipt");
+    std::ifstream in(path,std::ios::binary);std::string bytes(static_cast<std::size_t>(size),'\0');
+    need(bool(in.read(bytes.data(),bytes.size())),"Cannot read source receipt");
+    picojson::value v;const auto err=picojson::parse(v,bytes);
+    need(err.empty()&&v.is<picojson::object>(),"Invalid source receipt JSON");
+    const auto& obj=v.get<picojson::object>();
+    need(str(obj,"format")=="rts-source-1-fnv64","Unsupported source receipt version");
+    Receipt r;r.source=str(obj,"source");
+    need(portableRelative(r.source),"Invalid tracked source path");
+    const auto& cache=field(obj,"cache");
+    need(cache.is<picojson::object>(),"Invalid cache fingerprint");
+    r.cache=readStamp(cache.get<picojson::object>(),cacheLimit);
+    const auto& files=field(obj,"files");
+    need(files.is<picojson::array>(),"Invalid source receipt dependency list");
+    const auto& list=files.get<picojson::array>();
+    need(!list.empty()&&list.size()<=65,"Invalid source receipt dependency count");
+    std::uint64_t total=0;
+    for(const auto& item:list){
+        need(item.is<picojson::object>(),"Invalid source receipt dependency");
+        const auto& row=item.get<picojson::object>();
+        const auto name=str(row,"path");
+        need(portableRelative(name),"Invalid dependency path");
+        const auto fp=readStamp(row,maxBytes);
+        need(fp.size<=sourceBudget-total,"Source receipt exceeds dependency budget");
+        total+=fp.size;
+        need(r.files.emplace(name,fp).second,"Duplicate source dependency");
+    }
+    need(r.files.count(r.source)==1,"Source receipt does not include source file");
+    return r;
+}
+void writeReceipt(const fs::path& path,const SourceCapture& capture,const FileStamp& cache){
+    picojson::array files;
+    for(const auto& item:capture.files){
+        auto row=stampJson(item.second);row.emplace("path",picojson::value(item.first));files.emplace_back(row);
+    }
+    picojson::object obj{{"format",picojson::value(std::string("rts-source-1-fnv64"))},
+        {"source",picojson::value(capture.source)},{"cache",picojson::value(stampJson(cache))},
+        {"files",picojson::value(files)}};
+    std::ofstream out(path,std::ios::binary|std::ios::trunc);
+    out<<picojson::value(obj).serialize()<<"\n";out.close();need(bool(out),"Cannot write source receipt");
+}
+struct Stage{
+    fs::path path;
+    explicit Stage(fs::path destination):path(std::move(destination)){
+        path+=".importing";need(fs::create_directory(path),"Import already in progress for this asset");
+    }
+    ~Stage(){std::error_code ec;fs::remove_all(path,ec);}
+};
+bool exactFiles(const fs::path& a,const fs::path& b){
+    if(fs::file_size(a)!=fs::file_size(b))return false;
+    std::ifstream x(a,std::ios::binary),y(b,std::ios::binary);
+    std::array<char,65536> xb{},yb{};
+    while(x&&y){
+        x.read(xb.data(),xb.size());y.read(yb.data(),yb.size());
+        if(x.gcount()!=y.gcount()||!std::equal(xb.begin(),xb.begin()+x.gcount(),yb.begin()))return false;
+    }
+    return x.eof()&&y.eof()&&!x.bad()&&!y.bad();
+}
+void preserveSockets(const RTSStaticMesh& previous,const RTSStaticMesh& validated){
+    for(const auto& node:previous.nodes)
+        if(rtsFindUniqueModelNode(previous.nodes,node.name))
+            need(bool(rtsFindUniqueModelNode(validated.nodes,node.name)),
+                 ("Reimport would remove or ambiguate a unique node: "+node.name).c_str());
+}
 void publishGltf(const std::filesystem::path& source,const std::filesystem::path& project,
                  const std::string& reference,bool replace){
     const auto destination=rtsResolveMeshReference(project,reference);
@@ -479,10 +662,7 @@ void publishGltf(const std::filesystem::path& source,const std::filesystem::path
     const auto validated=rtsReadStaticMesh(temp);
     if(replace){
         const auto previous=rtsReadStaticMesh(destination);
-        for(const auto& node:previous.nodes)
-            if(rtsFindUniqueModelNode(previous.nodes,node.name))
-                need(bool(rtsFindUniqueModelNode(validated.nodes,node.name)),
-                     ("Reimport would remove or ambiguate a unique node: "+node.name).c_str());
+        preserveSockets(previous,validated);
         // Same-filesystem rename replaces the existing file atomically.
         // Failed validation or rename leaves the old asset intact.
         std::filesystem::rename(temp,destination);
@@ -493,3 +673,73 @@ void rtsImportGltf(const std::filesystem::path& source,const std::filesystem::pa
                    const std::string& reference){publishGltf(source,project,reference,false);}
 void rtsReimportGltf(const std::filesystem::path& source,const std::filesystem::path& project,
                     const std::string& reference){publishGltf(source,project,reference,true);}
+
+
+void rtsTrackGltf(const fs::path& source,const fs::path& project,const std::string& reference){
+    const auto destination=rtsResolveMeshReference(project,reference);
+    const auto receipt=receiptPath(destination);
+    need(fs::is_regular_file(destination),"Tracking requires an existing compiled asset");
+    need(!fs::is_symlink(receipt),"Cannot replace a symlink source receipt");
+    Stage stage(destination);
+    SourceCapture capture;capture.root=projectRoot(project);
+    capture.source=relativeSource(capture.root,source);
+    const auto mesh=compileGltf(checkedPath(capture.root,capture.source),&capture);
+    const auto temp=stage.path/"mesh.tmp";
+    writeMesh(mesh,temp);(void)rtsReadStaticMesh(temp);
+    need(exactFiles(temp,destination),"Source does not reproduce the existing cache; reimport first");
+    const auto tmpReceipt=stage.path/"source.json";
+    writeReceipt(tmpReceipt,capture,stampFile(temp,cacheLimit));
+    fs::rename(tmpReceipt,receipt);
+}
+RTSAssetSourceStatus rtsInspectTrackedGltf(const fs::path& project,const std::string& reference){
+    RTSAssetSourceStatus out;
+    try{
+        const auto destination=rtsResolveMeshReference(project,reference);
+        const auto path=receiptPath(destination);
+        if(!fs::exists(path)&&!fs::is_symlink(path)){out.state="untracked";return out;}
+        const auto receipt=readReceipt(path);
+        out.source=receipt.source;out.dependencies=receipt.files.size();
+        try{
+            if(!same(stampFile(destination,cacheLimit),receipt.cache)){
+                out.state="cache_changed";out.detail="Compiled asset differs from its source receipt";return out;
+            }
+        }catch(const std::exception&){
+            out.state="cache_changed";out.detail="Compiled asset is missing or unreadable";return out;
+        }
+        const auto root=projectRoot(project);
+        bool missing=false;std::uint64_t total=0;
+        for(const auto& item:receipt.files){
+            const auto p=checkedPath(root,item.first);
+            try{
+                const auto current=stampFile(p,std::min<std::uint64_t>(maxBytes,sourceBudget-total));
+                total+=current.size;
+                if(!same(current,item.second))out.changed.push_back(item.first);
+            }catch(const std::exception&){missing=true;out.changed.push_back(item.first);}
+        }
+        out.state=missing?"source_unavailable":out.changed.empty()?"current":"source_changed";
+    }catch(const std::exception& ex){out.state="invalid_receipt";out.detail=ex.what();}
+    return out;
+}
+void rtsRebuildTrackedGltf(const fs::path& project,const std::string& reference){
+    const auto destination=rtsResolveMeshReference(project,reference);
+    Stage stage(destination);
+    const auto path=receiptPath(destination);
+    const auto old=readReceipt(path);
+    need(same(stampFile(destination,cacheLimit),old.cache),
+         "Compiled cache changed since tracking; explicitly re-track or reimport first");
+    SourceCapture capture;capture.root=projectRoot(project);capture.source=old.source;
+    const auto mesh=compileGltf(checkedPath(capture.root,capture.source),&capture);
+    const auto temp=stage.path/"mesh.tmp";
+    writeMesh(mesh,temp);
+    const auto validated=rtsReadStaticMesh(temp);
+    preserveSockets(rtsReadStaticMesh(destination),validated);
+    const auto tmpReceipt=stage.path/"source.json";
+    writeReceipt(tmpReceipt,capture,stampFile(temp,cacheLimit));
+    // Two independent atomic replacements, not a two-file transaction.
+    // An interruption between them is detected as cache_changed on inspection.
+    fs::rename(temp,destination);
+    try{fs::rename(tmpReceipt,path);}
+    catch(const std::exception&){
+        throw std::runtime_error("Mesh rebuilt, but source receipt publication failed; re-track the source");
+    }
+}
