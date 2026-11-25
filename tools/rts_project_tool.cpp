@@ -15,6 +15,7 @@
 static void usage() {
     std::cerr
       << "RTSProjectTool --import-gltf source.glb project-path assets/name.rtsmesh\n"
+      << "RTSProjectTool --reimport-gltf source.glb project-path assets/name.rtsmesh\n"
       << "RTSProjectTool --create path\n"
       << "RTSProjectTool --validate path\n"
       << "RTSProjectTool --asset-report path  # Verify all referenced mesh files\n"
@@ -34,9 +35,10 @@ int main(int argc,char** argv) {
     try {
         if(argc<3){usage();return 2;}
         const std::string action=argv[1],path=argv[2];
-        if(action=="--import-gltf"){
+        if(action=="--import-gltf" || action=="--reimport-gltf"){
             if(argc!=5){usage();return 2;}
-            rtsImportGltf(path,argv[3],argv[4]);
+            if(action=="--reimport-gltf")rtsReimportGltf(path,argv[3],argv[4]);
+            else rtsImportGltf(path,argv[3],argv[4]);
             std::cout<<"Imported "<<argv[4]<<"; register it in F7 to add Model + Actor\n";
             return 0;
         }

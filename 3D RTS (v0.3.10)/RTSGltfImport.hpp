@@ -6,3 +6,7 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source);
 void rtsImportGltf(const std::filesystem::path& source,
                    const std::filesystem::path& project,
                    const std::string& reference);
+// Deliberate replacement of a valid existing cache. Preserve unique sockets.
+void rtsReimportGltf(const std::filesystem::path& source,
+                    const std::filesystem::path& project,
+                    const std::string& reference);

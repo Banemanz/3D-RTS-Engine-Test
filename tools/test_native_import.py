@@ -38,6 +38,25 @@ with tempfile.TemporaryDirectory() as tmp:
     assert (project.parent/'assets/model.rtsmesh').read_bytes() == result
     assert not list(project.parent.rglob('*.importing'))
 
+    # Deliberate replacement: valid imports update bytes, invalid imports
+    # leave the previous valid asset intact.
+    def reimport(source_path,reference,ok=True):
+        p=subprocess.run([exe,'--reimport-gltf',str(source_path),str(project),reference],
+                         capture_output=True,text=True,timeout=15)
+        assert (p.returncode==0)==ok,p.stdout+p.stderr
+    changed=copy.deepcopy(fixture)
+    changed['nodes'][0]['translation']=[1,0,0]
+    source.write_text(json.dumps(changed))
+    reimport(source,'assets/model.rtsmesh')
+    assert (project.parent/'assets/model.rtsmesh').read_bytes()!=result
+    source.write_text('invalid')
+    previous=(project.parent/'assets/model.rtsmesh').read_bytes()
+    reimport(source,'assets/model.rtsmesh',False)
+    assert (project.parent/'assets/model.rtsmesh').read_bytes()==previous
+    source.write_text(json.dumps(fixture))
+    reimport(source,'assets/model.rtsmesh')
+    assert (project.parent/'assets/model.rtsmesh').read_bytes()==result
+
     glb = copy.deepcopy(fixture)
     binary = base64.b64decode(glb['buffers'][0].pop('uri').split(',')[1])
     document = json.dumps(glb).encode()
@@ -145,6 +164,19 @@ with tempfile.TemporaryDirectory() as tmp:
     assert [n['surfaceCount'] for n in graph['nodes']]==[0,1,0,1]
     assert [n['firstSurface'] for n in graph['nodes']]==[0,0,1,1]
     cap=info('assets/assembly.rtsmesh','Amber cap')['nodes'][0]
+    # Preserve old unique socket names during replacement.
+    replacement=json.loads((root/'assets/source/beacon_assembly.gltf').read_text())
+    replacement['nodes'][3]['name']='Renamed cap'
+    source.write_text(json.dumps(replacement))
+    reimport(source,'assets/assembly.rtsmesh',False)
+    assert (project.parent/'assets/assembly.rtsmesh').read_bytes()==assembly
+    replacement['nodes'][3]['name']='Amber cap'
+    replacement['nodes'][2]['translation']=[.6,.35,0]
+    source.write_text(json.dumps(replacement))
+    reimport(source,'assets/assembly.rtsmesh')
+    assert abs(info('assets/assembly.rtsmesh','Amber cap')['nodes'][0]['model'][12]-.6)<1e-6
+    reimport(root/'assets/source/beacon_assembly.gltf','assets/assembly.rtsmesh')
+    assert (project.parent/'assets/assembly.rtsmesh').read_bytes()==assembly
     assert cap['local'][12:15]==[0,0,0]
     assert all(abs(a-b)<1e-6 for a,b in zip(cap['model'][12:15],[.35,.35,0]))
     assert info('assets/model.rtsmesh')['nodes']==[]

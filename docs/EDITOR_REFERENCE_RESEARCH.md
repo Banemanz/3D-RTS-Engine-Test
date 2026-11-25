@@ -186,3 +186,13 @@ expandable model bounds/texture memory details, and bounded native static
 glTF scene flattening with parent TRS and inverse-transpose normals. It
 does not yet retain a runtime node tree or display a rendered model viewer,
 animation timeline or attachments. No third-party art or GPL code copied.
+
+## Model studio follow-up
+
+The earlier Galaxy Model Data Viewer and Recoil/0 A.D. model inspection
+research is now reflected in a real isolated orbit viewport, bounds,
+selected model-node axes and material highlighting. Actor-to-Model socket
+attachments deliberately keep visual transforms separate from gameplay
+weapon and collision logic. Explicit replacement retains asset references
+and rejects missing/ambiguous old socket names. These are original
+implementations, not third-party engine code or copied art.

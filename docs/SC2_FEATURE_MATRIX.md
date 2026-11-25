@@ -525,3 +525,12 @@ bounds/material image totals. These are concrete steps toward a model
 inspection module, not a complete Galaxy Model Data Viewer: runtime node
 identities, attachment editing, animation preview and material graphs
 remain missing.
+
+## Model studio and attachments
+
+Added orbitable textured model viewport, selected-node axes/bounds/highlight,
+typed one-level cosmetic child Model attachments on Units and Doodads,
+reference migration and socket audit. Manual explicit reimport preserves
+the existing asset path and old unique socket names. Still missing full
+material editor, rig/animation, articulation, automatic source dependency
+tracking, and non-ImGui editor backend.

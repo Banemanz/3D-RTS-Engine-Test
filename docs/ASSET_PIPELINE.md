@@ -176,3 +176,31 @@ renderer behavior stay compatible. F7 has a read-only model-node inspector;
 the headless `--model-info` command exposes JSON and unique-name lookup.
 This establishes socket metadata, not skeletal animation or runtime
 articulation. See [Native asset import](NATIVE_ASSET_IMPORT.md).
+
+## Model studio, cosmetic attachments and explicit reimport
+
+F7 Model viewer now shows the actual OpenGL indexed textured model in a
+bounded isolated color/depth framebuffer, with orbit drag, zoom wheel,
+frame reset, bounds, selected-node axes and optional surface highlighting.
+It works on legacy meshes as well as RTSMESH3. The viewport reuses the
+production shader/draw implementation, restores the GL state it changes,
+and retains only the current preview mesh in its own GPU cache.
+
+Actor.attachments is an inherited array of up to eight objects with
+`socket` (unique retained node name), `model` (typed Model ID),
+`offset`, `scale`, `yaw` (degrees), `tint` and `opacity`.
+F7 exposes a transactional editor for these properties. Model links
+participate in catalog rename and deletion protection, including placement
+Actor overrides. Runtime draws child models at parent world * socket model
+* offset * yaw * scale (including child Model scale), for Units and
+Doodads. Missing/ambiguous sockets are skipped at render time and rejected
+by the asset audit. No recursive attachments, weapon muzzle changes,
+collision changes, articulated animation or simulation-dependent effects.
+
+Explicit `RTSProjectTool --reimport-gltf source project assets/name.rtsmesh`
+or the F7 import dialog replacement checkbox recompiles a valid existing
+asset at its same path using staged validation and same-filesystem rename.
+A failed compile leaves the existing file untouched. All old unique named
+nodes must remain uniquely resolvable in the replacement. No source
+manifest or automatic dependency tracking yet. Asset file replacement is
+not part of map undo. Keep original source files separately.

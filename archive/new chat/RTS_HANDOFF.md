@@ -2708,3 +2708,21 @@ and game from same compiled asset. No runtime attachments, animation,
 persistent node GUIDs, source-linked reimport or true model preview yet.
 Check exact-head CI before marking green. Next: rendered model viewer,
 actor socket resolution at draw time, source reimport and animation.
+
+## November 25 — larger model studio / attachments / reimport pass
+
+Starting head 45394870, Release workflow 45708570401 green. Same original
+open, unmerged draft PR #1. Commits 9f2097bd and 062b7dc4 add:
+CreatorModelPreview.hpp isolated GL3.3 framebuffer viewer with orbit,
+zoom, bounds and node axes, highlight material spans; shared production
+renderer, bounded preview cache. RTSModelAttachment.hpp CPU transform plus
+typed Actor.attachments (8 one-level Model children), authoring panel,
+rename/deletion protection and placement override migration, cached
+runtime draw for Units/Doodads. Asset audit catches missing/ambiguous
+sockets. This followup adds explicit staged reimport in F7 and CLI which
+preserves unique node names and existing asset references; asset writes
+are not map undo. New model_attachment CTest and native reimport regression;
+CI renders original assembled beacon with child mesh and F7 model viewer.
+Check exact HEAD CI and screenshots. No full PBR, rig/animation, source
+manifests, persistent node GUIDs, recursive Actor graphs, or non-ImGui
+editor backend.

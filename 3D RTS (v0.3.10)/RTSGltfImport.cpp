@@ -461,10 +461,12 @@ RTSStaticMesh rtsCompileGltf(const std::filesystem::path& source){
     return result;
 }
 
-void rtsImportGltf(const std::filesystem::path& source,const std::filesystem::path& project,
-                   const std::string& reference){
+namespace {
+void publishGltf(const std::filesystem::path& source,const std::filesystem::path& project,
+                 const std::string& reference,bool replace){
     const auto destination=rtsResolveMeshReference(project,reference);
-    need(!std::filesystem::exists(destination),"Asset already exists; choose a different output name");
+    if(!replace)need(!std::filesystem::exists(destination),"Asset already exists; choose a different output name");
+    else need(std::filesystem::is_regular_file(destination),"Reimport requires an existing compiled asset");
     const auto mesh=rtsCompileGltf(source); // no output mutations on invalid input
     std::filesystem::create_directories(destination.parent_path());
     // Reserve an isolated staging directory; hard-link publication is atomic and
@@ -474,6 +476,20 @@ void rtsImportGltf(const std::filesystem::path& source,const std::filesystem::pa
     struct Cleanup{std::filesystem::path path;~Cleanup(){std::error_code ec;std::filesystem::remove_all(path,ec);}} cleanup{staging};
     const auto temp=staging/"mesh.tmp";
     writeMesh(mesh,temp);
-    rtsReadStaticMesh(temp); // compiler output must satisfy the runtime contract
-    std::filesystem::create_hard_link(temp,destination);
+    const auto validated=rtsReadStaticMesh(temp);
+    if(replace){
+        const auto previous=rtsReadStaticMesh(destination);
+        for(const auto& node:previous.nodes)
+            if(rtsFindUniqueModelNode(previous.nodes,node.name))
+                need(bool(rtsFindUniqueModelNode(validated.nodes,node.name)),
+                     "Reimport would remove or ambiguate a unique node: "+node.name);
+        // Same-filesystem rename replaces the existing file atomically.
+        // Failed validation or rename leaves the old asset intact.
+        std::filesystem::rename(temp,destination);
+    }else std::filesystem::create_hard_link(temp,destination);
 }
+} // namespace
+void rtsImportGltf(const std::filesystem::path& source,const std::filesystem::path& project,
+                   const std::string& reference){publishGltf(source,project,reference,false);}
+void rtsReimportGltf(const std::filesystem::path& source,const std::filesystem::path& project,
+                    const std::string& reference){publishGltf(source,project,reference,true);}

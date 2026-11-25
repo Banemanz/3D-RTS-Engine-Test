@@ -21,6 +21,7 @@ struct Browser {
     char output[128]="imported_model";
     char filter[128]{};
     bool invalidOnly=false;
+    bool replaceExisting=false;
     std::string nodeAsset;
     std::size_t selectedNode=0;
     std::string importNotice;
@@ -31,6 +32,7 @@ struct Browser {
 inline void drawImport(Browser& browser){
     if(ImGui::Button("Import glTF / GLB...") || requestImportPopup){
         requestImportPopup=false;
+        browser.replaceExisting=false;
         if(browser.folder.empty())browser.folder=std::filesystem::absolute(browser.projectPath).parent_path();
         browser.folderDirty=true;
         ImGui::OpenPopup("Import static model");
@@ -82,17 +84,22 @@ inline void drawImport(Browser& browser){
     ImGui::SetNextItemWidth(-1);ImGui::InputText("##sourcePath",browser.source,sizeof(browser.source));
     ImGui::TextUnformatted("Output name (without extension)");
     ImGui::SetNextItemWidth(-1);ImGui::InputText("##outputName",browser.output,sizeof(browser.output));
-    ImGui::TextWrapped("Creates assets/%s.rtsmesh. Existing files are never overwritten. Register Model + Actor after import; Ctrl+S saves catalog changes.",browser.output);
-    if(ImGui::Button("Import model")){
+    ImGui::Checkbox("Explicitly replace an existing compiled asset",&browser.replaceExisting);
+    ImGui::TextWrapped("Target: assets/%s.rtsmesh. Replacement preserves unique node names; asset files are not part of map undo.",browser.output);
+    if(ImGui::Button(browser.replaceExisting?"Replace compiled asset":"Import model")){
         try{
             auto source=std::filesystem::u8path(browser.source);
             if(source.is_relative())source=std::filesystem::absolute(browser.projectPath).parent_path()/source;
             const std::string name=browser.output;
             if(name.empty() || name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
                 throw std::invalid_argument("Use letters, numbers, underscores or hyphens for the output name");
-            rtsImportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
+            if(browser.replaceExisting)
+                rtsReimportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
+            else rtsImportGltf(source,browser.projectPath,"assets/"+name+".rtsmesh");
             browser.ready=false;
-            browser.importNotice="Imported assets/"+name+".rtsmesh. Register it below to create Model + Actor.";
+            browser.importNotice=browser.replaceExisting?
+                "Replaced assets/"+name+".rtsmesh; existing Model and Actor links are retained.":
+                "Imported assets/"+name+".rtsmesh. Register it below to create Model + Actor.";
             ImGui::CloseCurrentPopup();
         }catch(const std::exception& e){browser.importNotice=e.what();}
     }
